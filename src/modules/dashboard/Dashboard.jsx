@@ -5,6 +5,7 @@ import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { DonutChart, ChartLegend, ActivityHeatmap } from "../../shared/charts.jsx";
+import { nextSmallAction, nudgeOfTheDay, compound } from "../../shared/kaizen.js";
 import { DOMAINS } from "./domains.js";
 import { LifeMatrix } from "./LifeMatrix.jsx";
 
@@ -31,6 +32,11 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
   const activeDays = Object.keys(activityCounts).length;
   const totalActivity = Object.values(activityCounts).reduce((s, c) => s + c, 0);
 
+  // Kaizen — the single smallest action that moves today forward.
+  const action = nextSmallAction({ habits, workouts, trades });
+  const nudge = nudgeOfTheDay();
+  const yearMultiple = compound(365).toFixed(0);
+
   return (
     <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ padding: "10px 18px", background: `${kz.color}11`, border: `1px solid ${kz.color}33`, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -41,6 +47,23 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
         </div>
         <span style={{ fontSize: 11, color: T3 }}>{eatTime} EAT</span>
       </div>
+
+      <Card style={{ padding: "20px 24px", borderColor: `${GR}33`, background: `linear-gradient(180deg,${GR}0C,transparent)` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ fontSize: 30, lineHeight: 1 }}>{action.icon}</div>
+            <div>
+              <div style={{ fontSize: 10, letterSpacing: 3, color: GR, textTransform: "uppercase", marginBottom: 5, fontWeight: 700 }}>Today's 1% · {action.area}</div>
+              <div style={{ fontSize: 15, color: T1, fontWeight: 600, lineHeight: 1.5, maxWidth: 620 }}>{action.text}</div>
+              <div style={{ fontSize: 11.5, color: T3, marginTop: 6 }}>{nudge}</div>
+            </div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: GR, fontFamily: "'JetBrains Mono',monospace" }}>{yearMultiple}×</div>
+            <div style={{ fontSize: 10, color: T3, lineHeight: 1.4, maxWidth: 150 }}>1% better daily compounds to ~{yearMultiple}× over a year</div>
+          </div>
+        </div>
+      </Card>
 
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
         <Card style={{ padding: "24px 24px 24px 20px", flexShrink: 0 }}>

@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { Bell, Flame, Cpu } from "lucide-react";
-import { B1, BD, T1, T2, T3, GL, CY, PU, RE, AM, OR } from "./designTokens.js";
+import { Bell, Flame, Cpu, Sprout } from "lucide-react";
+import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, OR } from "./designTokens.js";
 import { getActiveKillzone, getEATTimeStr } from "../modules/trading/timezone.js";
+import { nudgeOfTheDay } from "./kaizen.js";
 import { NAV } from "./nav.js";
 
 export function Header({ module, aiOpen, onAIToggle }) {
   const label = NAV.find((n) => n.id === module)?.label || "Command Center";
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
+  const [nudgesOpen, setNudgesOpen] = useState(false);
   const XP = 2840, XP_MAX = 4000, LV = 7;
 
   useEffect(() => {
@@ -49,10 +51,30 @@ export function Header({ module, aiOpen, onAIToggle }) {
       </div>
 
       <div style={{ position: "relative" }}>
-        <button style={{ width: 34, height: 34, borderRadius: 10, background: GL, border: `1px solid ${BD}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Bell size={13} color={T2} />
+        <button onClick={() => setNudgesOpen((o) => !o)} title="Daily Kaizen" style={{ width: 34, height: 34, borderRadius: 10, background: nudgesOpen ? `${GR}18` : GL, border: `1px solid ${nudgesOpen ? GR + "55" : BD}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Bell size={13} color={nudgesOpen ? GR : T2} />
         </button>
-        <div style={{ position: "absolute", top: 7, right: 7, width: 6, height: 6, borderRadius: "50%", background: RE, border: `1.5px solid ${B1}` }} />
+        <div style={{ position: "absolute", top: 7, right: 7, width: 6, height: 6, borderRadius: "50%", background: GR, border: `1.5px solid ${B1}` }} />
+        {nudgesOpen && (
+          <>
+            <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => setNudgesOpen(false)} />
+            <div style={{ position: "absolute", top: 42, right: 0, width: 288, background: B1, border: `1px solid ${BD}`, borderRadius: 12, padding: 14, zIndex: 41, boxShadow: "0 12px 40px rgba(0,0,0,0.5)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 11 }}>
+                <Sprout size={13} color={GR} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: GR, letterSpacing: 1.5 }}>DAILY KAIZEN</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} style={{ display: "flex", gap: 9, padding: "10px 11px", background: GL, border: `1px solid ${BD}`, borderRadius: 9 }}>
+                    <span style={{ fontSize: 12, flexShrink: 0 }}>{i === 0 ? "🌱" : i === 1 ? "☀️" : "✨"}</span>
+                    <span style={{ fontSize: 12, color: T2, lineHeight: 1.5 }}>{nudgeOfTheDay(i)}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: T3, marginTop: 11, lineHeight: 1.5, textAlign: "center" }}>Gentle reminders — never a scoreboard. Return whenever you're ready.</div>
+            </div>
+          </>
+        )}
       </div>
 
       <button onClick={onAIToggle} style={{ height: 34, padding: "0 13px", borderRadius: 10, border: `1px solid ${aiOpen ? CY + "55" : BD}`, cursor: "pointer", background: aiOpen ? `linear-gradient(135deg,${CY}22,${PU}22)` : GL, color: aiOpen ? CY : T2, fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s", fontFamily: "inherit" }}>

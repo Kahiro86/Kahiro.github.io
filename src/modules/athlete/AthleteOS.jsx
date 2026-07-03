@@ -103,15 +103,22 @@ export function AthleteOS() {
           <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Athlete OS</div>
-              <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Simple. Consistent. Strong.</div>
+              <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Consistency over intensity — small sessions compound.</div>
             </div>
+
+            {streak === 0 && workouts.length > 0 && !todayLogged && (
+              <div style={{ padding: "12px 18px", background: `${GR}0D`, border: `1px solid ${GR}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 18 }}>🌱</span>
+                <span style={{ fontSize: 13, color: T2, lineHeight: 1.5 }}>Been a little while — that's part of training. Returning is the win. Even a 10-minute session today puts you back in motion.</span>
+              </div>
+            )}
 
             {!todayLogged && todayPlan && todayPlan.type !== "Rest" && (
               <div style={{ padding: "14px 18px", background: `${PU}0D`, border: `1px solid ${PU}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
                 <span style={{ fontSize: 24 }}>{todayPlan.icon}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: PU }}>Today: {todayPlan.type}</div>
-                  <div style={{ fontSize: 12, color: T2 }}>Not logged yet — get it done.</div>
+                  <div style={{ fontSize: 12, color: T2 }}>A short, easy version still counts. Start small.</div>
                 </div>
                 <button onClick={() => setView("log")} style={{ padding: "8px 16px", background: `${PU}22`, border: `1px solid ${PU}44`, borderRadius: 9, color: PU, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   Log Now
