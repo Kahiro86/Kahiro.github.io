@@ -2,20 +2,23 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Cpu, X, Send } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, PU, GR } from "./designTokens.js";
 import { callClaude } from "./anthropic.js";
+import { KAIZEN_COACH_PREAMBLE } from "./kaizen.js";
 
 const SYSTEM_PROMPT = (tradingStats) => `You are ARCHITECT — elite AI operating system for Irisu (based in Nairobi, Kenya). Master ICT and hybrid athlete expertise.
+
+${KAIZEN_COACH_PREAMBLE}
 
 ICT TRADING: FVG, OB, Breaker Blocks, BPR, SIBI/BISI, Displacement, MSS/BOS/MSB. Killzones in EAT: London Open 9AM-12PM, NY Open 2-5PM, NY PM 8PM-Midnight. ICT Macros: 4:50PM, 5:50PM, 8:10PM, 9:10PM, 10:15PM EAT. Silver Bullet: 5-6PM and 9-10PM EAT. PO3 (AMD), SMT Divergence, Draw on Liquidity, Judas Swing, Dealing Ranges, OTE 62-79%.
 FUNDED ACCOUNT: FundedNext $15,000. Daily limit $750. Max DD $1,500.
 TRADING STATS: WR ${tradingStats.wr || 0}% · PF ${tradingStats.pf || 0} · Avg RR ${tradingStats.avgRR || 0}R · ${tradingStats.total || 0} trades · Net $${tradingStats.totalPnl || 0}.
 HYBRID ATHLETE: Concurrent training interference effect. Strength BEFORE cardio if same day (8+ hr gap). Zone 2: 60-70% HRMax, below VT1, nasal breathing. Block periodization. Protein 2.2g/kg. HRV monitoring. Deload every 4th week.
 SCHEDULE: Afternoon/evening shift 1PM-12:30AM EAT. Morning window after 9:30AM.
-STYLE: Sharp, direct, data-driven. Reference actual ICT concepts and training physiology. Under 250 words. No filler.`;
+STYLE: Calm, supportive, direct, data-driven. Reference real ICT concepts and training physiology, but favor the smallest sustainable step. Under 250 words. No filler, no guilt.`;
 
-export function AIPanel({ onClose, tradingStats }) {
+export function AIPanel({ onClose, tradingStats, mobile }) {
   const [msgs, setMsgs] = useState([{
     role: "assistant",
-    content: `ARCHITECT online. All systems nominal.\n\n→ Trading: ${tradingStats.wr || 0}% WR · PF ${tradingStats.pf || 0} · ${tradingStats.total || 0} trades · Net $${tradingStats.totalPnl || 0}\n→ Athletic: Phase 1 Accumulation · W6 · Zone 2 sessions on track\n→ Recovery: HRV 74ms (Normal) · Readiness 76%\n→ Habits: 4/6 complete · Journal streak 15 days\n\nWhat do you need?`,
+    content: `ARCHITECT online. All systems nominal.\n\n→ Trading: ${tradingStats.wr || 0}% WR · PF ${tradingStats.pf || 0} · ${tradingStats.total || 0} trades · Net $${tradingStats.totalPnl || 0}\n→ Athletic: Phase 1 Accumulation · W6 · Zone 2 sessions on track\n→ Recovery: HRV 74ms (Normal) · Readiness 76%\n→ Habits: 4/6 complete · Journal streak 15 days\n\n1% better than yesterday is enough. What's one small thing we can improve today?`,
   }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +26,7 @@ export function AIPanel({ onClose, tradingStats }) {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
-  const QUICK = ["Review today's trades", "Generate tomorrow plan", "Analyse my edge", "Optimal training today"];
+  const QUICK = ["Smallest step today?", "Review one trade", "Analyse my edge", "Help me regain momentum"];
 
   const send = useCallback(async (text) => {
     const msg = (text || input).trim();
@@ -46,7 +49,7 @@ export function AIPanel({ onClose, tradingStats }) {
   }, [input, loading, msgs, tradingStats]);
 
   return (
-    <div style={{ width: 340, height: "100vh", background: B1, borderLeft: `1px solid ${BD}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <div style={{ width: mobile ? "100%" : 340, height: "100%", background: B1, borderLeft: mobile ? "none" : `1px solid ${BD}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "16px 18px", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", gap: 11 }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${CY}22,${PU}22)`, border: `1px solid ${CY}33`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Cpu size={17} color={CY} />

@@ -17,7 +17,7 @@ export function DetailView({ trade, onBack, onEdit }) {
     setLdState(true);
     try {
       const reply = await callClaude({
-        system: `You are ARCHITECT — master ICT trading coach. Analyze this trade from Irisu (Nairobi, Kenya) on a FundedNext $15,000 challenge. Use expert ICT methodology knowledge. Be direct, specific, under 300 words. Reference actual ICT concepts. Praise strengths and identify exactly what was wrong.`,
+        system: `You are ARCHITECT — master ICT trading coach with a Kaizen mindset. Analyze this trade from Irisu (Nairobi, Kenya) on a FundedNext $15,000 challenge. Use expert ICT methodology. Be direct, specific, under 300 words. Reference actual ICT concepts and praise real strengths. Be compassionate about losses — they are tuition, not failure. Measure this trade against Irisu's own past process, not perfection. End with the ONE smallest adjustment to apply on the very next trade. No guilt.`,
         messages: [{
           role: "user",
           content: `Analyze this trade:\n${JSON.stringify({

@@ -103,7 +103,7 @@ export function FinanceOS() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: B1, borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+      <div style={{ background: B1, borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, overflowX: "auto" }}>
         <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
           {FIN_TABS.map(({ id, l, i: Icon }) => (
             <button key={id} onClick={() => setFinTab(id)}

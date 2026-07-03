@@ -1,6 +1,7 @@
 import { Lock } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH } from "../../shared/ui.jsx";
+import { DonutChart } from "../../shared/charts.jsx";
 
 export function OverviewTab({ fmtKES, netWorthKES, totalLiquid, totalInvested, monthlyPassive, tradingKES, efBal, savBal, opBal, personalDebt, setPersonalDebt }) {
   return (
@@ -23,34 +24,47 @@ export function OverviewTab({ fmtKES, netWorthKES, totalLiquid, totalInvested, m
       <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 20 }}>
         <Card style={{ padding: "22px" }}>
           <SH title="Asset Allocation" sub="All positions in KES equivalent" />
-          {[
-            { l: "Trading Account (Firewall)", v: tradingKES,    c: CY, note: `$15,000 USD — READ ONLY`, lock: true },
-            { l: "Investments (Kenya)",        v: totalInvested,  c: PU, note: null },
-            { l: "Emergency Fund",             v: +efBal || 0,    c: GR, note: null },
-            { l: "Savings Account",            v: +savBal || 0,   c: AM, note: null },
-            { l: "Operating Account",          v: +opBal || 0,    c: T2, note: null },
-          ].map((x) => {
+          {(() => {
+            const items = [
+              { l: "Trading Account (Firewall)", v: tradingKES,    c: CY, note: `$15,000 USD — READ ONLY`, lock: true },
+              { l: "Investments (Kenya)",        v: totalInvested,  c: PU, note: null },
+              { l: "Emergency Fund",             v: +efBal || 0,    c: GR, note: null },
+              { l: "Savings Account",            v: +savBal || 0,   c: AM, note: null },
+              { l: "Operating Account",          v: +opBal || 0,    c: T2, note: null },
+            ];
             const total = Math.max(tradingKES + totalInvested + totalLiquid, 1);
-            const pct = Math.round((x.v / total) * 100);
+            const pieData = items.filter((x) => x.v > 0).map((x) => ({ name: x.l.split(" (")[0], value: x.v, color: x.c }));
             return (
-              <div key={x.l} style={{ marginBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {x.lock && <Lock size={10} color={CY} />}
-                    <span style={{ fontSize: 12, color: T2 }}>{x.l}</span>
-                    {x.note && <span style={{ fontSize: 10, color: T3 }}>({x.note})</span>}
-                  </div>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <span style={{ fontSize: 10.5, color: T3 }}>{pct}%</span>
-                    <span style={{ fontSize: 12, color: x.c, fontFamily: "monospace", fontWeight: 700 }}>{fmtKES(x.v)}</span>
-                  </div>
+              <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+                <div style={{ width: 190, flexShrink: 0 }}>
+                  <DonutChart data={pieData.length ? pieData : [{ name: "None", value: 1, color: BD }]} height={190} centerLabel={total >= 1e6 ? `${(total / 1e6).toFixed(1)}M` : total >= 1e3 ? `${Math.round(total / 1e3)}k` : Math.round(total)} centerSub="Total KES" unit="KES " />
                 </div>
-                <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: x.lock ? `repeating-linear-gradient(45deg,${x.c}33 0,${x.c}33 4px,transparent 4px,transparent 8px)` : `linear-gradient(90deg,${x.c}77,${x.c})`, borderRadius: 3 }} />
+                <div style={{ flex: 1 }}>
+                  {items.map((x) => {
+                    const pct = Math.round((x.v / total) * 100);
+                    return (
+                      <div key={x.l} style={{ marginBottom: 14 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {x.lock && <Lock size={10} color={CY} />}
+                            <span style={{ fontSize: 12, color: T2 }}>{x.l}</span>
+                            {x.note && <span style={{ fontSize: 10, color: T3 }}>({x.note})</span>}
+                          </div>
+                          <div style={{ display: "flex", gap: 10 }}>
+                            <span style={{ fontSize: 10.5, color: T3 }}>{pct}%</span>
+                            <span style={{ fontSize: 12, color: x.c, fontFamily: "monospace", fontWeight: 700 }}>{fmtKES(x.v)}</span>
+                          </div>
+                        </div>
+                        <div style={{ height: 5, background: BD, borderRadius: 3 }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: x.lock ? `repeating-linear-gradient(45deg,${x.c}33 0,${x.c}33 4px,transparent 4px,transparent 8px)` : `linear-gradient(90deg,${x.c}77,${x.c})`, borderRadius: 3 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
-          })}
+          })()}
         </Card>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

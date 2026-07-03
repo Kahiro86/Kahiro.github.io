@@ -46,7 +46,7 @@ export function TradingReports({ trades, balance }) {
     setLdReport(true); setAiReport("");
     try {
       const reply = await callClaude({
-        system: `You are ARCHITECT — master ICT trading coach generating a performance report for Irisu (Nairobi). Use expert ICT methodology. Be direct, data-driven, specific. Format as a structured report with clear sections. Under 400 words total.`,
+        system: `You are ARCHITECT — master ICT trading coach with a Kaizen mindset, generating a performance report for Irisu (Nairobi). Use expert ICT methodology. Be direct, data-driven, specific. Format as a structured report with clear sections, under 400 words. Frame all progress against the PRIOR period — Irisu's own past self, never other traders. Celebrate showing up, consistency, and any 1% improvement. Treat weak periods as learning, not failure — no guilt. Close with exactly ONE small, achievable focus for the next period.`,
         messages: [{
           role: "user",
           content: `Generate a ${period} trading performance report:
