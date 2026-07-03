@@ -1,12 +1,2585 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ARCHITECT — Life Operating System</title>
+<title>Imperium — Systema Progressionis</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Imperium">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════
+   DESIGN TOKENS
+════════════════════════════════════════ */
+:root {
+  /* Backgrounds — near-black with teal undertone */
+  --bg:         #060B0A;
+  --bg1:        #0A1210;
+  --bg2:        #0E1715;
+  --bg3:        #12201D;
+  --card:       #142420;
+  --card2:      #1A2C27;
+
+  /* Borders — teal-tinted dark */
+  --b0:         #142420;
+  --b1:         #1C3530;
+  --b2:         #2A4B43;
+  --b3:         #3A6358;
+
+  /* Accent — deep purple replaces crimson as primary accent */
+  --cr:         #7C3AED;
+  --cr2:        #5B21B6;
+  --cr3:        #A78BFA;
+  --gold:       #14B8A6;
+  --gold2:      #2DD4BF;
+  --gold3:      #5EEAD4;
+
+  /* Semantic */
+  --green:      #22C55E;
+  --green2:     #16A34A;
+  --blue:       #3B82F6;
+  --blue2:      #2563EB;
+  --purple:     #7C3AED;
+  --orange:     #F59E0B;
+  --red:        #EF4444;
+
+  /* Text */
+  --t1:         #EAFBF7;
+  --t2:         #A9CFC8;
+  --t3:         #6FA89C;
+  --t4:         #3D5F58;
+
+  /* Glow */
+  --glow-cr:    rgba(124,58,237,0.35);
+  --glow-cr2:   rgba(124,58,237,0.12);
+  --glow-gold:  rgba(20,184,166,0.3);
+
+  /* Boot-screen accent set (teal/purple, dark) */
+  --teal:       #2DD4BF;
+  --teal2:      #14B8A6;
+  --teal3:      #5EEAD4;
+  --teal-glow:  rgba(45,212,191,0.35);
+  --teal-glow2: rgba(45,212,191,0.10);
+  --gold4:      #C4B5FD;
+  --obsidian:   #060B0A;
+
+  /* Sizing */
+  --radius:     6px;
+  --radius-sm:  4px;
+  --radius-lg:  10px;
+  --gap:        10px;
+  --gap-lg:     16px;
+}
+
+/* ════════════════════════════════════════
+   RESET & BASE
+════════════════════════════════════════ */
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; font-size:14px; }
+body {
+  background: var(--bg);
+  color: var(--t2);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; font-size: 13px; }
+canvas { display: block; }
+
+/* ════════════════════════════════════════
+   SCANLINE OVERLAY
+════════════════════════════════════════ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(124,58,237,0.006) 2px, rgba(124,58,237,0.006) 4px
+  );
+  pointer-events: none;
+  z-index: 9990;
+}
+
+/* ════════════════════════════════════════
+   BOOT / WELCOME SCREEN
+════════════════════════════════════════ */
+#boot {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 1.4s ease;
+}
+#boot.out { opacity: 0; pointer-events: none; }
+#boot-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.boot-inner {
+  position: relative; text-align: center;
+  max-width: 640px; padding: 0 32px;
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+}
+.boot-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 0.4em;
+  color: var(--teal); text-transform: uppercase;
+  opacity: 0; animation: fadeUp 0.7s ease 0.2s forwards;
+  margin-bottom: 24px;
+}
+.boot-name {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(40px, 9vw, 86px);
+  font-weight: 900; line-height: 1;
+  color: var(--t1); letter-spacing: 0.06em;
+  opacity: 0; animation: fadeUp 1s ease 1s forwards;
+  margin-bottom: 28px; min-height: 90px;
+}
+.boot-rule {
+  width: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--teal3), var(--gold3), var(--teal3), transparent);
+  margin: 0 auto 32px;
+  animation: ruleExpand 1s ease 0.6s forwards;
+}
+@keyframes ruleExpand { to { width: min(380px, 80vw); } }
+.boot-latin {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(22px, 4.2vw, 38px);
+  color: var(--t1); letter-spacing: 0.08em;
+  font-style: italic; font-weight: 600;
+  text-shadow: 0 0 24px var(--teal-glow);
+  opacity: 0; animation: fadeUp 1s ease 1s forwards;
+  margin-bottom: 18px; min-height: 50px;
+}
+.boot-translation {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(13px, 2vw, 16px);
+  color: var(--gold4); font-style: italic;
+  line-height: 1.8; letter-spacing: 0.05em;
+  opacity: 0; animation: fadeUp 0.9s ease 1.9s forwards;
+  white-space: pre-line; margin-bottom: 40px;
+}
+.boot-progress {
+  width: 180px; height: 2px;
+  background: var(--b2); border-radius: 2px;
+  overflow: hidden; margin-bottom: 32px;
+}
+.boot-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal3), var(--teal));
+  width: 0; animation: progFill 1.3s ease 2.4s forwards;
+}
+@keyframes progFill { to { width: 100%; } }
+#boot-enter {
+  padding: 12px 48px;
+  background: transparent;
+  border: 1px solid rgba(45,212,191,0.4);
+  color: var(--teal);
+  font-family: 'Cinzel', serif;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.35em; text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  opacity: 0; animation: fadeUp 0.7s ease 3.1s forwards;
+  transition: all 0.3s;
+}
+#boot-enter:hover {
+  background: var(--teal-glow2);
+  border-color: var(--teal);
+  box-shadow: 0 0 24px var(--teal-glow), inset 0 0 12px var(--teal-glow2);
+  letter-spacing: 0.45em;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ════════════════════════════════════════
+   MAIN APP SHELL
+════════════════════════════════════════ */
+#app { display: none; min-height: 100vh; position: relative; }
+
+/* ── SIDEBAR NAV ── */
+#sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: 220px;
+  background: var(--bg1);
+  border-right: 1px solid var(--b1);
+  z-index: 800;
+  display: flex; flex-direction: column;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  overflow-y: auto;
+}
+#sidebar.collapsed { transform: translateX(-220px); }
+.sb-header {
+  padding: 20px 16px 14px;
+  border-bottom: 1px solid var(--b1);
+  flex-shrink: 0;
+}
+.sb-os-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: 0.35em;
+  color: var(--cr); text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.sb-name {
+  font-family: 'Cinzel', serif;
+  font-size: 17px; font-weight: 700;
+  color: var(--t1); letter-spacing: 0.05em;
+}
+.sb-class {
+  font-size: 10px; color: var(--t4);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 3px;
+}
+.sb-xp-bar { margin: 10px 0 0; }
+.sb-xp-track { height: 3px; background: var(--b2); border-radius: 2px; overflow: hidden; }
+.sb-xp-fill { height: 100%; background: linear-gradient(90deg, var(--cr2), var(--cr3)); border-radius: 2px; transition: width 0.6s; }
+.sb-xp-label {
+  display: flex; justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--t4); margin-top: 3px;
+}
+.sb-nav { flex: 1; padding: 8px 0; }
+.sb-section {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: 0.25em;
+  color: var(--t4); text-transform: uppercase;
+  padding: 10px 16px 4px;
+}
+.sb-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; cursor: pointer;
+  color: var(--t3); font-size: 13px; font-weight: 500;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+}
+.sb-item:hover { color: var(--t1); background: rgba(255,255,255,0.03); }
+.sb-item.active { color: var(--cr); background: var(--glow-cr2); border-left-color: var(--cr); }
+.sb-item-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+.sb-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--b1);
+  flex-shrink: 0;
+}
+.sb-footer-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; color: var(--t4);
+  letter-spacing: 0.1em; line-height: 1.6;
+}
+
+/* ── TOPBAR ── */
+#topbar {
+  position: fixed; top: 0; left: 220px; right: 0;
+  height: 52px;
+  background: rgba(13,13,13,0.95);
+  border-bottom: 1px solid var(--b1);
+  z-index: 700;
+  display: flex; align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  backdrop-filter: blur(8px);
+  transition: left 0.3s;
+}
+#topbar.full { left: 0; }
+#menu-toggle {
+  background: none; border: 1px solid var(--b2);
+  color: var(--t3); border-radius: var(--radius-sm);
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: all 0.2s; flex-shrink: 0;
+}
+#menu-toggle:hover { border-color: var(--cr); color: var(--cr); }
+.topbar-title {
+  font-family: 'Cinzel', serif;
+  font-size: 13px; font-weight: 700;
+  color: var(--t1); letter-spacing: 0.08em;
+  flex: 1;
+}
+.topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.topbar-stat {
+  background: var(--card);
+  border: 1px solid var(--b1);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--t3);
+  display: flex; align-items: center; gap: 5px;
+}
+.topbar-stat span { color: var(--t1); font-weight: 500; }
+#notif-bar {
+  position: fixed; top: 62px; left: 50%;
+  transform: translateX(-50%) translateY(-40px);
+  background: rgba(17,17,17,0.97);
+  border: 1px solid var(--cr);
+  border-radius: var(--radius-sm);
+  padding: 10px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--cr3);
+  z-index: 5000; white-space: nowrap;
+  max-width: 90vw; white-space: normal; text-align: center;
+  box-shadow: 0 4px 20px var(--glow-cr);
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: none;
+}
+#notif-bar.show { transform: translateX(-50%) translateY(0); }
+
+/* ── MAIN CONTENT ── */
+#content {
+  margin-left: 220px;
+  margin-top: 52px;
+  padding: 20px;
+  min-height: calc(100vh - 52px);
+  transition: margin-left 0.3s;
+}
+#content.full { margin-left: 0; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ════════════════════════════════════════
+   DESIGN SYSTEM COMPONENTS
+════════════════════════════════════════ */
+
+/* Cards */
+.card {
+  background: var(--card);
+  border: 1px solid var(--b1);
+  border-radius: var(--radius);
+  padding: var(--gap-lg);
+}
+.card-sm { padding: 12px 14px; }
+.card-accent-cr  { border-left: 3px solid var(--cr); }
+.card-accent-gd  { border-left: 3px solid var(--gold); }
+.card-accent-gn  { border-left: 3px solid var(--green); }
+.card-accent-bl  { border-left: 3px solid var(--blue); }
+.card-accent-top { border-top: 2px solid var(--cr); }
+
+/* Section headers */
+.sec-h {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--cr); margin: 20px 0 10px;
+}
+.sec-h::after { content:''; flex:1; height:1px; background: linear-gradient(90deg,var(--b2),transparent); }
+.sec-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; color: var(--t4);
+  border: 1px solid var(--b2);
+  padding: 2px 6px; border-radius: 2px;
+}
+
+/* KPI Grid */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: var(--gap); }
+.kpi-card {
+  background: var(--card); border: 1px solid var(--b1);
+  border-radius: var(--radius); padding: 12px 14px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.kpi-card:hover { border-color: var(--b3); transform: translateY(-1px); }
+.kpi-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; }
+.kpi-cr::before { background: var(--cr); }
+.kpi-gn::before { background: var(--green); }
+.kpi-gd::before { background: var(--gold); }
+.kpi-bl::before { background: var(--blue); }
+.kpi-pu::before { background: var(--purple); }
+.kpi-val {
+  font-family: 'Cinzel', serif;
+  font-size: 22px; font-weight: 700;
+  line-height: 1; margin-bottom: 3px;
+}
+.kpi-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--t4);
+}
+.kpi-sub { font-size: 11px; color: var(--t3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+/* Two-col layout */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.three-col { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--gap); }
+@media (max-width: 680px) { .two-col, .three-col { grid-template-columns: 1fr; } }
+
+/* Divider row */
+.mini-list-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; border-bottom: 1px solid var(--b1);
+  font-size: 12px;
+}
+.mini-list-row:last-child { border-bottom: none; }
+.mini-list-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--t4); }
+.mini-list-val { font-size: 13px; color: var(--t1); font-weight: 500; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  background: transparent; border: 1px solid var(--cr);
+  color: var(--cr); border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  transition: all 0.2s;
+}
+.btn:hover { background: var(--glow-cr2); box-shadow: 0 0 12px var(--glow-cr); }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-ghost { border-color: var(--b2); color: var(--t3); }
+.btn-ghost:hover { border-color: var(--b3); color: var(--t2); box-shadow: none; }
+.btn-green { border-color: var(--green); color: var(--green); }
+.btn-green:hover { background: rgba(34,197,94,0.08); box-shadow: none; }
+.btn-gold { border-color: var(--gold); color: var(--gold); }
+.btn-gold:hover { background: var(--glow-gold); box-shadow: none; }
+.btn-red { border-color: var(--red); color: var(--red); }
+.btn-red:hover { background: rgba(239,68,68,0.08); box-shadow: none; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+/* Form elements */
+.field { margin-bottom: 12px; }
+.field-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; text-transform: uppercase;
+  letter-spacing: 0.15em; color: var(--t4);
+  margin-bottom: 5px;
+}
+.input {
+  width: 100%;
+  background: var(--bg2); border: 1px solid var(--b2);
+  color: var(--t1); border-radius: var(--radius-sm);
+  padding: 9px 12px; font-size: 13px;
+  outline: none; transition: border-color 0.2s;
+}
+.input:focus { border-color: var(--cr); }
+.input::placeholder { color: var(--t4); }
+.input-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.input-row .input { flex: 1; min-width: 100px; }
+textarea.input { resize: vertical; min-height: 80px; line-height: 1.6; }
+select.input option { background: var(--bg2); }
+
+/* Tags/pills */
+.pill {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--b2); color: var(--t4);
+  cursor: pointer; transition: all 0.15s;
+}
+.pill.active { border-color: var(--cr); color: var(--cr); background: var(--glow-cr2); }
+.pill:hover:not(.active) { border-color: var(--b3); color: var(--t3); }
+.pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+
+/* Progress bars */
+.prog-track { height: 4px; background: var(--b2); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+.prog-cr { background: linear-gradient(90deg, var(--cr2), var(--cr3)); }
+.prog-gn { background: linear(var(--green2), var(--green)); background: var(--green); }
+.prog-gd { background: var(--gold); }
+.prog-bl { background: var(--blue); }
+
+/* Badges */
+.badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: 0.1em;
+  padding: 2px 7px; border-radius: 2px;
+  border: 1px solid; text-transform: uppercase;
+}
+.badge-cr { color: var(--cr); border-color: rgba(220,20,60,0.4); background: var(--glow-cr2); }
+.badge-gd { color: var(--gold3); border-color: rgba(200,148,26,0.4); background: var(--glow-gold); }
+.badge-gn { color: var(--green); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.07); }
+.badge-bl { color: var(--blue); border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.07); }
+
+/* ════════════════════════════════════════
+   MODALS
+════════════════════════════════════════ */
+.modal-bg {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 2000; display: flex;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+  padding: 20px;
+}
+.modal-bg.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--bg1);
+  border: 1px solid var(--b2);
+  border-radius: var(--radius-lg);
+  padding: 28px 28px 24px;
+  max-width: 520px; width: 100%;
+  max-height: 90vh; overflow-y: auto;
+  position: relative;
+  transform: translateY(16px);
+  transition: transform 0.25s;
+}
+.modal-bg.open .modal { transform: translateY(0); }
+.modal-title {
+  font-family: 'Cinzel', serif;
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.modal-close {
+  position: absolute; top: 14px; right: 16px;
+  background: none; border: none;
+  color: var(--t4); font-size: 20px; line-height: 1;
+  transition: color 0.15s;
+}
+.modal-close:hover { color: var(--t2); }
+
+/* Level-up modal special */
+.levelup-inner { text-align: center; padding: 8px 0; }
+.lu-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--t4); letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 10px; }
+.lu-num { font-family: 'Cinzel', serif; font-size: 80px; font-weight: 900; color: var(--gold3); line-height: 1; text-shadow: 0 0 30px var(--glow-gold); margin-bottom: 8px; }
+.lu-rank { font-family: 'Cinzel', serif; font-size: 20px; color: var(--t1); letter-spacing: 0.15em; margin-bottom: 20px; }
+.lu-reward { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--green); padding: 3px 0; }
+
+/* ════════════════════════════════════════
+   QUEST SYSTEM
+════════════════════════════════════════ */
+.quest-grid { display: flex; flex-direction: column; gap: 6px; }
+.quest-card {
+  background: var(--card); border: 1px solid var(--b1);
+  border-radius: var(--radius); padding: 11px 14px;
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer; transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.quest-card:hover { border-color: var(--b2); transform: translateX(2px); }
+.quest-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; }
+.qc-str::before { background: var(--cr); }
+.qc-card::before { background: var(--blue); }
+.qc-daily::before { background: var(--blue); }
+.qc-weekly::before { background: var(--purple); }
+.qc-monthly::before { background: var(--orange); }
+.qc-onetime::before { background: var(--gold); }
+.qc-boss::before { background: var(--cr); box-shadow: 0 0 8px var(--glow-cr); }
+.qc-nutrition::before { background: #22d3ee; }
+.qc-mindset::before { background: var(--purple); }
+.qc-trading::before { background: var(--green); }
+.quest-card.done { opacity: 0.38; }
+.quest-card.done .q-name { text-decoration: line-through; }
+.q-check {
+  width: 20px; height: 20px;
+  border: 1px solid var(--b3);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; flex-shrink: 0;
+  background: var(--bg2);
+}
+.quest-card.done .q-check { border-color: var(--green); color: var(--green); background: rgba(34,197,94,0.1); }
+.q-body { flex: 1; min-width: 0; }
+.q-name { font-size: 13px; font-weight: 600; color: var(--t1); margin-bottom: 2px; }
+.q-detail { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--t4); display: flex; align-items: center; gap: 6px; }
+.q-rewards { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; gap: 2px; }
+.q-xp { font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700; color: var(--gold3); }
+.q-coins { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--t4); }
+.q-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.q-btn {
+  background: none; border: 1px solid var(--b2);
+  color: var(--t4); border-radius: 3px;
+  font-size: 11px; padding: 3px 7px;
+  transition: all 0.15s;
+}
+.q-btn:hover { border-color: var(--cr); color: var(--cr); }
+.q-del:hover { border-color: var(--red); color: var(--red); }
+.quest-summary-row {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(110px,1fr));
+  gap: var(--gap); margin-bottom: 14px;
+}
+.qs-card {
+  background: var(--card); border: 1px solid var(--b1);
+  border-radius: var(--radius); padding: 10px 12px;
+}
+.qs-val { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.qs-label { font-family: 'JetBrains Mono', monospace; font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--t4); }
+
+/* ════════════════════════════════════════
+   CALENDAR
+════════════════════════════════════════ */
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.cal-month-label { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 700; color: var(--t1); min-width: 140px; text-align: center; }
+.cal-dow-row {
+  display: grid; grid-template-columns: repeat(7,1fr); gap: 3px;
+  margin-bottom: 4px;
+}
+.cal-dow { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--t4); text-align: center; padding: 4px; letter-spacing: 0.05em; }
+.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+.cal-cell {
+  aspect-ratio: 1 / 0.85;
+  background: var(--bg2); border: 1px solid var(--b1);
+  border-radius: var(--radius-sm); padding: 4px 5px;
+  cursor: pointer; transition: all 0.15s; position: relative;
+  overflow: hidden; min-height: 48px;
+}
+.cal-cell:hover { border-color: var(--b3); }
+.cal-cell.today { border-color: var(--cr); box-shadow: 0 0 8px var(--glow-cr); }
+.cal-cell.profit { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3); }
+.cal-cell.loss   { background: rgba(220,20,60,0.1); border-color: rgba(220,20,60,0.25); }
+.cal-cell.trained { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); }
+.cal-cell.other  { opacity: 0.2; pointer-events: none; }
+.cc-num { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--t4); }
+.cc-pnl { font-family: 'Cinzel', serif; font-size: 10px; font-weight: 700; line-height: 1.2; }
+.cc-pnl.pos { color: var(--green); }
+.cc-pnl.neg { color: var(--cr3); }
+.cc-meta { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--t4); }
+.cc-dot { position: absolute; bottom: 3px; right: 4px; font-size: 10px; }
+.cal-legend { display: flex; gap: 14px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--t4); margin-top: 8px; }
+.cal-legend span { display: flex; align-items: center; gap: 5px; }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* Day detail */
+.day-detail {
+  background: var(--card); border: 1px solid var(--b2);
+  border-radius: var(--radius); padding: 16px;
+  margin-top: 14px; display: none;
+}
+.day-detail.open { display: block; }
+.dd-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.dd-date { font-family: 'Cinzel', serif; font-size: 14px; color: var(--t1); }
+
+/* ════════════════════════════════════════
+   TRADING JOURNAL
+════════════════════════════════════════ */
+.trade-card {
+  background: var(--card); border: 1px solid var(--b1);
+  border-radius: var(--radius); padding: 13px 15px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s;
+  margin-bottom: 7px;
+}
+.trade-card:hover { border-color: var(--b2); }
+.trade-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; }
+.tc-win::before   { background: var(--green); }
+.tc-loss::before  { background: var(--cr); }
+.tc-be::before    { background: var(--blue); }
+.tc-open::before  { background: var(--gold); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.tc-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.tc-pair { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 700; color: var(--t1); }
+.tc-dir {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  padding: 2px 7px; border-radius: 2px; font-weight: 700; letter-spacing: 0.08em;
+}
+.tc-long  { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+.tc-short { background: rgba(220,20,60,0.15); color: var(--cr3); border: 1px solid rgba(220,20,60,0.3); }
+.tc-date  { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--t4); margin-left: auto; }
+.tc-xp-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--gold3); background: var(--glow-gold); border: 1px solid rgba(200,148,26,0.3); padding: 1px 6px; border-radius: 2px; }
+.tc-del { background: none; border: none; color: var(--t4); font-size: 16px; line-height: 1; transition: color 0.15s; }
+.tc-del:hover { color: var(--red); }
+.tc-metrics { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 7px; }
+.tc-metric { display: flex; flex-direction: column; gap: 1px; }
+.tcm-label { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--t4); text-transform: uppercase; letter-spacing: 0.08em; }
+.tcm-val { font-size: 13px; font-weight: 600; }
+.tcm-pos { color: var(--green); }
+.tcm-neg { color: var(--cr3); }
+.tcm-neu { color: var(--blue); }
+.tc-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 5px; }
+.tc-tag { font-family: 'JetBrains Mono', monospace; font-size: 8px; padding: 2px 6px; border-radius: 2px; letter-spacing: 0.06em; }
+.t-grade-A { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+.t-grade-B { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.25); }
+.t-grade-C { background: rgba(200,148,26,0.12); color: var(--gold3); border: 1px solid rgba(200,148,26,0.25); }
+.t-grade-D { background: rgba(220,20,60,0.12); color: var(--cr3); border: 1px solid rgba(220,20,60,0.3); }
+.t-emo   { background: rgba(139,92,246,0.12); color: var(--purple); border: 1px solid rgba(139,92,246,0.25); }
+.t-strat { background: rgba(255,255,255,0.04); color: var(--t3); border: 1px solid var(--b2); }
+.tc-note { font-size: 12px; color: var(--t3); font-style: italic; border-top: 1px solid var(--b1); padding-top: 6px; margin-top: 4px; line-height: 1.5; }
+.tc-review-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 5px; margin-top: 6px; }
+.tc-review-item { background: var(--bg2); border-radius: 3px; padding: 6px 8px; }
+.tcri-label { font-family: 'JetBrains Mono', monospace; font-size: 8px; text-transform: uppercase; margin-bottom: 2px; }
+.tcri-text { font-size: 12px; color: var(--t2); }
+
+/* Trader rank bar */
+.trader-rank-card { position: relative; overflow: hidden; }
+.trc-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.trc-rank-name { font-family: 'Cinzel', serif; font-size: 16px; font-weight: 700; }
+.trc-xp { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--t4); margin-top: 3px; }
+.trc-badge { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 3px 10px; border: 1px solid; border-radius: 2px; letter-spacing: 0.12em; }
+
+/* Trading sub-tabs */
+.sub-tab-row { display: flex; gap: 2px; margin-bottom: 14px; border-bottom: 1px solid var(--b1); padding-bottom: 0; }
+.sub-tab {
+  padding: 8px 14px; background: none; border: none;
+  color: var(--t4); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+.sub-tab:hover { color: var(--t2); }
+.sub-tab.active { color: var(--cr); border-bottom-color: var(--cr); }
+
+/* Trade form grid */
+.trade-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 8px; }
+.trade-form-grid .full { grid-column: 1 / -1; }
+.rr-preview { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--t4); padding: 6px 0; }
+
+/* ════════════════════════════════════════
+   STATS & ACHIEVEMENTS
+════════════════════════════════════════ */
+.stat-item {
+  background: var(--card); border: 1px solid var(--b1);
+  border-radius: var(--radius); padding: 12px 14px;
+  text-align: center;
+}
+.stat-icon { font-size: 18px; margin-bottom: 4px; }
+.stat-name { font-family: 'JetBrains Mono', monospace; font-size: 8px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--t4); margin-bottom: 3px; }
+.stat-val { font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700; color: var(--cr3); }
+.stat-bar { height: 2px; background: var(--b2); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.stat-bar-fill { height: 100%; background: linear-gradient(90deg, var(--cr2), var(--cr3)); border-radius: 2px; transition: width 0.8s; }
+
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 8px; }
+.ach-card {
+  background: var(--card); border: 1px solid var(--b1);
+  border-radius: var(--radius); padding: 14px 10px;
+  text-align: center; transition: all 0.2s;
+}
+.ach-card.unlocked { border-color: rgba(200,148,26,0.4); background: rgba(200,148,26,0.04); }
+.ach-card:not(.unlocked) { opacity: 0.32; filter: grayscale(0.6); }
+.ach-icon { font-size: 26px; margin-bottom: 6px; }
+.ach-name { font-family: 'Cinzel', serif; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--gold3); text-transform: uppercase; margin-bottom: 3px; }
+.ach-card:not(.unlocked) .ach-name { color: var(--t4); }
+.ach-desc { font-size: 11px; color: var(--t4); line-height: 1.4; }
+
+/* ════════════════════════════════════════
+   BODY METRICS
+════════════════════════════════════════ */
+.metric-card {
+  background: var(--card); border: 1px solid var(--b1);
+  border-radius: var(--radius); padding: 14px;
+}
+.mc-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--t4); margin-bottom: 6px; }
+.mc-val-row { display: flex; align-items: baseline; gap: 5px; margin-bottom: 6px; }
+.mc-val { font-family: 'Cinzel', serif; font-size: 26px; font-weight: 700; color: var(--t1); }
+.mc-unit { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--t4); }
+.mc-trend { font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+.mc-input-row { display: flex; gap: 5px; }
+.mc-input { flex:1; background:var(--bg2); border:1px solid var(--b2); color:var(--t1); font-family:'JetBrains Mono',monospace; font-size:12px; padding:6px 9px; border-radius:var(--radius-sm); outline:none; }
+.mc-input:focus { border-color:var(--cr); }
+.mc-set-btn { padding:6px 10px; background:transparent; border:1px solid var(--b2); color:var(--t3); border-radius:var(--radius-sm); font-size:11px; transition:all 0.15s; }
+.mc-set-btn:hover { border-color:var(--cr); color:var(--cr); }
+.mc-history { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--t4); margin-top:5px; }
+
+/* ════════════════════════════════════════
+   NUTRITION
+════════════════════════════════════════ */
+.macro-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 14px; }
+@media (max-width: 500px) { .macro-grid { grid-template-columns: repeat(2,1fr); } }
+.macro-card {
+  background: var(--card); border: 1px solid var(--b1);
+  border-radius: var(--radius); padding: 12px 14px;
+  position: relative; overflow: hidden;
+}
+.macro-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; }
+.mac-kcal::after { background: var(--blue); }
+.mac-protein::after { background: var(--green); }
+.mac-carbs::after { background: var(--gold); }
+.mac-fats::after { background: var(--cr); }
+.mac-val { font-family:'Cinzel',serif; font-size:22px; font-weight:700; color:var(--t1); margin-bottom:2px; }
+.mac-target { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--t4); margin-bottom:5px; }
+.mac-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; }
+.mac-kcal .mac-label { color:var(--blue); }
+.mac-protein .mac-label { color:var(--green); }
+.mac-carbs .mac-label { color:var(--gold3); }
+.mac-fats .mac-label { color:var(--cr3); }
+.food-log-item { display:flex; align-items:center; gap:10px; background:var(--bg2); border:1px solid var(--b1); border-radius:var(--radius-sm); padding:7px 10px; margin-bottom:5px; }
+.fli-name { flex:1; font-size:13px; font-weight:500; color:var(--t1); }
+.fli-macros { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--t4); }
+.fli-del { background:none; border:none; color:var(--t4); font-size:15px; cursor:pointer; }
+.fli-del:hover { color:var(--red); }
+
+/* ════════════════════════════════════════
+   WORKOUT LOG
+════════════════════════════════════════ */
+.log-row { display:flex; align-items:center; gap:10px; background:var(--bg2); border:1px solid var(--b1); border-radius:var(--radius-sm); padding:8px 12px; margin-bottom:5px; }
+.lr-time { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--t4); flex-shrink:0; width:42px; }
+.lr-ex { flex:1; font-size:13px; font-weight:500; }
+.lr-sets { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--blue); }
+.lr-del { background:none; border:none; color:var(--t4); font-size:15px; cursor:pointer; }
+.lr-del:hover { color:var(--red); }
+.session-hist-item { background:var(--card); border:1px solid var(--b1); border-radius:var(--radius); padding:12px 14px; margin-bottom:7px; }
+.shi-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.shi-title { font-family:'Cinzel',serif; font-size:13px; color:var(--t1); }
+.shi-meta { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--t4); }
+.shi-exs { font-size:12px; color:var(--t3); }
+.shi-note { font-size:12px; color:var(--t3); font-style:italic; margin-top:4px; }
+
+/* ════════════════════════════════════════
+   REPORTS
+════════════════════════════════════════ */
+.report-section { background:var(--card); border:1px solid var(--b1); border-radius:var(--radius); padding:16px; margin-bottom:10px; }
+.report-title { font-family:'Cinzel',serif; font-size:13px; font-weight:700; letter-spacing:0.15em; color:var(--cr); text-transform:uppercase; margin-bottom:12px; }
+.report-kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:7px; margin-bottom:12px; }
+.rk { background:var(--bg2); border:1px solid var(--b1); border-radius:var(--radius-sm); padding:9px 11px; }
+.rk-val { font-family:'Cinzel',serif; font-size:17px; font-weight:700; color:var(--t1); margin-bottom:2px; }
+.rk-label { font-family:'JetBrains Mono',monospace; font-size:8px; text-transform:uppercase; letter-spacing:0.08em; color:var(--t4); }
+.insight { background:var(--bg2); border:1px solid var(--b1); border-left:2px solid var(--cr); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:6px; font-size:12px; color:var(--t2); line-height:1.6; }
+.insight.good { border-left-color:var(--green); }
+.insight.warn { border-left-color:var(--orange); }
+
+/* ════════════════════════════════════════
+   JOURNAL
+════════════════════════════════════════ */
+.journal-card { background:var(--card); border:1px solid var(--b1); border-radius:var(--radius); padding:14px; margin-bottom:8px; transition:border-color 0.2s; }
+.journal-card:hover { border-color:var(--b2); }
+.jc-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+.jc-date { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--cr); letter-spacing:0.1em; }
+.jc-type-badge { font-family:'JetBrains Mono',monospace; font-size:8px; padding:2px 7px; border-radius:2px; border:1px solid; }
+.jc-mood { font-size:15px; }
+.jc-title { font-family:'Cinzel',serif; font-size:14px; font-weight:700; color:var(--t1); margin-bottom:4px; }
+.jc-body { font-size:13px; color:var(--t3); line-height:1.6; }
+.jc-extras { margin-top:8px; display:flex; flex-direction:column; gap:3px; }
+.jc-gratitude { font-size:11px; color:var(--gold3); }
+.jc-lesson { font-size:11px; color:var(--t4); }
+.jc-tags { display:flex; gap:4px; flex-wrap:wrap; margin-top:7px; }
+.jc-tag { font-family:'JetBrains Mono',monospace; font-size:8px; padding:2px 6px; border-radius:2px; background:var(--bg2); border:1px solid var(--b1); color:var(--t4); }
+.jc-actions { display:flex; gap:5px; justify-content:flex-end; margin-top:7px; }
+.mood-row { display:flex; gap:6px; flex-wrap:wrap; }
+.mood-btn { background:var(--bg2); border:1px solid var(--b2); border-radius:var(--radius-sm); padding:7px 11px; font-size:17px; transition:all 0.15s; }
+.mood-btn:hover,.mood-btn.sel { border-color:var(--cr); background:var(--glow-cr2); }
+
+/* ════════════════════════════════════════
+   MILESTONES / FITNESS CAL
+════════════════════════════════════════ */
+.milestone-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+.ms-card { background:var(--card); border:1px solid var(--b1); border-radius:var(--radius); padding:14px 10px; text-align:center; }
+.ms-card.achieved { border-color:rgba(200,148,26,0.4); background:rgba(200,148,26,0.04); }
+.ms-card.next { border-color:var(--cr); background:var(--glow-cr2); }
+.ms-icon { font-size:24px; margin-bottom:5px; }
+.ms-name { font-family:'Cinzel',serif; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--gold3); margin-bottom:2px; }
+.ms-card:not(.achieved):not(.next) .ms-name { color:var(--t4); }
+.ms-days { font-size:11px; color:var(--t4); margin-bottom:5px; }
+.ms-status { font-family:'JetBrains Mono',monospace; font-size:9px; }
+
+/* ════════════════════════════════════════
+   RANK ROAD
+════════════════════════════════════════ */
+.rank-road { display:flex; background:var(--card); border:1px solid var(--b1); border-radius:var(--radius); overflow:hidden; }
+.rr-step { flex:1; padding:14px 6px; text-align:center; border-right:1px solid var(--b1); transition:background 0.2s; }
+.rr-step:last-child { border-right:none; }
+.rr-step.current { background:var(--glow-cr2); }
+.rr-step.achieved { background:rgba(34,197,94,0.05); }
+.rr-letter { font-family:'Cinzel',serif; font-size:20px; font-weight:900; margin-bottom:3px; }
+.rr-step.achieved .rr-letter { color:var(--green); }
+.rr-step.current .rr-letter { color:var(--cr); text-shadow:0 0 10px var(--glow-cr); }
+.rr-step:not(.achieved):not(.current) .rr-letter { color:var(--t4); }
+.rr-lv { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--t4); }
+.rr-check { font-size:8px; color:var(--green); margin-bottom:1px; }
+
+/* ════════════════════════════════════════
+   SVG CHARTS (inline)
+════════════════════════════════════════ */
+.chart-wrap { background:var(--bg2); border:1px solid var(--b1); border-radius:var(--radius); padding:10px; }
+.chart-tabs { display:flex; gap:3px; flex-wrap:wrap; margin-bottom:10px; }
+.chart-tab { padding:5px 12px; background:none; border:1px solid var(--b2); color:var(--t4); border-radius:var(--radius-sm); font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; transition:all 0.15s; }
+.chart-tab.active { border-color:var(--cr); color:var(--cr); background:var(--glow-cr2); }
+.chart-tab:hover:not(.active) { color:var(--t2); }
+
+/* ════════════════════════════════════════
+   SETTINGS
+════════════════════════════════════════ */
+.settings-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
+.settings-card { background:var(--card); border:1px solid var(--b1); border-radius:var(--radius); padding:16px; }
+.settings-card-title { font-family:'Cinzel',serif; font-size:11px; font-weight:700; letter-spacing:0.2em; color:var(--cr); text-transform:uppercase; margin-bottom:12px; }
+
+/* ════════════════════════════════════════
+   PSYCHOLOGY LOG
+════════════════════════════════════════ */
+.psych-card { background:var(--card); border:1px solid var(--b1); border-radius:var(--radius); padding:13px 14px; margin-bottom:7px; }
+.pc-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.pc-date { font-family:'Cinzel',serif; font-size:13px; color:var(--t1); }
+.pc-scores { display:flex; gap:10px; flex-wrap:wrap; }
+.pc-score { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--t4); }
+
+/* ════════════════════════════════════════
+   QUEST MANAGER TABLE
+════════════════════════════════════════ */
+.qm-row { display:flex; align-items:center; gap:10px; background:var(--bg2); border:1px solid var(--b1); border-radius:var(--radius-sm); padding:8px 12px; margin-bottom:5px; }
+.qm-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.qm-name { flex:1; font-size:13px; font-weight:500; color:var(--t1); }
+.qm-meta { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--t4); }
+
+/* ════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════ */
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(-220px); }
+  #sidebar.mobile-open { transform: translateX(0); }
+  #topbar { left: 0 !important; }
+  #content { margin-left: 0 !important; }
+  .macro-grid { grid-template-columns: repeat(2,1fr); }
+  .trade-form-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 480px) {
+  #content { padding: 12px; }
+  .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  .trade-form-grid { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 <body>
-<div id="root"></div>
-<script type="module" src="/src/main.jsx"></script>
+
+<!-- ════ BOOT SCREEN ════ -->
+<div id="boot">
+  <canvas id="boot-canvas"></canvas>
+  <div class="boot-inner">
+    <div class="boot-eyebrow">Systema Progressionis</div>
+    <div class="boot-name" id="boot-name" style="display:none;"></div>
+    <div class="boot-rule"></div>
+    <div class="boot-latin" id="boot-latin"></div>
+    <div class="boot-translation" id="boot-trans"></div>
+    <div class="boot-progress"><div class="boot-progress-fill"></div></div>
+    <button id="boot-enter" onclick="enterOS()">Ingredere — Intra</button>
+  </div>
+</div>
+
+<!-- ════ MODALS ════ -->
+
+<!-- Level Up -->
+<div class="modal-bg" id="modal-levelup">
+  <div class="modal" style="max-width:380px;">
+    <div class="levelup-inner">
+      <div class="lu-label">— System Alert —</div>
+      <div class="lu-num" id="lu-num">2</div>
+      <div class="lu-rank" id="lu-rank">E-RANK</div>
+      <div id="lu-rewards" style="margin-bottom:20px;"></div>
+      <button class="btn btn-gold" onclick="closeModal('modal-levelup')">[ CONFIRM ]</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile -->
+<div class="modal-bg" id="modal-profile">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-profile')">×</button>
+    <div class="modal-title" style="color:var(--blue);">Edit Profile</div>
+    <div class="field"><label class="field-label">Name</label><input class="input" id="p-name" placeholder="Your name" maxlength="20"></div>
+    <div class="field"><label class="field-label">Title / Class</label><input class="input" id="p-class" placeholder="e.g. Trader · Athlete" maxlength="40"></div>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="saveProfile()">Save</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-profile')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quest Editor -->
+<div class="modal-bg" id="modal-quest-edit">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-quest-edit')">×</button>
+    <div class="modal-title" id="qe-title-label" style="color:var(--blue);">Create Quest</div>
+    <input type="hidden" id="qe-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="full field" style="grid-column:1/-1;"><label class="field-label">Quest Name</label><input class="input" id="qe-name" placeholder="Quest name..." maxlength="50"></div>
+      <div class="full field" style="grid-column:1/-1;"><label class="field-label">Description</label><input class="input" id="qe-detail" placeholder="What needs to be done?" maxlength="80"></div>
+      <div class="field"><label class="field-label">Category</label>
+        <select class="input" id="qe-category">
+          <option value="daily">⏱ Daily</option><option value="weekly">📅 Weekly</option>
+          <option value="monthly">🗓 Monthly</option><option value="onetime">⭐ One-Time</option>
+        </select></div>
+      <div class="field"><label class="field-label">Type</label>
+        <select class="input" id="qe-type">
+          <option value="strength">Strength</option><option value="cardio">Cardio</option>
+          <option value="daily">General</option><option value="boss">Boss</option>
+          <option value="nutrition">Nutrition</option><option value="mindset">Mindset</option>
+          <option value="trading">Trading</option><option value="finance">Finance</option>
+          <option value="custom">Custom</option>
+        </select></div>
+      <div class="field"><label class="field-label">Difficulty</label>
+        <select class="input" id="qe-difficulty">
+          <option value="easy">🟢 Easy</option><option value="medium">🟡 Medium</option>
+          <option value="hard">🔴 Hard</option><option value="boss">💀 Boss</option>
+        </select></div>
+      <div class="field"><label class="field-label">Stat</label>
+        <select class="input" id="qe-stat">
+          <option value="strength">⚔️ Strength</option><option value="endurance">🏃 Endurance</option>
+          <option value="vitality">❤️ Vitality</option><option value="agility">⚡ Agility</option>
+          <option value="sense">🧠 Intellect</option><option value="willpower">🔥 Willpower</option>
+        </select></div>
+      <div class="field"><label class="field-label">XP Reward</label><input class="input" type="number" id="qe-xp" placeholder="100" min="1" max="9999"></div>
+      <div class="field"><label class="field-label">Gold Reward</label><input class="input" type="number" id="qe-coins" placeholder="20" min="0" max="9999"></div>
+    </div>
+    <div class="field" style="margin-top:6px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="qe-repeatable" checked style="accent-color:var(--cr);width:14px;height:14px;">
+        <span style="color:var(--t2);">Repeatable (auto-resets by category)</span>
+      </label>
+    </div>
+    <div id="qe-preview" style="margin-top:8px;background:var(--bg2);border:1px solid var(--b1);border-radius:var(--radius-sm);padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t4);"></div>
+    <div class="btn-row"><button class="btn btn-green" onclick="saveQuestEditor()">Save Quest</button><button class="btn btn-ghost" onclick="closeModal('modal-quest-edit')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Quest Manager -->
+<div class="modal-bg" id="modal-quest-mgr">
+  <div class="modal" style="max-width:580px;">
+    <button class="modal-close" onclick="closeModal('modal-quest-mgr')">×</button>
+    <div class="modal-title" style="color:var(--blue);">Quest Manager</div>
+    <div class="pill-row" id="qmgr-pills">
+      <span class="pill active" onclick="qmgrFilter('all',this)">All</span>
+      <span class="pill" onclick="qmgrFilter('daily',this)">Daily</span>
+      <span class="pill" onclick="qmgrFilter('weekly',this)">Weekly</span>
+      <span class="pill" onclick="qmgrFilter('monthly',this)">Monthly</span>
+      <span class="pill" onclick="qmgrFilter('onetime',this)">One-Time</span>
+    </div>
+    <div id="qmgr-list" style="max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:5px;"></div>
+    <div class="btn-row"><button class="btn btn-green" onclick="closeModal('modal-quest-mgr');openQuestEditor()">+ New Quest</button></div>
+  </div>
+</div>
+
+<!-- Edit Macros -->
+<div class="modal-bg" id="modal-macros">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('modal-macros')">×</button>
+    <div class="modal-title" style="color:var(--blue);">Macro Targets</div>
+    <div class="field"><label class="field-label">Calories</label><input class="input" type="number" id="em-kcal" placeholder="2800"></div>
+    <div class="field"><label class="field-label">Protein (g)</label><input class="input" type="number" id="em-protein" placeholder="170"></div>
+    <div class="field"><label class="field-label">Carbs (g)</label><input class="input" type="number" id="em-carbs" placeholder="320"></div>
+    <div class="field"><label class="field-label">Fats (g)</label><input class="input" type="number" id="em-fats" placeholder="80"></div>
+    <div class="btn-row"><button class="btn btn-green" onclick="saveMacroTargets()">Save</button><button class="btn btn-ghost" onclick="closeModal('modal-macros')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Workout Detail -->
+<div class="modal-bg" id="modal-workout">
+  <div class="modal" style="max-width:460px;">
+    <button class="modal-close" onclick="closeModal('modal-workout')">×</button>
+    <div class="modal-title" style="color:var(--blue);">Log Workout Details</div>
+    <div class="field"><label class="field-label">Date</label><input class="input" type="date" id="wd-date"></div>
+    <div class="field"><label class="field-label">Workout Type</label>
+      <select class="input" id="wd-type">
+        <option value="Push">Push Day</option><option value="Pull">Pull Day</option>
+        <option value="Legs">Legs + Core</option><option value="Cardio">Cardio</option>
+        <option value="Full Body">Full Body</option><option value="Rest">Active Recovery</option><option value="Other">Other</option>
+      </select></div>
+    <div class="field"><label class="field-label">Duration (min)</label><input class="input" type="number" id="wd-duration" placeholder="60" min="1"></div>
+    <div class="field"><label class="field-label">Calories Burned</label><input class="input" type="number" id="wd-calories" placeholder="350" min="0"></div>
+    <div class="field"><label class="field-label">Body Weight (kg)</label><input class="input" type="number" id="wd-weight" placeholder="75.5" step="0.1"></div>
+    <div class="field"><label class="field-label">Notes / PRs</label><textarea class="input" id="wd-notes" placeholder="Personal records, how you felt..."></textarea></div>
+    <div class="btn-row"><button class="btn btn-green" onclick="saveWorkoutDetail()">Save</button><button class="btn btn-ghost" onclick="closeModal('modal-workout')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Journal Editor -->
+<div class="modal-bg" id="modal-journal">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modal-journal')">×</button>
+    <div class="modal-title" id="je-modal-label" style="color:var(--gold3);">New Entry</div>
+    <input type="hidden" id="je-id">
+    <div class="field"><label class="field-label">Title (optional)</label><input class="input" id="je-title" placeholder="Entry title..."></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="field"><label class="field-label">Type</label>
+        <select class="input" id="je-type">
+          <option value="daily">Daily Reflection</option><option value="trading">Trading</option>
+          <option value="fitness">Fitness</option><option value="reflection">Deep Reflection</option>
+          <option value="gratitude">Gratitude</option><option value="goals">Goals & Vision</option>
+          <option value="lessons">Lessons Learned</option><option value="mistakes">Mistakes & Growth</option>
+        </select></div>
+      <div class="field"><label class="field-label">Date</label><input class="input" type="date" id="je-date"></div>
+    </div>
+    <div class="field"><label class="field-label">Mood</label>
+      <div class="mood-row" id="je-moods">
+        <button class="mood-btn" data-mood="1" onclick="setMood(1,this)">😔</button>
+        <button class="mood-btn" data-mood="2" onclick="setMood(2,this)">😕</button>
+        <button class="mood-btn" data-mood="3" onclick="setMood(3,this)">😐</button>
+        <button class="mood-btn" data-mood="4" onclick="setMood(4,this)">🙂</button>
+        <button class="mood-btn" data-mood="5" onclick="setMood(5,this)">😊</button>
+        <button class="mood-btn" data-mood="6" onclick="setMood(6,this)">😄</button>
+        <button class="mood-btn" data-mood="7" onclick="setMood(7,this)">🔥</button>
+      </div>
+    </div>
+    <div class="field"><label class="field-label">Entry</label><textarea class="input" id="je-body" placeholder="Write your thoughts..." style="min-height:140px;"></textarea></div>
+    <div class="field"><label class="field-label">Gratitude</label><input class="input" id="je-gratitude" placeholder="3 things you're grateful for..."></div>
+    <div class="field"><label class="field-label">Lesson Learned</label><input class="input" id="je-lesson" placeholder="One actionable insight..."></div>
+    <div class="field"><label class="field-label">Tags (comma-separated)</label><input class="input" id="je-tags" placeholder="discipline, mindset, trading..."></div>
+    <div class="btn-row"><button class="btn btn-gold" onclick="saveJournal()">Save Entry</button><button class="btn btn-ghost" onclick="closeModal('modal-journal')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Admin -->
+<div class="modal-bg" id="modal-admin">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('modal-admin')">×</button>
+    <div class="modal-title" style="color:var(--red);">⚠ Admin Override</div>
+    <div class="field"><label class="field-label">Set Level (1-100)</label><input class="input" type="number" id="adm-level" placeholder="5" min="1" max="100"></div>
+    <div class="field"><label class="field-label">Add XP</label><input class="input" type="number" id="adm-xp" placeholder="500"></div>
+    <div class="field"><label class="field-label">Add Gold</label><input class="input" type="number" id="adm-coins" placeholder="100"></div>
+    <div class="field"><label class="field-label">Set Streak</label><input class="input" type="number" id="adm-streak" placeholder="7" min="0"></div>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="applyAdmin()">Apply</button>
+      <button class="btn btn-red" onclick="resetAll()">Reset All Data</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-admin')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification bar -->
+<div id="notif-bar"></div>
+
+<!-- ════ APP SHELL ════ -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sb-header">
+      <div class="sb-os-label">Irisu OS</div>
+      <div class="sb-name" id="sb-name">Irisu</div>
+      <div class="sb-class" id="sb-class">Trader · Athlete · High Performer</div>
+      <div class="sb-xp-bar">
+        <div class="sb-xp-track"><div class="sb-xp-fill" id="sb-xp" style="width:0%"></div></div>
+        <div class="sb-xp-label"><span id="sb-lvl">Lv 1</span><span id="sb-rank">E-RANK</span></div>
+      </div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-section">Core</div>
+      <div class="sb-item active" onclick="nav('dashboard')"><span class="sb-item-icon">🏠</span>Dashboard</div>
+      <div class="sb-item" onclick="nav('quests')"><span class="sb-item-icon">⚔</span>Quests</div>
+      <div class="sb-item" onclick="nav('achieve')"><span class="sb-item-icon">🏆</span>Achievements</div>
+      <div class="sb-item" onclick="nav('journal')"><span class="sb-item-icon">📓</span>Journal</div>
+      <div class="sb-section">Trading</div>
+      <div class="sb-item" onclick="nav('trading')"><span class="sb-item-icon">📈</span>Trade Journal</div>
+      <div class="sb-item" onclick="nav('pnlcal')"><span class="sb-item-icon">📅</span>PnL Calendar</div>
+      <div class="sb-section">Fitness</div>
+      <div class="sb-item" onclick="nav('fitcal')"><span class="sb-item-icon">🏋</span>Fit Calendar</div>
+      <div class="sb-item" onclick="nav('log')"><span class="sb-item-icon">📋</span>Workout Log</div>
+      <div class="sb-item" onclick="nav('diet')"><span class="sb-item-icon">🍖</span>Nutrition</div>
+      <div class="sb-item" onclick="nav('body')"><span class="sb-item-icon">📐</span>Body Metrics</div>
+      <div class="sb-section">Analytics</div>
+      <div class="sb-item" onclick="nav('ranks')"><span class="sb-item-icon">◈</span>Ranks</div>
+      <div class="sb-item" onclick="nav('reports')"><span class="sb-item-icon">📊</span>Reports</div>
+      <div class="sb-section">System</div>
+      <div class="sb-item" onclick="nav('settings')"><span class="sb-item-icon">⚙</span>Settings</div>
+    </div>
+    <div class="sb-footer">
+      <div class="sb-footer-text">IRISU OS v1.0<br>Hodie venisti, vidisti, vicisti.</div>
+    </div>
+  </nav>
+
+  <!-- TOPBAR -->
+  <header id="topbar">
+    <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-right">
+      <div class="topbar-stat">Lv <span id="tb-lvl">1</span></div>
+      <div class="topbar-stat">◈ <span id="tb-coins">0</span></div>
+      <div class="topbar-stat">🔥 <span id="tb-streak">0</span></div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main id="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="panel-dashboard" class="panel active">
+      <div id="dash-greeting" style="margin-bottom:12px;padding:12px 14px;background:var(--card);border:1px solid var(--b1);border-radius:var(--radius);border-left:2px solid var(--cr);"></div>
+      <div class="kpi-grid" id="dash-kpi"></div>
+      <div class="two-col" style="margin-top:10px;" id="dash-mid">
+        <div class="card card-sm"><div style="font-family:'Cinzel',serif;font-size:10px;color:var(--cr);letter-spacing:0.2em;margin-bottom:10px;">📈 TRADING</div><div id="dash-trade-ov"></div></div>
+        <div class="card card-sm"><div style="font-family:'Cinzel',serif;font-size:10px;color:var(--cr);letter-spacing:0.2em;margin-bottom:10px;">💪 FITNESS</div><div id="dash-fit-ov"></div></div>
+      </div>
+      <div class="two-col" style="margin-top:10px;">
+        <div class="card card-sm"><div style="font-family:'Cinzel',serif;font-size:10px;color:var(--cr);letter-spacing:0.2em;margin-bottom:10px;">📓 JOURNAL</div><div id="dash-j-ov"></div></div>
+        <div class="card card-sm"><div style="font-family:'Cinzel',serif;font-size:10px;color:var(--cr);letter-spacing:0.2em;margin-bottom:10px;">⚡ RECENT</div><div id="dash-recent"></div></div>
+      </div>
+      <div class="sec-h"><span class="sec-badge">GOALS</span> Active Goals</div>
+      <div id="dash-goals" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;"></div>
+    </div>
+
+    <!-- ══ QUESTS ══ -->
+    <div id="panel-quests" class="panel">
+      <div class="quest-summary-row" id="q-summary"></div>
+      <div class="pill-row" id="q-cat-pills">
+        <span class="pill active" onclick="setQuestCat('all',this)">All</span>
+        <span class="pill" onclick="setQuestCat('daily',this)">⏱ Daily</span>
+        <span class="pill" onclick="setQuestCat('weekly',this)">📅 Weekly</span>
+        <span class="pill" onclick="setQuestCat('monthly',this)">🗓 Monthly</span>
+        <span class="pill" onclick="setQuestCat('onetime',this)">⭐ One-Time</span>
+        <span class="pill" onclick="setQuestCat('completed',this)">✓ Done</span>
+      </div>
+      <div class="quest-grid" id="q-list"></div>
+      <div class="btn-row">
+        <button class="btn btn-green" onclick="openQuestEditor()">+ New Quest</button>
+        <button class="btn btn-ghost" onclick="openModal('modal-quest-mgr');renderQuestMgr('all')">✎ Manage All</button>
+        <div id="q-reset-timer" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);margin-left:auto;text-align:right;line-height:1.8;"></div>
+      </div>
+    </div>
+
+    <!-- ══ TRADING ══ -->
+    <div id="panel-trading" class="panel">
+      <!-- Trader rank -->
+      <div class="card trader-rank-card" style="margin-bottom:10px;">
+        <div class="trc-top">
+          <div><div class="trc-rank-name" id="tr-rank-name">Bronze Trader</div><div class="trc-xp" id="tr-xp">0 Trader XP</div></div>
+          <div style="text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);margin-bottom:2px;">BALANCE</div><div style="font-family:'Cinzel',serif;font-size:20px;font-weight:700;" id="tr-balance">$10,000</div></div>
+          <div class="trc-badge" id="tr-badge">BRONZE</div>
+        </div>
+        <div class="prog-track"><div class="prog-fill prog-cr" id="tr-xp-bar" style="width:0%"></div></div>
+        <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);margin-bottom:5px;">EQUITY CURVE</div>
+        <div class="chart-wrap" style="padding:6px;"><canvas id="equity-canvas" style="width:100%;height:70px;"></canvas></div>
+      </div>
+      <!-- KPIs -->
+      <div class="kpi-grid" id="tr-kpis" style="margin-bottom:10px;"></div>
+      <!-- Sub-tabs -->
+      <div class="sub-tab-row">
+        <button class="sub-tab active" onclick="tradingTab('log',this)">Trade Log</button>
+        <button class="sub-tab" onclick="tradingTab('new',this)">Log Trade</button>
+        <button class="sub-tab" onclick="tradingTab('psych',this)">Psychology</button>
+        <button class="sub-tab" onclick="tradingTab('analysis',this)">Analysis</button>
+      </div>
+      <!-- Log -->
+      <div id="tt-log">
+        <div class="pill-row" id="tr-filter-pills">
+          <span class="pill active" onclick="filterTrades('all',this)">All</span>
+          <span class="pill" onclick="filterTrades('Win',this)">Wins</span>
+          <span class="pill" onclick="filterTrades('Loss',this)">Losses</span>
+          <span class="pill" onclick="filterTrades('open',this)">Open</span>
+          <span class="pill" onclick="filterTrades('BE',this)">Break Even</span>
+        </div>
+        <div id="tr-log"></div>
+      </div>
+      <!-- New trade form -->
+      <div id="tt-new" style="display:none;">
+        <div class="trade-form-grid">
+          <div class="field"><label class="field-label">Instrument</label><input class="input" id="t-pair" list="pair-list" placeholder="EUR/USD, AAPL..."><datalist id="pair-list"><option value="EUR/USD"><option value="GBP/USD"><option value="USD/JPY"><option value="XAU/USD"><option value="NAS100"><option value="US30"><option value="BTCUSD"></datalist></div>
+          <div class="field"><label class="field-label">Direction</label><select class="input" id="t-dir"><option value="Long">Long (Buy)</option><option value="Short">Short (Sell)</option></select></div>
+          <div class="field"><label class="field-label">Session</label><select class="input" id="t-session"><option value="London">London</option><option value="New York">New York</option><option value="Asian">Asian</option><option value="London/NY Overlap">London/NY Overlap</option><option value="Pre-Market">Pre-Market</option></select></div>
+          <div class="field"><label class="field-label">Strategy</label><select class="input" id="t-strategy"><option value="Trend Follow">Trend Follow</option><option value="Breakout">Breakout</option><option value="Support/Resistance">S&R</option><option value="Order Block">Order Block</option><option value="Fair Value Gap">FVG</option><option value="Price Action">Price Action</option><option value="Reversal">Reversal</option><option value="Scalp">Scalp</option><option value="News Play">News</option><option value="Other">Other</option></select></div>
+          <div class="field"><label class="field-label">Entry Date</label><input class="input" type="date" id="t-date"></div>
+          <div class="field"><label class="field-label">Exit Date</label><input class="input" type="date" id="t-exitdate"></div>
+          <div class="field"><label class="field-label">Entry Price</label><input class="input" type="number" id="t-entry" placeholder="1.09500" step="0.00001" oninput="calcRRPreview()"></div>
+          <div class="field"><label class="field-label">Stop Loss</label><input class="input" type="number" id="t-sl" placeholder="1.09200" step="0.00001" oninput="calcRRPreview()"></div>
+          <div class="field"><label class="field-label">Take Profit</label><input class="input" type="number" id="t-tp" placeholder="1.10100" step="0.00001" oninput="calcRRPreview()"></div>
+          <div class="field"><label class="field-label">Exit Price</label><input class="input" type="number" id="t-exit" placeholder="Actual exit" step="0.00001"></div>
+          <div class="field"><label class="field-label">Lot Size</label><input class="input" type="number" id="t-lot" placeholder="0.10" step="0.01"></div>
+          <div class="field"><label class="field-label">P&L ($)</label><input class="input" type="number" id="t-pnl" placeholder="120.50 or -45.00" step="0.01"></div>
+          <div class="field"><label class="field-label">Outcome</label><select class="input" id="t-outcome"><option value="open">Open</option><option value="Win">Win ✓</option><option value="Loss">Loss ✗</option><option value="BE">Break Even</option></select></div>
+          <div class="field"><label class="field-label">Pre-Mood (1-10)</label><input class="input" type="number" id="t-premood" placeholder="7" min="1" max="10"></div>
+          <div class="field"><label class="field-label">Post-Mood (1-10)</label><input class="input" type="number" id="t-postmood" placeholder="7" min="1" max="10"></div>
+          <div class="field"><label class="field-label">Confidence (1-10)</label><input class="input" type="number" id="t-conf" placeholder="7" min="1" max="10"></div>
+          <div class="field"><label class="field-label">Followed Plan?</label><select class="input" id="t-plan"><option value="Yes">✓ Yes</option><option value="Partial">~ Partial</option><option value="No">✗ No</option></select></div>
+          <div class="field"><label class="field-label">Emotion</label><select class="input" id="t-emotion"><option value="Calm">Calm</option><option value="Confident">Confident</option><option value="Anxious">Anxious</option><option value="FOMO">FOMO</option><option value="Greedy">Greedy</option><option value="Fearful">Fearful</option><option value="Neutral">Neutral</option><option value="Disciplined">Disciplined</option></select></div>
+          <div class="full field" style="grid-column:1/-1;"><label class="field-label">Rationale</label><textarea class="input" id="t-rationale" placeholder="Why did you take this trade? What did you see?" style="min-height:60px;"></textarea></div>
+          <div class="field"><label class="field-label">What Went Well</label><input class="input" id="t-well" placeholder="Correct level, patient entry..."></div>
+          <div class="field"><label class="field-label">What Went Wrong</label><input class="input" id="t-wrong" placeholder="Moved SL early..."></div>
+          <div class="full field" style="grid-column:1/-1;"><label class="field-label">Lesson Learned</label><input class="input" id="t-lesson" placeholder="One actionable takeaway..."></div>
+          <div class="full field" style="grid-column:1/-1;"><label class="field-label">Tags</label><input class="input" id="t-tags" placeholder="forex, fvg, mistake, london..."></div>
+        </div>
+        <div class="rr-preview" id="rr-preview"></div>
+        <div class="btn-row"><button class="btn btn-gold" onclick="logTrade()">⚔ Log Trade</button></div>
+      </div>
+      <!-- Psychology -->
+      <div id="tt-psych" style="display:none;">
+        <div class="trade-form-grid" style="margin-bottom:10px;">
+          <div class="field"><label class="field-label">Date</label><input class="input" type="date" id="ps-date"></div>
+          <div class="field"><label class="field-label">Pre-Session (1-10)</label><input class="input" type="number" id="ps-pre" min="1" max="10" placeholder="7"></div>
+          <div class="field"><label class="field-label">Post-Session (1-10)</label><input class="input" type="number" id="ps-post" min="1" max="10" placeholder="7"></div>
+          <div class="field"><label class="field-label">Discipline (1-10)</label><input class="input" type="number" id="ps-disc" min="1" max="10" placeholder="8"></div>
+          <div class="field"><label class="field-label">Trades Today</label><input class="input" type="number" id="ps-trades" min="0" placeholder="3"></div>
+          <div class="field"><label class="field-label">Followed Rules?</label><select class="input" id="ps-rules"><option value="Yes">Yes</option><option value="No">No</option><option value="Partial">Partial</option></select></div>
+          <div class="field"><label class="field-label">Emotion</label><select class="input" id="ps-emotion"><option value="Calm">Calm</option><option value="Confident">Confident</option><option value="Anxious">Anxious</option><option value="FOMO">FOMO</option><option value="Neutral">Neutral</option><option value="Disciplined">Disciplined</option></select></div>
+          <div class="field"><label class="field-label">Physical State</label><select class="input" id="ps-phys"><option value="Rested">Rested</option><option value="Energized">Energized</option><option value="Average">Average</option><option value="Tired">Tired</option><option value="Stressed">Stressed</option></select></div>
+          <div class="full field" style="grid-column:1/-1;"><label class="field-label">Session Notes</label><textarea class="input" id="ps-notes" placeholder="How did the session go?" style="min-height:70px;"></textarea></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-gold" onclick="logPsych()">Save Entry</button></div>
+        <div style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;" id="psych-stats"></div>
+        <div class="sec-h"><span class="sec-badge">LOG</span> Psychology History</div>
+        <div id="psych-log"></div>
+      </div>
+      <!-- Analysis -->
+      <div id="tt-analysis" style="display:none;">
+        <div class="chart-tabs" id="chart-tabs">
+          <button class="chart-tab active" onclick="switchChart('equity',this)">📈 Equity</button>
+          <button class="chart-tab" onclick="switchChart('winrate',this)">🎯 Win Rate</button>
+          <button class="chart-tab" onclick="switchChart('strategy',this)">📊 Strategy</button>
+          <button class="chart-tab" onclick="switchChart('monthly',this)">📅 Monthly</button>
+          <button class="chart-tab" onclick="switchChart('drawdown',this)">📉 Drawdown</button>
+          <button class="chart-tab" onclick="switchChart('heatmap',this)">🔥 Heatmap</button>
+          <button class="chart-tab" onclick="switchChart('emotion',this)">🧠 Emotion</button>
+        </div>
+        <div class="chart-wrap" id="chart-container">
+          <svg id="main-chart" style="width:100%;height:300px;display:block;"></svg>
+          <div id="heatmap-wrap" style="display:none;overflow-x:auto;"></div>
+        </div>
+        <div class="sec-h" style="margin-top:14px;"><span class="sec-badge">STRATEGIES</span> Strategy Breakdown</div>
+        <div style="overflow-x:auto;"><table id="strat-table" style="width:100%;border-collapse:collapse;font-size:12px;font-family:'JetBrains Mono',monospace;min-width:400px;"></table></div>
+        <div class="sec-h" style="margin-top:10px;"><span class="sec-badge">INSIGHTS</span> System Insights</div>
+        <div id="trade-insights"></div>
+      </div>
+    </div>
+
+    <!-- ══ PNL CALENDAR ══ -->
+    <div id="panel-pnlcal" class="panel">
+      <div class="cal-header">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn btn-ghost btn-sm" onclick="pnlPrev()">◀</button>
+          <div class="cal-month-label" id="pnl-cal-label"></div>
+          <button class="btn btn-ghost btn-sm" onclick="pnlNext()">▶</button>
+          <button class="btn btn-ghost btn-sm" onclick="pnlToday()">Today</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:7px;margin-bottom:12px;" id="pnl-strip"></div>
+      <div class="card card-sm" style="margin-bottom:10px;">
+        <div class="cal-dow-row"><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div><div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div><div class="cal-dow">Sun</div></div>
+        <div class="cal-grid" id="pnl-grid"></div>
+      </div>
+      <div class="cal-legend">
+        <span><span class="leg-dot" style="background:rgba(34,197,94,0.5);"></span>Profitable</span>
+        <span><span class="leg-dot" style="background:rgba(220,20,60,0.5);"></span>Loss</span>
+        <span><span class="leg-dot" style="background:var(--b2);"></span>No trades</span>
+      </div>
+      <div class="day-detail" id="pnl-day-detail">
+        <div class="dd-header">
+          <div class="dd-date" id="pnl-dd-date"></div>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pnl-day-detail').classList.remove('open')">Close</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:7px;margin-bottom:12px;" id="pnl-dd-stats"></div>
+        <div id="pnl-dd-trades"></div>
+        <div class="field" style="margin-top:10px;"><label class="field-label">Day Notes</label><textarea class="input" id="pnl-day-notes" style="min-height:50px;"></textarea><button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="saveDayNote()">Save Note</button></div>
+      </div>
+      <div class="sec-h"><span class="sec-badge">STATS</span> Advanced Statistics</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;" id="pnl-adv"></div>
+    </div>
+
+    <!-- ══ FITNESS CALENDAR ══ -->
+    <div id="panel-fitcal" class="panel">
+      <div class="cal-header">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn btn-ghost btn-sm" onclick="fitPrev()">◀</button>
+          <div class="cal-month-label" id="fit-cal-label"></div>
+          <button class="btn btn-ghost btn-sm" onclick="fitNext()">▶</button>
+          <button class="btn btn-ghost btn-sm" onclick="fitToday()">Today</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:7px;margin-bottom:12px;" id="fit-strip"></div>
+      <div class="card card-sm" style="margin-bottom:10px;">
+        <div class="cal-dow-row"><div class="cal-dow">Mon</div><div class="cal-dow">Tue</div><div class="cal-dow">Wed</div><div class="cal-dow">Thu</div><div class="cal-dow">Fri</div><div class="cal-dow">Sat</div><div class="cal-dow">Sun</div></div>
+        <div class="cal-grid" id="fit-grid"></div>
+      </div>
+      <div class="sec-h"><span class="sec-badge">MILESTONES</span> Streak Milestones</div>
+      <div class="milestone-grid" id="fit-milestones"></div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-green" onclick="openWorkoutModal()">⚔ Log Workout</button>
+        <button class="btn btn-ghost" onclick="openWorkoutModal()">+ Add Details</button>
+      </div>
+      <div class="sec-h"><span class="sec-badge">STATS</span> Training Stats</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;" id="fit-adv"></div>
+    </div>
+
+    <!-- ══ WORKOUT LOG ══ -->
+    <div id="panel-log" class="panel">
+      <div class="sec-h"><span class="sec-badge">SESSION</span> Workout Logger</div>
+      <div class="input-row" style="margin-bottom:8px;">
+        <input class="input" id="log-ex" placeholder="Exercise (e.g. DB Chest Press)" style="flex:2;">
+        <input class="input" id="log-sets" placeholder="Sets (3×10@12kg)" style="flex:1;">
+        <button class="btn btn-ghost btn-sm" onclick="addLogRow()">+ Log</button>
+      </div>
+      <div id="log-rows" style="margin-bottom:12px;"></div>
+      <div class="field"><label class="field-label">Session Notes</label><textarea class="input" id="log-notes" placeholder="How you felt, PRs..." style="min-height:60px;"></textarea></div>
+      <div class="btn-row">
+        <button class="btn btn-gold" onclick="completeSession()">⚔ Complete Session (+200 XP)</button>
+        <button class="btn btn-red" onclick="clearSession()">↺ Clear</button>
+      </div>
+      <div class="sec-h"><span class="sec-badge">HISTORY</span> Past Sessions</div>
+      <div id="session-history"></div>
+    </div>
+
+    <!-- ══ NUTRITION ══ -->
+    <div id="panel-diet" class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <div class="sec-h" style="margin:0;">Daily Nutrition</div>
+        <button class="btn btn-ghost btn-sm" onclick="openMacroModal()">✎ Edit Targets</button>
+      </div>
+      <div class="macro-grid" id="macro-cards"></div>
+      <div class="sec-h"><span class="sec-badge">LOG</span> Add Food</div>
+      <div class="input-row" style="margin-bottom:8px;flex-wrap:wrap;">
+        <input class="input" id="f-name" placeholder="Food name" style="flex:2;min-width:120px;">
+        <input class="input" type="number" id="f-kcal" placeholder="kcal" style="max-width:70px;">
+        <input class="input" type="number" id="f-prot" placeholder="prot g" style="max-width:76px;">
+        <input class="input" type="number" id="f-carb" placeholder="carb g" style="max-width:70px;">
+        <input class="input" type="number" id="f-fat" placeholder="fat g" style="max-width:68px;">
+        <button class="btn btn-ghost btn-sm" onclick="addFood()">+ Add</button>
+      </div>
+      <div id="food-log" style="margin-bottom:10px;"></div>
+      <button class="btn btn-red btn-sm" onclick="resetNutrition()">↺ Reset Daily</button>
+    </div>
+
+    <!-- ══ BODY METRICS ══ -->
+    <div id="panel-body" class="panel">
+      <div class="sec-h"><span class="sec-badge">METRICS</span> Body Tracker</div>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t4);margin-bottom:12px;">Measure every 2 weeks — same time, same conditions.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-bottom:16px;" id="body-metrics-grid"></div>
+      <div class="sec-h"><span class="sec-badge">CHART</span> Progress</div>
+      <div class="chart-wrap"><canvas id="body-chart" style="width:100%;height:200px;"></canvas></div>
+      <div class="sec-h"><span class="sec-badge">GOALS</span> Body Goals</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;" id="body-goals-grid"></div>
+      <div class="btn-row" style="margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="saveBodyGoals()">Save Goals</button></div>
+    </div>
+
+    <!-- ══ ACHIEVEMENTS ══ -->
+    <div id="panel-achieve" class="panel">
+      <div class="sec-h"><span class="sec-badge">HALL</span> Trophy Case</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t4);margin-bottom:10px;" id="ach-progress"></div>
+      <div class="sec-h" style="margin-top:14px;"><span class="sec-badge">STATS</span> Hunter Stats</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;" id="hunter-stats"></div>
+      <div class="ach-grid" id="ach-grid"></div>
+    </div>
+
+    <!-- ══ JOURNAL ══ -->
+    <div id="panel-journal" class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <div class="sec-h" style="margin:0;">Personal Journal</div>
+        <button class="btn btn-gold btn-sm" onclick="openJournalModal()">+ New Entry</button>
+      </div>
+      <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;">
+        <input class="input" id="j-search" placeholder="Search entries..." oninput="renderJournal()" style="flex:1;min-width:140px;">
+        <select class="input" id="j-sort" onchange="renderJournal()" style="max-width:140px;"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="mood">By Mood</option></select>
+      </div>
+      <div class="pill-row" id="j-filter-pills">
+        <span class="pill active" onclick="setJournalFilter('all',this)">All</span>
+        <span class="pill" onclick="setJournalFilter('daily',this)">Daily</span>
+        <span class="pill" onclick="setJournalFilter('trading',this)">Trading</span>
+        <span class="pill" onclick="setJournalFilter('fitness',this)">Fitness</span>
+        <span class="pill" onclick="setJournalFilter('reflection',this)">Reflection</span>
+        <span class="pill" onclick="setJournalFilter('gratitude',this)">Gratitude</span>
+        <span class="pill" onclick="setJournalFilter('goals',this)">Goals</span>
+      </div>
+      <div id="j-list"></div>
+    </div>
+
+    <!-- ══ RANKS ══ -->
+    <div id="panel-ranks" class="panel">
+      <div class="sec-h"><span class="sec-badge">PATH</span> Hunter Rank</div>
+      <div class="rank-road" id="rank-road" style="margin-bottom:10px;"></div>
+      <div class="card card-sm" style="margin-bottom:10px;"><div id="rank-reqs"></div></div>
+      <div class="sec-h"><span class="sec-badge">WEEK</span> Training Calendar</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px;" id="week-grid"></div>
+      <div style="background:var(--card);border:1px solid var(--b1);border-radius:var(--radius);padding:14px;display:flex;align-items:center;justify-content:space-between;">
+        <div><div style="font-family:'Cinzel',serif;font-size:34px;font-weight:900;color:var(--gold3);" id="streak-num">0</div><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);text-transform:uppercase;letter-spacing:0.12em;">Day Streak</div></div>
+        <div style="text-align:right;"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);margin-bottom:3px;">Best Streak</div><div style="font-family:'Cinzel',serif;font-size:22px;color:var(--t3);" id="best-streak-num">0</div></div>
+        <div style="font-size:26px;">🔥</div>
+      </div>
+      <div class="btn-row" style="margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="markTrained()">⚔ Mark Today Trained</button></div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div id="panel-reports" class="panel">
+      <div class="pill-row" id="report-pills">
+        <span class="pill active" onclick="setReport('weekly',this)">Weekly</span>
+        <span class="pill" onclick="setReport('monthly',this)">Monthly</span>
+        <span class="pill" onclick="setReport('quarterly',this)">Quarterly</span>
+      </div>
+      <div id="report-body"></div>
+    </div>
+
+    <!-- ══ SETTINGS ══ -->
+    <div id="panel-settings" class="panel">
+      <div class="settings-grid">
+        <div class="settings-card">
+          <div class="settings-card-title">Profile</div>
+          <div class="mini-list-row"><span class="mini-list-label">Name</span><span class="mini-list-val" id="s-name">Irisu</span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Class</span><span class="mini-list-val" id="s-class" style="font-size:11px;"></span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Level</span><span class="mini-list-val" id="s-level">1</span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Rank</span><span class="mini-list-val" id="s-rank">E-RANK</span></div>
+          <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="openProfileModal()">✎ Edit</button></div>
+        </div>
+        <div class="settings-card">
+          <div class="settings-card-title">Macro Targets</div>
+          <div class="mini-list-row"><span class="mini-list-label">Calories</span><span class="mini-list-val" id="s-kcal">2800</span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Protein</span><span class="mini-list-val" id="s-prot">170g</span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Carbs</span><span class="mini-list-val" id="s-carbs">320g</span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Fats</span><span class="mini-list-val" id="s-fats">80g</span></div>
+          <div class="btn-row"><button class="btn btn-ghost btn-sm" onclick="openMacroModal()">✎ Edit</button></div>
+        </div>
+        <div class="settings-card">
+          <div class="settings-card-title">Progress</div>
+          <div class="mini-list-row"><span class="mini-list-label">Total XP</span><span class="mini-list-val" id="s-xp">0</span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Gold</span><span class="mini-list-val" id="s-gold">0</span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Sessions</span><span class="mini-list-val" id="s-sess">0</span></div>
+          <div class="mini-list-row"><span class="mini-list-label">Best Streak</span><span class="mini-list-val" id="s-bs">0</span></div>
+        </div>
+        <div class="settings-card">
+          <div class="settings-card-title">System</div>
+          <div class="btn-row" style="flex-direction:column;">
+            <button class="btn btn-ghost btn-sm" onclick="openModal('modal-admin')">⚠ Admin Override</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportData()">↓ Export Data</button>
+            <button class="btn btn-ghost btn-sm" onclick="importData()">↑ Import Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+
+// ═══════════════════════════════════════════════
+// CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════
+const RANKS=[
+  {name:'TIRO',min:1,max:10,color:'#888'},
+  {name:'MILES',min:11,max:20,color:'#22c55e'},
+  {name:'CENTURIO',min:21,max:35,color:'#3b82f6'},
+  {name:'LEGATUS',min:36,max:50,color:'#8b5cf6'},
+  {name:'DUX',min:51,max:70,color:'#c8941a'},
+  {name:'IMPERATOR',min:71,max:100,color:'#dc143c'},
+];
+const XP_TABLE=[];for(let i=1;i<=100;i++)XP_TABLE.push(Math.floor(500*Math.pow(1.18,i-1)));
+const STATS_DEF=[
+  {id:'strength',icon:'⚔️',name:'STRENGTH'},
+  {id:'endurance',icon:'🏃',name:'ENDURANCE'},
+  {id:'vitality',icon:'❤️',name:'VITALITY'},
+  {id:'agility',icon:'⚡',name:'AGILITY'},
+  {id:'sense',icon:'🧠',name:'INTELLECT'},
+  {id:'willpower',icon:'🔥',name:'WILLPOWER'},
+];
+const TRADER_RANKS=[
+  {name:'Mercator Aeneus',label:'AENEUS',minXP:0,color:'#cd7f32'},
+  {name:'Mercator Argenteus',label:'ARGENTEUS',minXP:500,color:'#aaa'},
+  {name:'Mercator Aureus',label:'AUREUS',minXP:1500,color:'#c8941a'},
+  {name:'Mercator Platinus',label:'PLATINUS',minXP:3500,color:'#3b82f6'},
+  {name:'Mercator Adamantinus',label:'ADAMAS',minXP:7000,color:'#8b5cf6'},
+  {name:'Mercator Imperialis',label:'IMPERIALIS',minXP:15000,color:'#dc143c'},
+];
+const BODY_METRICS=[
+  {id:'weight',name:'Body Weight',unit:'kg',icon:'⚖️'},
+  {id:'chest',name:'Chest',unit:'cm',icon:'🫀'},
+  {id:'waist',name:'Waist',unit:'cm',icon:'📏'},
+  {id:'arms',name:'Arms',unit:'cm',icon:'💪'},
+  {id:'thighs',name:'Thighs',unit:'cm',icon:'🦵'},
+  {id:'shoulders',name:'Shoulders',unit:'cm',icon:'🔱'},
+];
+const FIT_MILESTONES=[
+  {days:7,icon:'🔥',label:'VII DIES — MILES'},
+  {days:30,icon:'💪',label:'XXX DIES — BESTIA'},
+  {days:60,icon:'⚡',label:'LX DIES — VENATOR'},
+  {days:90,icon:'🏆',label:'XC DIES — CAMPIO'},
+  {days:180,icon:'💎',label:'CLXXX DIES — ELECTUS'},
+  {days:365,icon:'👑',label:'CCCLXV DIES — LEGENDA'},
+];
+const ACHIEVEMENTS=[
+  {id:'first_quest',icon:'⚔️',name:'FIRST BLOOD',desc:'Mandatum primum comple',c:s=>s.totalQuestsCompleted>=1},
+  {id:'level5',icon:'⭐',name:'AWAKENED',desc:'Attinge Gradum V',c:s=>s.level>=5},
+  {id:'level10',icon:'💫',name:'D-RANK HUNTER',desc:'Attinge Gradum X',c:s=>s.level>=10},
+  {id:'level20',icon:'🌀',name:'C-RANK HUNTER',desc:'Attinge Gradum XX',c:s=>s.level>=20},
+  {id:'level35',icon:'💠',name:'B-RANK HUNTER',desc:'Attinge Gradum XXXV',c:s=>s.level>=35},
+  {id:'level50',icon:'👑',name:'A-RANK HUNTER',desc:'Attinge Gradum L',c:s=>s.level>=50},
+  {id:'streak3',icon:'🔥',name:'ON FIRE',desc:'Triduum constans',c:s=>s.streak>=3},
+  {id:'streak7',icon:'💥',name:'UNSTOPPABLE',desc:'Septem dies constans',c:s=>s.streak>=7},
+  {id:'streak30',icon:'🌟',name:'IRON WILL',desc:'XXX dies constans',c:s=>s.streak>=30},
+  {id:'xp1000',icon:'✨',name:'XP COLLECTOR',desc:'I,000 XP accumulata',c:s=>s.totalXP>=1000},
+  {id:'xp5000',icon:'💎',name:'POWER SURGE',desc:'V,000 XP accumulata',c:s=>s.totalXP>=5000},
+  {id:'xp20000',icon:'🔮',name:'LEGEND',desc:'XX,000 XP accumulata',c:s=>s.totalXP>=20000},
+  {id:'boss1',icon:'👺',name:'BOSS SLAYER',desc:'Mandatum Imperatoris comple',c:s=>s.bossesDefeated>=1},
+  {id:'sessions5',icon:'🏋️',name:'IRON INITIATE',desc:'V sessiones adscribe',c:s=>s.totalSessions>=5},
+  {id:'sessions20',icon:'🗡️',name:'IRON DISCIPLE',desc:'XX sessiones adscribe',c:s=>s.totalSessions>=20},
+  {id:'protein7',icon:'🥩',name:'PROTEIN HUNTER',desc:'VII dies proteinorum',c:s=>s.proteinDays>=7},
+  {id:'custom3',icon:'🛠️',name:'QUEST CREATOR',desc:'III mandata propria crea',c:s=>(s.allQuests||[]).filter(q=>q.custom).length>=3},
+  {id:'trade_first',icon:'📈',name:'MARKET INITIATE',desc:'Primum mercatum adscribe',c:s=>(s.trades||[]).length>=1},
+  {id:'trade_10',icon:'💹',name:'ACTIVE TRADER',desc:'X mercatus adscribe',c:s=>(s.trades||[]).length>=10},
+  {id:'trade_win5',icon:'🎯',name:'WINNING STREAK',desc:'V victoriae mercatus',c:s=>(s.trades||[]).filter(t=>t.outcome==='Win').length>=5},
+  {id:'trade_agrade5',icon:'⭐',name:'SETUP MASTER',desc:'V constitutiones gradus A',c:s=>(s.trades||[]).filter(t=>t.grade==='A').length>=5},
+  {id:'trade_plan10',icon:'🧘',name:'IRON DISCIPLINE',desc:'X vices consilium sequere',c:s=>(s.trades||[]).filter(t=>t.plan==='Yes').length>=10},
+  {id:'trade_xp1000',icon:'💰',name:'XP FARMER',desc:'I,000 XP mercatoris',c:s=>(s.traderXP||0)>=1000},
+  {id:'journal10',icon:'📓',name:'SCRIBE',desc:'X inscriptiones scribe',c:s=>(s.journalEntries||[]).length>=10},
+  {id:'journal30',icon:'📖',name:'CHRONICLER',desc:'XXX inscriptiones scribe',c:s=>(s.journalEntries||[]).length>=30},
+];
+const QUEST_DEFAULTS=[
+  {id:'q1',name:'Morning Activation',detail:'10 min warm-up',category:'daily',type:'daily',difficulty:'easy',xp:50,coins:10,stat:'agility',repeatable:true},
+  {id:'q2',name:'Hydration Protocol',detail:'Drink 3L water',category:'daily',type:'daily',difficulty:'easy',xp:30,coins:5,stat:'vitality',repeatable:true},
+  {id:'q3',name:'Protein Target',detail:'Hit protein target today',category:'daily',type:'nutrition',difficulty:'medium',xp:60,coins:15,stat:'strength',repeatable:true},
+  {id:'q4',name:'Push Day',detail:'Complete Push Day workout',category:'weekly',type:'strength',difficulty:'hard',xp:150,coins:30,stat:'strength',repeatable:true},
+  {id:'q5',name:'Pull Day',detail:'Complete Pull Day workout',category:'weekly',type:'strength',difficulty:'hard',xp:150,coins:30,stat:'strength',repeatable:true},
+  {id:'q6',name:'Leg Dungeon',detail:'Legs + Core session',category:'weekly',type:'strength',difficulty:'hard',xp:160,coins:35,stat:'endurance',repeatable:true},
+  {id:'q7',name:'Cardio Gate',detail:'25 min cardio session',category:'daily',type:'cardio',difficulty:'medium',xp:100,coins:20,stat:'endurance',repeatable:true},
+  {id:'q8',name:'Iron Will Walk',detail:'30 min outdoor walk',category:'daily',type:'cardio',difficulty:'easy',xp:40,coins:10,stat:'agility',repeatable:true},
+  {id:'q9',name:'Sleep Guardian',detail:'Sleep 7+ hours',category:'daily',type:'mindset',difficulty:'easy',xp:80,coins:20,stat:'vitality',repeatable:true},
+  {id:'q10',name:'Progressive Overload',detail:'Increase weight on any lift',category:'weekly',type:'strength',difficulty:'medium',xp:120,coins:25,stat:'strength',repeatable:true},
+  {id:'q11',name:'Recovery Ritual',detail:'10 min stretching',category:'daily',type:'daily',difficulty:'easy',xp:50,coins:10,stat:'agility',repeatable:true},
+  {id:'q12',name:'⚠ BOSS: WEEKLY WARRIOR',detail:'Complete ALL 4 training days',category:'weekly',type:'boss',difficulty:'boss',xp:500,coins:100,stat:'willpower',repeatable:true},
+  {id:'q13',name:'Monthly Review',detail:'Review your progress',category:'monthly',type:'mindset',difficulty:'medium',xp:200,coins:50,stat:'sense',repeatable:true},
+  {id:'q14',name:'First Trade Logged',detail:'Log your first trade',category:'onetime',type:'trading',difficulty:'easy',xp:100,coins:25,stat:'sense',repeatable:false},
+  {id:'q15',name:'⚠ BOSS: MONTHLY CHAMPION',detail:'Hit macros 20 days',category:'monthly',type:'boss',difficulty:'boss',xp:1000,coins:200,stat:'willpower',repeatable:true},
+];
+
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+function defaultState(){
+  return {
+    hunterName:'Irisu',hunterClass:'Trader · Athlete · High Performer',
+    level:1,currentXP:0,totalXP:0,coins:0,totalCoins:0,
+    stats:{strength:10,endurance:10,vitality:10,agility:10,sense:10,willpower:10},
+    completedQuests:[],allQuests:null,completionLog:{},
+    streak:0,bestStreak:0,lastTrainedDate:null,trainedDays:[],
+    totalQuestsCompleted:0,bossesDefeated:0,totalSessions:0,proteinDays:0,
+    unlockedAchievements:[],
+    nutrition:{kcal:0,protein:0,carbs:0,fats:0},
+    macroTargets:{kcal:2800,protein:170,carbs:320,fats:80},
+    foodLog:[],workoutLog:[],sessionNotes:'',sessionHistory:[],
+    bodyMetrics:{},goals:{weight:'',chest:'',waist:'',arms:'',thighs:'',shoulders:''},
+    trades:[],traderXP:0,psychLogs:[],dayNotes:{},
+    journalEntries:[],workoutDetails:[],startBalance:10000,
+  };
+}
+let S=loadState();
+function loadState(){try{const r=localStorage.getItem('irisu_v1');if(r)return Object.assign(defaultState(),JSON.parse(r));}catch(e){}return defaultState();}
+function save(){try{localStorage.setItem('irisu_v1',JSON.stringify(S));}catch(e){}}
+
+// ═══════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════
+const today=()=>new Date().toISOString().split('T')[0];
+const weekKey=()=>{const d=new Date(),j=new Date(d.getFullYear(),0,1);return d.getFullYear()+'-W'+Math.ceil(((d-j)/86400000+j.getDay()+1)/7);};
+const monthKey=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1);};
+const weekStart=()=>{const d=new Date(),day=d.getDay()||7;d.setDate(d.getDate()-day+1);return d.toISOString().split('T')[0];};
+const getRank=lv=>RANKS.find(r=>lv>=r.min&&lv<=r.max)||RANKS[RANKS.length-1];
+const getTraderRank=xp=>[...TRADER_RANKS].reverse().find(r=>xp>=r.minXP)||TRADER_RANKS[0];
+const $=id=>document.getElementById(id);
+let notifT;
+function notify(msg,dur=3200){const el=$('notif-bar');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(notifT);notifT=setTimeout(()=>el.classList.remove('show'),dur);}
+
+// ═══════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════
+(function boot(){
+  const canvas=$('boot-canvas');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const resize=()=>{canvas.width=innerWidth;canvas.height=innerHeight;};resize();window.addEventListener('resize',resize);
+  const pts=Array.from({length:55},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,s:Math.random()*1.1+.3,a:Math.random()*.17+.04,gold:Math.random()>.72}));
+  (function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>canvas.width)p.vx*=-1;if(p.y<0||p.y>canvas.height)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.s,0,Math.PI*2);ctx.fillStyle=p.gold?`rgba(196,181,253,${p.a*.7})`:`rgba(45,212,191,${p.a})`;ctx.fill();});requestAnimationFrame(draw);})();
+  function tw(el,text,speed,cb){if(!el)return cb&&cb();let i=0;el.textContent='';const t=setInterval(()=>{el.textContent+=text[i++];if(i>=text.length){clearInterval(t);cb&&cb();}},speed);}
+  setTimeout(()=>{const nameEl=$('boot-name');if(nameEl){nameEl.style.display='none';}tw($('boot-latin'),'Hodie venisti, vidisti, vicisti.',32,()=>{setTimeout(()=>{const t=$('boot-trans');if(t){t.textContent='Superbus sum tui, frater mi.';t.style.whiteSpace='pre-line';}},300);});},800);
+})();
+function enterOS(){const b=$('boot');if(!b)return;b.classList.add('out');setTimeout(()=>{b.style.display='none';$('app').style.display='block';initApp();},1400);}
+
+// ═══════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════
+function openModal(id){const el=$(id);if(el)el.classList.add('open');}
+function closeModal(id){const el=$(id);if(el)el.classList.remove('open');}
+window.addEventListener('click',e=>{if(e.target.classList.contains('modal-bg'))e.target.classList.remove('open');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));});
+
+// ═══════════════════════════════════════════════
+// SIDEBAR / NAV
+// ═══════════════════════════════════════════════
+let sidebarOpen=true;
+const PANEL_TITLES={dashboard:'Dashboard',quests:'Quest Board',trading:'Trading Journal',pnlcal:'PnL Calendar',fitcal:'Fitness Calendar',log:'Workout Log',diet:'Nutrition',body:'Body Metrics',achieve:'Achievements',journal:'Personal Journal',ranks:'Hunter Ranks',reports:'Reports',settings:'Settings'};
+function toggleSidebar(){
+  sidebarOpen=!sidebarOpen;
+  const sb=$('sidebar'),tb=$('topbar'),ct=$('content');
+  if(window.innerWidth<=768){sb.classList.toggle('mobile-open',sidebarOpen);}
+  else{sb.classList.toggle('collapsed',!sidebarOpen);tb.classList.toggle('full',!sidebarOpen);ct.classList.toggle('full',!sidebarOpen);}
+}
+let currentPanel='dashboard';
+function nav(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  const p=$('panel-'+id);if(p)p.classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i=>{if(i.getAttribute('onclick')&&i.getAttribute('onclick').includes("'"+id+"'"))i.classList.add('active');});
+  currentPanel=id;
+  const tt=$('topbar-title');if(tt)tt.textContent=PANEL_TITLES[id]||id;
+  if(window.innerWidth<=768&&sidebarOpen){sidebarOpen=false;$('sidebar').classList.remove('mobile-open');}
+  onNavTo(id);
+}
+function onNavTo(id){
+  const fn={dashboard:renderDash,quests:renderQuests,trading:renderTrading,pnlcal:renderPnlCal,fitcal:renderFitCal,log:renderLog,diet:renderNutrition,body:renderBody,achieve:renderAchievements,journal:renderJournal,ranks:renderRanks,reports:renderReports,settings:renderSettings};
+  if(fn[id])fn[id]();
+}
+function initApp(){
+  if(!S.allQuests)S.allQuests=QUEST_DEFAULTS.map(q=>({...q}));
+  if(!S.completionLog)S.completionLog={};
+  if(!S.journalEntries)S.journalEntries=[];
+  if(!S.workoutDetails)S.workoutDetails=[];
+  if(!S.dayNotes)S.dayNotes={};
+  if(!S.psychLogs)S.psychLogs=[];
+  if(!S.trades)S.trades=[];
+  if(!S.nutrition)S.nutrition={kcal:0,protein:0,carbs:0,fats:0};
+  if(!S.foodLog)S.foodLog=[];
+  if(!S.workoutLog)S.workoutLog=[];
+  if(!S.sessionHistory)S.sessionHistory=[];
+  updateTopbar();updateSidebar();nav('dashboard');
+  setInterval(checkResets,60000);setInterval(()=>{updateTopbar();if(currentPanel==='dashboard')renderDashKPIs();},30000);
+}
+function updateTopbar(){const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};set('tb-lvl',S.level);set('tb-coins',S.coins);set('tb-streak',S.streak||0);}
+function updateSidebar(){
+  const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+  set('sb-name',S.hunterName||'Irisu');set('sb-class',S.hunterClass||'Trader · Athlete · High Performer');
+  const needed=XP_TABLE[Math.min(S.level-1,99)];const pct=Math.min(100,Math.floor((S.currentXP/needed)*100));
+  const bar=$('sb-xp');if(bar)bar.style.width=pct+'%';
+  set('sb-lvl','Lv '+S.level);set('sb-rank',getRank(S.level).name);
+}
+
+// ═══════════════════════════════════════════════
+// XP & LEVELING
+// ═══════════════════════════════════════════════
+function gainXP(amount,statId){
+  S.totalXP+=amount;S.currentXP+=amount;
+  if(statId&&S.stats[statId]!==undefined)S.stats[statId]=Math.min(999,S.stats[statId]+Math.floor(amount/25));
+  let leveled=false;
+  while(S.level<100){const n=XP_TABLE[S.level-1];if(S.currentXP>=n){S.currentXP-=n;S.level++;leveled=true;}else break;}
+  if(leveled)showLevelUp();
+  updateTopbar();updateSidebar();checkAchievements();save();
+}
+function showLevelUp(){
+  const rank=getRank(S.level);
+  const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+  set('lu-num',S.level);set('lu-rank',rank.name);
+  const rw=$('lu-rewards');if(rw)rw.innerHTML=['▸ +3 AD OMNES VIRTUTES','▸ ORDO: '+rank.name,'▸ VIAE NOVAE APERTAE'].map(r=>`<div class="lu-reward">${r}</div>`).join('');
+  STATS_DEF.forEach(s=>S.stats[s.id]=(S.stats[s.id]||10)+3);
+  openModal('modal-levelup');
+}
+
+
+// ═══════════════════════════════════════════════
+// QUEST SYSTEM
+// ═══════════════════════════════════════════════
+let questCat='all',qmgrCat='all',qeditId=null;
+function isComplete(q){const log=(S.completionLog||{})[q.id];if(!log)return false;if(q.category==='onetime')return !!log.done;if(q.category==='daily')return log.d===today();if(q.category==='weekly')return log.w===weekKey();if(q.category==='monthly')return log.m===monthKey();return false;}
+function markComplete(id){if(!S.completionLog)S.completionLog={};if(!S.completionLog[id])S.completionLog[id]={};const q=(S.allQuests||[]).find(q=>q.id===id);if(!q)return;const log=S.completionLog[id];if(q.category==='onetime')log.done=true;if(q.category==='daily')log.d=today();if(q.category==='weekly')log.w=weekKey();if(q.category==='monthly')log.m=monthKey();}
+function checkResets(){if(currentPanel==='quests')renderQuests();}
+function setQuestCat(cat,btn){questCat=cat;document.querySelectorAll('#q-cat-pills .pill').forEach(p=>p.classList.remove('active'));if(btn)btn.classList.add('active');renderQuestList();}
+function renderQuests(){renderQuestSummary();renderQuestList();renderQuestTimer();}
+function renderQuestSummary(){
+  const el=$('q-summary');if(!el)return;
+  const all=S.allQuests||[];
+  const cats=[{k:'daily',label:'Daily',col:'var(--blue)'},{k:'weekly',label:'Weekly',col:'var(--purple)'},{k:'monthly',label:'Monthly',col:'var(--orange)'},{k:'onetime',label:'One-Time',col:'var(--gold3)'}];
+  el.innerHTML=cats.map(c=>{const qs=all.filter(q=>q.category===c.k);const done=qs.filter(q=>isComplete(q)).length;const pct=qs.length?Math.round((done/qs.length)*100):0;return `<div class="qs-card"><div class="qs-val" style="color:${c.col};">${done}/${qs.length}</div><div style="height:2px;background:var(--b2);border-radius:2px;margin:4px 0;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${c.col};border-radius:2px;transition:width .5s;"></div></div><div class="qs-label">${c.label}</div></div>`;}).join('');
+}
+function renderQuestList(){
+  const el=$('q-list');if(!el)return;
+  const catColors={daily:'var(--blue)',weekly:'var(--purple)',monthly:'var(--orange)',onetime:'var(--gold3)'};
+  const catLabels={daily:'⏱ DAILY',weekly:'📅 WEEKLY',monthly:'🗓 MONTHLY',onetime:'⭐ ONE-TIME'};
+  const diffIcon={easy:'🟢',medium:'🟡',hard:'🔴',boss:'💀'};
+  let qs=S.allQuests||[];
+  if(questCat==='completed')qs=qs.filter(q=>isComplete(q));
+  else if(questCat==='all')qs=qs.filter(q=>!isComplete(q));
+  else qs=qs.filter(q=>q.category===questCat&&!isComplete(q));
+  if(!qs.length){el.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t4);padding:16px;text-align:center;">No quests here${questCat==='all'?' — All complete! Great work.':questCat==='completed'?' — None completed yet.':' — Category empty.'}</div>`;return;}
+  el.innerHTML=qs.map(q=>{const done=isComplete(q);const typeCls='qc-'+(q.type==='boss'?'boss':q.category==='weekly'?'weekly':q.category==='monthly'?'monthly':q.category==='onetime'?'onetime':'daily');return `<div class="quest-card ${typeCls} ${done?'done':''}" onclick="completeQuest('${q.id}')">
+    <div class="q-check">${done?'✓':''}</div>
+    <div class="q-body">
+      <div class="q-name">${diffIcon[q.difficulty]||'🟡'} ${q.name}</div>
+      <div class="q-detail"><span class="badge" style="color:${catColors[q.category]||'var(--t4)'};border-color:${catColors[q.category]||'var(--b2)'};background:transparent;font-size:8px;padding:1px 5px;">${catLabels[q.category]||q.category}</span> ${q.detail}</div>
+    </div>
+    <div class="q-rewards"><div class="q-xp">+${q.xp} XP</div><div class="q-coins">◈ ${q.coins}</div></div>
+    <div class="q-actions"><button class="q-btn" onclick="openQuestEditor('${q.id}',event)">✎</button><button class="q-btn q-del" onclick="deleteQuest('${q.id}',event)">×</button></div>
+  </div>`;}).join('');
+}
+function completeQuest(id){
+  const q=(S.allQuests||[]).find(q=>q.id===id);if(!q)return;
+  if(isComplete(q)){notify('▸ Already completed!');return;}
+  markComplete(id);S.totalQuestsCompleted=(S.totalQuestsCompleted||0)+1;S.coins+=(q.coins||0);S.totalCoins=(S.totalCoins||0)+(q.coins||0);
+  if(q.type==='boss')S.bossesDefeated=(S.bossesDefeated||0)+1;
+  gainXP(q.xp||0,q.stat||'willpower');notify('▸ QUEST COMPLETE: '+q.name+' +'+q.xp+' XP ◈+'+q.coins);
+  renderQuests();save();
+}
+function openQuestEditor(id,e){
+  if(e)e.stopPropagation();qeditId=id||null;
+  const q=id?(S.allQuests||[]).find(q=>q.id===id):null;
+  $('qe-title-label').textContent=id?'Edit Quest':'Create Quest';
+  $('qe-id').value=id||'';$('qe-name').value=q?q.name:'';$('qe-detail').value=q?q.detail:'';$('qe-category').value=q?q.category:'daily';$('qe-type').value=q?q.type:'strength';$('qe-difficulty').value=q?q.difficulty:'medium';$('qe-stat').value=q?q.stat:'strength';$('qe-xp').value=q?q.xp:100;$('qe-coins').value=q?q.coins:20;$('qe-repeatable').checked=q?q.repeatable!==false:true;
+  updateQePreview();openModal('modal-quest-edit');
+}
+function updateQePreview(){const el=$('qe-preview');if(!el)return;const cat=$('qe-category')?.value||'daily';const resets={daily:'Resets daily',weekly:'Resets Monday',monthly:'Resets 1st of month',onetime:'Completes once'};el.textContent=`${cat.toUpperCase()} · ${$('qe-difficulty')?.value||'medium'} · +${$('qe-xp')?.value||0} XP · ◈${$('qe-coins')?.value||0} · ${resets[cat]||''}`;}
+['qe-category','qe-difficulty','qe-xp','qe-coins'].forEach(id=>{setTimeout(()=>{const el=$(id);if(el)el.addEventListener('change',updateQePreview);},200);});
+function saveQuestEditor(){
+  if(!S.allQuests)S.allQuests=[];
+  const id=$('qe-id')?.value.trim()||'cq_'+Date.now();const name=$('qe-name')?.value.trim();
+  if(!name){notify('▸ Quest name required.');return;}
+  const q={id,name,detail:$('qe-detail')?.value.trim()||'Complete this quest',category:$('qe-category')?.value,type:$('qe-type')?.value,difficulty:$('qe-difficulty')?.value,stat:$('qe-stat')?.value,xp:parseInt($('qe-xp')?.value)||50,coins:parseInt($('qe-coins')?.value)||10,repeatable:$('qe-repeatable')?.checked,custom:true};
+  const idx=S.allQuests.findIndex(q=>q.id===id);if(idx>=0)S.allQuests[idx]=q;else S.allQuests.push(q);
+  closeModal('modal-quest-edit');renderQuests();renderQuestMgr(qmgrCat);checkAchievements();save();notify('▸ QUEST '+(qeditId?'UPDATED':'CREATED')+': '+name);qeditId=null;
+}
+function deleteQuest(id,e){
+  if(e)e.stopPropagation();const q=(S.allQuests||[]).find(q=>q.id===id);if(!q)return;
+  if(!q.custom&&!confirm('Delete built-in quest "'+q.name+'"?'))return;
+  S.allQuests=S.allQuests.filter(q=>q.id!==id);if(S.completionLog)delete S.completionLog[id];
+  renderQuests();renderQuestMgr(qmgrCat);save();notify('▸ Quest deleted.');
+}
+function qmgrFilter(cat,btn){qmgrCat=cat;document.querySelectorAll('#qmgr-pills .pill').forEach(p=>p.classList.remove('active'));if(btn)btn.classList.add('active');renderQuestMgr(cat);}
+function renderQuestMgr(filter){
+  const el=$('qmgr-list');if(!el)return;
+  const catColors={daily:'var(--blue)',weekly:'var(--purple)',monthly:'var(--orange)',onetime:'var(--gold3)'};
+  let qs=S.allQuests||[];if(filter!=='all')qs=qs.filter(q=>q.category===filter);
+  if(!qs.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);padding:10px;">No quests.</div>';return;}
+  el.innerHTML=qs.map(q=>`<div class="qm-row"><div class="qm-dot" style="background:${catColors[q.category]||'var(--b2)'}"></div><div class="qm-name">${q.name}</div><div class="qm-meta">${q.category.toUpperCase()} · +${q.xp}XP</div>${isComplete(q)?'<span class="badge badge-gn">DONE</span>':''}<button class="q-btn" onclick="closeModal('modal-quest-mgr');openQuestEditor('${q.id}')">✎</button><button class="q-btn q-del" onclick="delQM('${q.id}')">×</button></div>`).join('');
+}
+function delQM(id){S.allQuests=(S.allQuests||[]).filter(q=>q.id!==id);renderQuestMgr(qmgrCat);renderQuests();save();notify('▸ Quest removed.');}
+function renderQuestTimer(){
+  const el=$('q-reset-timer');if(!el)return;
+  const now=new Date();const midnight=new Date(now);midnight.setHours(23,59,59,999);
+  const nextMon=new Date(now);nextMon.setDate(now.getDate()+(1+7-now.getDay())%7||7);nextMon.setHours(0,0,0,0);
+  const nextMonth=new Date(now.getFullYear(),now.getMonth()+1,1);
+  const fmt=ms=>{const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h>24?Math.ceil(ms/86400000)+'d':h+'h '+m+'m';};
+  el.innerHTML=`<div>⏱ Daily resets in ${fmt(midnight-now)}</div><div>📅 Weekly in ${fmt(nextMon-now)}</div><div>🗓 Monthly in ${fmt(nextMonth-now)}</div>`;
+}
+
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+function renderDash(){renderDashGreeting();renderDashKPIs();renderDashTrading();renderDashFitness();renderDashJournal();renderDashRecent();renderDashGoals();}
+function renderDashGreeting(){
+  const el=$('dash-greeting');if(!el)return;
+  const h=new Date().getHours();const g=h<6?'Nox':h<12?'Mane':h<17?'Meridies':'Vespera';
+  const name=S.hunterName||'Irisu';const td=today();
+  const todayTrades=(S.trades||[]).filter(t=>t.date===td&&t.outcome!=='open');
+  const todayPnl=todayTrades.reduce((s,t)=>s+(t.pnl||0),0);
+  const trained=(S.trainedDays||[]).includes(td);
+  const mottos=['Discipline creates freedom.','The markets reward patience.','Every rep builds the foundation.','Consistency compounds infinitely.','Small improvements compound into mastery.'];
+  const mot=mottos[new Date().getDay()%mottos.length];
+  const updates=[];
+  if(todayTrades.length)updates.push(`${todayTrades.length} trade${todayTrades.length>1?'s':''} · ${todayPnl>=0?'+':''}$${todayPnl.toFixed(2)}`);
+  if(trained)updates.push(`Workout ✓ · Streak: ${S.streak||0} days 🔥`);
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+    <div><div style="font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:var(--t1);">${g}, ${name}.</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);margin-top:2px;">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase()}</div>
+    ${updates.length?`<div style="font-size:12px;color:var(--t3);margin-top:5px;">${updates.join(' · ')}</div>`:''}</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t4);font-style:italic;text-align:right;max-width:200px;">"${mot}"</div>
+  </div>`;
+}
+function renderDashKPIs(){
+  const el=$('dash-kpi');if(!el)return;
+  const td=today();const closed=(S.trades||[]).filter(t=>t.outcome!=='open');
+  const todayPnl=closed.filter(t=>t.date===td).reduce((s,t)=>s+(t.pnl||0),0);
+  const weekPnl=closed.filter(t=>t.date>=weekStart()).reduce((s,t)=>s+(t.pnl||0),0);
+  const monthPnl=closed.filter(t=>t.date&&t.date.startsWith(td.substring(0,7))).reduce((s,t)=>s+(t.pnl||0),0);
+  const wins=closed.filter(t=>t.outcome==='Win');const wr=closed.length?Math.round((wins.length/closed.length)*100):0;
+  const totalPnl=closed.reduce((s,t)=>s+(t.pnl||0),0);const streak=S.streak||0;
+  el.innerHTML=[
+    {val:(todayPnl>=0?'+':'')+' $'+todayPnl.toFixed(2),label:"Today's PnL",cls:'kpi-cr',vc:todayPnl>=0?'var(--green)':'var(--cr3)'},
+    {val:(weekPnl>=0?'+':'')+' $'+weekPnl.toFixed(2),label:'Weekly PnL',cls:weekPnl>=0?'kpi-gn':'kpi-cr',vc:weekPnl>=0?'var(--green)':'var(--cr3)'},
+    {val:(monthPnl>=0?'+':'')+' $'+monthPnl.toFixed(2),label:'Monthly PnL',cls:monthPnl>=0?'kpi-gn':'kpi-cr',vc:monthPnl>=0?'var(--green)':'var(--cr3)'},
+    {val:wr+'%',label:'Win Rate',cls:'kpi-bl',vc:'var(--blue)',sub:wins.length+'W/'+closed.filter(t=>t.outcome==='Loss').length+'L'},
+    {val:streak+' days',label:'Fit Streak',cls:streak>=7?'kpi-gd':'kpi-cr',vc:streak>=7?'var(--gold3)':'var(--t1)'},
+    {val:'$'+(S.startBalance+totalPnl).toFixed(0),label:'Account',cls:totalPnl>=0?'kpi-gn':'kpi-cr',vc:totalPnl>=0?'var(--green)':'var(--cr3)'},
+    {val:S.level,label:'Level',cls:'kpi-cr',vc:'var(--cr3)',sub:getRank(S.level).name},
+    {val:(S.traderXP||0),label:'Trader XP',cls:'kpi-gd',vc:'var(--gold3)',sub:getTraderRank(S.traderXP||0).label},
+  ].map(c=>`<div class="kpi-card ${c.cls}"><div class="kpi-val" style="color:${c.vc};">${c.val}</div><div class="kpi-label">${c.label}</div>${c.sub?`<div class="kpi-sub">${c.sub}</div>`:''}</div>`).join('');
+}
+function mRow(l,v){return `<div class="mini-list-row"><span class="mini-list-label">${l}</span><span class="mini-list-val">${v}</span></div>`;}
+function renderDashTrading(){
+  const el=$('dash-trade-ov');if(!el)return;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');const wins=closed.filter(t=>t.outcome==='Win');
+  const totalPnl=closed.reduce((s,t)=>s+(t.pnl||0),0);const wr=closed.length?Math.round((wins.length/closed.length)*100):0;
+  const grossW=wins.reduce((s,t)=>s+Math.max(0,t.pnl||0),0);const grossL=Math.abs(closed.filter(t=>t.outcome==='Loss').reduce((s,t)=>s+Math.min(0,t.pnl||0),0));
+  el.innerHTML=[['Trades',closed.length],['Win Rate',wr+'%'],['P&L',(totalPnl>=0?'+':'')+' $'+totalPnl.toFixed(2)],['PF',grossL>0?(grossW/grossL).toFixed(2):'∞']].map(([l,v])=>mRow(l,v)).join('');
+}
+function renderDashFitness(){
+  const el=$('dash-fit-ov');if(!el)return;const td=today();
+  const mDays=(S.trainedDays||[]).filter(d=>d&&d.startsWith(td.substring(0,7)));
+  const dIM=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+  const cons=Math.round((mDays.length/dIM)*100);
+  const wds=(S.workoutDetails||[]).filter(w=>w.date&&w.date.startsWith(td.substring(0,7)));
+  el.innerHTML=[['Streak',(S.streak||0)+' days 🔥'],['Best',(S.bestStreak||0)+' days'],['Consistency',cons+'%'],['This Month',mDays.length+' sessions'],['Calories',wds.reduce((s,w)=>s+(w.calories||0),0)]].map(([l,v])=>mRow(l,v)).join('');
+}
+function renderDashJournal(){
+  const el=$('dash-j-ov');if(!el)return;const td=today();const entries=S.journalEntries||[];
+  const todayE=entries.find(e=>e.date===td);const thisMonth=entries.filter(e=>e.date&&e.date.startsWith(td.substring(0,7))).length;
+  el.innerHTML=mRow('Total Entries',entries.length)+mRow('This Month',thisMonth)+mRow('Today',todayE?'✓ Written':'Not yet')+(entries[0]?`<div style="font-size:11px;color:var(--t4);margin-top:6px;font-style:italic;">"${(entries[0].body||'').substring(0,70)}..."</div>`:'<div style="font-size:11px;color:var(--t4);margin-top:6px;">Start your first entry today.</div>');
+}
+function renderDashRecent(){
+  const el=$('dash-recent');if(!el)return;const items=[];
+  (S.trades||[]).slice(0,3).forEach(t=>{const c=t.outcome==='Win'?'var(--green)':t.outcome==='Loss'?'var(--cr3)':'var(--gold3)';items.push({icon:'📈',text:`<span style="color:${c};font-weight:600;">[${t.pair}] ${t.outcome}</span> ${t.outcome!=='open'?(t.pnl>=0?'+':'')+'$'+parseFloat(t.pnl||0).toFixed(2):'(open)'}`,date:t.date});});
+  (S.workoutDetails||[]).slice(0,2).forEach(w=>items.push({icon:'💪',text:`${w.type||'Workout'} — ${w.duration||0}min`,date:w.date}));
+  items.sort((a,b)=>b.date>a.date?1:-1);
+  if(!items.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);">No recent activity.</div>';return;}
+  el.innerHTML=items.slice(0,6).map(i=>`<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid var(--b1);font-size:12px;"><span>${i.icon}</span><span style="flex:1;">${i.text}</span><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);">${i.date||''}</span></div>`).join('');
+}
+function renderDashGoals(){
+  const el=$('dash-goals');if(!el)return;const goals=S.goals||{};const metrics=S.bodyMetrics||{};
+  const items=BODY_METRICS.filter(m=>goals[m.id]&&metrics[m.id]);
+  if(!items.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);">Set goals in Body Metrics.</div>';return;}
+  el.innerHTML=items.map(m=>{const cur=metrics[m.id],tgt=parseFloat(goals[m.id]);const pct=Math.min(100,Math.round((cur/tgt)*100));return `<div class="card card-sm"><div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);margin-bottom:4px;">${m.name}</div><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-family:'Cinzel',serif;font-size:16px;color:var(--t1);">${cur}${m.unit}</span><span style="font-size:10px;color:var(--t4);">→ ${tgt}${m.unit}</span></div><div class="prog-track"><div class="prog-fill prog-cr" style="width:${pct}%;"></div></div></div>`;}).join('');
+}
+
+
+// ═══════════════════════════════════════════════
+// TRADING JOURNAL
+// ═══════════════════════════════════════════════
+let tradeFilter='all',tradeSubTab='log',chartView='equity';
+function tradingTab(tab,btn){
+  tradeSubTab=tab;document.querySelectorAll('.sub-tab').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');
+  ['tt-log','tt-new','tt-psych','tt-analysis'].forEach(id=>{const el=$(id);if(el)el.style.display='none';});
+  const show=$('tt-'+tab);if(show)show.style.display='block';
+  if(tab==='analysis')setTimeout(()=>renderChart(chartView),80);
+  if(tab==='log')renderTradeLog();if(tab==='psych')renderPsychPanel();
+}
+function renderTrading(){
+  renderTraderRank();renderTradeKPIs();renderTradeLog();drawEquityCurve();
+  const td=today();[$('t-date'),$('t-exitdate'),$('ps-date')].forEach(el=>{if(el)el.value=td;});
+}
+function renderTraderRank(){
+  const xp=S.traderXP||0;const rank=getTraderRank(xp);const next=TRADER_RANKS[TRADER_RANKS.indexOf(rank)+1];
+  const pct=next?Math.min(100,Math.floor(((xp-rank.minXP)/(next.minXP-rank.minXP))*100)):100;
+  const totalPnl=(S.trades||[]).filter(t=>t.outcome!=='open').reduce((s,t)=>s+(t.pnl||0),0);
+  const set=(id,v,style)=>{const el=$(id);if(el){el.textContent=v;if(style)Object.assign(el.style,style);}};
+  set('tr-rank-name',rank.name,{color:rank.color});set('tr-xp',xp.toLocaleString()+' Trader XP');
+  set('tr-badge',rank.label,{borderColor:rank.color,color:rank.color});
+  const bar=$('tr-xp-bar');if(bar)bar.style.width=pct+'%';
+  set('tr-balance','$'+(S.startBalance+totalPnl).toFixed(2),{color:totalPnl>=0?'var(--green)':'var(--cr3)'});
+}
+function renderTradeKPIs(){
+  const el=$('tr-kpis');if(!el)return;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');const wins=closed.filter(t=>t.outcome==='Win');const losses=closed.filter(t=>t.outcome==='Loss');
+  const wr=closed.length?Math.round((wins.length/closed.length)*100):0;const totalPnl=closed.reduce((s,t)=>s+(t.pnl||0),0);
+  const grossW=wins.reduce((s,t)=>s+Math.max(0,t.pnl||0),0);const grossL=Math.abs(losses.reduce((s,t)=>s+Math.min(0,t.pnl||0),0));
+  const pf=grossL>0?(grossW/grossL).toFixed(2):'∞';const rrs=closed.filter(t=>t.rr&&t.rr!=='—').map(t=>parseFloat(t.rr)||0);
+  const avgRR=rrs.length?(rrs.reduce((a,b)=>a+b,0)/rrs.length).toFixed(2):'0.00';
+  const avgW=wins.length?(grossW/wins.length):0;const avgL_v=losses.length?(grossL/losses.length):0;
+  const exp=closed.length?(((wr/100)*avgW)-((1-wr/100)*avgL_v)).toFixed(2):0;
+  el.innerHTML=[{val:closed.length,label:'Total Trades',cls:'kpi-bl',vc:'var(--blue)'},{val:wr+'%',label:'Win Rate',cls:wr>=50?'kpi-gn':'kpi-cr',vc:wr>=50?'var(--green)':'var(--cr3)'},{val:(totalPnl>=0?'+':'')+' $'+totalPnl.toFixed(2),label:'Total P&L',cls:totalPnl>=0?'kpi-gn':'kpi-cr',vc:totalPnl>=0?'var(--green)':'var(--cr3)'},{val:pf,label:'Profit Factor',cls:'kpi-bl',vc:'var(--blue)'},{val:avgRR,label:'Avg R:R',cls:'kpi-bl',vc:'var(--blue)'},{val:(exp>=0?'+':'')+' $'+exp,label:'Expectancy',cls:parseFloat(exp)>=0?'kpi-gn':'kpi-cr',vc:parseFloat(exp)>=0?'var(--green)':'var(--cr3)'}].map(c=>`<div class="kpi-card ${c.cls}"><div class="kpi-val" style="color:${c.vc};font-size:18px;">${c.val}</div><div class="kpi-label">${c.label}</div></div>`).join('');
+}
+function filterTrades(f,btn){tradeFilter=f;document.querySelectorAll('#tr-filter-pills .pill').forEach(p=>p.classList.remove('active'));if(btn)btn.classList.add('active');renderTradeLog();}
+function tradeXP(t){const gx={A:120,B:80,C:40,D:10};let x=(gx[t.grade]||40);if(t.plan==='Yes')x+=60;else if(t.plan==='Partial')x+=20;if(['Calm','Confident','Disciplined'].includes(t.emotion))x+=30;if(t.outcome==='Win')x+=80;else if(t.outcome==='BE')x+=30;else if(t.outcome==='Loss'&&t.plan==='Yes')x+=40;else if(t.outcome==='Loss')x+=10;return x;}
+function tradeGold(t){if(t.outcome==='Win')return Math.max(20,Math.floor((t.pnl||0)/5));if(t.outcome==='BE')return 5;if(t.outcome==='Loss'&&t.plan==='Yes')return 10;return 0;}
+function renderTradeLog(){
+  const el=$('tr-log');if(!el)return;let trades=S.trades||[];
+  if(tradeFilter!=='all')trades=trades.filter(t=>t.outcome===tradeFilter);
+  if(!trades.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--t4);padding:14px;text-align:center;">No trades. Use "Log Trade" tab to add your first trade.</div>';return;}
+  el.innerHTML=trades.map(t=>{
+    const oc=t.outcome==='Win'?'tc-win':t.outcome==='Loss'?'tc-loss':t.outcome==='BE'?'tc-be':'tc-open';
+    const pnlStr=t.outcome==='open'?'OPEN':t.outcome==='BE'?'B/E':(t.pnl>=0?'+':'')+' $'+parseFloat(t.pnl||0).toFixed(2);
+    const pnlCls=t.outcome==='Win'?'tcm-pos':t.outcome==='Loss'?'tcm-neg':'tcm-neu';
+    const xpE=tradeXP(t);const gc=t.grade||'B';
+    return `<div class="trade-card ${oc}">
+      <div class="tc-top">
+        <span class="tc-pair">${t.pair||'—'}</span>
+        <span class="tc-dir ${t.dir==='Long'?'tc-long':'tc-short'}">${t.dir||'—'}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);">${t.session||''}</span>
+        <span class="tc-date">${t.date||''}</span>
+        <span class="tc-xp-badge">+${xpE} XP</span>
+        <button class="tc-del" onclick="deleteTrade('${t.id}')">×</button>
+      </div>
+      <div class="tc-metrics">
+        <div class="tc-metric"><div class="tcm-label">P&L</div><div class="tcm-val ${pnlCls}">${pnlStr}</div></div>
+        <div class="tc-metric"><div class="tcm-label">R:R</div><div class="tcm-val tcm-neu">${t.rr||'—'}</div></div>
+        <div class="tc-metric"><div class="tcm-label">Entry</div><div class="tcm-val tcm-neu">${t.entry||'—'}</div></div>
+        <div class="tc-metric"><div class="tcm-label">SL</div><div class="tcm-val tcm-neg">${t.sl||'—'}</div></div>
+        <div class="tc-metric"><div class="tcm-label">TP</div><div class="tcm-val tcm-pos">${t.tp||'—'}</div></div>
+        <div class="tc-metric"><div class="tcm-label">Lots</div><div class="tcm-val tcm-neu">${t.lot||'—'}</div></div>
+      </div>
+      <div class="tc-tags">
+        <span class="tc-tag t-grade-${gc}">Grade ${gc}</span>
+        <span class="tc-tag t-strat">${t.strategy||'—'}</span>
+        <span class="tc-tag t-emo">${t.emotion||'—'}</span>
+        <span class="tc-tag ${t.plan==='Yes'?'t-grade-A':t.plan==='Partial'?'t-grade-C':'t-grade-D'}">${t.plan==='Yes'?'✓ Plan':t.plan==='Partial'?'~ Partial':'✗ Deviated'}</span>
+        ${(t.tags||[]).map(tg=>`<span class="tc-tag t-strat">#${tg}</span>`).join('')}
+      </div>
+      ${t.rationale||t.well||t.wrong||t.lesson?`<div class="tc-review-grid">
+        ${t.rationale?`<div class="tc-review-item"><div class="tcri-label" style="color:var(--t4);">Why</div><div class="tcri-text">${t.rationale}</div></div>`:''}
+        ${t.well?`<div class="tc-review-item"><div class="tcri-label" style="color:var(--green);">✓ Went Well</div><div class="tcri-text">${t.well}</div></div>`:''}
+        ${t.wrong?`<div class="tc-review-item"><div class="tcri-label" style="color:var(--cr3);">✗ Went Wrong</div><div class="tcri-text">${t.wrong}</div></div>`:''}
+        ${t.lesson?`<div class="tc-review-item"><div class="tcri-label" style="color:var(--gold3);">💡 Lesson</div><div class="tcri-text">${t.lesson}</div></div>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+function calcRRPreview(){
+  const e=parseFloat($('t-entry')?.value),s=parseFloat($('t-sl')?.value),tp=parseFloat($('t-tp')?.value);
+  const el=$('rr-preview');if(!el)return;
+  if(!isNaN(e)&&!isNaN(s)&&!isNaN(tp)&&Math.abs(e-s)>0){const rr=(Math.abs(tp-e)/Math.abs(e-s)).toFixed(2);const col=rr>=2?'var(--green)':rr>=1?'var(--gold3)':'var(--cr3)';el.innerHTML=`R:R = <span style="color:${col};font-family:'Cinzel',serif;font-size:15px;font-weight:700;">${rr}</span>`;}else el.textContent='';
+}
+function logTrade(){
+  const pair=($('t-pair')?.value||'').trim();if(!pair){notify('▸ Enter a pair/instrument.');return;}
+  const entry=parseFloat($('t-entry')?.value)||0,sl=parseFloat($('t-sl')?.value)||0,tp=parseFloat($('t-tp')?.value)||0;
+  const rr=(entry&&sl&&tp&&Math.abs(entry-sl)>0)?(Math.abs(tp-entry)/Math.abs(entry-sl)):0;
+  const grade=rr>=3?'A':rr>=2?'B':rr>=1?'C':'D';const pnl=parseFloat($('t-pnl')?.value)||0;
+  const tagsRaw=$('t-tags')?.value||'';
+  const trade={id:'t_'+Date.now(),pair,dir:$('t-dir')?.value||'Long',session:$('t-session')?.value,strategy:$('t-strategy')?.value,date:$('t-date')?.value||today(),exitdate:$('t-exitdate')?.value||today(),entry,sl,tp,exit:parseFloat($('t-exit')?.value)||0,lot:parseFloat($('t-lot')?.value)||0,pnl,outcome:$('t-outcome')?.value||'open',grade,rr:rr?rr.toFixed(2):'—',preEmo:parseInt($('t-premood')?.value)||5,postEmo:parseInt($('t-postmood')?.value)||5,conf:parseInt($('t-conf')?.value)||5,plan:$('t-plan')?.value||'Yes',emotion:$('t-emotion')?.value||'Calm',rationale:$('t-rationale')?.value.trim()||'',well:$('t-well')?.value.trim()||'',wrong:$('t-wrong')?.value.trim()||'',lesson:$('t-lesson')?.value.trim()||'',tags:tagsRaw?tagsRaw.split(',').map(t=>t.trim()).filter(Boolean):[]};
+  if(!S.trades)S.trades=[];S.trades.unshift(trade);
+  const xpE=tradeXP(trade),goldE=tradeGold(trade);
+  S.traderXP=(S.traderXP||0)+xpE;gainXP(Math.floor(xpE*.4),'sense');S.coins+=goldE;S.totalCoins=(S.totalCoins||0)+goldE;
+  ['t-pair','t-entry','t-sl','t-tp','t-exit','t-lot','t-pnl','t-rationale','t-well','t-wrong','t-lesson','t-tags'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  $('t-outcome').value='open';if($('rr-preview'))$('rr-preview').textContent='';
+  checkTradeAchievements();renderTrading();save();notify('▸ TRADE LOGGED ['+pair+'] +'+xpE+' XP ◈+'+goldE);
+}
+function deleteTrade(id){S.trades=(S.trades||[]).filter(t=>t.id!==id);renderTrading();save();notify('▸ Trade removed.');}
+function logPsych(){
+  if(!S.psychLogs)S.psychLogs=[];
+  S.psychLogs.unshift({id:'p_'+Date.now(),date:$('ps-date')?.value||today(),pre:parseInt($('ps-pre')?.value)||5,post:parseInt($('ps-post')?.value)||5,disc:parseInt($('ps-disc')?.value)||5,trades:parseInt($('ps-trades')?.value)||0,rules:$('ps-rules')?.value||'Yes',emotion:$('ps-emotion')?.value||'Calm',phys:$('ps-phys')?.value||'Rested',notes:$('ps-notes')?.value.trim()||''});
+  gainXP(25,'willpower');['ps-pre','ps-post','ps-disc','ps-trades','ps-notes'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  renderPsychPanel();save();notify('▸ PSYCHOLOGY LOG SAVED · +25 XP');
+}
+function renderPsychPanel(){
+  const logs=S.psychLogs||[];const el=$('psych-stats');
+  if(el){const avgPre=logs.length?(logs.reduce((s,l)=>s+(l.pre||5),0)/logs.length).toFixed(1):'—';const avgPost=logs.length?(logs.reduce((s,l)=>s+(l.post||5),0)/logs.length).toFixed(1):'—';const avgDisc=logs.length?(logs.reduce((s,l)=>s+(l.disc||5),0)/logs.length).toFixed(1):'—';const rulePct=logs.length?Math.round(logs.filter(l=>l.rules==='Yes').length/logs.length*100)+'%':'—';el.innerHTML=[{l:'Avg Pre',v:avgPre},{l:'Avg Post',v:avgPost},{l:'Discipline',v:avgDisc},{l:'Rule Adherence',v:rulePct}].map(s=>`<div class="kpi-card kpi-bl"><div class="kpi-val" style="color:var(--blue);font-size:18px;">${s.v}</div><div class="kpi-label">${s.l}</div></div>`).join('');}
+  const pl=$('psych-log');if(!pl)return;
+  if(!logs.length){pl.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--t4);padding:12px;">No entries yet.</div>';return;}
+  pl.innerHTML=logs.map(l=>`<div class="psych-card"><div class="pc-header"><div class="pc-date">${new Date(l.date).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</div><div class="pc-scores"><span class="pc-score">Pre: <span style="color:var(--blue);">${l.pre}/10</span></span><span class="pc-score">Post: <span style="color:var(--green);">${l.post}/10</span></span><span class="pc-score">Disc: <span style="color:var(--gold3);">${l.disc}/10</span></span></div><div style="display:flex;gap:5px;"><span class="badge ${l.rules==='Yes'?'badge-gn':l.rules==='Partial'?'badge-gd':'badge-cr'}">${l.rules}</span><span class="badge badge-bl">${l.emotion}</span><button onclick="delPsych('${l.id}')" style="background:none;border:none;color:var(--t4);cursor:pointer;font-size:15px;line-height:1;">×</button></div></div>${l.notes?`<div style="font-size:12px;color:var(--t3);font-style:italic;">"${l.notes}"</div>`:''}</div>`).join('');
+}
+function delPsych(id){S.psychLogs=(S.psychLogs||[]).filter(l=>l.id!==id);renderPsychPanel();save();}
+function checkTradeAchievements(){
+  const trades=S.trades||[];const wins=trades.filter(t=>t.outcome==='Win');
+  const checks=[{id:'trade_first',c:trades.length>=1,xp:100},{id:'trade_10',c:trades.length>=10,xp:150},{id:'trade_win5',c:wins.length>=5,xp:150},{id:'trade_agrade5',c:trades.filter(t=>t.grade==='A').length>=5,xp:200},{id:'trade_plan10',c:trades.filter(t=>t.plan==='Yes').length>=10,xp:250},{id:'trade_xp1000',c:(S.traderXP||0)>=1000,xp:100}];
+  if(!S.unlockedAchievements)S.unlockedAchievements=[];
+  checks.forEach(a=>{if(!S.unlockedAchievements.includes(a.id)&&a.c){S.unlockedAchievements.push(a.id);gainXP(a.xp,'sense');notify('⚔ GLORIA: '+(ACHIEVEMENTS.find(x=>x.id===a.id)?.name||a.id)+' +'+a.xp+'XP');}});
+}
+
+
+// ═══════════════════════════════════════════════
+// SVG CHART ENGINE
+// ═══════════════════════════════════════════════
+let currentChart='equity';
+function switchChart(view,btn){
+  currentChart=view;
+  document.querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');
+  const svg=$('main-chart'),hw=$('heatmap-wrap');
+  if(view==='heatmap'){if(svg)svg.style.display='none';if(hw)hw.style.display='block';}
+  else{if(svg)svg.style.display='block';if(hw)hw.style.display='none';}
+  setTimeout(()=>renderChart(view),60);
+}
+function renderChart(view){
+  if(view==='equity')drawEquityChart();else if(view==='winrate')drawWinRateChart();else if(view==='strategy')drawStrategyChart();else if(view==='monthly')drawMonthlyChart();else if(view==='drawdown')drawDrawdownChart();else if(view==='heatmap')drawHeatmap();else if(view==='emotion')drawEmotionChart();
+  renderStrategyTable();renderAnalysisInsights();
+}
+function svgE(tag,attrs){const el=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>el.setAttributeNS(null,k,String(v)));return el;}
+function svgT(svg,x,y,text,opts){opts=opts||{};const t=svgE('text',{x,y,'text-anchor':opts.a||'middle',fill:opts.fill||'var(--t4)','font-size':opts.sz||9,'font-family':opts.mono?'JetBrains Mono,monospace':'Inter,sans-serif'});if(opts.w)t.setAttributeNS(null,'font-weight',opts.w);t.textContent=text;svg.appendChild(t);return t;}
+function initSvg(id){const el=$(id);if(!el)return null;el.innerHTML='';const w=Math.max(el.parentElement?.clientWidth||600,280),h=280;el.setAttribute('viewBox',`0 0 ${w} ${h}`);el.setAttribute('width','100%');el.setAttribute('height',h);return{svg:el,w,h};}
+function drawGrid(svg,w,h,pad,minV,maxV){const r=maxV-minV||1;for(let i=0;i<=4;i++){const v=minV+(r/4)*i,y=h-pad-((v-minV)/r)*(h-pad*1.5);svg.appendChild(svgE('line',{x1:pad,y1:y,x2:w-8,y2:y,stroke:'var(--b2)','stroke-dasharray':'3,4','stroke-width':'.5'}));svgT(svg,pad-5,y+3,'$'+v.toFixed(0),{a:'end',sz:9,mono:true});}}
+function drawAxes(svg,w,h,pad){svg.appendChild(svgE('line',{x1:pad,y1:h*0.1,x2:pad,y2:h-pad,stroke:'var(--b3)','stroke-width':1}));svg.appendChild(svgE('line',{x1:pad,y1:h-pad,x2:w-8,y2:h-pad,stroke:'var(--b3)','stroke-width':1}));}
+function drawEquityChart(){
+  const r=initSvg('main-chart');if(!r)return;const{svg,w,h}=r;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open').slice().reverse();
+  if(closed.length<2){svgT(svg,w/2,h/2,'Log 2+ trades to see equity curve',{fill:'var(--t4)',sz:12});return;}
+  let eq=0;const pts=[0];closed.forEach(t=>{eq+=(t.pnl||0);pts.push(eq);});
+  const minV=Math.min(...pts),maxV=Math.max(...pts),range=maxV-minV||1;const pad=42;
+  const tx=i=>pad+(i/(pts.length-1))*(w-pad-8),ty=v=>h-pad-((v-minV)/range)*(h-pad*1.5);
+  if(minV<0&&maxV>0)svg.appendChild(svgE('line',{x1:pad,y1:ty(0),x2:w-8,y2:ty(0),stroke:'rgba(255,255,255,0.1)','stroke-dasharray':'4,4','stroke-width':1}));
+  drawGrid(svg,w,h,pad,minV,maxV);
+  const defs=svgE('defs',{});const g=svgE('linearGradient',{id:'eqg',x1:'0',y1:'0',x2:'0',y2:'1'});
+  g.appendChild(svgE('stop',{offset:'0%','stop-color':eq>=0?'#22c55e':'#dc143c','stop-opacity':'0.25'}));
+  g.appendChild(svgE('stop',{offset:'100%','stop-color':eq>=0?'#22c55e':'#dc143c','stop-opacity':'0.02'}));
+  defs.appendChild(g);svg.appendChild(defs);
+  let ap=tx(0)+','+(h-pad)+' ';pts.forEach((_,i)=>ap+=tx(i)+','+ty(pts[i])+' ');ap+=tx(pts.length-1)+','+(h-pad);
+  svg.appendChild(svgE('polygon',{points:ap,fill:'url(#eqg)'}));
+  svg.appendChild(svgE('polyline',{points:pts.map((_,i)=>tx(i)+','+ty(pts[i])).join(' '),fill:'none',stroke:eq>=0?'#22c55e':'#dc143c','stroke-width':2.2}));
+  closed.forEach((t,i)=>svg.appendChild(svgE('circle',{cx:tx(i+1),cy:ty(pts[i+1]),r:2.5,fill:t.outcome==='Win'?'#22c55e':t.outcome==='Loss'?'#dc143c':'#3b82f6',stroke:'var(--bg2)','stroke-width':1})));
+  drawAxes(svg,w,h,pad);svgT(svg,w-8,14,(eq>=0?'+':'')+' $'+eq.toFixed(2),{a:'end',sz:11,fill:eq>=0?'var(--green)':'var(--cr3)',w:'bold',mono:true});
+}
+function drawWinRateChart(){
+  const r=initSvg('main-chart');if(!r)return;const{svg,w,h}=r;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');if(!closed.length){svgT(svg,w/2,h/2,'No closed trades yet',{fill:'var(--t4)',sz:12});return;}
+  const wins=closed.filter(t=>t.outcome==='Win').length,losses=closed.filter(t=>t.outcome==='Loss').length,be=closed.filter(t=>t.outcome==='BE').length,total=closed.length;
+  const cx=w*.36,cy=h/2,rd=Math.min(h/2-24,85);
+  const slices=[{val:wins,c:'#22c55e',label:'Wins'},{val:losses,c:'#dc143c',label:'Losses'},{val:be,c:'#3b82f6',label:'BE'}].filter(s=>s.val>0);
+  let start=-Math.PI/2;
+  slices.forEach(s=>{const ang=(s.val/total)*Math.PI*2,x1=cx+rd*Math.cos(start),y1=cy+rd*Math.sin(start),x2=cx+rd*Math.cos(start+ang),y2=cy+rd*Math.sin(start+ang),lg=ang>Math.PI?1:0;svg.appendChild(svgE('path',{d:`M${cx} ${cy} L${x1} ${y1} A${rd} ${rd} 0 ${lg} 1 ${x2} ${y2}Z`,fill:s.c,stroke:'var(--bg2)','stroke-width':2.5,opacity:.85}));if(ang>0.3){const mid=start+ang/2;svgT(svg,cx+rd*.6*Math.cos(mid),cy+rd*.6*Math.sin(mid)+4,Math.round((s.val/total)*100)+'%',{fill:'#fff',sz:12,w:'bold'});}start+=ang;});
+  svg.appendChild(svgE('circle',{cx,cy,r:rd*.36,fill:'var(--bg2)'}));svgT(svg,cx,cy-3,total,{fill:'var(--t1)',sz:18,w:'bold'});
+  const lx=w*.68,ly=h/2-slices.length*18;slices.forEach((s,i)=>{svg.appendChild(svgE('rect',{x:lx,y:ly+i*33,width:12,height:12,rx:2,fill:s.c}));svgT(svg,lx+18,ly+i*33+10,s.label+' ('+s.val+')',{a:'start',fill:'var(--t2)',sz:12});svgT(svg,lx+18,ly+i*33+22,Math.round((s.val/total)*100)+'%',{a:'start',fill:'var(--t4)',sz:9,mono:true});});
+}
+function drawStrategyChart(){
+  const r=initSvg('main-chart');if(!r)return;const{svg,w,h}=r;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');if(!closed.length){svgT(svg,w/2,h/2,'No data yet',{fill:'var(--t4)',sz:12});return;}
+  const strats={};closed.forEach(t=>{const s=t.strategy||'Unknown';if(!strats[s])strats[s]={wins:0,total:0,pnl:0};strats[s].total++;if(t.outcome==='Win')strats[s].wins++;strats[s].pnl+=(t.pnl||0);});
+  const sorted=Object.entries(strats).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,8);const pad=42,bp=4,maxAbs=Math.max(...sorted.map(s=>Math.abs(s[1].pnl)),1),bw=(w-pad-8)/sorted.length,midY=h/2;
+  svg.appendChild(svgE('line',{x1:pad,y1:midY,x2:w-8,y2:midY,stroke:'var(--b2)','stroke-dasharray':'4,4','stroke-width':1}));
+  svg.appendChild(svgE('line',{x1:pad,y1:20,x2:pad,y2:h-30,stroke:'var(--b3)','stroke-width':1}));
+  svg.appendChild(svgE('line',{x1:pad,y1:h-30,x2:w-8,y2:h-30,stroke:'var(--b3)','stroke-width':1}));
+  sorted.forEach(([name,d],i)=>{const x=pad+i*bw+bp,bwi=bw-bp*2,pH=((Math.abs(d.pnl)||.1)/maxAbs)*(midY-22),isP=d.pnl>=0,col=isP?'#22c55e':'#dc143c';svg.appendChild(svgE('rect',{x,y:isP?midY-pH:midY,width:bwi,height:pH,fill:col,rx:2,opacity:.82}));svgT(svg,x+bwi/2,isP?midY-pH-4:midY+pH+13,(isP?'+':'')+'$'+d.pnl.toFixed(0),{fill:col,sz:9,w:'bold',mono:true});svgT(svg,x+bwi/2,h-14,name.substring(0,9),{fill:'var(--t4)',sz:8,mono:true});svgT(svg,x+bwi/2,h-4,Math.round((d.wins/d.total)*100)+'%WR',{fill:'var(--t3)',sz:8,mono:true});});
+}
+function drawMonthlyChart(){
+  const r=initSvg('main-chart');if(!r)return;const{svg,w,h}=r;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');if(!closed.length){svgT(svg,w/2,h/2,'No data yet',{fill:'var(--t4)',sz:12});return;}
+  const months={};closed.forEach(t=>{const d=new Date(t.date),k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(!months[k])months[k]=0;months[k]+=(t.pnl||0);});
+  const sorted=Object.keys(months).sort();if(sorted.length<2){svgT(svg,w/2,h/2,'Need 2+ months of trades',{fill:'var(--t4)',sz:12});return;}
+  const vals=sorted.map(k=>months[k]);const minV=Math.min(...vals),maxV=Math.max(...vals),range=maxV-minV||1;const pad=42;
+  const tx=i=>pad+(i/(sorted.length-1))*(w-pad-8),ty=v=>h-pad-((v-minV)/range)*(h-pad*1.5);
+  drawGrid(svg,w,h,pad,minV,maxV);if(minV<0&&maxV>0)svg.appendChild(svgE('line',{x1:pad,y1:ty(0),x2:w-8,y2:ty(0),stroke:'rgba(255,255,255,0.12)','stroke-dasharray':'4,4','stroke-width':1}));
+  const bw=Math.min(28,(w-pad*2)/sorted.length-4);
+  sorted.forEach((m,i)=>{const v=vals[i],isP=v>=0,midY=ty(0),barH=Math.abs(ty(v)-midY);svg.appendChild(svgE('rect',{x:tx(i)-bw/2,y:isP?ty(v):midY,width:bw,height:barH,fill:isP?'rgba(34,197,94,.3)':'rgba(220,20,60,.3)',rx:2}));});
+  svg.appendChild(svgE('polyline',{points:sorted.map((_,i)=>tx(i)+','+ty(vals[i])).join(' '),fill:'none',stroke:'#3b82f6','stroke-width':2.2}));
+  sorted.forEach((m,i)=>{const col=vals[i]>=0?'#22c55e':'#dc143c';svg.appendChild(svgE('circle',{cx:tx(i),cy:ty(vals[i]),r:3.5,fill:col,stroke:'var(--bg2)','stroke-width':1.5}));svgT(svg,tx(i),vals[i]>=0?ty(vals[i])-7:ty(vals[i])+14,(vals[i]>=0?'+':'')+'$'+vals[i].toFixed(0),{fill:col,sz:9,w:'bold',mono:true});svgT(svg,tx(i),h-3,m.substring(5),{fill:'var(--t4)',sz:8,mono:true});});
+  drawAxes(svg,w,h,pad);
+}
+function drawDrawdownChart(){
+  const r=initSvg('main-chart');if(!r)return;const{svg,w,h}=r;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open').slice().reverse();if(closed.length<2){svgT(svg,w/2,h/2,'Log 2+ trades to see drawdown',{fill:'var(--t4)',sz:12});return;}
+  let eq=0,peak=0;const pts=[];closed.forEach(t=>{eq+=(t.pnl||0);peak=Math.max(peak,eq);pts.push(peak-eq);});
+  const maxDD=Math.max(...pts)||1;const pad=42;const tx=i=>pad+(i/(pts.length-1))*(w-pad-8),ty=v=>18+((v/maxDD)*(h-pad-18));
+  for(let i=0;i<=4;i++){const v=(maxDD/4)*i,y=ty(v);svg.appendChild(svgE('line',{x1:pad,y1:y,x2:w-8,y2:y,stroke:'var(--b2)','stroke-dasharray':'3,4','stroke-width':'.5'}));svgT(svg,pad-5,y+3,'$'+v.toFixed(0),{a:'end',sz:9,mono:true});}
+  let ap=tx(0)+','+(h-pad)+' ';pts.forEach((_,i)=>ap+=tx(i)+','+ty(pts[i])+' ');ap+=tx(pts.length-1)+','+(h-pad);
+  svg.appendChild(svgE('polygon',{points:ap,fill:'rgba(220,20,60,.18)'}));
+  svg.appendChild(svgE('polyline',{points:pts.map((_,i)=>tx(i)+','+ty(pts[i])).join(' '),fill:'none',stroke:'#dc143c','stroke-width':2.2}));
+  drawAxes(svg,w,h,pad);svgT(svg,w-8,14,'Max DD: $'+maxDD.toFixed(2),{a:'end',sz:11,fill:'var(--cr3)',w:'bold',mono:true});
+}
+function drawHeatmap(){
+  const el=$('heatmap-wrap');if(!el)return;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');if(!closed.length){el.innerHTML='<div style="padding:14px;font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--t4);">Log trades to see session heatmap.</div>';return;}
+  const sessions=['London','New York','Asian','London/NY Overlap','Pre-Market','Other'];const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const data={};sessions.forEach(s=>{data[s]={};days.forEach(d=>{data[s][d]={wins:0,total:0,pnl:0};});});
+  closed.forEach(t=>{const s=t.session||'Other';const d=new Date(t.date);const day=days[d.getDay()===0?6:d.getDay()-1];if(data[s]&&data[s][day]){data[s][day].total++;if(t.outcome==='Win')data[s][day].wins++;data[s][day].pnl+=(t.pnl||0);}});
+  const maxPnl=Math.max(...sessions.flatMap(s=>days.map(d=>Math.abs(data[s][d].pnl))),1);
+  let html='<table style="border-collapse:collapse;width:100%;font-family:\'JetBrains Mono\',monospace;font-size:10px;min-width:460px;"><thead><tr><th style="padding:6px 8px;border:1px solid var(--b2);text-align:left;color:var(--t4);font-weight:400;">Session</th>';
+  days.forEach(d=>html+=`<th style="padding:6px;border:1px solid var(--b2);text-align:center;color:var(--t4);font-weight:400;">${d}</th>`);html+='</tr></thead><tbody>';
+  sessions.forEach(s=>{html+=`<tr><td style="padding:7px 8px;border:1px solid var(--b1);color:var(--t2);font-weight:500;">${s}</td>`;days.forEach(d=>{const cell=data[s][d];if(!cell.total){html+=`<td style="padding:7px 6px;border:1px solid var(--b1);background:var(--bg2);"></td>`;return;}const wr=(cell.wins/cell.total)*100;const intensity=Math.min(.85,Math.abs(cell.pnl)/maxPnl*.7+.2);const bg=cell.pnl>=0?`rgba(34,197,94,${intensity})`:`rgba(220,20,60,${intensity})`;const tc=intensity>.5?'var(--bg)':'var(--t1)';html+=`<td style="padding:6px 4px;border:1px solid var(--b1);background:${bg};text-align:center;color:${tc};"><div style="font-size:10px;font-weight:700;">${Math.round(wr)}%</div><div style="font-size:8px;opacity:.8;">${cell.total}t</div></td>`;});html+='</tr>';});
+  html+='</tbody></table>';el.innerHTML=html;
+}
+function drawEmotionChart(){
+  const r=initSvg('main-chart');if(!r)return;const{svg,w,h}=r;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');if(!closed.length){svgT(svg,w/2,h/2,'No data yet',{fill:'var(--t4)',sz:12});return;}
+  const emos={};closed.forEach(t=>{const e=t.emotion||'Unknown';if(!emos[e])emos[e]={wins:0,total:0};emos[e].total++;if(t.outcome==='Win')emos[e].wins++;});
+  const sorted=Object.entries(emos).sort((a,b)=>b[1].total-a[1].total).slice(0,8);const pad=42,bp=4,maxT=Math.max(...sorted.map(s=>s[1].total),1),bw=(w-pad-8)/sorted.length;
+  svg.appendChild(svgE('line',{x1:pad,y1:20,x2:pad,y2:h-36,stroke:'var(--b3)','stroke-width':1}));
+  svg.appendChild(svgE('line',{x1:pad,y1:h-36,x2:w-8,y2:h-36,stroke:'var(--b3)','stroke-width':1}));
+  sorted.forEach(([emo,d],i)=>{const wr=d.total>0?(d.wins/d.total)*100:0,x=pad+i*bw+bp,bwi=bw-bp*2,barH=(d.total/maxT)*(h-56),col=wr>=60?'#22c55e':wr>=40?'#f59e0b':'#dc143c';svg.appendChild(svgE('rect',{x,y:h-36-barH,width:bwi,height:barH,fill:col,rx:2,opacity:.82}));svgT(svg,x+bwi/2,h-40-barH,Math.round(wr)+'%',{fill:col,sz:9,w:'bold',mono:true});svgT(svg,x+bwi/2,h-19,emo.substring(0,7),{fill:'var(--t4)',sz:8,mono:true});svgT(svg,x+bwi/2,h-8,'('+d.total+')',{fill:'var(--t4)',sz:8,mono:true});});
+  svgT(svg,w-8,14,'Win Rate by Emotion',{a:'end',sz:10,fill:'var(--t3)',mono:true});
+}
+function renderStrategyTable(){
+  const el=$('strat-table');if(!el)return;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');if(!closed.length){el.innerHTML='<tr><td colspan="5" style="padding:12px;color:var(--t4);font-family:\'JetBrains Mono\',monospace;font-size:10px;">No data yet.</td></tr>';return;}
+  const strats={};closed.forEach(t=>{const s=t.strategy||'Unknown';if(!strats[s])strats[s]={wins:0,total:0,pnl:0};strats[s].total++;if(t.outcome==='Win')strats[s].wins++;strats[s].pnl+=(t.pnl||0);});
+  el.innerHTML='<thead><tr style="border-bottom:1px solid var(--b2);">'+['Strategy','Trades','Win%','Net P&L','Rating'].map(h=>`<th style="padding:7px 8px;text-align:${h==='Strategy'?'left':'center'};color:var(--t4);font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;">${h}</th>`).join('')+'</tr></thead><tbody>'+Object.entries(strats).sort((a,b)=>b[1].pnl-a[1].pnl).map(([n,d])=>{const wr=Math.round((d.wins/d.total)*100);const rating=d.pnl>0&&wr>=50?'🟢 GOOD':d.pnl>0?'🟡 OK':'🔴 REVIEW';return `<tr style="border-bottom:1px solid var(--b1);"><td style="padding:7px 8px;color:var(--t2);">${n}</td><td style="padding:7px 8px;text-align:center;color:var(--t1);">${d.total}</td><td style="padding:7px 8px;text-align:center;color:${wr>=50?'var(--green)':'var(--cr3)'};">${wr}%</td><td style="padding:7px 8px;text-align:center;color:${d.pnl>=0?'var(--green)':'var(--cr3)'};font-family:'Cinzel',serif;">${d.pnl>=0?'+':''}$${d.pnl.toFixed(2)}</td><td style="padding:7px 8px;text-align:center;">${rating}</td></tr>`;}).join('')+'</tbody>';
+}
+function renderAnalysisInsights(){
+  const el=$('trade-insights');if(!el)return;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');if(!closed.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);padding:10px;">Log trades to unlock insights.</div>';return;}
+  const wins=closed.filter(t=>t.outcome==='Win'),losses=closed.filter(t=>t.outcome==='Loss');const wr=Math.round((wins.length/closed.length)*100);
+  const avgW=wins.length?(wins.reduce((s,t)=>s+(t.pnl||0),0)/wins.length):0;const avgL=losses.length?(Math.abs(losses.reduce((s,t)=>s+(t.pnl||0),0))/losses.length):0;
+  const planYes=closed.filter(t=>t.plan==='Yes'),planNo=closed.filter(t=>t.plan==='No');
+  const planYesWR=planYes.length?Math.round((planYes.filter(t=>t.outcome==='Win').length/planYes.length)*100):0;
+  const planNoWR=planNo.length?Math.round((planNo.filter(t=>t.outcome==='Win').length/planNo.length)*100):0;
+  const insights=[];
+  if(planYes.length&&planNo.length)insights.push({text:`Plan adherence: <strong style="color:var(--green)">${planYesWR}%</strong> WR when followed vs <strong style="color:var(--cr3)">${planNoWR}%</strong> when deviated. Stick to the plan.`,type:'good'});
+  if(wr>=55)insights.push({text:`Win rate ${wr}% above 55% target. Excellent execution.`,type:'good'});else if(wr<45&&closed.length>=5)insights.push({text:`Win rate ${wr}% below target. Focus on A/B-grade setups only.`,type:''});
+  if(avgW>avgL)insights.push({text:`Avg win ($${avgW.toFixed(2)}) > avg loss ($${avgL.toFixed(2)}) — positive risk management.`,type:'good'});
+  else if(avgL>avgW)insights.push({text:`Avg loss ($${avgL.toFixed(2)}) > avg win ($${avgW.toFixed(2)}). Tighten stops or move to break-even sooner.`,type:''});
+  el.innerHTML=insights.map(i=>`<div class="insight ${i.type||''}">${i.text}</div>`).join('');
+}
+function drawEquityCurve(){
+  const canvas=$('equity-canvas');if(!canvas)return;
+  const ctx=canvas.getContext('2d');const w=canvas.parentElement?.clientWidth||400;
+  canvas.width=w;canvas.height=70;ctx.clearRect(0,0,w,70);
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open').slice().reverse();if(closed.length<2){ctx.fillStyle='#4a4a4a';ctx.font='10px JetBrains Mono';ctx.textAlign='center';ctx.fillText('Log trades to see equity curve',w/2,38);return;}
+  let eq=0;const pts=[0];closed.forEach(t=>{eq+=(t.pnl||0);pts.push(eq);});
+  const minV=Math.min(...pts),maxV=Math.max(...pts),range=maxV-minV||1;
+  const tx=i=>4+(i/(pts.length-1))*(w-8),ty=v=>66-((v-minV)/range)*62;
+  const g=ctx.createLinearGradient(0,0,0,70);g.addColorStop(0,eq>=0?'rgba(34,197,94,.25)':'rgba(220,20,60,.25)');g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath();ctx.moveTo(tx(0),66);pts.forEach((_,i)=>ctx.lineTo(tx(i),ty(pts[i])));ctx.lineTo(tx(pts.length-1),66);ctx.closePath();ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.moveTo(tx(0),ty(0));pts.forEach((_,i)=>ctx.lineTo(tx(i),ty(pts[i])));ctx.strokeStyle=eq>=0?'#22c55e':'#dc143c';ctx.lineWidth=1.8;ctx.stroke();
+}
+
+
+// ═══════════════════════════════════════════════
+// PNL CALENDAR
+// ═══════════════════════════════════════════════
+let pnlCal=new Date(),selectedPnlDay=null;
+function pnlPrev(){pnlCal.setMonth(pnlCal.getMonth()-1);renderPnlCal();}
+function pnlNext(){pnlCal.setMonth(pnlCal.getMonth()+1);renderPnlCal();}
+function pnlToday(){pnlCal=new Date();renderPnlCal();}
+function renderPnlCal(){renderPnlCalGrid();renderPnlStrip();renderPnlAdv();}
+function renderPnlCalGrid(){
+  const el=$('pnl-grid'),lb=$('pnl-cal-label');if(!el||!lb)return;
+  const yr=pnlCal.getFullYear(),mo=pnlCal.getMonth();
+  lb.textContent=new Date(yr,mo,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'}).toUpperCase();
+  const dayMap={};(S.trades||[]).forEach(t=>{if(!t.date)return;if(!dayMap[t.date])dayMap[t.date]={trades:[],pnl:0,wins:0};dayMap[t.date].trades.push(t);if(t.outcome!=='open')dayMap[t.date].pnl+=(t.pnl||0);if(t.outcome==='Win')dayMap[t.date].wins++;});
+  const first=new Date(yr,mo,1),last=new Date(yr,mo+1,0),startDow=(first.getDay()+6)%7,td=today();
+  let html='';
+  for(let i=0;i<startDow;i++)html+='<div class="cal-cell other"></div>';
+  for(let d=1;d<=last.getDate();d++){
+    const ds=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const dd=dayMap[ds];const isToday=ds===td;const closed=dd?dd.trades.filter(t=>t.outcome!=='open'):[];
+    const pnl=dd?dd.pnl:0;const wr=closed.length?Math.round((dd.wins/closed.length)*100):0;
+    let cls='cal-cell';if(isToday)cls+=' today';if(dd&&closed.length>0)cls+=pnl>=0?' profit':' loss';
+    html+=`<div class="${cls}" onclick="openPnlDay('${ds}')">
+      <div class="cc-num">${d}</div>
+      ${dd&&closed.length?`<div class="cc-pnl ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(0)}</div><div class="cc-meta">${dd.trades.length}t ${wr}%</div>`:dd&&dd.trades.length?`<div class="cc-meta" style="color:var(--gold3);">${dd.trades.length}t open</div>`:''}
+      ${(S.dayNotes||{})[ds]?'<div class="cc-dot">📝</div>':''}
+    </div>`;
+  }
+  const trailing=(7-((startDow+last.getDate())%7))%7;
+  for(let i=0;i<trailing;i++)html+='<div class="cal-cell other"></div>';
+  el.innerHTML=html;
+}
+function openPnlDay(ds){
+  selectedPnlDay=ds;
+  const el=$('pnl-day-detail');if(!el)return;
+  $('pnl-dd-date').textContent=new Date(ds).toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase();
+  const dayTrades=(S.trades||[]).filter(t=>t.date===ds);const closed=dayTrades.filter(t=>t.outcome!=='open');
+  const wins=dayTrades.filter(t=>t.outcome==='Win'),losses=dayTrades.filter(t=>t.outcome==='Loss');
+  const pnl=closed.reduce((s,t)=>s+(t.pnl||0),0);const wr=closed.length?Math.round((wins.length/closed.length)*100):0;
+  const rrs=closed.filter(t=>t.rr&&t.rr!=='—').map(t=>parseFloat(t.rr)||0);const avgRR=rrs.length?(rrs.reduce((a,b)=>a+b,0)/rrs.length).toFixed(2):'—';
+  $('pnl-dd-stats').innerHTML=[{l:'Total Trades',v:dayTrades.length,c:'var(--blue)'},{l:'Net P&L',v:(pnl>=0?'+':'')+' $'+pnl.toFixed(2),c:pnl>=0?'var(--green)':'var(--cr3)'},{l:'Win Rate',v:wr+'%',c:wr>=50?'var(--green)':'var(--cr3)'},{l:'W/L',v:wins.length+'W/'+losses.length+'L',c:'var(--t2)'},{l:'Avg R:R',v:avgRR,c:'var(--gold3)'},{l:'Open',v:dayTrades.filter(t=>t.outcome==='open').length,c:'var(--gold3)'}].map(s=>`<div class="kpi-card kpi-bl"><div class="kpi-val" style="color:${s.c};font-size:16px;">${s.v}</div><div class="kpi-label">${s.l}</div></div>`).join('');
+  $('pnl-dd-trades').innerHTML=!dayTrades.length?'<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);">No trades on this day.</div>':dayTrades.map(t=>{const pc=t.outcome==='Win'?'var(--green)':t.outcome==='Loss'?'var(--cr3)':'var(--gold3)';return `<div class="log-row"><span style="font-family:'Cinzel',serif;font-weight:700;color:var(--t1);flex-shrink:0;">${t.pair||'—'}</span><span class="tc-dir ${t.dir==='Long'?'tc-long':'tc-short'}" style="font-size:9px;">${t.dir||'—'}</span><span style="font-family:'Cinzel',serif;color:${pc};font-weight:700;">${t.outcome==='open'?'OPEN':(t.pnl>=0?'+':'')+' $'+parseFloat(t.pnl||0).toFixed(2)}</span><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);">R:R ${t.rr||'—'} · ${t.strategy||''}</span></div>`;}).join('');
+  $('pnl-day-notes').value=(S.dayNotes||{})[ds]||'';
+  el.classList.add('open');el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function saveDayNote(){if(!selectedPnlDay)return;if(!S.dayNotes)S.dayNotes={};S.dayNotes[selectedPnlDay]=$('pnl-day-notes')?.value||'';save();renderPnlCalGrid();notify('▸ Day note saved.');}
+function renderPnlStrip(){
+  const el=$('pnl-strip');if(!el)return;
+  const yr=pnlCal.getFullYear(),mo=pnlCal.getMonth(),prefix=yr+'-'+String(mo+1).padStart(2,'0');
+  const mTrades=(S.trades||[]).filter(t=>t.date&&t.date.startsWith(prefix)&&t.outcome!=='open');
+  const mWins=mTrades.filter(t=>t.outcome==='Win'),mPnl=mTrades.reduce((s,t)=>s+(t.pnl||0),0);
+  const mWr=mTrades.length?Math.round((mWins.length/mTrades.length)*100):0;
+  const dayPnl={};mTrades.forEach(t=>{if(!dayPnl[t.date])dayPnl[t.date]=0;dayPnl[t.date]+=(t.pnl||0);});
+  const dVals=Object.values(dayPnl);const best=dVals.length?Math.max(...dVals):0,worst=dVals.length?Math.min(...dVals):0;
+  el.innerHTML=[{v:(mPnl>=0?'+':'')+' $'+mPnl.toFixed(2),l:'Month P&L',c:mPnl>=0?'var(--green)':'var(--cr3)'},{v:mTrades.length,l:'Trades',c:'var(--blue)'},{v:mWr+'%',l:'Win Rate',c:mWr>=50?'var(--green)':'var(--cr3)'},{v:Object.keys(dayPnl).length,l:'Trading Days',c:'var(--t2)'},{v:'+$'+best.toFixed(0),l:'Best Day',c:'var(--green)'},{v:'-$'+Math.abs(worst).toFixed(0),l:'Worst Day',c:'var(--cr3)'}].map(p=>`<div class="kpi-card kpi-cr"><div class="kpi-val" style="color:${p.c};font-size:16px;">${p.v}</div><div class="kpi-label">${p.l}</div></div>`).join('');
+}
+function renderPnlAdv(){
+  const el=$('pnl-adv');if(!el)return;
+  const closed=(S.trades||[]).filter(t=>t.outcome!=='open');if(!closed.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);">Log trades for advanced stats.</div>';return;}
+  const wins=closed.filter(t=>t.outcome==='Win'),losses=closed.filter(t=>t.outcome==='Loss');
+  const wr=Math.round((wins.length/closed.length)*100);const avgW=wins.length?(wins.reduce((s,t)=>s+(t.pnl||0),0)/wins.length):0;const avgL=losses.length?(Math.abs(losses.reduce((s,t)=>s+(t.pnl||0),0))/losses.length):0;
+  const exp=((wr/100)*avgW)-((1-wr/100)*avgL);const totalPnl=closed.reduce((s,t)=>s+(t.pnl||0),0);
+  let curW=0,bestW=0,curL=0,bestL=0;
+  [...closed].reverse().forEach(t=>{if(t.outcome==='Win'){curW++;curL=0;}else if(t.outcome==='Loss'){curL++;curW=0;}bestW=Math.max(bestW,curW);bestL=Math.max(bestL,curL);});
+  el.innerHTML=[{l:'Total P&L',v:(totalPnl>=0?'+':'')+' $'+totalPnl.toFixed(2),c:totalPnl>=0?'var(--green)':'var(--cr3)'},{l:'Avg Win',v:'+$'+avgW.toFixed(2),c:'var(--green)'},{l:'Avg Loss',v:'-$'+avgL.toFixed(2),c:'var(--cr3)'},{l:'Expectancy',v:(exp>=0?'+':'')+' $'+exp.toFixed(2),c:exp>=0?'var(--green)':'var(--cr3)'},{l:'Best Win Streak',v:bestW,c:'var(--green)'},{l:'Worst Loss Streak',v:bestL,c:'var(--cr3)'},{l:'Account Growth',v:(totalPnl/(S.startBalance||10000)*100).toFixed(2)+'%',c:totalPnl>=0?'var(--green)':'var(--cr3)'},{l:'Total Wins',v:wins.length,c:'var(--green)'},{l:'Total Losses',v:losses.length,c:'var(--cr3)'}].map(s=>`<div class="kpi-card kpi-bl"><div class="kpi-val" style="color:${s.c};font-size:16px;">${s.v}</div><div class="kpi-label">${s.l}</div></div>`).join('');
+}
+// ═══════════════════════════════════════════════
+// FITNESS CALENDAR
+// ═══════════════════════════════════════════════
+let fitCal=new Date();
+function fitPrev(){fitCal.setMonth(fitCal.getMonth()-1);renderFitCal();}
+function fitNext(){fitCal.setMonth(fitCal.getMonth()+1);renderFitCal();}
+function fitToday(){fitCal=new Date();renderFitCal();}
+function renderFitCal(){renderFitCalGrid();renderFitStrip();renderFitMilestones();renderFitAdv();checkFitMilestones();}
+function renderFitCalGrid(){
+  const el=$('fit-grid'),lb=$('fit-cal-label');if(!el||!lb)return;
+  const yr=fitCal.getFullYear(),mo=fitCal.getMonth();
+  lb.textContent=new Date(yr,mo,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'}).toUpperCase();
+  const first=new Date(yr,mo,1),last=new Date(yr,mo+1,0),startDow=(first.getDay()+6)%7,td=today();
+  const tSet=new Set(S.trainedDays||[]);const wdMap={};(S.workoutDetails||[]).forEach(w=>{wdMap[w.date]=w;});
+  let html='';
+  for(let i=0;i<startDow;i++)html+='<div class="cal-cell other"></div>';
+  for(let d=1;d<=last.getDate();d++){
+    const ds=yr+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isToday=ds===td,trained=tSet.has(ds),wd=wdMap[ds];
+    let cls='cal-cell';if(isToday)cls+=' today';if(trained)cls+=' trained';
+    html+=`<div class="${cls}" title="${ds}">
+      <div class="cc-num">${d}</div>
+      ${trained?`<div class="cc-meta" style="color:var(--blue);">✓ ${wd?wd.type:'Done'}</div>${wd&&wd.duration?`<div class="cc-meta">${wd.duration}m</div>`:''}`:isToday?'<div class="cc-meta" style="color:var(--cr);">Today</div>':''}
+    </div>`;
+  }
+  const trailing=(7-((startDow+last.getDate())%7))%7;for(let i=0;i<trailing;i++)html+='<div class="cal-cell other"></div>';
+  el.innerHTML=html;
+}
+function renderFitStrip(){
+  const el=$('fit-strip');if(!el)return;
+  const yr=fitCal.getFullYear(),mo=fitCal.getMonth(),prefix=yr+'-'+String(mo+1).padStart(2,'0');
+  const mDays=(S.trainedDays||[]).filter(d=>d&&d.startsWith(prefix));
+  const dIM=new Date(yr,mo+1,0).getDate();const cons=Math.round((mDays.length/dIM)*100);
+  const wds=(S.workoutDetails||[]).filter(w=>w.date&&w.date.startsWith(prefix));
+  const totalMins=wds.reduce((s,w)=>s+(w.duration||0),0),totalCals=wds.reduce((s,w)=>s+(w.calories||0),0);
+  el.innerHTML=[{v:mDays.length,l:'Days Trained',c:'var(--blue)'},{v:cons+'%',l:'Consistency',c:cons>=70?'var(--green)':'var(--gold3)'},{v:(S.streak||0)+' days',l:'Current Streak',c:'var(--cr3)'},{v:(S.bestStreak||0)+' days',l:'Best Streak',c:'var(--gold3)'},{v:Math.floor(totalMins/60)+'h '+totalMins%60+'m',l:'Training Time',c:'var(--t2)'},{v:totalCals,l:'Calories',c:'var(--green)'}].map(p=>`<div class="kpi-card kpi-cr"><div class="kpi-val" style="color:${p.c};font-size:16px;">${p.v}</div><div class="kpi-label">${p.l}</div></div>`).join('');
+}
+function renderFitMilestones(){
+  const el=$('fit-milestones');if(!el)return;
+  const best=S.bestStreak||0,cur=S.streak||0,next=FIT_MILESTONES.find(m=>best<m.days);
+  el.innerHTML=FIT_MILESTONES.map(m=>{const achieved=best>=m.days,isNext=next&&next.days===m.days,pct=Math.min(100,Math.round((cur/m.days)*100));return `<div class="ms-card ${achieved?'achieved':isNext?'next':''}"><div class="ms-icon">${achieved?m.icon:'🔒'}</div><div class="ms-name">${m.label}</div><div class="ms-days">${m.days} day streak</div>${isNext?`<div class="prog-track" style="margin:4px 0;"><div class="prog-fill prog-cr" style="width:${pct}%;"></div></div><div class="ms-status" style="color:var(--t4);">${cur}/${m.days}</div>`:''}${achieved?`<div class="ms-status" style="color:var(--gold3);">✓ ACHIEVED</div>`:''}</div>`;}).join('');
+}
+function renderFitAdv(){
+  const el=$('fit-adv');if(!el)return;
+  const td=today();const trained=S.trainedDays||[];const wds=S.workoutDetails||[];
+  const mDays=trained.filter(d=>d&&d.startsWith(td.substring(0,7)));
+  const dIM=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+  const cons=Math.round((mDays.length/dIM)*100);const thisWeek=trained.filter(d=>d>=weekStart()).length;
+  const totalH=(wds.reduce((s,w)=>s+(w.duration||0),0)/60).toFixed(1);const totalCals=wds.reduce((s,w)=>s+(w.calories||0),0);const avgDur=wds.length?(wds.reduce((s,w)=>s+(w.duration||0),0)/wds.length).toFixed(0):0;
+  const typeCount={};wds.forEach(w=>{typeCount[w.type||'Other']=(typeCount[w.type||'Other']||0)+1;});const topType=Object.entries(typeCount).sort((a,b)=>b[1]-a[1])[0];
+  el.innerHTML=[{l:'Total Workouts',v:S.totalSessions||0,c:'var(--blue)'},{l:'This Week',v:thisWeek,c:'var(--blue)'},{l:'Monthly Consistency',v:cons+'%',c:cons>=70?'var(--green)':'var(--gold3)'},{l:'Total Hours',v:totalH+'h',c:'var(--t2)'},{l:'Calories Burned',v:totalCals.toLocaleString(),c:'var(--green)'},{l:'Avg Duration',v:avgDur+'min',c:'var(--t2)'},{l:'Current Streak',v:(S.streak||0)+' days',c:'var(--cr3)'},{l:'Best Streak',v:(S.bestStreak||0)+' days',c:'var(--gold3)'},{l:'Favourite Workout',v:topType?topType[0]:'—',c:'var(--gold3)'}].map(s=>`<div class="kpi-card kpi-bl"><div class="kpi-val" style="color:${s.c};font-size:15px;">${s.v}</div><div class="kpi-label">${s.l}</div></div>`).join('');
+}
+function checkFitMilestones(){
+  const best=S.bestStreak||0;if(!S.unlockedAchievements)S.unlockedAchievements=[];
+  [{id:'streak3',d:3},{id:'streak7',d:7},{id:'streak30',d:30}].forEach(a=>{if(best>=a.d&&!S.unlockedAchievements.includes(a.id)){S.unlockedAchievements.push(a.id);gainXP(a.d*2,'vitality');notify('🏆 STREAK MILESTONE: '+a.d+' Days! +'+a.d*2+'XP');save();}});
+}
+function openWorkoutModal(){const el=$('wd-date');if(el)el.value=today();openModal('modal-workout');}
+function saveWorkoutDetail(){
+  const date=$('wd-date')?.value||today();const type=$('wd-type')?.value||'Other';const duration=parseInt($('wd-duration')?.value)||0;const calories=parseInt($('wd-calories')?.value)||0;const weight=parseFloat($('wd-weight')?.value)||0;const notes=$('wd-notes')?.value.trim()||'';
+  if(!S.workoutDetails)S.workoutDetails=[];
+  const existing=S.workoutDetails.findIndex(w=>w.date===date);const entry={date,type,duration,calories,weight,notes,id:'wd_'+date};
+  if(existing>=0)S.workoutDetails[existing]=entry;else S.workoutDetails.unshift(entry);
+  if(!(S.trainedDays||[]).includes(date)){
+    if(!S.trainedDays)S.trainedDays=[];S.trainedDays.push(date);
+    const yesterday=new Date(date);yesterday.setDate(yesterday.getDate()-1);const yStr=yesterday.toISOString().split('T')[0];
+    if(S.lastTrainedDate===yStr||S.lastTrainedDate===date)S.streak=(S.streak||0)+1;else S.streak=1;
+    S.lastTrainedDate=date;S.bestStreak=Math.max(S.bestStreak||0,S.streak);S.totalSessions=(S.totalSessions||0)+1;
+    gainXP(50+Math.floor(duration/2),'endurance');
+  }
+  if(weight>0){if(!S.bodyMetrics)S.bodyMetrics={};S.bodyMetrics.weight=weight;if(!S.bodyMetrics.weight_h)S.bodyMetrics.weight_h=[];S.bodyMetrics.weight_h.push(weight);}
+  closeModal('modal-workout');['wd-duration','wd-calories','wd-weight','wd-notes'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  renderFitCal();checkFitMilestones();save();notify('▸ WORKOUT LOGGED: '+type+' '+duration+'min +'+Math.floor(50+duration/2)+' XP');
+}
+function markTrained(){
+  const td=today();if((S.trainedDays||[]).includes(td)){notify('▸ Already marked today!');return;}
+  if(!S.trainedDays)S.trainedDays=[];S.trainedDays.push(td);
+  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);const yStr=yesterday.toISOString().split('T')[0];
+  if(S.lastTrainedDate===yStr)S.streak=(S.streak||0)+1;else S.streak=1;
+  S.lastTrainedDate=td;S.bestStreak=Math.max(S.bestStreak||0,S.streak);
+  gainXP(50,'endurance');notify('▸ TRAINED! Streak: '+S.streak+' days 🔥');
+  if(currentPanel==='ranks')renderRanks();if(currentPanel==='fitcal')renderFitCal();save();
+}
+
+
+// ═══════════════════════════════════════════════
+// WORKOUT LOG
+// ═══════════════════════════════════════════════
+function renderLog(){renderLogRows();renderSessionHistory();}
+function addLogRow(){
+  const ex=$('log-ex')?.value.trim();if(!ex){notify('▸ Enter an exercise name.');return;}
+  const sets=$('log-sets')?.value.trim();
+  if(!S.workoutLog)S.workoutLog=[];
+  S.workoutLog.push({ex,sets:sets||'—',time:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})});
+  if($('log-ex'))$('log-ex').value='';if($('log-sets'))$('log-sets').value='';
+  renderLogRows();save();
+}
+function renderLogRows(){
+  const el=$('log-rows');if(!el)return;const log=S.workoutLog||[];
+  if(!log.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);padding:10px;">No exercises logged yet.</div>';return;}
+  el.innerHTML=log.map((e,i)=>`<div class="log-row"><span class="lr-time">${e.time}</span><span style="flex:1;font-size:13px;font-weight:500;">${e.ex}</span><span class="lr-sets">${e.sets}</span><button class="lr-del" onclick="removeLogRow(${i})">×</button></div>`).join('');
+}
+function removeLogRow(i){if(!S.workoutLog)return;S.workoutLog.splice(i,1);renderLogRows();save();}
+function completeSession(){
+  if(!(S.workoutLog||[]).length){notify('▸ Log at least one exercise first.');return;}
+  S.totalSessions=(S.totalSessions||0)+1;
+  const notes=$('log-notes')?.value||'';
+  if(!S.sessionHistory)S.sessionHistory=[];
+  S.sessionHistory.unshift({date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),exercises:[...S.workoutLog],notes,xp:200});
+  if(S.sessionHistory.length>20)S.sessionHistory=S.sessionHistory.slice(0,20);
+  gainXP(200,'strength');markTrained();
+  notify('▸ SESSION COMPLETE! +200 XP · Sessions: '+S.totalSessions);
+  save();renderLog();
+}
+function clearSession(){S.workoutLog=[];if($('log-notes'))$('log-notes').value='';renderLogRows();save();}
+function renderSessionHistory(){
+  const el=$('session-history');if(!el)return;const hist=S.sessionHistory||[];
+  if(!hist.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);padding:10px;">No sessions yet.</div>';return;}
+  el.innerHTML=hist.slice(0,5).map((s,i)=>`<div class="session-hist-item"><div class="shi-header"><span class="shi-title">Session #${S.totalSessions-i}</span><span class="shi-meta">${s.date} · +${s.xp||200} XP</span></div><div class="shi-exs">${s.exercises.map(e=>`${e.ex} ${e.sets}`).join(' · ')}</div>${s.notes?`<div class="shi-note">"${s.notes}"</div>`:''}</div>`).join('');
+}
+// ═══════════════════════════════════════════════
+// NUTRITION
+// ═══════════════════════════════════════════════
+function renderNutrition(){renderMacroCards();renderFoodLog();}
+function renderMacroCards(){
+  const el=$('macro-cards');if(!el)return;
+  const n=S.nutrition||{kcal:0,protein:0,carbs:0,fats:0};const t=S.macroTargets||{kcal:2800,protein:170,carbs:320,fats:80};
+  el.innerHTML=[{cls:'mac-kcal',val:n.kcal,tgt:t.kcal,unit:'kcal',label:'Calories',barCls:'var(--blue)'},{cls:'mac-protein',val:n.protein,tgt:t.protein,unit:'g',label:'Protein',barCls:'var(--green)'},{cls:'mac-carbs',val:n.carbs,tgt:t.carbs,unit:'g',label:'Carbs',barCls:'var(--gold3)'},{cls:'mac-fats',val:n.fats,tgt:t.fats,unit:'g',label:'Fats',barCls:'var(--cr3)'}].map(m=>{const pct=Math.min(100,Math.round((m.val/m.tgt)*100));return `<div class="macro-card ${m.cls}"><div class="mac-val">${m.val}</div><div class="mac-target">/ ${m.tgt} ${m.unit}</div><div class="mac-label">${m.label}</div><div class="prog-track" style="margin-top:6px;"><div class="prog-fill" style="width:${pct}%;background:${m.barCls};"></div></div></div>`;}).join('');
+}
+function addFood(){
+  const name=$('f-name')?.value.trim();if(!name){notify('▸ Enter food name.');return;}
+  const kcal=parseInt($('f-kcal')?.value)||0,prot=parseInt($('f-prot')?.value)||0,carb=parseInt($('f-carb')?.value)||0,fat=parseInt($('f-fat')?.value)||0;
+  if(!S.nutrition)S.nutrition={kcal:0,protein:0,carbs:0,fats:0};
+  S.nutrition.kcal+=kcal;S.nutrition.protein+=prot;S.nutrition.carbs+=carb;S.nutrition.fats+=fat;
+  if(!S.foodLog)S.foodLog=[];S.foodLog.push({name,kcal,protein:prot,carbs:carb,fats:fat});
+  if(S.nutrition.protein>=(S.macroTargets?.protein||170)&&(S.nutrition.protein-prot)<(S.macroTargets?.protein||170)){S.proteinDays=(S.proteinDays||0)+1;gainXP(30,'strength');notify('▸ PROTEIN TARGET HIT! +30 XP');}
+  ['f-name','f-kcal','f-prot','f-carb','f-fat'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  renderNutrition();save();
+}
+function renderFoodLog(){
+  const el=$('food-log');if(!el)return;const log=S.foodLog||[];
+  if(!log.length){el.innerHTML='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--t4);padding:8px;">No food logged today.</div>';return;}
+  el.innerHTML=log.map((f,i)=>`<div class="food-log-item"><span class="fli-name">${f.name}</span><span class="fli-macros">${f.kcal}kcal · ${f.protein}p · ${f.carbs}c · ${f.fats}f</span><button class="fli-del" onclick="removeFood(${i})">×</button></div>`).join('');
+}
+function removeFood(i){if(!S.foodLog)return;const f=S.foodLog[i];if(!S.nutrition)return;S.nutrition.kcal-=f.kcal;S.nutrition.protein-=f.protein;S.nutrition.carbs-=f.carbs;S.nutrition.fats-=f.fats;S.foodLog.splice(i,1);renderNutrition();save();}
+function resetNutrition(){S.nutrition={kcal:0,protein:0,carbs:0,fats:0};S.foodLog=[];renderNutrition();save();notify('▸ Nutrition reset.');}
+function openMacroModal(){const t=S.macroTargets||{};$('em-kcal').value=t.kcal||2800;$('em-protein').value=t.protein||170;$('em-carbs').value=t.carbs||320;$('em-fats').value=t.fats||80;openModal('modal-macros');}
+function saveMacroTargets(){S.macroTargets={kcal:parseInt($('em-kcal')?.value)||2800,protein:parseInt($('em-protein')?.value)||170,carbs:parseInt($('em-carbs')?.value)||320,fats:parseInt($('em-fats')?.value)||80};closeModal('modal-macros');renderNutrition();renderSettings();save();notify('▸ Macro targets updated.');}
+// ═══════════════════════════════════════════════
+// BODY METRICS
+// ═══════════════════════════════════════════════
+function renderBody(){renderBodyMetrics();renderBodyGoals();drawBodyChart();}
+function renderBodyMetrics(){
+  const el=$('body-metrics-grid');if(!el)return;if(!S.bodyMetrics)S.bodyMetrics={};
+  el.innerHTML=BODY_METRICS.map(m=>{
+    const cur=S.bodyMetrics[m.id]||null;const hist=S.bodyMetrics[m.id+'_h']||[];const prev=hist.length>1?hist[hist.length-2]:null;
+    const trend=prev&&cur!==null?(cur>prev?'▲':cur<prev?'▼':'—'):null;const trendC=m.id==='waist'?(trend==='▲'?'var(--cr3)':'var(--green)'):(trend==='▲'?'var(--green)':'var(--cr3)');
+    return `<div class="metric-card"><div class="mc-label">${m.icon} ${m.name}</div>
+      <div class="mc-val-row"><div class="mc-val">${cur||'—'}</div><div class="mc-unit">${m.unit}</div>${trend?`<div class="mc-trend" style="color:${trendC};">${trend}</div>`:''}</div>
+      <div class="mc-input-row"><input type="number" class="mc-input" id="bm-${m.id}" placeholder="${m.unit}" step="0.1"><button class="mc-set-btn" onclick="setMetric('${m.id}')">SET</button></div>
+      ${hist.length?`<div class="mc-history">Prev: ${hist[hist.length-1]} ${m.unit}${hist.length>1?' · '+hist[hist.length-2]+' '+m.unit:''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function setMetric(id){const val=parseFloat($('bm-'+id)?.value);if(isNaN(val)||val<=0){notify('▸ Enter a valid value.');return;}if(!S.bodyMetrics)S.bodyMetrics={};S.bodyMetrics[id]=val;if(!S.bodyMetrics[id+'_h'])S.bodyMetrics[id+'_h']=[];S.bodyMetrics[id+'_h'].push(val);if(S.bodyMetrics[id+'_h'].length>10)S.bodyMetrics[id+'_h']=S.bodyMetrics[id+'_h'].slice(-10);gainXP(20,'vitality');notify('▸ '+id.toUpperCase()+' updated: '+val+' · +20 XP');renderBody();save();}
+function renderBodyGoals(){const el=$('body-goals-grid');if(!el)return;el.innerHTML=BODY_METRICS.map(m=>`<div><label class="field-label">${m.icon} Target ${m.name} (${m.unit})</label><input type="number" class="input" id="bg-${m.id}" value="${(S.goals||{})[m.id]||''}" placeholder="Goal in ${m.unit}" step="0.1"></div>`).join('');}
+function saveBodyGoals(){if(!S.goals)S.goals={};BODY_METRICS.forEach(m=>{const v=$('bg-'+m.id)?.value;if(v)S.goals[m.id]=parseFloat(v);});save();notify('▸ Goals saved.');renderBody();}
+function drawBodyChart(){
+  const canvas=$('body-chart');if(!canvas)return;const ctx=canvas.getContext('2d');const w=canvas.parentElement?.clientWidth||500;
+  canvas.width=w;canvas.height=200;ctx.clearRect(0,0,w,200);
+  const hist=((S.bodyMetrics||{}).weight_h)||[];
+  if(hist.length<2){ctx.fillStyle='#4a4a4a';ctx.font='10px JetBrains Mono';ctx.textAlign='center';ctx.fillText('Log body weight to see progress',w/2,105);return;}
+  const minV=Math.min(...hist)*.98,maxV=Math.max(...hist)*1.02,range=maxV-minV||1;const pad=36;
+  const tx=i=>pad+(i/(hist.length-1))*(w-pad-8),ty=v=>180-((v-minV)/range)*160;
+  ctx.strokeStyle='#2a2a2a';ctx.lineWidth=.5;ctx.setLineDash([3,4]);for(let i=0;i<=4;i++){const v=minV+(range/4)*i,y=ty(v);ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-8,y);ctx.stroke();}ctx.setLineDash([]);
+  const g=ctx.createLinearGradient(0,20,0,180);g.addColorStop(0,'rgba(59,130,246,.2)');g.addColorStop(1,'rgba(59,130,246,0)');
+  ctx.beginPath();ctx.moveTo(tx(0),180);hist.forEach((_,i)=>ctx.lineTo(tx(i),ty(hist[i])));ctx.lineTo(tx(hist.length-1),180);ctx.closePath();ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.moveTo(tx(0),ty(hist[0]));hist.forEach((_,i)=>ctx.lineTo(tx(i),ty(hist[i])));ctx.strokeStyle='#3b82f6';ctx.lineWidth=2;ctx.stroke();
+  hist.forEach((v,i)=>{ctx.beginPath();ctx.arc(tx(i),ty(v),3,0,Math.PI*2);ctx.fillStyle='#3b82f6';ctx.fill();});
+}
+// ═══════════════════════════════════════════════
+// ACHIEVEMENTS
+// ═══════════════════════════════════════════════
+function checkAchievements(){
+  if(!S.unlockedAchievements)S.unlockedAchievements=[];let any=false;
+  ACHIEVEMENTS.forEach(a=>{if(!S.unlockedAchievements.includes(a.id)&&a.c(S)){S.unlockedAchievements.push(a.id);gainXP(100,'willpower');notify('⚔ GLORIA: '+a.name+' +100 XP');any=true;}});
+  if(any){save();if(currentPanel==='achieve')renderAchievements();}
+}
+function renderAchievements(){
+  const un=S.unlockedAchievements||[];const el=$('ach-progress');if(el)el.textContent=un.length+' / '+ACHIEVEMENTS.length+' ACHIEVEMENTS UNLOCKED';
+  const hel=$('hunter-stats');
+  if(hel)hel.innerHTML=STATS_DEF.map(s=>{const v=S.stats[s.id]||10;const pct=Math.min(100,(v/100)*100);return `<div class="stat-item"><div class="stat-icon">${s.icon}</div><div class="stat-name">${s.name}</div><div class="stat-val" style="color:var(--cr3);">${v}</div><div class="stat-bar"><div class="stat-bar-fill" style="width:${pct}%;"></div></div></div>`;}).join('');
+  const gel=$('ach-grid');if(!gel)return;
+  gel.innerHTML=ACHIEVEMENTS.map(a=>{const u=un.includes(a.id);return `<div class="ach-card ${u?'unlocked':''}"><div class="ach-icon">${a.icon}</div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`;}).join('');
+}
+// ═══════════════════════════════════════════════
+// JOURNAL
+// ═══════════════════════════════════════════════
+let jFilter='all',jMood=5;
+function setJournalFilter(f,btn){jFilter=f;document.querySelectorAll('#j-filter-pills .pill').forEach(p=>p.classList.remove('active'));if(btn)btn.classList.add('active');renderJournal();}
+function setMood(m,btn){jMood=m;document.querySelectorAll('#je-moods .mood-btn').forEach(b=>b.classList.remove('sel'));if(btn)btn.classList.add('sel');}
+function openJournalModal(id){
+  if(!S.journalEntries)S.journalEntries=[];const entry=id?(S.journalEntries||[]).find(e=>e.id===id):null;
+  $('je-modal-label').textContent=id?'Edit Entry':'New Entry';$('je-id').value=id||'';$('je-title').value=entry?.title||'';$('je-type').value=entry?.type||'daily';$('je-date').value=entry?.date||today();$('je-body').value=entry?.body||'';$('je-gratitude').value=entry?.gratitude||'';$('je-lesson').value=entry?.lesson||'';$('je-tags').value=(entry?.tags||[]).join(', ');jMood=entry?.mood||5;
+  document.querySelectorAll('#je-moods .mood-btn').forEach(b=>b.classList.toggle('sel',parseInt(b.getAttribute('data-mood'))===jMood));openModal('modal-journal');
+}
+function saveJournal(){
+  if(!S.journalEntries)S.journalEntries=[];const id=$('je-id')?.value.trim()||'j_'+Date.now();const body=$('je-body')?.value.trim(),title=$('je-title')?.value.trim();
+  if(!body&&!title){notify('▸ Write something first.');return;}
+  const tags=($('je-tags')?.value||'').split(',').map(t=>t.trim()).filter(Boolean);
+  const entry={id,title,type:$('je-type')?.value||'daily',date:$('je-date')?.value||today(),body,gratitude:$('je-gratitude')?.value.trim()||'',lesson:$('je-lesson')?.value.trim()||'',tags,mood:jMood,created:new Date().toISOString()};
+  const idx=S.journalEntries.findIndex(e=>e.id===id);if(idx>=0)S.journalEntries[idx]=entry;else S.journalEntries.unshift(entry);
+  gainXP(25,'sense');closeModal('modal-journal');renderJournal();checkAchievements();save();notify('▸ ENTRY SAVED · +25 XP');
+}
+function renderJournal(){
+  if(!S.journalEntries)S.journalEntries=[];const el=$('j-list');if(!el)return;
+  const search=($('j-search')?.value||'').toLowerCase();const sort=$('j-sort')?.value||'newest';
+  const moodE=['','😔','😕','😐','🙂','😊','😄','🔥'];const typeColors={daily:'var(--blue)',trading:'var(--cr3)',fitness:'var(--blue)',reflection:'var(--purple)',gratitude:'var(--gold3)',goals:'var(--green)',lessons:'var(--gold3)',mistakes:'var(--cr3)'};
+  let entries=S.journalEntries||[];if(jFilter!=='all')entries=entries.filter(e=>e.type===jFilter);if(search)entries=entries.filter(e=>(e.title+e.body+(e.tags||[]).join(' ')).toLowerCase().includes(search));
+  if(sort==='oldest')entries=[...entries].reverse();else if(sort==='mood')entries=[...entries].sort((a,b)=>(b.mood||0)-(a.mood||0));
+  if(!entries.length){el.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t4);padding:20px;text-align:center;">${!search&&jFilter==='all'?'No entries yet. Click "+ New Entry" to start.':'No entries match your filters.'}</div>`;return;}
+  el.innerHTML=entries.map(e=>`<div class="journal-card">
+    <div class="jc-header"><span class="jc-date">${new Date(e.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}).toUpperCase()}</span><span class="jc-type-badge" style="color:${typeColors[e.type]||'var(--t4)'};border-color:${typeColors[e.type]||'var(--b2)'};">${e.type.toUpperCase()}</span><span class="jc-mood">${moodE[e.mood||5]}</span></div>
+    ${e.title?`<div class="jc-title">${e.title}</div>`:''}
+    <div class="jc-body">${(e.body||'').substring(0,200)}${e.body&&e.body.length>200?'...':''}</div>
+    <div class="jc-extras">${e.gratitude?`<div class="jc-gratitude">✨ ${e.gratitude}</div>`:''}${e.lesson?`<div class="jc-lesson">💡 ${e.lesson}</div>`:''}</div>
+    ${e.tags?.length?`<div class="jc-tags">${e.tags.map(t=>`<span class="jc-tag">#${t}</span>`).join('')}</div>`:''}
+    <div class="jc-actions"><button class="btn btn-ghost btn-sm" onclick="openJournalModal('${e.id}')">✎ Edit</button><button class="btn btn-ghost btn-sm" style="border-color:var(--red);color:var(--red);" onclick="delJournal('${e.id}')">× Delete</button></div>
+  </div>`).join('');
+}
+function delJournal(id){S.journalEntries=(S.journalEntries||[]).filter(e=>e.id!==id);renderJournal();save();notify('▸ Entry deleted.');}
+// ═══════════════════════════════════════════════
+// RANKS
+// ═══════════════════════════════════════════════
+function renderRanks(){
+  const rr=$('rank-road');if(rr)rr.innerHTML=RANKS.map(r=>{const achieved=S.level>r.max,current=S.level>=r.min&&S.level<=r.max,letter=r.name.split('-')[0];return `<div class="rr-step ${achieved?'achieved':''} ${current?'current':''}"><div class="rr-check">${achieved?'✓':''}</div><div class="rr-letter">${letter}</div><div class="rr-lv">Lv ${r.min}–${r.max}</div></div>`;}).join('');
+  const rreqs=$('rank-reqs');if(rreqs)rreqs.innerHTML=RANKS.map(r=>{const achieved=S.level>r.max,current=S.level>=r.min&&S.level<=r.max;return `<div class="mini-list-row" style="${current?'border-color:var(--cr);':''}"><div style="display:flex;align-items:center;gap:8px;"><span style="font-family:'Cinzel',serif;font-size:13px;color:${r.color};">${r.name}</span><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t4);">Lv ${r.min}–${r.max}</span></div><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${achieved?'var(--green)':current?'var(--cr3)':'var(--t4)'};">${achieved?'✓ ACHIEVED':current?'◆ CURRENT':r.min-S.level+' lvls away'}</span></div>`;}).join('');
+  renderWeekCalendar();const sn=$('streak-num');if(sn)sn.textContent=S.streak||0;const bs=$('best-streak-num');if(bs)bs.textContent=S.bestStreak||0;
+}
+function renderWeekCalendar(){
+  const el=$('week-grid');if(!el)return;const days=['SUN','MON','TUE','WED','THU','FRI','SAT'];const td=new Date();const tStr=today();
+  el.innerHTML=days.map((d,i)=>{const date=new Date(td);date.setDate(td.getDate()-td.getDay()+i);const ds=date.toISOString().split('T')[0];const trained=(S.trainedDays||[]).includes(ds);const isToday=ds===tStr;return `<div style="aspect-ratio:1;background:${trained?'rgba(59,130,246,0.12)':'var(--bg2)'};border:1px solid ${isToday?'var(--cr)':trained?'rgba(59,130,246,0.3)':'var(--b1)'};border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--t4);">${d}</div><div style="font-size:14px;">${trained?'⚔':'·'}</div></div>`;}).join('');
+}
+// ═══════════════════════════════════════════════
+// REPORTS
+// ═══════════════════════════════════════════════
+let reportPeriod='weekly';
+function setReport(p,btn){reportPeriod=p;document.querySelectorAll('#report-pills .pill').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderReports();}
+function renderReports(){const el=$('report-body');if(!el)return;const td=today();let from,label;if(reportPeriod==='weekly'){from=weekStart();label='This Week';}else if(reportPeriod==='monthly'){from=td.substring(0,7)+'-01';label='This Month';}else{const d=new Date(),q=Math.floor(d.getMonth()/3);from=new Date(d.getFullYear(),q*3,1).toISOString().split('T')[0];label='This Quarter';}el.innerHTML=buildReport(label,from,td);}
+function buildReport(period,from,to){
+  const mTrades=(S.trades||[]).filter(t=>t.date&&t.date>=from&&t.date<=to&&t.outcome!=='open');const mWins=mTrades.filter(t=>t.outcome==='Win');const mPnl=mTrades.reduce((s,t)=>s+(t.pnl||0),0);const mWr=mTrades.length?Math.round((mWins.length/mTrades.length)*100):0;
+  const mDays=(S.trainedDays||[]).filter(d=>d>=from&&d<=to);const wds=(S.workoutDetails||[]).filter(w=>w.date&&w.date>=from&&w.date<=to);
+  const grossW=mWins.reduce((s,t)=>s+Math.max(0,t.pnl||0),0);const grossL=Math.abs(mTrades.filter(t=>t.outcome==='Loss').reduce((s,t)=>s+(t.pnl||0),0));const pf=grossL>0?(grossW/grossL).toFixed(2):'∞';
+  const daysInPeriod=Math.max(1,Math.round((new Date(to)-new Date(from))/(1000*60*60*24))+1);const cons=Math.round((mDays.length/daysInPeriod)*100);
+  const totalPnl=(S.trades||[]).filter(t=>t.outcome!=='open').reduce((s,t)=>s+(t.pnl||0),0);
+  const insights=[];
+  if(mWr>=55)insights.push({t:'Win rate of '+mWr+'% is above the 55% target — excellent consistency.',type:'good'});else if(mWr<45&&mTrades.length>=5)insights.push({t:'Win rate '+mWr+'% is below target. Focus on A/B-grade setups only.',type:''});
+  if(mPnl>0)insights.push({t:'Profitable period: +$'+mPnl.toFixed(2)+'. Stay consistent.',type:'good'});else if(mPnl<0)insights.push({t:'Down $'+Math.abs(mPnl).toFixed(2)+' this period. Review risk rules.',type:''});
+  if(cons>=70)insights.push({t:cons+'% constantia exercitii. Perfecti 70%+ dierum exercitantur.',type:'good'});else insights.push({t:'Constantia exercitii: '+cons+'%. Petis 4+ sessiones per hebdomadam.',type:'warn'});
+  return `<div class="report-section"><div class="report-title">📈 Trading — ${period}</div><div class="report-kpi-grid">${[{l:'Trades',v:mTrades.length},{l:'Win Rate',v:mWr+'%'},{l:'Net P&L',v:(mPnl>=0?'+':'')+'$'+mPnl.toFixed(2)},{l:'Profit Factor',v:pf},{l:'Wins',v:mWins.length},{l:'Losses',v:mTrades.filter(t=>t.outcome==='Loss').length}].map(s=>`<div class="rk"><div class="rk-val">${s.v}</div><div class="rk-label">${s.l}</div></div>`).join('')}</div></div>
+<div class="report-section"><div class="report-title">💪 Fitness — ${period}</div><div class="report-kpi-grid">${[{l:'Days Trained',v:mDays.length},{l:'Consistency',v:cons+'%'},{l:'Sessions',v:wds.length},{l:'Training Hrs',v:Math.floor(wds.reduce((s,w)=>s+(w.duration||0),0)/60)+'h'},{l:'Calories',v:wds.reduce((s,w)=>s+(w.calories||0),0)},{l:'Streak',v:(S.streak||0)+' days'}].map(s=>`<div class="rk"><div class="rk-val">${s.v}</div><div class="rk-label">${s.l}</div></div>`).join('')}</div></div>
+<div class="report-section"><div class="report-title">🔍 Insights</div>${insights.map(i=>`<div class="insight ${i.type||''}">${i.t}</div>`).join('')}</div>
+<div class="report-section"><div class="report-title">📊 All-Time Account</div><div class="report-kpi-grid">${[{l:'Account Value',v:'$'+(S.startBalance+totalPnl).toFixed(0)},{l:'Total P&L',v:(totalPnl>=0?'+':'')+'$'+totalPnl.toFixed(2)},{l:'Growth',v:(totalPnl/(S.startBalance||10000)*100).toFixed(2)+'%'},{l:'All Trades',v:(S.trades||[]).length},{l:'Total Sessions',v:S.totalSessions||0},{l:'Best Streak',v:(S.bestStreak||0)+'d'}].map(s=>`<div class="rk"><div class="rk-val">${s.v}</div><div class="rk-label">${s.l}</div></div>`).join('')}</div></div>`;
+}
+// ═══════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════
+function renderSettings(){
+  const rank=getRank(S.level);const t=S.macroTargets||{};
+  const set=(id,v)=>{const el=$(id);if(el)el.textContent=v;};
+  set('s-name',S.hunterName||'Irisu');set('s-class',S.hunterClass||'');set('s-level',S.level);set('s-rank',rank.name);set('s-kcal',t.kcal+' kcal');set('s-prot',(t.protein||170)+'g');set('s-carbs',(t.carbs||320)+'g');set('s-fats',(t.fats||80)+'g');set('s-xp',(S.totalXP||0).toLocaleString());set('s-gold',S.coins||0);set('s-sess',S.totalSessions||0);set('s-bs',(S.bestStreak||0)+' days');
+}
+function openProfileModal(){if($('p-name'))$('p-name').value=S.hunterName||'';if($('p-class'))$('p-class').value=S.hunterClass||'';openModal('modal-profile');}
+function saveProfile(){const n=$('p-name')?.value.trim(),c=$('p-class')?.value.trim();if(n)S.hunterName=n.toUpperCase();if(c)S.hunterClass=c.toUpperCase();closeModal('modal-profile');renderSettings();updateSidebar();save();notify('▸ Profile updated.');}
+function applyAdmin(){const lv=parseInt($('adm-level')?.value),xp=parseInt($('adm-xp')?.value)||0,coins=parseInt($('adm-coins')?.value)||0,streak=parseInt($('adm-streak')?.value);if(lv&&lv>=1&&lv<=100){S.level=lv;S.currentXP=0;}if(xp>0){S.totalXP+=xp;S.currentXP+=xp;}if(coins>0){S.coins+=coins;S.totalCoins=(S.totalCoins||0)+coins;}if(!isNaN(streak)&&streak>=0){S.streak=streak;S.bestStreak=Math.max(S.bestStreak||0,streak);}closeModal('modal-admin');updateTopbar();updateSidebar();renderSettings();save();notify('▸ Admin changes applied.');}
+function resetAll(){if(confirm('Reset ALL data? This cannot be undone.')){S=defaultState();localStorage.removeItem('irisu_v1');nav('dashboard');notify('▸ Data reset. Starting fresh.');}}
+function exportData(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='irisu_os_data.json';a.click();notify('▸ Data exported.');}
+function importData(){const i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=e=>{const r=new FileReader();r.onload=ev=>{try{S=Object.assign(defaultState(),JSON.parse(ev.target.result));save();nav('dashboard');notify('▸ Data imported.');}catch{notify('▸ Invalid file.');}};r.readAsText(e.target.files[0]);};i.click();}
+
+// ═══════════════════════════════════════════════
+// PWA: SERVICE WORKER + INSTALL PROMPT
+// ═══════════════════════════════════════════════
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg=>{
+        // Check for updates periodically
+        setInterval(()=>reg.update(),60*60*1000);
+        reg.addEventListener('updatefound',()=>{
+          const newWorker=reg.installing;
+          newWorker.addEventListener('statechange',()=>{
+            if(newWorker.state==='installed'&&navigator.serviceWorker.controller){
+              showUpdateBanner();
+            }
+          });
+        });
+      })
+      .catch(err=>console.warn('Service worker registration failed:',err));
+  });
+}
+
+function showUpdateBanner(){
+  const el=document.createElement('div');
+  el.id='pwa-update-banner';
+  el.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--bg1);border:1px solid var(--teal);border-radius:var(--radius);padding:12px 18px;z-index:6000;display:flex;align-items:center;gap:14px;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--t2);box-shadow:0 4px 24px rgba(0,0,0,0.5);';
+  el.innerHTML='Renovatio nova adest. <button id="pwa-refresh-btn" style="background:none;border:1px solid var(--teal);color:var(--teal);border-radius:4px;padding:4px 12px;cursor:pointer;font-family:inherit;font-size:11px;">Renova</button>';
+  document.body.appendChild(el);
+  document.getElementById('pwa-refresh-btn').onclick=()=>window.location.reload();
+}
+
+// Install prompt (Android/Desktop Chrome — iOS Safari has no programmatic prompt)
+let deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  deferredInstallPrompt=e;
+  showInstallBanner();
+});
+function showInstallBanner(){
+  if(document.getElementById('pwa-install-banner'))return;
+  const el=document.createElement('div');
+  el.id='pwa-install-banner';
+  el.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--bg1);border:1px solid rgba(45,212,191,0.4);border-radius:var(--radius);padding:12px 16px;z-index:6000;display:flex;align-items:center;gap:12px;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--t2);box-shadow:0 4px 24px rgba(0,0,0,0.5);max-width:92vw;';
+  el.innerHTML='⚜ Instala Imperium in machinam tuam. '
+    +'<button id="pwa-install-btn" style="background:var(--teal-glow2);border:1px solid var(--teal);color:var(--teal);border-radius:4px;padding:5px 14px;cursor:pointer;font-family:inherit;font-size:11px;white-space:nowrap;">Instala</button>'
+    +'<button id="pwa-dismiss-btn" style="background:none;border:none;color:var(--t4);cursor:pointer;font-size:16px;line-height:1;padding:0 4px;">×</button>';
+  document.body.appendChild(el);
+  document.getElementById('pwa-install-btn').onclick=async()=>{
+    el.remove();
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      const choice=await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt=null;
+      if(choice.outcome==='accepted')notify('▸ Imperium instalatum est.');
+    }
+  };
+  document.getElementById('pwa-dismiss-btn').onclick=()=>el.remove();
+}
+window.addEventListener('appinstalled',()=>{
+  deferredInstallPrompt=null;
+  const banner=document.getElementById('pwa-install-banner');
+  if(banner)banner.remove();
+});
+
+</script>
 </body>
 </html>
