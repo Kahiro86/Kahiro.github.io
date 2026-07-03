@@ -11,8 +11,9 @@ export function LifeMatrix({ size = 280 }) {
   const cx = size / 2, cy = size / 2;
   const overall = Math.round(DOMAINS.reduce((s, d) => s + d.score, 0) / DOMAINS.length);
   return (
-    <div style={{ position: "relative", width: size, height: size }}>
-      <svg width={size} height={size} style={{ overflow: "visible" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+      <div style={{ width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ overflow: "visible", display: "block" }}>
         <defs>
           <radialGradient id="cg">
             <stop offset="0%" stopColor={CY} stopOpacity="0.12" />
@@ -47,11 +48,12 @@ export function LifeMatrix({ size = 280 }) {
           LIFE SCORE
         </text>
       </svg>
-      <div style={{ position: "absolute", top: 0, right: -130, display: "flex", flexDirection: "column", gap: 9, paddingTop: 20 }}>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 11, flexShrink: 0 }}>
         {DOMAINS.map(({ key, label, color, score }) => (
           <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: color, boxShadow: `0 0 8px ${color}` }} />
-            <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1.2, width: 54 }}>{label}</span>
+            <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1.2, width: 58 }}>{label}</span>
             <span style={{ fontSize: 11, color, fontFamily: "monospace", fontWeight: 700 }}>{score}</span>
           </div>
         ))}

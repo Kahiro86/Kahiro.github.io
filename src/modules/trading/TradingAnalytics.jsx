@@ -4,8 +4,9 @@ import {
 import { B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
+import { DonutChart, ChartLegend } from "../../shared/charts.jsx";
 import { SESSION_CONFIG, ICT_MODELS, GRADES, PSYCH } from "./constants.js";
-import { calcPnl, getStats, gcol } from "./helpers.js";
+import { calcPnl, getStats, gcol, ocol } from "./helpers.js";
 
 export function TradingAnalytics({ trades, balance }) {
   const cl = trades.filter((t) => t.status === "CLOSED");
@@ -45,6 +46,11 @@ export function TradingAnalytics({ trades, balance }) {
   const nonMacro = cl.filter((t) => !t.ictMacro || t.ictMacro === "");
   const nonMacroWins = nonMacro.filter((t) => t.outcome === "WIN" || t.outcome === "PARTIAL");
 
+  const outcomePie = ["WIN", "PARTIAL", "BE", "LOSS"]
+    .map((o) => ({ name: o, value: cl.filter((t) => t.outcome === o).length, color: ocol(o) }))
+    .filter((x) => x.value > 0);
+  const gradePie = gradeData.map((g) => ({ name: g.grade, value: g.trades, color: g.color }));
+
   return (
     <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 18 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 11 }}>
@@ -55,6 +61,27 @@ export function TradingAnalytics({ trades, balance }) {
         <Chip label="Net P&L"       value={`${stats.totalPnl >= 0 ? "+" : ""}$${stats.totalPnl}`} color={stats.totalPnl >= 0 ? GR : RE} />
         <Chip label="Avg R:R (W)"   value={`${stats.avgRR}R`} color={PU} />
       </div>
+
+      {cl.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+          <Card style={{ padding: "18px" }}>
+            <SH title="Outcome Distribution" sub="Share of closed trades by result" />
+            <DonutChart data={outcomePie} height={190} centerLabel={cl.length} centerSub="Closed" />
+            <ChartLegend data={outcomePie} />
+          </Card>
+          <Card style={{ padding: "18px" }}>
+            <SH title="Grade Distribution" sub="How your setups grade out" />
+            {gradePie.length > 0 ? (
+              <>
+                <DonutChart data={gradePie} height={190} centerLabel={gradePie.reduce((s, g) => s + g.value, 0)} centerSub="Graded" />
+                <ChartLegend data={gradePie} />
+              </>
+            ) : (
+              <div style={{ padding: "40px 0", textAlign: "center", color: T3, fontSize: 13 }}>No graded trades yet.</div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {(macroTrades.length > 0 || nonMacro.length > 0) && (
         <Card style={{ padding: "18px" }}>

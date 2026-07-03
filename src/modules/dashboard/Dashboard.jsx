@@ -1,14 +1,18 @@
 import { useState, useEffect } from "react";
-import { Cpu, CheckCircle, Check } from "lucide-react";
+import { Cpu, CheckCircle, Check, Flame, Activity as ActivityIcon } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, GR, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
+import { useStorageState } from "../../shared/useStorageState.js";
+import { DonutChart, ChartLegend, ActivityHeatmap } from "../../shared/charts.jsx";
 import { DOMAINS } from "./domains.js";
 import { LifeMatrix } from "./LifeMatrix.jsx";
 
 export function Dashboard({ onNavigate, habits, setHabits }) {
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
+  const [trades] = useStorageState("ict_trades", []);
+  const [workouts] = useStorageState("athlete_workouts", []);
 
   useEffect(() => {
     const t = setInterval(() => { setKz(getActiveKillzone()); setEatTime(getEATTimeStr()); }, 30000);
@@ -16,6 +20,16 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
   }, []);
 
   const done = habits.filter((h) => h.done).length;
+
+  // Domain balance donut
+  const domainPie = DOMAINS.map((d) => ({ name: d.label, value: d.score, color: d.color }));
+
+  // Activity heatmap: any day with a logged trade or workout counts.
+  const activityCounts = {};
+  trades.forEach((t) => { if (t.date) activityCounts[t.date] = (activityCounts[t.date] || 0) + 1; });
+  workouts.forEach((w) => { if (w.date) activityCounts[w.date] = (activityCounts[w.date] || 0) + 1; });
+  const activeDays = Object.keys(activityCounts).length;
+  const totalActivity = Object.values(activityCounts).reduce((s, c) => s + c, 0);
 
   return (
     <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -31,7 +45,7 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
       <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
         <Card style={{ padding: "24px 24px 24px 20px", flexShrink: 0 }}>
           <div style={{ fontSize: 10, color: T3, letterSpacing: 3, marginBottom: 18, textTransform: "uppercase" }}>Life Matrix</div>
-          <LifeMatrix size={270} />
+          <LifeMatrix size={220} />
         </Card>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 13, minWidth: 0 }}>
@@ -83,6 +97,32 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
             </Card>
           ))}
         </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "0.85fr 1.15fr", gap: 20 }}>
+        <Card style={{ padding: "18px" }}>
+          <SH title="Domain Balance" sub="Relative weight across all 6 domains" />
+          <DonutChart data={domainPie} height={200} centerLabel={Math.round(DOMAINS.reduce((s, d) => s + d.score, 0) / DOMAINS.length)} centerSub="Life Score" />
+          <ChartLegend data={domainPie} fmt={(v) => String(v)} />
+        </Card>
+
+        <Card style={{ padding: "18px" }}>
+          <SH title="Activity Consistency" sub="Trades + workouts logged — last 13 weeks" action={
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T2 }}><ActivityIcon size={11} color={CY} />{activeDays} active days</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T2 }}><Flame size={11} color={AM} />{totalActivity} sessions</span>
+            </div>
+          } />
+          <ActivityHeatmap counts={activityCounts} weeks={13} color={CY} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, marginTop: 12, fontSize: 9.5, color: T3 }}>
+            Less
+            <div style={{ width: 11, height: 11, borderRadius: 3, background: BD }} />
+            <div style={{ width: 11, height: 11, borderRadius: 3, background: `${CY}55` }} />
+            <div style={{ width: 11, height: 11, borderRadius: 3, background: `${CY}99` }} />
+            <div style={{ width: 11, height: 11, borderRadius: 3, background: CY }} />
+            More
+          </div>
+        </Card>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
