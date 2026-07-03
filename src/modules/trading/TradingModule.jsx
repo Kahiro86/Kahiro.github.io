@@ -47,7 +47,7 @@ export function TradingModule() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: B1, borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+      <div style={{ background: B1, borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, overflowX: "auto" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 10 }}>
           <DollarSign size={12} color={GR} />
           {editBal ? (

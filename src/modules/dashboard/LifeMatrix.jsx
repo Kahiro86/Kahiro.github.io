@@ -11,7 +11,7 @@ export function LifeMatrix({ size = 280 }) {
   const cx = size / 2, cy = size / 2;
   const overall = Math.round(DOMAINS.reduce((s, d) => s + d.score, 0) / DOMAINS.length);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
       <div style={{ width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ overflow: "visible", display: "block" }}>
         <defs>

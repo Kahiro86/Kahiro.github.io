@@ -65,8 +65,8 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
         </div>
       </Card>
 
-      <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-        <Card style={{ padding: "24px 24px 24px 20px", flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <Card style={{ padding: "24px 24px 24px 20px", flexShrink: 0, maxWidth: "100%" }}>
           <div style={{ fontSize: 10, color: T3, letterSpacing: 3, marginBottom: 18, textTransform: "uppercase" }}>Life Matrix</div>
           <LifeMatrix size={220} />
         </Card>
@@ -106,7 +106,7 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
 
       <div>
         <div style={{ fontSize: 10, color: T3, letterSpacing: 3, marginBottom: 11, textTransform: "uppercase" }}>Domain Performance</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 11 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: 11 }}>
           {DOMAINS.map(({ key, label, color, score }) => (
             <Card
               key={key} style={{ padding: "13px", cursor: "pointer", transition: "border-color 0.2s" }}
@@ -122,7 +122,7 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "0.85fr 1.15fr", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
         <Card style={{ padding: "18px" }}>
           <SH title="Domain Balance" sub="Relative weight across all 6 domains" />
           <DonutChart data={domainPie} height={200} centerLabel={Math.round(DOMAINS.reduce((s, d) => s + d.score, 0) / DOMAINS.length)} centerSub="Life Score" />
@@ -148,7 +148,7 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
         </Card>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
         <Card style={{ padding: "18px" }}>
           <SH title="Today's Habits" sub={`${done}/${habits.length} complete`} action={
             <div style={{ display: "flex", gap: 3 }}>

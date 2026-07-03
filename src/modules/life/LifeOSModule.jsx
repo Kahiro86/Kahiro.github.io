@@ -22,7 +22,7 @@ export function LifeOSModule({ habits, setHabits }) {
         <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Life OS</div>
         <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Habits · Goals · Journal · Time Architecture</div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
         <Card style={{ padding: "20px" }}>
           <SH title="Habit Tracker" sub="Consistency over perfection — showing up is the win" action={
             <div style={{ display: "flex", gap: 3 }}>
@@ -102,7 +102,7 @@ export function LifeOSModule({ habits, setHabits }) {
       </div>
       <Card style={{ padding: "20px" }}>
         <SH title="Active Goals" sub="Big horizons, tiny next steps — do just the smallest one today" />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 13 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 13 }}>
           {[
             { goal: "Consistent Trading Profitability", p: 22, h: "12 months", c: CY, icon: "📈", step: "Grade one past trade against your checklist." },
             { goal: "Elite Hybrid Athlete",             p: 35, h: "12 months", c: PU, icon: "🏆", step: "Log today's session — even a 10-min walk." },

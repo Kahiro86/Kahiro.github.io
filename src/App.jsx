@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { B0, T1 } from "./shared/designTokens.js";
 import { storage } from "./shared/storage.js";
 import { useStorageState } from "./shared/useStorageState.js";
+import { useIsMobile } from "./shared/useIsMobile.js";
 import { getStats } from "./modules/trading/helpers.js";
 import { HABITS_DEF } from "./modules/dashboard/domains.js";
 import { Dashboard } from "./modules/dashboard/Dashboard.jsx";
@@ -16,9 +17,12 @@ import { AIPanel } from "./shared/AIPanel.jsx";
 import { SettingsPanel } from "./shared/SettingsPanel.jsx";
 
 export default function App() {
+  const isMobile = useIsMobile();
   const [module, setModule] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
-  const [aiOpen, setAiOpen] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // AI panel starts open on desktop, closed on phones (it's a full overlay there).
+  const [aiOpen, setAiOpen] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 820 : true));
   const [showSettings, setShowSettings] = useState(false);
   const [habits, setHabits] = useStorageState("habits", HABITS_DEF);
   const [tradingStats, setTradingStats] = useState({ wr: 0, total: 0, pf: 0, avgRR: 0, totalPnl: 0 });
@@ -45,23 +49,61 @@ export default function App() {
     }
   };
 
+  const globalStyle = (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { max-width: 100%; overflow-x: hidden; }
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
+      input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
+      input::placeholder, textarea::placeholder { color: rgba(136,151,179,0.45); }
+      input:focus, textarea:focus, select:focus { border-color: rgba(0,212,255,0.4) !important; box-shadow: 0 0 0 3px rgba(0,212,255,0.07); }
+      button { font-family: inherit; }
+      button:active { transform: scale(0.97); }
+      @keyframes dp { 0%,100% { opacity: 0.3; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.2); } }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    `}</style>
+  );
+
+  if (isMobile) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: B0, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
+        {globalStyle}
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} />
+        <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "fadeIn 0.25s ease" }}>
+          {renderModule()}
+        </div>
+
+        {mobileNavOpen && (
+          <>
+            <div onClick={() => setMobileNavOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 45 }} />
+            <Sidebar
+              overlay
+              active={module}
+              onNavigate={(id) => { setModule(id); setMobileNavOpen(false); }}
+              collapsed={false}
+              onToggle={() => setMobileNavOpen(false)}
+              onOpenSettings={() => { setShowSettings(true); setMobileNavOpen(false); }}
+            />
+          </>
+        )}
+
+        {aiOpen && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 44 }}>
+            <AIPanel mobile onClose={() => setAiOpen(false)} tradingStats={tradingStats} />
+          </div>
+        )}
+        {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", height: "100vh", background: B0, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
-        input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
-        input::placeholder, textarea::placeholder { color: rgba(136,151,179,0.45); }
-        input:focus, textarea:focus, select:focus { border-color: rgba(0,212,255,0.4) !important; box-shadow: 0 0 0 3px rgba(0,212,255,0.07); }
-        button { font-family: inherit; }
-        button:active { transform: scale(0.97); }
-        @keyframes dp { 0%,100% { opacity: 0.3; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.2); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-      `}</style>
+      {globalStyle}
 
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 

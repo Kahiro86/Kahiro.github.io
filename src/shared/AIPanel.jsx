@@ -15,7 +15,7 @@ HYBRID ATHLETE: Concurrent training interference effect. Strength BEFORE cardio 
 SCHEDULE: Afternoon/evening shift 1PM-12:30AM EAT. Morning window after 9:30AM.
 STYLE: Calm, supportive, direct, data-driven. Reference real ICT concepts and training physiology, but favor the smallest sustainable step. Under 250 words. No filler, no guilt.`;
 
-export function AIPanel({ onClose, tradingStats }) {
+export function AIPanel({ onClose, tradingStats, mobile }) {
   const [msgs, setMsgs] = useState([{
     role: "assistant",
     content: `ARCHITECT online. All systems nominal.\n\n→ Trading: ${tradingStats.wr || 0}% WR · PF ${tradingStats.pf || 0} · ${tradingStats.total || 0} trades · Net $${tradingStats.totalPnl || 0}\n→ Athletic: Phase 1 Accumulation · W6 · Zone 2 sessions on track\n→ Recovery: HRV 74ms (Normal) · Readiness 76%\n→ Habits: 4/6 complete · Journal streak 15 days\n\n1% better than yesterday is enough. What's one small thing we can improve today?`,
@@ -49,7 +49,7 @@ export function AIPanel({ onClose, tradingStats }) {
   }, [input, loading, msgs, tradingStats]);
 
   return (
-    <div style={{ width: 340, height: "100vh", background: B1, borderLeft: `1px solid ${BD}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <div style={{ width: mobile ? "100%" : 340, height: "100%", background: B1, borderLeft: mobile ? "none" : `1px solid ${BD}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "16px 18px", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", gap: 11 }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${CY}22,${PU}22)`, border: `1px solid ${CY}33`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Cpu size={17} color={CY} />
