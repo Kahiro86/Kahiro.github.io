@@ -28,7 +28,7 @@ export function FinanceOS() {
   const [finTab, setFinTab] = useState("overview");
   const [state, setState] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const {
-    currency, xRate, gross, opBal, savBal, efBal, efMMF, personalDebt,
+    currency, xRate, income = [], gross, opBal, savBal, efBal, efMMF, personalDebt,
     mmfs, tbills, nseStocks, saccoBal, saccoYield, reitUnits, reitNAV, budgets,
   } = state;
 
@@ -49,6 +49,7 @@ export function FinanceOS() {
   const setReitUnits = (v) => patch({ reitUnits: v });
   const setReitNAV = (v) => patch({ reitNAV: v });
   const setBudgets = (updater) => setState((s) => ({ ...s, budgets: typeof updater === "function" ? updater(s.budgets) : updater }));
+  const setIncome = (updater) => setState((s) => ({ ...s, income: typeof updater === "function" ? updater(s.income || []) : updater }));
 
   // Trading account is read-only here — the firewall never gives Finance OS a setter into Trading OS's own storage.
   const [trades] = useStorageState("ict_trades", SEED_TRADES);
@@ -140,7 +141,8 @@ export function FinanceOS() {
             personalDebt={personalDebt} setPersonalDebt={setPersonalDebt} />
         )}
         {finTab === "income" && (
-          <IncomeTab gross={gross} setGross={setGross} g={g} paye={paye} nssf={nssf} shif={shif} ahl={ahl} totalDed={totalDed} netPay={netPay} />
+          <IncomeTab income={income} setIncome={setIncome} fmtKES={fmtKES}
+            gross={gross} setGross={setGross} g={g} paye={paye} nssf={nssf} shif={shif} ahl={ahl} totalDed={totalDed} netPay={netPay} />
         )}
         {finTab === "accounts" && (
           <AccountsTab g={g} netPay={netPay} fmtKES={fmtKES} opBal={opBal} setOpBal={setOpBal} savBal={savBal} setSavBal={setSavBal} />

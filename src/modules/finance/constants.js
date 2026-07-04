@@ -3,6 +3,7 @@ import { CY, GR, PU, AM, OR, RE, T2 } from "../../shared/designTokens.js";
 export const DEFAULT_FINANCE_STATE = {
   currency: "KES",
   xRate: 130,
+  income: [],
   gross: "",
   opBal: 0,
   savBal: 0,
@@ -36,3 +37,20 @@ export const DEFAULT_FINANCE_STATE = {
 };
 
 export const TBILL_TYPES = ["91-Day T-Bill", "182-Day T-Bill", "364-Day T-Bill", "2-Year Bond", "5-Year Bond", "10-Year Bond", "15-Year Bond", "20-Year Bond"];
+
+// ── Dynamic income tracking ─────────────────────────────────────────
+// Income is never assumed fixed — users log unlimited entries from any source.
+export const INCOME_SOURCES = [
+  "Salary", "Trading Profits", "Investment Returns", "Freelance",
+  "Business", "Side Hustle", "Gift / Bonus", "Other",
+];
+
+export const INCOME_CATEGORIES = ["Active", "Passive", "Business", "Investment", "Windfall", "Other"];
+
+// Stable-ish palette so a source keeps a colour across the app.
+export const INCOME_PALETTE = [CY, GR, PU, AM, OR, RE, "#2DD4BF", "#F472B6", "#A78BFA", "#38BDF8"];
+export function sourceColor(source) {
+  let h = 0;
+  for (let i = 0; i < (source || "").length; i++) h = (h * 31 + source.charCodeAt(i)) >>> 0;
+  return INCOME_PALETTE[h % INCOME_PALETTE.length];
+}
