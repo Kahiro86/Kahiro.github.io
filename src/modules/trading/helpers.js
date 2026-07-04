@@ -7,20 +7,24 @@ export const gcol = (g) => (g === "A+" ? GR : g === "A" || g === "A-" ? CY : g =
 export const ocol = (o) => ({ WIN: GR, LOSS: RE, BE: AM, PARTIAL: CY }[o] ?? T2);
 export const suggestGrade = (s) => (s === 7 ? "A+" : s === 6 ? "A" : s === 5 ? "B+" : s === 4 ? "B" : "C");
 
+// Total commission + swap/fees for a trade (0 when unset — no effect on old trades).
+export const tradeFees = (t) => (+t.commission || 0) + (+t.swapFees || 0);
+
 export const calcPnl = (t) => {
   if (t.status === "CLOSED" && t.pnl !== undefined) return t.pnl;
   const en = +t.entryPrice || 0;
   const pv = getPV(t.instrument);
   const n = +t.contracts || 1;
   const d = t.direction === "LONG" ? 1 : -1;
+  const fees = tradeFees(t);
   if (t.hasPartial && t.partialExitPrice && t.remainingExitPrice) {
     const ps = +t.partialSize || 0.5;
     return Math.round(
       ps * n * (+t.partialExitPrice - en) * d * pv +
-        (1 - ps) * n * (+t.remainingExitPrice - en) * d * pv
+        (1 - ps) * n * (+t.remainingExitPrice - en) * d * pv - fees
     );
   }
-  if (t.exitPrice) return Math.round(n * (+t.exitPrice - en) * d * pv);
+  if (t.exitPrice) return Math.round(n * (+t.exitPrice - en) * d * pv - fees);
   return 0;
 };
 
@@ -48,7 +52,7 @@ export const calcActualRR = (t) => {
 };
 
 export const getStats = (trades) => {
-  const cl = trades.filter((t) => t.status === "CLOSED");
+  const cl = trades.filter((t) => t.status === "CLOSED" && !t.archived);
   const wins = cl.filter((t) => t.outcome === "WIN" || t.outcome === "PARTIAL");
   const losses = cl.filter((t) => t.outcome === "LOSS");
   const wr = cl.length ? Math.round((wins.length / cl.length) * 100) : 0;
@@ -72,7 +76,10 @@ export const initForm = () => ({
   ictMacro: "", silverBullet: "", mmModel: "", dealingRangeH: "", dealingRangeL: "",
   dol: "", judasSwing: false,
   entryPrice: "", stopPrice: "", targetPrice: "", contracts: 1, tvUrl: "",
-  checklist: [false, false, false, false, false, false, false],
+  checklist: [], checklistItems: [], checklistScore: 0, checklistTotal: 0,
+  checklistTemplate: "", checklistSkipped: false,
+  timeClosed: "", commission: "", swapFees: "", screenshots: "",
+  emotionBefore: "", emotionAfter: "", mistakes: "",
   exitPrice: "", hasPartial: false, partialExitPrice: "", partialSize: "0.5",
   remainingExitPrice: "", outcome: "", grade: "", targetReached: "",
   entryQuality: "", exitQuality: "", psychologyTag: "", executionScore: 7,

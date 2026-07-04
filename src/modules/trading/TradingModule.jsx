@@ -3,7 +3,8 @@ import { DollarSign, Edit3, Check, X, FileText, BarChart2, Shield, Star, AlertCi
 import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { SEED_TRADES } from "./seedTrades.js";
-import { getStats } from "./helpers.js";
+import { getStats, genId } from "./helpers.js";
+import { DEFAULT_CHECKLIST_TEMPLATES } from "./checklists.js";
 import { LogView } from "./LogView.jsx";
 import { TradingAnalytics } from "./TradingAnalytics.jsx";
 import { RiskCalculator } from "./RiskCalculator.jsx";
@@ -11,6 +12,7 @@ import { PlaybookBuilder } from "./PlaybookBuilder.jsx";
 import { TradingReports } from "./TradingReports.jsx";
 import { EntryForm } from "./EntryForm.jsx";
 import { DetailView } from "./DetailView.jsx";
+import { PreTradeChecklist } from "./PreTradeChecklist.jsx";
 
 export function TradingModule() {
   const [tv, setTv] = useState("log");
@@ -21,6 +23,12 @@ export function TradingModule() {
   const [editBal, setEditBal] = useState(false);
   const [balI, setBalI] = useState(String(bal));
 
+  // Checklist templates + gate settings (persisted, customizable).
+  const [templates, setTemplates] = useStorageState("ict_checklist_templates", DEFAULT_CHECKLIST_TEMPLATES);
+  const [activeChecklist, setActiveChecklist] = useStorageState("ict_active_checklist", "ict");
+  const [allowSkip, setAllowSkip] = useStorageState("ict_checklist_skip", false);
+  const [pendingChecklist, setPendingChecklist] = useState(null);
+
   const saveTrade = useCallback((t) => {
     setTrades((prev) => {
       const idx = prev.findIndex((x) => x.id === t.id);
@@ -28,12 +36,26 @@ export function TradingModule() {
     });
     setTv("log");
     setEditT(null);
+    setPendingChecklist(null);
   }, [setTrades]);
 
   const delTrade = useCallback((id) => {
     if (window.confirm("Delete this trade?")) {
       setTrades((prev) => prev.filter((t) => t.id !== id));
     }
+  }, [setTrades]);
+
+  const duplicateTrade = useCallback((id) => {
+    setTrades((prev) => {
+      const orig = prev.find((t) => t.id === id);
+      if (!orig) return prev;
+      const copy = { ...orig, id: genId(), status: "OPEN", outcome: "", grade: "", pnl: 0, actualRR: null, exitPrice: "", createdAt: new Date().toISOString(), archived: false, notes: `(copy) ${orig.notes || ""}`.trim() };
+      return [copy, ...prev];
+    });
+  }, [setTrades]);
+
+  const archiveTrade = useCallback((id) => {
+    setTrades((prev) => prev.map((t) => (t.id === id ? { ...t, archived: !t.archived } : t)));
   }, [setTrades]);
 
   const saveBal = () => {
@@ -105,14 +127,15 @@ export function TradingModule() {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: tv === "log" || tv === "form" ? "hidden" : "auto" }} key={tv}>
-        {tv === "log" && <div style={{ height: "100%", display: "flex", flexDirection: "column" }}><LogView trades={trades} onView={(t) => { setSel(t); setTv("detail"); }} onEdit={(t) => { setEditT(t); setTv("form"); }} onDelete={delTrade} onNew={() => { setEditT(null); setTv("form"); }} stats={stats} balance={bal} /></div>}
+      <div style={{ flex: 1, overflow: tv === "log" || tv === "form" || tv === "checklist" ? "hidden" : "auto" }} key={tv}>
+        {tv === "log" && <div style={{ height: "100%", display: "flex", flexDirection: "column" }}><LogView trades={trades} onView={(t) => { setSel(t); setTv("detail"); }} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} onDelete={delTrade} onDuplicate={duplicateTrade} onArchive={archiveTrade} onNew={() => { setEditT(null); setPendingChecklist(null); setTv("checklist"); }} stats={stats} balance={bal} /></div>}
+        {tv === "checklist" && <div style={{ height: "100%" }}><PreTradeChecklist templates={templates} setTemplates={setTemplates} activeId={activeChecklist} setActiveId={setActiveChecklist} allowSkip={allowSkip} setAllowSkip={setAllowSkip} onComplete={(res) => { setPendingChecklist(res); setTv("form"); }} onCancel={() => setTv("log")} /></div>}
         {tv === "analytics" && <TradingAnalytics trades={trades} balance={bal} />}
         {tv === "risk" && <RiskCalculator trades={trades} balance={bal + netPnl} />}
         {tv === "playbook" && <PlaybookBuilder trades={trades} />}
         {tv === "reports" && <TradingReports trades={trades} balance={bal + netPnl} />}
-        {tv === "form" && <div style={{ height: "100%" }}><EntryForm onSubmit={saveTrade} onCancel={() => { setTv("log"); setEditT(null); }} editTrade={editT} accountBalance={bal} /></div>}
-        {tv === "detail" && sel && <div style={{ overflowY: "auto", height: "100%" }}><DetailView trade={trades.find((t) => t.id === sel.id) || sel} onBack={() => setTv("log")} onEdit={(t) => { setEditT(t); setTv("form"); }} /></div>}
+        {tv === "form" && <div style={{ height: "100%" }}><EntryForm onSubmit={saveTrade} onCancel={() => { setTv("log"); setEditT(null); setPendingChecklist(null); }} editTrade={editT} accountBalance={bal} checklistResult={pendingChecklist} /></div>}
+        {tv === "detail" && sel && <div style={{ overflowY: "auto", height: "100%" }}><DetailView trade={trades.find((t) => t.id === sel.id) || sel} trades={trades} onBack={() => setTv("log")} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} /></div>}
       </div>
     </div>
   );

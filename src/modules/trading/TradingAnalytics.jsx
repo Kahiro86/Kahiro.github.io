@@ -7,10 +7,15 @@ import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { DonutChart, ChartLegend } from "../../shared/charts.jsx";
 import { SESSION_CONFIG, ICT_MODELS, GRADES, PSYCH } from "./constants.js";
 import { calcPnl, getStats, gcol, ocol } from "./helpers.js";
+import { checklistEdge } from "./checklists.js";
 
 export function TradingAnalytics({ trades, balance }) {
   const cl = trades.filter((t) => t.status === "CLOSED");
   const stats = getStats(trades);
+
+  // Checklist discipline edge: win rate when each pre-trade item was checked vs
+  // skipped. Only show items with enough data and at least one skip to compare.
+  const edge = checklistEdge(trades).filter((e) => e.checkedN + e.skippedN >= 2);
 
   let run = balance;
   const equity = [...cl]
@@ -207,6 +212,48 @@ export function TradingAnalytics({ trades, balance }) {
                     <div style={{ height: "100%", width: `${p.wr}%`, background: p.wr >= 60 ? GR : p.wr >= 50 ? CY : RE, borderRadius: 2 }} />
                   </div>
                   <div style={{ fontSize: 10, color: T3 }}>{p.trades} trades</div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {edge.length > 0 && (
+        <Card style={{ padding: "18px" }}>
+          <SH title="Checklist Discipline Edge" sub="Win rate when each pre-trade step was checked vs skipped — where discipline pays" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+            {edge.map((e) => {
+              const hasSkips = e.skippedN > 0 && e.skippedWr !== null;
+              const hurts = hasSkips && e.checkedWr !== null && e.skippedWr < e.checkedWr;
+              return (
+                <div key={e.text} style={{ padding: "11px 13px", background: GL, border: `1px solid ${hurts ? RE + "33" : BD}`, borderRadius: 10 }}>
+                  <div style={{ fontSize: 12, color: T1, marginBottom: 8, lineHeight: 1.4 }}>{e.text}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontSize: 10, color: T3, letterSpacing: 0.5 }}>CHECKED · {e.checkedN}t</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: GR, fontFamily: "monospace" }}>{e.checkedWr !== null ? `${e.checkedWr}%` : "—"}</span>
+                      </div>
+                      <div style={{ height: 4, background: BD, borderRadius: 3 }}>
+                        <div style={{ height: "100%", width: `${e.checkedWr || 0}%`, background: GR, borderRadius: 3 }} />
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontSize: 10, color: T3, letterSpacing: 0.5 }}>SKIPPED · {e.skippedN}t</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: hasSkips ? RE : T3, fontFamily: "monospace" }}>{hasSkips ? `${e.skippedWr}%` : "—"}</span>
+                      </div>
+                      <div style={{ height: 4, background: BD, borderRadius: 3 }}>
+                        <div style={{ height: "100%", width: `${hasSkips ? e.skippedWr : 0}%`, background: RE, borderRadius: 3 }} />
+                      </div>
+                    </div>
+                  </div>
+                  {hurts && (
+                    <div style={{ fontSize: 10.5, color: RE, marginTop: 7 }}>
+                      Skipping this drops your win rate {e.checkedWr - e.skippedWr} points — a Kaizen keep-doing.
+                    </div>
+                  )}
                 </div>
               );
             })}
