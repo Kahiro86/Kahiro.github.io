@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { DollarSign, Edit3, Check, X, FileText, BarChart2, Shield, Star, AlertCircle } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
-import { SEED_TRADES } from "./seedTrades.js";
+import { useToast } from "../../shared/toast.jsx";
 import { getStats, genId } from "./helpers.js";
 import { DEFAULT_CHECKLIST_TEMPLATES } from "./checklists.js";
 import { LogView } from "./LogView.jsx";
@@ -16,7 +16,7 @@ import { PreTradeChecklist } from "./PreTradeChecklist.jsx";
 
 export function TradingModule() {
   const [tv, setTv] = useState("log");
-  const [trades, setTrades] = useStorageState("ict_trades", SEED_TRADES);
+  const [trades, setTrades] = useStorageState("ict_trades", []);
   const [sel, setSel] = useState(null);
   const [editT, setEditT] = useState(null);
   const [bal, setBal] = useStorageState("ict_balance", 15000);
@@ -39,11 +39,25 @@ export function TradingModule() {
     setPendingChecklist(null);
   }, [setTrades]);
 
+  const toast = useToast();
+
   const delTrade = useCallback((id) => {
-    if (window.confirm("Delete this trade?")) {
-      setTrades((prev) => prev.filter((t) => t.id !== id));
-    }
-  }, [setTrades]);
+    setTrades((prev) => {
+      const t = prev.find((x) => x.id === id);
+      if (t) toast("Trade deleted", { action: "Undo", onAction: () => setTrades((p) => [t, ...p.filter((x) => x.id !== id)]), tone: "danger" });
+      return prev.filter((x) => x.id !== id);
+    });
+  }, [setTrades, toast]);
+
+  // Legacy demo trades (t001–t005) may still exist on devices that stored the
+  // old seed data. They pollute every stat and AI insight, so surface a
+  // one-tap cleanup. Fresh installs start empty and never see this.
+  const demoTrades = trades.filter((t) => /^t00\d$/.test(t.id));
+  const clearDemo = useCallback(() => {
+    const removed = trades.filter((t) => /^t00\d$/.test(t.id));
+    setTrades((prev) => prev.filter((t) => !/^t00\d$/.test(t.id)));
+    toast(`${removed.length} demo trades cleared`, { action: "Undo", onAction: () => setTrades((p) => [...removed, ...p]), tone: "success" });
+  }, [trades, setTrades, toast]);
 
   const duplicateTrade = useCallback((id) => {
     setTrades((prev) => {
@@ -128,7 +142,18 @@ export function TradingModule() {
       </div>
 
       <div style={{ flex: 1, overflow: tv === "log" || tv === "form" || tv === "checklist" ? "hidden" : "auto" }} key={tv}>
-        {tv === "log" && <div style={{ height: "100%", display: "flex", flexDirection: "column" }}><LogView trades={trades} onView={(t) => { setSel(t); setTv("detail"); }} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} onDelete={delTrade} onDuplicate={duplicateTrade} onArchive={archiveTrade} onNew={() => { setEditT(null); setPendingChecklist(null); setTv("checklist"); }} stats={stats} balance={bal} /></div>}
+        {tv === "log" && <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+          {demoTrades.length > 0 && (
+            <div style={{ margin: "10px 22px 0", padding: "9px 14px", background: `${AM}0D`, border: `1px solid ${AM}33`, borderRadius: 10, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: T2, flex: 1, lineHeight: 1.45 }}>
+                <strong style={{ color: AM }}>{demoTrades.length} demo trades</strong> are included so you can explore. Clear them before logging real trades — they affect your stats.
+              </span>
+              <button onClick={clearDemo} style={{ padding: "6px 13px", background: `${AM}18`, border: `1px solid ${AM}44`, borderRadius: 8, color: AM, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                Clear demo data
+              </button>
+            </div>
+          )}
+          <LogView trades={trades} onView={(t) => { setSel(t); setTv("detail"); }} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} onDelete={delTrade} onDuplicate={duplicateTrade} onArchive={archiveTrade} onNew={() => { setEditT(null); setPendingChecklist(null); setTv("checklist"); }} stats={stats} balance={bal} /></div>}
         {tv === "checklist" && <div style={{ height: "100%" }}><PreTradeChecklist templates={templates} setTemplates={setTemplates} activeId={activeChecklist} setActiveId={setActiveChecklist} allowSkip={allowSkip} setAllowSkip={setAllowSkip} onComplete={(res) => { setPendingChecklist(res); setTv("form"); }} onCancel={() => setTv("log")} /></div>}
         {tv === "analytics" && <TradingAnalytics trades={trades} balance={bal} />}
         {tv === "risk" && <RiskCalculator trades={trades} balance={bal + netPnl} />}

@@ -28,7 +28,7 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
         )}
       </div>
       <div style={{ flex: 1, padding: "9px 7px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
-        {NAV.map(({ id, label, icon: Icon }) => {
+        {NAV.filter((n) => !n.soon).map(({ id, label, icon: Icon }) => {
           const on = active === id;
           return (
             <button
@@ -38,6 +38,23 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
               onMouseLeave={(e) => { if (!on) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T2; } }}
             >
               <Icon size={16} style={{ flexShrink: 0 }} />{!isCollapsed && label}
+            </button>
+          );
+        })}
+
+        {!isCollapsed && (
+          <div style={{ fontSize: 8.5, color: T3, letterSpacing: 2, padding: "12px 11px 4px", textTransform: "uppercase" }}>Coming soon</div>
+        )}
+        {NAV.filter((n) => n.soon).map(({ id, label, icon: Icon }) => {
+          const on = active === id;
+          return (
+            <button
+              key={id} onClick={() => onNavigate(id)} title={isCollapsed ? `${label} (coming soon)` : ""}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: isCollapsed ? "8px 16px" : "7px 11px", borderRadius: 10, border: "none", cursor: "pointer", background: on ? `linear-gradient(135deg,${CY}16,${PU}16)` : "transparent", color: on ? CY : T3, borderLeft: `2px solid ${on ? CY : "transparent"}`, fontSize: 12, fontWeight: on ? 600 : 400, textAlign: "left", transition: "all 0.15s", whiteSpace: "nowrap", width: "100%", fontFamily: "inherit", opacity: on ? 1 : 0.6 }}
+              onMouseEnter={(e) => { if (!on) { e.currentTarget.style.background = GL; e.currentTarget.style.opacity = 1; } }}
+              onMouseLeave={(e) => { if (!on) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.opacity = 0.6; } }}
+            >
+              <Icon size={15} style={{ flexShrink: 0 }} />{!isCollapsed && label}
             </button>
           );
         })}

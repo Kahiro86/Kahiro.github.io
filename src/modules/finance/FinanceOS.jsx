@@ -6,7 +6,6 @@ import { DEFAULT_FINANCE_STATE } from "./constants.js";
 import { calcPAYE, calcNSSF } from "./paye.js";
 import { incomeAnalytics } from "./income.js";
 import { financeHealth } from "./financeHealth.js";
-import { SEED_TRADES } from "../trading/seedTrades.js";
 import { getStats, tradingMetrics } from "../trading/helpers.js";
 import { OverviewTab } from "./OverviewTab.jsx";
 import { IncomeTab } from "./IncomeTab.jsx";
@@ -62,7 +61,7 @@ export function FinanceOS() {
   const setProfitSplit = (v) => patch({ profitSplit: v });
 
   // Trading account is read-only here — the firewall never gives Finance OS a setter into Trading OS's own storage.
-  const [trades] = useStorageState("ict_trades", SEED_TRADES);
+  const [trades] = useStorageState("ict_trades", []);
   const [bal] = useStorageState("ict_balance", 15000);
   const tradingStats = getStats(trades);
   const tradingBalanceUSD = bal + tradingStats.totalPnl;

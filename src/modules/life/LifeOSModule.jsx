@@ -1,19 +1,31 @@
 import { useState } from "react";
-import { Flame, Check, Star, Sprout } from "lucide-react";
-import { BD, T1, T2, T3, GL, CY, PU, GR, AM, OR, RE } from "../../shared/designTokens.js";
+import { Flame, Check, Star, Sprout, ChevronRight, Trash2 } from "lucide-react";
+import { BD, T1, T2, T3, GL, CY, PU, GR, AM } from "../../shared/designTokens.js";
 import { Card, SH } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
-import { REFLECTION_PROMPTS } from "../../shared/kaizen.js";
+import { useToast } from "../../shared/toast.jsx";
+import { REFLECTION_PROMPTS, nudgeOfTheDay } from "../../shared/kaizen.js";
+import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 
-export function LifeOSModule({ habits, setHabits }) {
+export function LifeOSModule({ habits, onToggleHabit, onNavigate }) {
   const [journal, setJournal] = useState("");
   const [entries, setEntries] = useStorageState("journal_entries", []);
+  const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
+  const toast = useToast();
   const done = habits.filter((h) => h.done).length;
+  const goals = (finance.goals || []).filter((g) => !g.archived);
 
   const saveEntry = () => {
     if (!journal.trim()) return;
     setEntries((prev) => [{ id: `j${Date.now()}`, date: new Date().toISOString(), text: journal }, ...prev]);
     setJournal("");
+    toast("Reflection saved 🌱", { tone: "success", duration: 2500 });
+  };
+
+  const deleteEntry = (id) => {
+    const entry = entries.find((e) => e.id === id);
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+    toast("Entry deleted", { action: "Undo", onAction: () => setEntries((prev) => [entry, ...prev]), tone: "danger" });
   };
 
   return (
@@ -40,13 +52,14 @@ export function LifeOSModule({ habits, setHabits }) {
             </span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {habits.map((h, i) => (
-              <div key={h.name} onClick={() => setHabits((p) => p.map((x, j) => (j === i ? { ...x, done: !x.done } : x)))} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: GL, borderRadius: 10, border: `1px solid ${h.done ? GR + "33" : BD}`, cursor: "pointer" }}>
+            {habits.map((h) => (
+              <div key={h.name} onClick={() => onToggleHabit(h.name)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: GL, borderRadius: 10, border: `1px solid ${h.done ? GR + "33" : BD}`, cursor: "pointer" }}>
                 <span style={{ fontSize: 16 }}>{h.icon}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, color: T1, fontWeight: 600 }}>{h.name}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                    <Flame size={10} color={AM} /><span style={{ fontSize: 10, color: T3 }}>{h.streak} day streak</span>
+                    <Flame size={10} color={AM} />
+                    <span style={{ fontSize: 10, color: T3 }}>{h.streak > 0 ? `${h.streak} day streak` : "start a streak today"}</span>
                   </div>
                 </div>
                 <div style={{ width: 23, height: 23, borderRadius: "50%", background: h.done ? `${GR}22` : GL, border: `2px solid ${h.done ? GR : "rgba(255,255,255,0.15)"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -78,11 +91,16 @@ export function LifeOSModule({ habits, setHabits }) {
               Save Entry
             </button>
             {entries.length > 0 && (
-              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8, maxHeight: 160, overflowY: "auto" }}>
+              <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8, maxHeight: 180, overflowY: "auto" }}>
                 {entries.map((e) => (
-                  <div key={e.id} style={{ padding: "9px 11px", background: GL, borderRadius: 9, border: `1px solid ${BD}` }}>
-                    <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>{new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
-                    <div style={{ fontSize: 12, color: T2, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{e.text}</div>
+                  <div key={e.id} style={{ padding: "9px 11px", background: GL, borderRadius: 9, border: `1px solid ${BD}`, display: "flex", gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>{new Date(e.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+                      <div style={{ fontSize: 12, color: T2, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{e.text}</div>
+                    </div>
+                    <button onClick={() => deleteEntry(e.id)} title="Delete entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}>
+                      <Trash2 size={11} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -91,43 +109,55 @@ export function LifeOSModule({ habits, setHabits }) {
           <Card style={{ padding: "16px", borderColor: AM + "33" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
               <Star size={13} color={AM} />
-              <div style={{ fontSize: 13, fontWeight: 700, color: AM }}>Weekly Review Due Sunday</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: AM }}>Sunday Weekly Review</div>
             </div>
-            <div style={{ fontSize: 12, color: T2, lineHeight: 1.6, marginBottom: 9 }}>Review all 6 domains. Grade your process not your results. Set W7 priorities.</div>
-            <button style={{ padding: "7px 13px", background: `${AM}22`, border: `1px solid ${AM}44`, borderRadius: 8, color: AM, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              Schedule Review →
-            </button>
+            <div style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>
+              Each Sunday, glance across all domains and grade your <em>process</em>, not your results. {nudgeOfTheDay(1)}
+            </div>
           </Card>
         </div>
       </div>
+
       <Card style={{ padding: "20px" }}>
-        <SH title="Active Goals" sub="Big horizons, tiny next steps — do just the smallest one today" />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 13 }}>
-          {[
-            { goal: "Consistent Trading Profitability", p: 22, h: "12 months", c: CY, icon: "📈", step: "Grade one past trade against your checklist." },
-            { goal: "Elite Hybrid Athlete",             p: 35, h: "12 months", c: PU, icon: "🏆", step: "Log today's session — even a 10-min walk." },
-            { goal: "Emergency Fund $6,000",            p: 40, h: "5 months",  c: GR, icon: "🛡️", step: "Move one small transfer to the fund." },
-            { goal: "Read 24 Books This Year",          p: 54, h: "6 months",  c: AM, icon: "📚", step: "Read one page. Just one." },
-            { goal: "Net Worth $100k",                  p: 24, h: "36 months", c: OR, icon: "💰", step: "Update one balance so today is honest." },
-            { goal: "VO2max > 55 ml/kg/min",            p: 30, h: "8 months",  c: RE, icon: "❤️", step: "Add 5 easy Zone 2 minutes today." },
-          ].map((g) => (
-            <div key={g.goal} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 12, padding: "14px" }}>
-              <div style={{ fontSize: 16, marginBottom: 6 }}>{g.icon}</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: T1, marginBottom: 6, lineHeight: 1.4 }}>{g.goal}</div>
-              <div style={{ height: 3, background: BD, borderRadius: 2, marginBottom: 6 }}>
-                <div style={{ height: "100%", width: `${g.p}%`, background: `linear-gradient(90deg,${g.c}77,${g.c})`, borderRadius: 2 }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}>
-                <span style={{ fontSize: 11, color: g.c, fontFamily: "monospace", fontWeight: 700 }}>{g.p}%</span>
-                <span style={{ fontSize: 10, color: T3 }}>{g.h}</span>
-              </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "flex-start", paddingTop: 9, borderTop: `1px solid ${BD}` }}>
-                <Sprout size={11} color={g.c} style={{ flexShrink: 0, marginTop: 1 }} />
-                <span style={{ fontSize: 10.5, color: T2, lineHeight: 1.45 }}>{g.step}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <SH title="Active Goals" sub="Live from your Finance goals — big horizons, tiny next steps" action={
+          <button onClick={() => onNavigate?.("finance")} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: CY, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" }}>
+            Manage<ChevronRight size={12} />
+          </button>
+        } />
+        {goals.length === 0 ? (
+          <div style={{ padding: "26px", textAlign: "center" }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>🎯</div>
+            <div style={{ fontSize: 12.5, color: T2, marginBottom: 12 }}>No active goals yet — create your first in Finance.</div>
+            <button onClick={() => onNavigate?.("finance")} style={{ padding: "8px 16px", background: `${CY}18`, border: `1px solid ${CY}44`, borderRadius: 9, color: CY, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              Open Finance Goals →
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 13 }}>
+            {goals.map((g) => {
+              const pct = g.target > 0 ? Math.min(100, Math.round(((+g.current || 0) / g.target) * 100)) : 0;
+              return (
+                <div key={g.id} onClick={() => onNavigate?.("finance")} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 12, padding: "14px", cursor: "pointer" }}>
+                  <div style={{ fontSize: 16, marginBottom: 6 }}>{g.icon}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: T1, marginBottom: 6, lineHeight: 1.4 }}>{g.name}</div>
+                  <div style={{ height: 3, background: BD, borderRadius: 2, marginBottom: 6 }}>
+                    <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg,${g.color || CY}77,${g.color || CY})`, borderRadius: 2 }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}>
+                    <span style={{ fontSize: 11, color: g.color || CY, fontFamily: "monospace", fontWeight: 700 }}>{pct}%</span>
+                    <span style={{ fontSize: 10, color: T3 }}>KES {Math.round(+g.target || 0).toLocaleString()}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-start", paddingTop: 9, borderTop: `1px solid ${BD}` }}>
+                    <Sprout size={11} color={g.color || CY} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 10.5, color: T2, lineHeight: 1.45 }}>
+                      {g.monthly > 0 ? `One transfer of KES ${Math.round(g.monthly).toLocaleString()} keeps this on pace.` : "Log one small contribution today."}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
     </div>
   );

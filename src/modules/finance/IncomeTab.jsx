@@ -1,19 +1,22 @@
 import { useState } from "react";
+import { localDateStr } from "../../shared/dates.js";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Plus, Trash2, Edit3, Check, Repeat, ChevronDown, ChevronRight } from "lucide-react";
 import { BD, GL, T1, T2, T3, CY, PU, GR, RE, AM, OR } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Fld, Inp, Sel, Radio } from "../../shared/ui.jsx";
 import { DonutChart, ChartLegend } from "../../shared/charts.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
+import { useToast } from "../../shared/toast.jsx";
 import { INCOME_SOURCES, INCOME_CATEGORIES, sourceColor } from "./constants.js";
 import { incomeAnalytics, monthLabel } from "./income.js";
 
 const emptyForm = () => ({
-  amount: "", date: new Date().toISOString().split("T")[0],
+  amount: "", date: localDateStr(),
   source: "Salary", customSource: "", category: "Active", notes: "", recurring: false,
 });
 
 export function IncomeTab({ income, setIncome, fmtKES, gross, setGross, g, paye, nssf, shif, ahl, totalDed, netPay }) {
+  const toast = useToast();
   const [form, setForm] = useState(emptyForm());
   const [editingId, setEditingId] = useState(null);
   const [showSalary, setShowSalary] = useState(false);
@@ -47,7 +50,9 @@ export function IncomeTab({ income, setIncome, fmtKES, gross, setGross, g, paye,
   };
 
   const remove = (id) => {
-    if (window.confirm("Delete this income entry?")) setIncome((prev) => prev.filter((e) => e.id !== id));
+    const entry = income.find((e) => e.id === id);
+    setIncome((prev) => prev.filter((e) => e.id !== id));
+    toast("Income entry deleted", { action: "Undo", onAction: () => setIncome((p) => [entry, ...p]), tone: "danger" });
     if (editingId === id) { setForm(emptyForm()); setEditingId(null); }
   };
 

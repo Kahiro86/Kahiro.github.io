@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { B0, T1 } from "./shared/designTokens.js";
 import { storage } from "./shared/storage.js";
 import { useStorageState } from "./shared/useStorageState.js";
 import { useIsMobile } from "./shared/useIsMobile.js";
+import { materializeHabits, toggleHabitToday } from "./shared/habits.js";
+import { localDateStr } from "./shared/dates.js";
+import { ToastProvider } from "./shared/toast.jsx";
+import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
 import { getStats } from "./modules/trading/helpers.js";
+import { financeSummary } from "./modules/finance/summary.js";
 import { HABITS_DEF } from "./modules/dashboard/domains.js";
 import { Dashboard } from "./modules/dashboard/Dashboard.jsx";
 import { TradingModule } from "./modules/trading/TradingModule.jsx";
@@ -24,28 +29,49 @@ export default function App() {
   // AI panel starts open on desktop, closed on phones (it's a full overlay there).
   const [aiOpen, setAiOpen] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 820 : true));
   const [showSettings, setShowSettings] = useState(false);
-  const [habits, setHabits] = useStorageState("habits", HABITS_DEF);
-  const [tradingStats, setTradingStats] = useState({ wr: 0, total: 0, pf: 0, avgRR: 0, totalPnl: 0 });
 
+  // Habits: history-backed. Completion + streaks derive from dated history,
+  // so checkmarks reset at local midnight and streaks are real.
+  const [rawHabits, setRawHabits] = useStorageState("habits", HABITS_DEF);
+  const habits = useMemo(() => materializeHabits(rawHabits), [rawHabits]);
+  const toggleHabit = useCallback((name) => setRawHabits((prev) => toggleHabitToday(prev, name)), [setRawHabits]);
+  const topStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
+
+  // Live cross-module context for the AI panel — real numbers only.
+  const [aiCtx, setAiCtx] = useState(null);
   useEffect(() => {
     (async () => {
-      const raw = await storage.get("ict_trades");
-      if (raw) setTradingStats(getStats(JSON.parse(raw)));
+      try {
+        const [tRaw, wRaw, fRaw, bRaw] = await Promise.all([
+          storage.get("ict_trades"), storage.get("athlete_workouts"),
+          storage.get("finance_state"), storage.get("ict_balance"),
+        ]);
+        const trades = tRaw ? JSON.parse(tRaw) : [];
+        const workouts = wRaw ? JSON.parse(wRaw) : [];
+        const finance = fRaw ? JSON.parse(fRaw) : null;
+        const stats = getStats(trades);
+        const fin = financeSummary(finance || {});
+        const now = new Date();
+        const ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
+        const sessionsWk = workouts.filter((w) => new Date(w.date) >= ws).length;
+        const workedToday = workouts.some((w) => w.date === localDateStr());
+        setAiCtx({ tradingStats: stats, sessionsWk, workedToday, netWorth: fin.personalNetWorth, monthlyPassive: fin.monthlyPassive, thisMonthIncome: fin.thisMonthIncome });
+      } catch { /* context is best-effort; the panel degrades gracefully */ }
     })();
-  }, [module]);
+  }, [module, aiOpen]);
 
   const renderModule = () => {
     switch (module) {
-      case "dashboard": return <Dashboard onNavigate={setModule} habits={habits} setHabits={setHabits} />;
+      case "dashboard": return <Dashboard onNavigate={setModule} habits={habits} onToggleHabit={toggleHabit} />;
       case "trading": return <TradingModule />;
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
-      case "life": return <LifeOSModule habits={habits} setHabits={setHabits} />;
+      case "life": return <LifeOSModule habits={habits} onToggleHabit={toggleHabit} onNavigate={setModule} />;
       case "relations": return <PlaceholderModule title="Relationship System" sub="Quality Time · Shared Goals · Connection" features={[{ name: "Date Planner", icon: "💕", desc: "Schedule and plan meaningful experiences." }, { name: "Important Dates", icon: "📅", desc: "Never miss anniversaries or milestones." }, { name: "Relationship Journal", icon: "📝", desc: "Log shared moments and reflections." }, { name: "Shared Goals", icon: "🎯", desc: "Set and track goals together." }, { name: "Conversation Prompts", icon: "💬", desc: "Deep questions to strengthen connection." }, { name: "AI Coach", icon: "🤖", desc: "Relationship intelligence and guidance." }]} />;
       case "knowledge": return <PlaceholderModule title="Knowledge Base" sub="Second Brain · Reading · Ideas · Learning" features={[{ name: "Note Capture", icon: "📄", desc: "Capture and organise ideas and insights." }, { name: "Reading Tracker", icon: "📚", desc: "Track books, articles, and materials." }, { name: "Idea Vault", icon: "💡", desc: "Store and develop your best ideas." }, { name: "Book Summaries", icon: "🗂️", desc: "Synthesise key lessons from reading." }, { name: "Learning Tracker", icon: "🎓", desc: "Monitor skills and knowledge acquisition." }, { name: "AI Assistant", icon: "🤖", desc: "Search and expand your knowledge base." }]} />;
       case "productivity": return <PlaceholderModule title="Productivity OS" sub="Tasks · Projects · Deep Work · Focus" features={[{ name: "Task Manager", icon: "✅", desc: "Capture, prioritise, and execute tasks." }, { name: "Deep Work Timer", icon: "⏱️", desc: "Structured focus sessions with Pomodoro." }, { name: "Project Tracker", icon: "📊", desc: "Manage multi-step projects end-to-end." }, { name: "Daily Priorities", icon: "🎯", desc: "Select your 1–3 MITs each morning." }, { name: "Focus Mode", icon: "🔇", desc: "Distraction-free peak performance mode." }, { name: "Habit Streaks", icon: "🔥", desc: "Visual streak tracking for daily behaviours." }]} />;
       case "health": return <PlaceholderModule title="Health OS" sub="Mental · Physical · Recovery · Vitals" features={[{ name: "Hydration", icon: "💧", desc: "Monitor water intake and electrolytes." }, { name: "Supplement Stack", icon: "💊", desc: "Log creatine, omega-3, Vitamin D, etc." }, { name: "Mood Tracking", icon: "😊", desc: "Monitor emotional states and stress." }, { name: "Sleep Analysis", icon: "😴", desc: "Track sleep quality and recovery." }, { name: "Stress Monitor", icon: "🧠", desc: "Identify patterns and apply interventions." }, { name: "Medical", icon: "🏥", desc: "Secure health data and appointments." }]} />;
-      default: return <Dashboard onNavigate={setModule} habits={habits} setHabits={setHabits} />;
+      default: return <Dashboard onNavigate={setModule} habits={habits} onToggleHabit={toggleHabit} />;
     }
   };
 
@@ -70,11 +96,12 @@ export default function App() {
 
   if (isMobile) {
     return (
+      <ToastProvider>
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: B0, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} streak={topStreak} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "fadeIn 0.25s ease" }}>
-          {renderModule()}
+          <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
 
         {mobileNavOpen && (
@@ -93,29 +120,32 @@ export default function App() {
 
         {aiOpen && (
           <div style={{ position: "fixed", inset: 0, zIndex: 44 }}>
-            <AIPanel mobile onClose={() => setAiOpen(false)} tradingStats={tradingStats} />
+            <AIPanel mobile onClose={() => setAiOpen(false)} ctx={aiCtx} habits={habits} />
           </div>
         )}
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       </div>
+      </ToastProvider>
     );
   }
 
   return (
+    <ToastProvider>
     <div style={{ display: "flex", height: "100vh", background: B0, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
       {globalStyle}
 
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} streak={topStreak} />
         <div key={module} style={{ flex: 1, overflowY: module === "trading" ? "hidden" : "auto", overflow: module === "trading" ? "hidden" : "auto", animation: "fadeIn 0.25s ease" }}>
-          {renderModule()}
+          <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
       </div>
 
-      {aiOpen && <AIPanel onClose={() => setAiOpen(false)} tradingStats={tradingStats} />}
+      {aiOpen && <AIPanel onClose={() => setAiOpen(false)} ctx={aiCtx} habits={habits} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
+    </ToastProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trash2, X, Plus, CheckCircle, Save, Zap } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, AM, RE } from "../../shared/designTokens.js";
 import { Fld, Inp, Radio, DirTogGeneric } from "../../shared/ui.jsx";
+import { localDateStr } from "../../shared/dates.js";
 import { uidA } from "./helpers.js";
 import { uidE, MUSCLE_GROUPS, EQUIPMENT } from "./library.js";
 
@@ -9,7 +10,7 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
   const seed = initial || {};
   const [type, setType] = useState(seed.type || "strength");
   const [name, setName] = useState(seed.name || "");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(localDateStr());
   const [exercises, setExercises] = useState(
     seed.exercises && seed.exercises.length
       ? seed.exercises.map((e) => ({ id: uidA(), name: e.name, sets: (e.sets || [{ reps: "", weight: "" }]).map((s) => ({ reps: s.reps ?? "", weight: s.weight ?? "" })) }))

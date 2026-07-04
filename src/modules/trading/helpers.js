@@ -1,5 +1,6 @@
 import { GR, CY, PU, AM, RE, T2 } from "../../shared/designTokens.js";
 import { INSTRUMENTS } from "./constants.js";
+import { localDateStr } from "../../shared/dates.js";
 
 export const genId = () => `t${Date.now().toString(36)}`;
 export const getPV = (i) => INSTRUMENTS.find((x) => x.l === i)?.pv ?? 20;
@@ -76,9 +77,9 @@ export const periodPnl = (trades, sinceDate) =>
 export const tradingMetrics = (trades, fundedSize = 15000, withdrawals = 0, profitSplit = 80) => {
   const stats = getStats(trades);
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
+  const today = localDateStr(now);
   const ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
-  const weekStart = ws.toISOString().split("T")[0];
+  const weekStart = localDateStr(ws);
   const monthStart = `${today.slice(0, 7)}-01`;
   const totalProfit = stats.totalPnl;
   const openRisk = trades
@@ -104,7 +105,7 @@ export const tradingMetrics = (trades, fundedSize = 15000, withdrawals = 0, prof
 };
 
 export const initForm = () => ({
-  date: new Date().toISOString().split("T")[0],
+  date: localDateStr(),
   time: new Date().toTimeString().slice(0, 5),
   instrument: "NQ1!", direction: "LONG", session: "", models: [],
   marketStructure: "", htfBias: "", premiumDiscount: "", liquidityTarget: "",

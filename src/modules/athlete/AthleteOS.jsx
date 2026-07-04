@@ -7,6 +7,8 @@ import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designT
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
+import { useToast } from "../../shared/toast.jsx";
+import { localDateStr } from "../../shared/dates.js";
 import { WEEK_PLAN } from "./constants.js";
 import { getDayName } from "./helpers.js";
 import { DEFAULT_EXERCISES, uidT, lastValuesByExercise, overloadTrend } from "./library.js";
@@ -20,15 +22,29 @@ export function AthleteOS() {
   const [logInitial, setLogInitial] = useState(null);
   const [filterType, setFilterType] = useState("");
 
+  const toast = useToast();
   const startLog = (initial = null) => { setLogInitial(initial); setView("log"); };
-  const saveWorkout = (w) => { setWorkouts((prev) => [w, ...prev]); setLogInitial(null); setView("week"); };
-  const deleteWorkout = (id) => { if (window.confirm("Delete this workout?")) setWorkouts((prev) => prev.filter((w) => w.id !== id)); };
+  const saveWorkout = (w) => {
+    setWorkouts((prev) => [w, ...prev]);
+    setLogInitial(null);
+    setView("week");
+    toast("Workout logged 💪", { tone: "success", duration: 2500 });
+  };
+  const deleteWorkout = (id) => {
+    const w = workouts.find((x) => x.id === id);
+    setWorkouts((prev) => prev.filter((x) => x.id !== id));
+    toast("Workout deleted", { action: "Undo", onAction: () => setWorkouts((p) => [w, ...p]), tone: "danger" });
+  };
   const duplicateWorkout = (w) => startLog({ type: w.type, name: w.name, exercises: w.exercises, duration: w.duration, intensity: w.intensity });
   const saveTemplate = (tpl) => {
     setTemplates((prev) => [...prev, { id: uidT(), ...tpl }]);
-    window.alert(`Saved "${tpl.name}" as a reusable template.`);
+    toast(`Template "${tpl.name}" saved — one tap to reuse it`, { tone: "success" });
   };
-  const deleteTemplate = (id) => setTemplates((prev) => prev.filter((t) => t.id !== id));
+  const deleteTemplate = (id) => {
+    const t = templates.find((x) => x.id === id);
+    setTemplates((prev) => prev.filter((x) => x.id !== id));
+    toast("Template deleted", { action: "Undo", onAction: () => setTemplates((p) => [...p, t]), tone: "danger" });
+  };
   const lastValues = lastValuesByExercise(workouts);
   const overload = overloadTrend(workouts);
 
@@ -43,7 +59,7 @@ export function AthleteOS() {
     let count = 0, d = new Date();
     const dates = new Set(workouts.map((w) => w.date));
     for (let i = 0; i < 60; i++) {
-      const ds = d.toISOString().split("T")[0];
+      const ds = localDateStr(d);
       if (dates.has(ds)) { count++; d.setDate(d.getDate() - 1); }
       else if (i === 0) { d.setDate(d.getDate() - 1); continue; }
       else break;
@@ -53,7 +69,7 @@ export function AthleteOS() {
 
   const todayDay = getDayName();
   const todayPlan = WEEK_PLAN.find((d) => d.day === todayDay);
-  const todayLogged = workouts.some((w) => w.date === now.toISOString().split("T")[0]);
+  const todayLogged = workouts.some((w) => w.date === localDateStr());
 
   const filteredHistory = workouts.filter((w) => !filterType || w.type === filterType);
 
