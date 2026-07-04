@@ -1,9 +1,11 @@
-import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, Target } from "lucide-react";
+import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, Target, Activity, FileText } from "lucide-react";
 import { useState } from "react";
 import { B1, BD, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { DEFAULT_FINANCE_STATE } from "./constants.js";
 import { calcPAYE, calcNSSF } from "./paye.js";
+import { incomeAnalytics } from "./income.js";
+import { financeHealth } from "./financeHealth.js";
 import { SEED_TRADES } from "../trading/seedTrades.js";
 import { getStats } from "../trading/helpers.js";
 import { OverviewTab } from "./OverviewTab.jsx";
@@ -13,10 +15,14 @@ import { BudgetTab } from "./BudgetTab.jsx";
 import { EmergencyFundTab } from "./EmergencyFundTab.jsx";
 import { PortfolioTab } from "./PortfolioTab.jsx";
 import { GoalsTab } from "./GoalsTab.jsx";
+import { AnalystTab } from "./AnalystTab.jsx";
+import { FinanceReports } from "./FinanceReports.jsx";
 
 const FIN_TABS = [
   { id: "overview",  l: "Net Worth",   i: Layers        },
   { id: "income",    l: "Income",      i: DollarSign    },
+  { id: "analyst",   l: "Analyst",     i: Activity      },
+  { id: "reports",   l: "Reports",     i: FileText      },
   { id: "accounts",  l: "Accounts",    i: Shield        },
   { id: "budget",    l: "Budget",      i: BarChart2     },
   { id: "emergency", l: "Emergency",   i: AlertTriangle },
@@ -102,6 +108,10 @@ export function FinanceOS() {
     return `KES ${n.toLocaleString()}`;
   };
 
+  // ── HEALTH SCORE (feeds Analyst + Reports) ────────────────────────
+  const incomeStats = incomeAnalytics(income);
+  const health = financeHealth({ incomeStats, totalBudgeted, totalSpent, efBal, savBal, totalInvested, personalDebt, tradingStats });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ background: B1, borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, overflowX: "auto" }}>
@@ -143,6 +153,15 @@ export function FinanceOS() {
         {finTab === "income" && (
           <IncomeTab income={income} setIncome={setIncome} fmtKES={fmtKES}
             gross={gross} setGross={setGross} g={g} paye={paye} nssf={nssf} shif={shif} ahl={ahl} totalDed={totalDed} netPay={netPay} />
+        )}
+        {finTab === "analyst" && (
+          <AnalystTab health={health} fmtKES={fmtKES} bySource={incomeStats.bySource} budgets={budgets} monthlyPassive={monthlyPassive} />
+        )}
+        {finTab === "reports" && (
+          <FinanceReports income={income} incomeStats={incomeStats} health={health} fmtKES={fmtKES}
+            budgets={budgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent}
+            efBal={efBal} savBal={savBal} totalInvested={totalInvested} monthlyPassive={monthlyPassive}
+            personalDebt={personalDebt} trades={trades} tradingStats={tradingStats} />
         )}
         {finTab === "accounts" && (
           <AccountsTab g={g} netPay={netPay} fmtKES={fmtKES} opBal={opBal} setOpBal={setOpBal} savBal={savBal} setSavBal={setSavBal} />
