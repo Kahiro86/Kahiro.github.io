@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { localDateStr } from "../../shared/dates.js";
 import { BD, T1, T2, T3, GL, CY, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Fld, Inp, Sel } from "../../shared/ui.jsx";
 import { INSTRUMENTS } from "./constants.js";
@@ -20,7 +21,7 @@ export function RiskCalculator({ trades, balance }) {
   const INT_DD = Math.round(MAX_DD_LIMIT * 0.5);
 
   // Today P&L from closed trades
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = localDateStr();
   const todayPnl = trades.filter((t) => t.date === todayStr && t.status === "CLOSED").reduce((s, t) => s + calcPnl(t), 0);
   const dailyLoss = Math.abs(Math.min(todayPnl, 0));
 

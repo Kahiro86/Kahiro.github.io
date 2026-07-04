@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
+import { localDateStr } from "../../shared/dates.js";
 import { B2, BD, GL, T1, T2, T3, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Fld } from "../../shared/ui.jsx";
 import { TBILL_TYPES } from "./constants.js";
@@ -50,7 +51,7 @@ export function PortfolioTab({
 
       <Card style={{ padding: "22px" }}>
         <SH title="Treasury Bills & Bonds — CBK DhowCSD" sub="Government securities · fixed income · current market: 91d ~15.2% · 182d ~15.8% · 364d ~16.2%" action={
-          <button onClick={() => setTbills((prev) => [...prev, { id: `tb${Date.now()}`, type: "364-Day T-Bill", faceValue: 0, rate: 16.2, purchaseDate: new Date().toISOString().split("T")[0], maturityDate: "" }])}
+          <button onClick={() => setTbills((prev) => [...prev, { id: `tb${Date.now()}`, type: "364-Day T-Bill", faceValue: 0, rate: 16.2, purchaseDate: localDateStr(), maturityDate: "" }])}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 13px", background: `${CY}22`, border: `1px solid ${CY}44`, borderRadius: 8, color: CY, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             <Plus size={13} />Add Holding
           </button>

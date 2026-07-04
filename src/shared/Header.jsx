@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Bell, Flame, Cpu, Sprout, Menu } from "lucide-react";
-import { B1, BD, T1, T2, T3, GL, CY, PU, GR, AM, OR } from "./designTokens.js";
+import { B1, BD, T1, T2, T3, GL, CY, PU, GR, AM } from "./designTokens.js";
 import { getActiveKillzone, getEATTimeStr } from "../modules/trading/timezone.js";
 import { nudgeOfTheDay } from "./kaizen.js";
 import { NAV } from "./nav.js";
@@ -37,11 +37,10 @@ function NudgeBell() {
   );
 }
 
-export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu }) {
+export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, streak = 0 }) {
   const label = NAV.find((n) => n.id === module)?.label || "Command Center";
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
-  const XP = 2840, XP_MAX = 4000, LV = 7;
 
   useEffect(() => {
     const t = setInterval(() => { setKz(getActiveKillzone()); setEatTime(getEATTimeStr()); }, 30000);
@@ -82,25 +81,13 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu }) {
         <span style={{ fontSize: 10, color: T3 }}>{eatTime} EAT</span>
       </div>
 
-      <div style={{ padding: "4px 10px", borderRadius: 20, background: `${AM}22`, border: `1px solid ${AM}44`, fontSize: 11, fontWeight: 800, color: AM, letterSpacing: 1 }}>
-        LVL {LV}
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, width: 100 }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 9, color: T3, letterSpacing: 1 }}>XP</span>
-          <span style={{ fontSize: 9, color: T3, fontFamily: "monospace" }}>{XP}/{XP_MAX}</span>
+      {streak > 0 && (
+        <div title="Longest active habit streak" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: GL, borderRadius: 10, border: `1px solid ${BD}` }}>
+          <Flame size={12} color={AM} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: T1, fontFamily: "monospace" }}>{streak}</span>
+          <span style={{ fontSize: 10, color: T3 }}>day streak</span>
         </div>
-        <div style={{ height: 4, background: BD, borderRadius: 2, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${(XP / XP_MAX) * 100}%`, background: `linear-gradient(90deg,${AM}99,${OR})`, borderRadius: 2, boxShadow: `0 0 8px ${AM}66` }} />
-        </div>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: GL, borderRadius: 10, border: `1px solid ${BD}` }}>
-        <Flame size={12} color={AM} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: T1, fontFamily: "monospace" }}>15</span>
-        <span style={{ fontSize: 10, color: T3 }}>streak</span>
-      </div>
+      )}
 
       <NudgeBell />
 

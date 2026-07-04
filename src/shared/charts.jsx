@@ -1,4 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { localDateStr } from "./dates.js";
 import { B2, BD, BD2, T1, T2, T3 } from "./designTokens.js";
 
 // ── Donut / pie summary chart ──────────────────────────────────────
@@ -71,7 +72,7 @@ export function ActivityHeatmap({ counts, weeks = 13, color = "#00D4FF", emptyCo
   for (let i = 0; i < totalDays; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    const key = d.toISOString().split("T")[0];
+    const key = localDateStr(d);
     const c = get(key);
     if (c > max) max = c;
     cells.push({ key, date: d, count: c, future: d > today });

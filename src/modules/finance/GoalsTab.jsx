@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Plus, Pencil, Archive, ArchiveRestore, Trash2, Check, X, TrendingUp, Cpu } from "lucide-react";
 import { T1, T2, T3, BD, BD2, GL, B2, CY, PU, GR, RE, AM, OR } from "../../shared/designTokens.js";
 import { Card } from "../../shared/ui.jsx";
+import { localDateStr } from "../../shared/dates.js";
+import { useToast } from "../../shared/toast.jsx";
 
 const GOAL_COLORS = [GR, CY, PU, AM, OR, RE];
 const GOAL_ICONS = ["🎯", "🛡️", "📈", "💰", "⚡", "🏠", "🚗", "✈️", "🎓", "💍"];
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => localDateStr();
 const addMonths = (n) => { const d = new Date(); d.setMonth(d.getMonth() + n); return d; };
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
 const monthsBetween = (a, b) => (new Date(b) - new Date(a)) / (1000 * 60 * 60 * 24 * 30.44);
@@ -42,6 +44,9 @@ export function GoalsTab({ goals = [], setGoals, fmtKES, liveMetrics }) {
   const [editing, setEditing] = useState(null); // goal id being edited, or "new"
   const [draft, setDraft] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [contribFor, setContribFor] = useState(null); // goal id with the inline contribution field open
+  const [contribAmt, setContribAmt] = useState("");
+  const toast = useToast();
 
   const active = goals.filter((g) => !g.archived);
   const archived = goals.filter((g) => g.archived);
@@ -59,13 +64,18 @@ export function GoalsTab({ goals = [], setGoals, fmtKES, liveMetrics }) {
     cancel();
   };
   const update = (id, patch) => setGoals((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
-  const del = (id) => { if (window.confirm("Delete this goal permanently?")) setGoals((prev) => prev.filter((g) => g.id !== id)); };
-  const logContribution = (g) => {
-    const raw = window.prompt(`Add a contribution to "${g.name}" (KES). Use a negative number to correct.`, "");
-    if (raw == null) return;
-    const amt = +raw;
+  const del = (id) => {
+    const g = goals.find((x) => x.id === id);
+    setGoals((prev) => prev.filter((x) => x.id !== id));
+    toast(`"${g?.name}" deleted`, { action: "Undo", onAction: () => setGoals((p) => [...p, g]), tone: "danger" });
+  };
+  const submitContribution = (g) => {
+    const amt = +contribAmt;
+    setContribFor(null);
+    setContribAmt("");
     if (!amt) return;
     update(g.id, { current: Math.max(0, (+g.current || 0) + amt), history: [...(g.history || []), { date: today(), amount: amt }] });
+    toast(`${fmtKES(Math.abs(amt))} ${amt > 0 ? "added to" : "corrected on"} "${g.name}"`, { tone: "success" });
   };
 
   const editForm = draft && (
@@ -116,7 +126,7 @@ export function GoalsTab({ goals = [], setGoals, fmtKES, liveMetrics }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
           <div style={{ fontSize: 22 }}>{g.icon}</div>
           <div style={{ display: "flex", gap: 4 }}>
-            <button onClick={() => logContribution(g)} title="Add contribution" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: GR, display: "flex" }}><Plus size={12} /></button>
+            <button onClick={() => { setContribFor(contribFor === g.id ? null : g.id); setContribAmt(""); }} title="Add contribution" style={{ background: contribFor === g.id ? `${GR}18` : GL, border: `1px solid ${contribFor === g.id ? GR + "55" : BD}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: GR, display: "flex" }}><Plus size={12} /></button>
             <button onClick={() => startEdit(g)} title="Edit" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T2, display: "flex" }}><Pencil size={12} /></button>
             <button onClick={() => update(g.id, { archived: !g.archived })} title={g.archived ? "Restore" : "Archive"} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: g.archived ? GR : AM, display: "flex" }}>{g.archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}</button>
             <button onClick={() => del(g.id)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
@@ -130,6 +140,19 @@ export function GoalsTab({ goals = [], setGoals, fmtKES, liveMetrics }) {
         <div style={{ height: 7, background: BD, borderRadius: 4, marginBottom: 11, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${a.pct}%`, background: `linear-gradient(90deg,${g.color}77,${g.color})`, borderRadius: 4, boxShadow: `0 0 6px ${g.color}44`, transition: "width 0.8s ease" }} />
         </div>
+
+        {contribFor === g.id && (
+          <div style={{ display: "flex", gap: 7, marginBottom: 11 }}>
+            <input
+              type="number" autoFocus value={contribAmt}
+              onChange={(e) => setContribAmt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitContribution(g); if (e.key === "Escape") setContribFor(null); }}
+              placeholder="Amount (KES) — negative to correct"
+              style={{ flex: 1, background: B2, border: `1px solid ${GR}44`, borderRadius: 8, padding: "8px 10px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box", minWidth: 0 }}
+            />
+            <button onClick={() => submitContribution(g)} style={{ padding: "0 13px", background: `${GR}22`, border: `1px solid ${GR}55`, borderRadius: 8, color: GR, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Add</button>
+          </div>
+        )}
 
         {a.done ? (
           <div style={{ padding: "7px 10px", background: `${GR}18`, border: `1px solid ${GR}44`, borderRadius: 8, fontSize: 11.5, color: GR, fontWeight: 700, textAlign: "center" }}>✓ ACHIEVED — archive to tidy up</div>

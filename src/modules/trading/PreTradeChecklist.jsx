@@ -7,6 +7,7 @@ export function PreTradeChecklist({ templates, setTemplates, activeId, setActive
   const tpl = templateById(templates, activeId);
   const [checks, setChecks] = useState({}); // id -> bool
   const [manage, setManage] = useState(false);
+  const [tplName, setTplName] = useState(null); // null = closed; string = naming a new template
 
   const mandatory = tpl.items.filter((i) => i.mandatory);
   const mandatoryDone = mandatory.every((i) => checks[i.id]);
@@ -30,13 +31,14 @@ export function PreTradeChecklist({ templates, setTemplates, activeId, setActive
   });
 
   const saveAsTemplate = () => {
-    const name = window.prompt("Name this checklist template:", `${tpl.name} copy`);
-    if (!name) return;
+    const name = (tplName || "").trim();
+    if (!name) { setTplName(null); return; }
     const id = `tpl${Date.now().toString(36)}`;
     const copy = { id, name, items: tpl.items.map((i) => ({ ...i, id: `ck${Math.random().toString(36).slice(2, 8)}` })) };
     setTemplates((prev) => [...prev, copy]);
     setActiveId(id);
     setChecks({});
+    setTplName(null);
   };
 
   const proceed = (skip = false) => {
@@ -71,7 +73,20 @@ export function PreTradeChecklist({ templates, setTemplates, activeId, setActive
         {templates.map((t) => (
           <button key={t.id} onClick={() => switchTemplate(t.id)} style={{ padding: "5px 12px", borderRadius: 8, border: `1px solid ${activeId === t.id ? CY + "66" : BD}`, background: activeId === t.id ? `${CY}22` : GL, color: activeId === t.id ? CY : T2, fontSize: 11.5, fontWeight: activeId === t.id ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}>{t.name}</button>
         ))}
-        <button onClick={saveAsTemplate} style={{ padding: "5px 10px", borderRadius: 8, border: `1px dashed ${BD2}`, background: "transparent", color: T3, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}><Plus size={11} />Save as…</button>
+        {tplName === null ? (
+          <button onClick={() => setTplName(`${tpl.name} copy`)} style={{ padding: "5px 10px", borderRadius: 8, border: `1px dashed ${BD2}`, background: "transparent", color: T3, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}><Plus size={11} />Save as…</button>
+        ) : (
+          <span style={{ display: "flex", gap: 5, alignItems: "center" }}>
+            <input
+              autoFocus value={tplName} onChange={(e) => setTplName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveAsTemplate(); if (e.key === "Escape") setTplName(null); }}
+              placeholder="Template name"
+              style={{ width: 150, background: B1, border: `1px solid ${CY}44`, borderRadius: 8, padding: "5px 9px", fontSize: 11.5, color: T1, outline: "none", fontFamily: "inherit" }}
+            />
+            <button onClick={saveAsTemplate} style={{ padding: "5px 9px", borderRadius: 8, border: `1px solid ${GR}55`, background: `${GR}18`, color: GR, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save</button>
+            <button onClick={() => setTplName(null)} style={{ padding: "5px 7px", borderRadius: 8, border: `1px solid ${BD}`, background: "transparent", color: T3, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit", display: "flex" }}><X size={11} /></button>
+          </span>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "18px 22px" }}>

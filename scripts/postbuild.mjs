@@ -17,4 +17,11 @@ if (!existsSync(built)) {
 }
 renameSync(built, distIndex);
 copyFileSync(distIndex, rootIndex);
-console.log("postbuild: dist/index.html written and copied to repo-root index.html");
+
+// PWA assets must also live at the repo root for branch-mode Pages serving.
+const extras = ["manifest.webmanifest", "sw.js", "icon-192.png", "icon-512.png"];
+for (const f of extras) {
+  const src = resolve(root, "dist", f);
+  if (existsSync(src)) copyFileSync(src, resolve(root, f));
+}
+console.log("postbuild: index.html + PWA assets copied to repo root");

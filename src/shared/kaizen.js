@@ -1,3 +1,5 @@
+import { localDateStr } from "./dates.js";
+
 // ── Kaizen — continuous improvement layer ──────────────────────────
 // The invisible foundation: 1% better every day, measured against your
 // own past self. Small, consistent, compassionate. Never guilt.
@@ -49,7 +51,7 @@ export function compound(days, rate = 0.01) {
 // Answers the one question every screen should: "what moves this person
 // forward today?" — always achievable in a few minutes.
 export function nextSmallAction({ habits = [], workouts = [], trades = [] } = {}) {
-  const todayISO = new Date().toISOString().split("T")[0];
+  const todayISO = localDateStr();
   const undone = habits.find((h) => !h.done);
   const workedOutToday = workouts.some((w) => w.date === todayISO);
   const tradedToday = trades.some((t) => t.date === todayISO);

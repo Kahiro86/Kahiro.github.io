@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { localDateStr } from "../../shared/dates.js";
 import { Cpu, ArrowUp, ArrowDown } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
@@ -12,7 +13,7 @@ export function TradingReports({ trades, balance }) {
   const [ldReport, setLdReport] = useState(false);
 
   const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = localDateStr(now);
   const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
   const monthAgo = new Date(now); monthAgo.setDate(monthAgo.getDate() - 30);
 

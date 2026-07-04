@@ -14,11 +14,12 @@ import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { WEEK_PLAN } from "../athlete/constants.js";
 import { getDayName } from "../athlete/helpers.js";
 import { computeDomains } from "./domains.js";
+import { localDateStr } from "../../shared/dates.js";
 import { LifeMatrix } from "./LifeMatrix.jsx";
 
 const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
 
-export function Dashboard({ onNavigate, habits, setHabits }) {
+export function Dashboard({ onNavigate, habits, onToggleHabit }) {
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
   const [trades] = useStorageState("ict_trades", []);
@@ -57,7 +58,7 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
 
   // ── ATHLETE ────────────────────────────────────────────────────────
   const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = localDateStr();
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
   const thisWeek = workouts.filter((w) => new Date(w.date) >= weekStart);
   const strengthWk = thisWeek.filter((w) => w.type === "strength").length;
@@ -67,7 +68,7 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
     let c = 0, d = new Date();
     const dates = new Set(workouts.map((w) => w.date));
     for (let i = 0; i < 60; i++) {
-      const ds = d.toISOString().split("T")[0];
+      const ds = localDateStr(d);
       if (dates.has(ds)) { c++; d.setDate(d.getDate() - 1); }
       else if (i === 0) { d.setDate(d.getDate() - 1); continue; }
       else break;
@@ -126,7 +127,7 @@ export function Dashboard({ onNavigate, habits, setHabits }) {
   if (openTrades > 0) priorities.push({ key: "t", t: `Review ${openTrades} open trade${openTrades > 1 ? "s" : ""}`, d: "TRADING", u: true, nav: "trading" });
   if (topGoal && topGoal.target > 0 && (+topGoal.current || 0) / topGoal.target < 1) priorities.push({ key: "g", t: `Fund "${topGoal.name}"`, d: "FINANCE", u: false, nav: "finance" });
 
-  const toggleHabit = (name) => setHabits((p) => p.map((x) => (x.name === name ? { ...x, done: !x.done } : x)));
+  const toggleHabit = onToggleHabit;
 
   const clickCard = { cursor: "pointer", transition: "border-color 0.2s, transform 0.15s" };
 
