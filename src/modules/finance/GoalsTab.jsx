@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Archive, ArchiveRestore, Trash2, Check, X, TrendingUp, Cpu } from "lucide-react";
 import { T1, T2, T3, BD, BD2, GL, B2, CY, PU, GR, RE, AM, OR } from "../../shared/designTokens.js";
-import { Card } from "../../shared/ui.jsx";
+import { Card, MoneyInp } from "../../shared/ui.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { useToast } from "../../shared/toast.jsx";
 
@@ -96,8 +96,7 @@ export function GoalsTab({ goals = [], setGoals, fmtKES, liveMetrics }) {
         ].map((f) => (
           <label key={f.k} style={{ display: "block" }}>
             <span style={{ fontSize: 10, color: T3, letterSpacing: 0.5, textTransform: "uppercase" }}>{f.lbl}</span>
-            <input type="number" value={draft[f.k]} onChange={(e) => setDraft((d) => ({ ...d, [f.k]: e.target.value }))} placeholder={f.ph}
-              style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "8px 11px", fontSize: 13, color: T1, outline: "none", fontFamily: "monospace", marginTop: 4, boxSizing: "border-box" }} />
+            <div style={{ marginTop: 4 }}><MoneyInp value={draft[f.k]} onChange={(v) => setDraft((d) => ({ ...d, [f.k]: v }))} placeholder={f.ph} /></div>
           </label>
         ))}
         <label style={{ display: "block" }}>

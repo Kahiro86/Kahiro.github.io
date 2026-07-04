@@ -42,6 +42,34 @@ export const Fld = ({ label, required, children, hint }) => (
   </div>
 );
 
+// Money input: live thousand separators, numeric keypad on phones, and a
+// plain numeric string handed to onChange — so "5000000" reads as 5,000,000
+// while typing but stores exactly as before.
+export const MoneyInp = ({ value, onChange, placeholder = "0", allowNegative = false }) => {
+  const fmt = (v) => {
+    if (v === "" || v == null) return "";
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toLocaleString("en-US") : "";
+  };
+  const handle = (raw) => {
+    let cleaned = raw.replace(allowNegative ? /[^0-9-]/g : /[^0-9]/g, "");
+    if (allowNegative) cleaned = cleaned.replace(/(?!^)-/g, "");
+    if (cleaned === "" || cleaned === "-") { onChange(""); return; }
+    onChange(String(parseInt(cleaned, 10)));
+  };
+  return (
+    <input
+      type="text" inputMode="numeric" value={fmt(value)} placeholder={placeholder}
+      onChange={(e) => handle(e.target.value)}
+      style={{
+        width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 9,
+        padding: "10px 13px", fontSize: 13, color: T1, outline: "none",
+        fontFamily: "'JetBrains Mono',monospace", boxSizing: "border-box",
+      }}
+    />
+  );
+};
+
 export const Inp = ({ value, onChange, placeholder, type = "text", mono }) => (
   <input
     type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}

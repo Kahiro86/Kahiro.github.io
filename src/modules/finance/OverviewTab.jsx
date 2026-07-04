@@ -75,7 +75,7 @@ export function OverviewTab({
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 11, marginTop: 11 }}>
           <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px" }}>
             <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Withdrawals ($)</div>
-            <input type="number" value={tradingWithdrawals} onChange={(e) => setTradingWithdrawals(+e.target.value || 0)}
+            <input type="text" inputMode="numeric" value={tradingWithdrawals ? (+tradingWithdrawals).toLocaleString("en-US") : ""} onChange={(e) => setTradingWithdrawals(+e.target.value.replace(/[^0-9]/g, "") || 0)} placeholder="0"
               style={{ width: "100%", background: "transparent", border: `1px solid ${BD}`, borderRadius: 6, padding: "5px 8px", fontSize: 14, color: T1, outline: "none", fontFamily: "monospace", fontWeight: 700 }} />
           </div>
           <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px" }}>
@@ -90,7 +90,7 @@ export function OverviewTab({
         </div>
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 20 }}>
         <Card style={{ padding: "22px" }}>
           <SH title="Asset Allocation" sub="Personal holdings in KES — trading excluded" />
           {(() => {
@@ -141,7 +141,7 @@ export function OverviewTab({
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: RE, fontFamily: "monospace" }}>KES {(+personalDebt || 0).toLocaleString()}</div>
-                <input type="number" value={personalDebt} onChange={(e) => setPersonalDebt(+e.target.value || 0)}
+                <input type="text" inputMode="numeric" value={personalDebt ? (+personalDebt).toLocaleString("en-US") : ""} onChange={(e) => setPersonalDebt(+e.target.value.replace(/[^0-9]/g, "") || 0)} placeholder="0"
                   style={{ width: 100, background: "transparent", border: `1px solid ${BD}`, borderRadius: 5, padding: "2px 6px", fontSize: 10, color: T3, outline: "none", fontFamily: "monospace", textAlign: "right", marginTop: 3 }} />
               </div>
             </div>
