@@ -34,6 +34,15 @@ export const DEFAULT_FINANCE_STATE = {
     { id: "leisure",   cat: "Leisure",       budget: 0, spent: 0, color: RE },
     { id: "misc",      cat: "Miscellaneous", budget: 0, spent: 0, color: T2 },
   ],
+  // Trading account lives inside Finance but is firewalled from personal wealth.
+  tradingWithdrawals: 0,
+  profitSplit: 80,
+  // Editable financial goals (persisted). history: [{ date, amount }] contribution log.
+  goals: [
+    { id: "g_ef",   name: "Emergency Fund (6 months)", icon: "🛡️", target: 300000, current: 0, monthly: 5000,  deadline: "", color: GR, archived: false, createdAt: "", history: [] },
+    { id: "g_port", name: "Investment Portfolio",      icon: "📈", target: 500000, current: 0, monthly: 10000, deadline: "", color: CY, archived: false, createdAt: "", history: [] },
+    { id: "g_nw",   name: "Net Worth KES 5M",          icon: "💰", target: 5000000, current: 0, monthly: 20000, deadline: "", color: PU, archived: false, createdAt: "", history: [] },
+  ],
 };
 
 export const TBILL_TYPES = ["91-Day T-Bill", "182-Day T-Bill", "364-Day T-Bill", "2-Year Bond", "5-Year Bond", "10-Year Bond", "15-Year Bond", "20-Year Bond"];

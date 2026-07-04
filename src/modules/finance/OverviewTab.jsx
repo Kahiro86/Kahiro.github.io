@@ -1,14 +1,20 @@
-import { Lock } from "lucide-react";
+import { Lock, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH } from "../../shared/ui.jsx";
 import { DonutChart } from "../../shared/charts.jsx";
 
-export function OverviewTab({ fmtKES, netWorthKES, totalLiquid, totalInvested, monthlyPassive, tradingKES, efBal, savBal, opBal, personalDebt, setPersonalDebt }) {
+const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
+
+export function OverviewTab({
+  fmtKES, netWorthKES, totalLiquid, totalInvested, monthlyPassive,
+  efBal, savBal, opBal, personalDebt, setPersonalDebt,
+  tMetrics, tradingWithdrawals, setTradingWithdrawals, profitSplit, setProfitSplit,
+}) {
   return (
     <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         {[
-          { l: "Net Worth",       v: fmtKES(netWorthKES),   c: netWorthKES >= 0 ? GR : RE, note: "Assets − Liabilities" },
+          { l: "Net Worth",       v: fmtKES(netWorthKES),   c: netWorthKES >= 0 ? GR : RE, note: "Personal assets − debt (excl. trading)" },
           { l: "Liquid Assets",   v: fmtKES(totalLiquid),   c: CY,  note: "Operating + Savings + EF" },
           { l: "Invested",        v: fmtKES(totalInvested), c: PU,  note: "MMF · T-bills · NSE · SACCO" },
           { l: "Monthly Passive", v: fmtKES(monthlyPassive),c: AM,  note: "Investment income projected" },
@@ -21,42 +27,100 @@ export function OverviewTab({ fmtKES, netWorthKES, totalLiquid, totalInvested, m
         ))}
       </div>
 
+      {/* ── TRADING ACCOUNT — firewalled from personal wealth ── */}
+      <Card style={{ padding: "22px", borderColor: CY + "33", background: `linear-gradient(180deg,${CY}08,transparent)` }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <Lock size={13} color={CY} />
+            <div style={{ fontSize: 15, fontWeight: 800, color: T1 }}>Trading Account</div>
+            <span style={{ fontSize: 9.5, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 8, background: `${CY}18`, color: CY, border: `1px solid ${CY}33` }}>FIREWALLED · USD</span>
+          </div>
+          <div style={{ fontSize: 10.5, color: T3 }}>Not included in Net Worth or Assets</div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 11, marginTop: 14 }}>
+          {[
+            { l: "Funded Size",    v: usd(tMetrics.fundedSize), c: T1 },
+            { l: "Current Equity", v: usd(tMetrics.equity),     c: tMetrics.equity >= tMetrics.fundedSize ? GR : RE },
+            { l: "Total Profit",   v: `${tMetrics.totalProfit >= 0 ? "+" : ""}${usd(tMetrics.totalProfit)}`, c: tMetrics.totalProfit >= 0 ? GR : RE },
+            { l: "Win Rate",       v: `${tMetrics.winRate}%`,   c: tMetrics.winRate >= 50 ? GR : AM },
+            { l: "Profit Factor",  v: tMetrics.pf || "—",       c: PU },
+          ].map((x) => (
+            <div key={x.l} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "12px 13px" }}>
+              <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>{x.l}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: x.c, fontFamily: "monospace" }}>{x.v}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 11, marginTop: 11 }}>
+          {[
+            { l: "Daily P&L",   v: tMetrics.dailyPnl },
+            { l: "Weekly P&L",  v: tMetrics.weeklyPnl },
+            { l: "Monthly P&L", v: tMetrics.monthlyPnl },
+          ].map((x) => (
+            <div key={x.l} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{x.l}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: x.v > 0 ? GR : x.v < 0 ? RE : T2, fontFamily: "monospace" }}>{x.v >= 0 ? "+" : ""}{usd(x.v)}</div>
+              </div>
+              {x.v > 0 ? <ArrowUpRight size={15} color={GR} /> : x.v < 0 ? <ArrowDownRight size={15} color={RE} /> : null}
+            </div>
+          ))}
+          <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>Open Risk</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: tMetrics.openRiskPct > 2 ? RE : tMetrics.openRiskPct > 0 ? AM : T2, fontFamily: "monospace" }}>{usd(tMetrics.openRisk)} · {tMetrics.openRiskPct}%</div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 11, marginTop: 11 }}>
+          <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Withdrawals ($)</div>
+            <input type="number" value={tradingWithdrawals} onChange={(e) => setTradingWithdrawals(+e.target.value || 0)}
+              style={{ width: "100%", background: "transparent", border: `1px solid ${BD}`, borderRadius: 6, padding: "5px 8px", fontSize: 14, color: T1, outline: "none", fontFamily: "monospace", fontWeight: 700 }} />
+          </div>
+          <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Profit Split (%)</div>
+            <input type="number" value={profitSplit} onChange={(e) => setProfitSplit(+e.target.value || 0)}
+              style={{ width: "100%", background: "transparent", border: `1px solid ${BD}`, borderRadius: 6, padding: "5px 8px", fontSize: 14, color: AM, outline: "none", fontFamily: "monospace", fontWeight: 700 }} />
+          </div>
+          <div style={{ background: `${GR}0C`, border: `1px solid ${GR}22`, borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Your Share</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: GR, fontFamily: "monospace" }}>{usd(tMetrics.yourShare)}</div>
+          </div>
+        </div>
+      </Card>
+
       <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 20 }}>
         <Card style={{ padding: "22px" }}>
-          <SH title="Asset Allocation" sub="All positions in KES equivalent" />
+          <SH title="Asset Allocation" sub="Personal holdings in KES — trading excluded" />
           {(() => {
             const items = [
-              { l: "Trading Account (Firewall)", v: tradingKES,    c: CY, note: `$15,000 USD — READ ONLY`, lock: true },
-              { l: "Investments (Kenya)",        v: totalInvested,  c: PU, note: null },
-              { l: "Emergency Fund",             v: +efBal || 0,    c: GR, note: null },
-              { l: "Savings Account",            v: +savBal || 0,   c: AM, note: null },
-              { l: "Operating Account",          v: +opBal || 0,    c: T2, note: null },
+              { l: "Investments (Kenya)", v: totalInvested,  c: PU },
+              { l: "Emergency Fund",      v: +efBal || 0,    c: GR },
+              { l: "Savings Account",     v: +savBal || 0,   c: AM },
+              { l: "Operating Account",   v: +opBal || 0,    c: T2 },
             ];
-            const total = Math.max(tradingKES + totalInvested + totalLiquid, 1);
+            const total = Math.max(totalInvested + totalLiquid, 1);
             const pieData = items.filter((x) => x.v > 0).map((x) => ({ name: x.l.split(" (")[0], value: x.v, color: x.c }));
             return (
-              <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
                 <div style={{ width: 190, flexShrink: 0 }}>
                   <DonutChart data={pieData.length ? pieData : [{ name: "None", value: 1, color: BD }]} height={190} centerLabel={total >= 1e6 ? `${(total / 1e6).toFixed(1)}M` : total >= 1e3 ? `${Math.round(total / 1e3)}k` : Math.round(total)} centerSub="Total KES" unit="KES " />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
                   {items.map((x) => {
                     const pct = Math.round((x.v / total) * 100);
                     return (
                       <div key={x.l} style={{ marginBottom: 14 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            {x.lock && <Lock size={10} color={CY} />}
-                            <span style={{ fontSize: 12, color: T2 }}>{x.l}</span>
-                            {x.note && <span style={{ fontSize: 10, color: T3 }}>({x.note})</span>}
-                          </div>
+                          <span style={{ fontSize: 12, color: T2 }}>{x.l}</span>
                           <div style={{ display: "flex", gap: 10 }}>
                             <span style={{ fontSize: 10.5, color: T3 }}>{pct}%</span>
                             <span style={{ fontSize: 12, color: x.c, fontFamily: "monospace", fontWeight: 700 }}>{fmtKES(x.v)}</span>
                           </div>
                         </div>
                         <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-                          <div style={{ height: "100%", width: `${pct}%`, background: x.lock ? `repeating-linear-gradient(45deg,${x.c}33 0,${x.c}33 4px,transparent 4px,transparent 8px)` : `linear-gradient(90deg,${x.c}77,${x.c})`, borderRadius: 3 }} />
+                          <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg,${x.c}77,${x.c})`, borderRadius: 3 }} />
                         </div>
                       </div>
                     );

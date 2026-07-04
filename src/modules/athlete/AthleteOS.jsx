@@ -2,22 +2,35 @@ import { useState } from "react";
 import {
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2 } from "lucide-react";
+import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { WEEK_PLAN } from "./constants.js";
 import { getDayName } from "./helpers.js";
+import { DEFAULT_EXERCISES, uidT, lastValuesByExercise, overloadTrend } from "./library.js";
 import { LogWorkoutForm } from "./LogWorkoutForm.jsx";
 
 export function AthleteOS() {
   const [view, setView] = useState("week");
   const [workouts, setWorkouts] = useStorageState("athlete_workouts", []);
+  const [exerciseLib, setExerciseLib] = useStorageState("athlete_exercises", DEFAULT_EXERCISES);
+  const [templates, setTemplates] = useStorageState("athlete_templates", []);
+  const [logInitial, setLogInitial] = useState(null);
   const [filterType, setFilterType] = useState("");
 
-  const saveWorkout = (w) => { setWorkouts((prev) => [w, ...prev]); setView("week"); };
+  const startLog = (initial = null) => { setLogInitial(initial); setView("log"); };
+  const saveWorkout = (w) => { setWorkouts((prev) => [w, ...prev]); setLogInitial(null); setView("week"); };
   const deleteWorkout = (id) => { if (window.confirm("Delete this workout?")) setWorkouts((prev) => prev.filter((w) => w.id !== id)); };
+  const duplicateWorkout = (w) => startLog({ type: w.type, name: w.name, exercises: w.exercises, duration: w.duration, intensity: w.intensity });
+  const saveTemplate = (tpl) => {
+    setTemplates((prev) => [...prev, { id: uidT(), ...tpl }]);
+    window.alert(`Saved "${tpl.name}" as a reusable template.`);
+  };
+  const deleteTemplate = (id) => setTemplates((prev) => prev.filter((t) => t.id !== id));
+  const lastValues = lastValuesByExercise(workouts);
+  const overload = overloadTrend(workouts);
 
   const now = new Date();
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
@@ -69,7 +82,9 @@ export function AthleteOS() {
   });
   const prList = Object.entries(exercisePRs).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.weight - a.weight);
 
-  if (view === "log") return <LogWorkoutForm onSave={saveWorkout} onCancel={() => setView("week")} />;
+  if (view === "log") return <LogWorkoutForm onSave={saveWorkout} onCancel={() => { setLogInitial(null); setView("week"); }}
+    exerciseLib={exerciseLib} setExerciseLib={setExerciseLib} templates={templates} onSaveTemplate={saveTemplate}
+    initial={logInitial} lastValues={lastValues} />;
 
   const TABS = [
     { id: "week",     l: "This Week", i: Layers },
@@ -93,7 +108,7 @@ export function AthleteOS() {
           <span style={{ fontSize: 12, fontWeight: 700, color: AM, fontFamily: "monospace" }}>{streak}</span>
           <span style={{ fontSize: 10, color: T3 }}>day streak</span>
         </div>
-        <button onClick={() => setView("log")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 15px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+        <button onClick={() => startLog()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 15px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
           <Plus size={14} />Log Workout
         </button>
       </div>
@@ -120,7 +135,7 @@ export function AthleteOS() {
                   <div style={{ fontSize: 13, fontWeight: 700, color: PU }}>Today: {todayPlan.type}</div>
                   <div style={{ fontSize: 12, color: T2 }}>A short, easy version still counts. Start small.</div>
                 </div>
-                <button onClick={() => setView("log")} style={{ padding: "8px 16px", background: `${PU}22`, border: `1px solid ${PU}44`, borderRadius: 9, color: PU, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={() => startLog()} style={{ padding: "8px 16px", background: `${PU}22`, border: `1px solid ${PU}44`, borderRadius: 9, color: PU, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   Log Now
                 </button>
               </div>
@@ -138,6 +153,23 @@ export function AthleteOS() {
               <Chip label="Cardio Minutes"     value={cardioMinutes} color={GR} />
               <Chip label="Day Streak"         value={streak}        color={AM} />
             </div>
+
+            {templates.length > 0 && (
+              <Card style={{ padding: "18px" }}>
+                <SH title="Quick-Start Templates" sub="One tap to load a saved session — edit before saving" />
+                <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+                  {templates.map((tpl) => (
+                    <div key={tpl.id} style={{ display: "flex", alignItems: "center", gap: 4, background: GL, border: `1px solid ${CY}33`, borderRadius: 10, padding: "4px 4px 4px 12px" }}>
+                      <button onClick={() => startLog(tpl)} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: CY, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+                        <Zap size={12} />{tpl.name}
+                        <span style={{ fontSize: 10, color: T3 }}>{tpl.type === "strength" ? `${(tpl.exercises || []).length} ex` : `${tpl.duration}m`}</span>
+                      </button>
+                      <button onClick={() => deleteTemplate(tpl.id)} title="Delete template" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", padding: 4 }}><Trash2 size={11} /></button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             <Card style={{ padding: "20px" }}>
               <SH title="Weekly Plan" sub="Simple split — adjust as needed" />
@@ -181,7 +213,7 @@ export function AthleteOS() {
                 <div style={{ fontSize: 30, marginBottom: 10 }}>🏋️</div>
                 <div style={{ fontSize: 14, color: T2, marginBottom: 6 }}>No workouts logged yet</div>
                 <div style={{ fontSize: 12, color: T3, marginBottom: 16 }}>Log your first session to start tracking progress.</div>
-                <button onClick={() => setView("log")} style={{ padding: "9px 20px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                <button onClick={() => startLog()} style={{ padding: "9px 20px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   Log Your First Workout
                 </button>
               </Card>
@@ -235,7 +267,8 @@ export function AthleteOS() {
                             <div style={{ fontSize: 9.5, color: T3 }}>volume</div>
                           </div>
                         )}
-                        <button onClick={() => deleteWorkout(w.id)} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
+                        <button onClick={() => duplicateWorkout(w)} title="Repeat this workout" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 7px", cursor: "pointer", color: CY, display: "flex" }}><Copy size={12} /></button>
+                        <button onClick={() => deleteWorkout(w.id)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
                       </div>
                     </div>
                   </Card>
@@ -300,6 +333,34 @@ export function AthleteOS() {
                     </BarChart>
                   </ResponsiveContainer>
                 </Card>
+
+                {overload.length > 0 && (
+                  <Card style={{ padding: "20px" }}>
+                    <SH title="Progressive Overload" sub="Top-set weight this session vs the one before" />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {overload.map((o) => {
+                        const up = o.delta != null && o.delta > 0;
+                        const down = o.delta != null && o.delta < 0;
+                        const flat = o.delta === 0 || o.delta == null;
+                        return (
+                          <div key={o.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 13px", background: GL, borderRadius: 10, border: `1px solid ${up ? GR + "33" : down ? RE + "33" : BD}` }}>
+                            <div>
+                              <div style={{ fontSize: 13, color: T1 }}>{o.name}</div>
+                              <div style={{ fontSize: 10, color: T3 }}>{o.sessions} session{o.sessions === 1 ? "" : "s"} · latest {o.date}</div>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <span style={{ fontSize: 15, fontWeight: 800, color: PU, fontFamily: "monospace" }}>{o.latest}kg</span>
+                              <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 700, fontFamily: "monospace", color: up ? GR : down ? RE : T3, width: 58, justifyContent: "flex-end" }}>
+                                {up ? <ArrowUp size={12} /> : down ? <ArrowDown size={12} /> : <Minus size={12} />}
+                                {o.delta == null ? "new" : `${o.delta > 0 ? "+" : ""}${o.delta}kg`}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
 
                 {prList.length > 0 && (
                   <Card style={{ padding: "20px" }}>

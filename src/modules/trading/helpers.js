@@ -66,6 +66,43 @@ export const getStats = (trades) => {
   return { total: cl.length, wins: wins.length, losses: losses.length, wr, totalPnl: Math.round(totalPnl), avgWin: Math.round(avgWin), pf, avgRR };
 };
 
+// Sum of closed (non-archived) trade P/L on/after a YYYY-MM-DD date string.
+export const periodPnl = (trades, sinceDate) =>
+  trades.filter((t) => t.status === "CLOSED" && !t.archived && t.date && t.date >= sinceDate)
+    .reduce((s, t) => s + calcPnl(t), 0);
+
+// Trading account as its own financial environment — never mixed into personal
+// wealth. Daily/weekly/monthly P&L, equity, profit split, win rate, risk.
+export const tradingMetrics = (trades, fundedSize = 15000, withdrawals = 0, profitSplit = 80) => {
+  const stats = getStats(trades);
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const ws = new Date(now); ws.setDate(now.getDate() - now.getDay());
+  const weekStart = ws.toISOString().split("T")[0];
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const totalProfit = stats.totalPnl;
+  const openRisk = trades
+    .filter((t) => t.status === "OPEN" && !t.archived)
+    .reduce((s, t) => s + (+t.riskAmount || 0), 0);
+  return {
+    fundedSize: +fundedSize || 0,
+    equity: (+fundedSize || 0) + totalProfit - (+withdrawals || 0),
+    dailyPnl: periodPnl(trades, today),
+    weeklyPnl: periodPnl(trades, weekStart),
+    monthlyPnl: periodPnl(trades, monthStart),
+    totalProfit,
+    withdrawals: +withdrawals || 0,
+    profitSplit: +profitSplit || 0,
+    yourShare: Math.round(Math.max(0, totalProfit) * ((+profitSplit || 0) / 100)),
+    winRate: stats.wr,
+    pf: stats.pf,
+    total: stats.total,
+    avgRR: stats.avgRR,
+    openRisk,
+    openRiskPct: fundedSize > 0 ? +((openRisk / fundedSize) * 100).toFixed(2) : 0,
+  };
+};
+
 export const initForm = () => ({
   date: new Date().toISOString().split("T")[0],
   time: new Date().toTimeString().slice(0, 5),
