@@ -1,20 +1,24 @@
 import { useState } from "react";
-import { Filter, Plus, Edit3, Trash2 } from "lucide-react";
+import { Filter, Plus, Edit3, Trash2, Copy, Archive, ArchiveRestore } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, GL2, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Chip } from "../../shared/ui.jsx";
 import { OUTCOMES, INSTRUMENTS, GRADES } from "./constants.js";
 import { calcPnl, gcol, ocol } from "./helpers.js";
 
-export function LogView({ trades, onView, onEdit, onDelete, onNew, stats, balance }) {
+export function LogView({ trades, onView, onEdit, onDelete, onDuplicate, onArchive, onNew, stats, balance }) {
   const [fo, setFo] = useState("");
   const [fi, setFi] = useState("");
   const [fg, setFg] = useState("");
+  const [showArch, setShowArch] = useState(false);
 
+  const archivedCount = trades.filter((t) => t.archived).length;
   const filtered = trades.filter((t) =>
+    (showArch || !t.archived) &&
     (!fo || t.outcome === fo) &&
     (!fi || t.instrument === fi) &&
     (!fg || t.grade === fg)
   );
+  const COLS = "62px 68px 55px 150px 66px 68px 56px 60px 96px";
   const netPnl = stats?.totalPnl || 0;
   const ss = { background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, color: T2, outline: "none", fontFamily: "inherit", cursor: "pointer" };
 
@@ -33,12 +37,17 @@ export function LogView({ trades, onView, onEdit, onDelete, onNew, stats, balanc
         <select value={fi} onChange={(e) => setFi(e.target.value)} style={ss}><option value="">All Pairs</option>{INSTRUMENTS.map((i) => <option key={i.l} value={i.l}>{i.l}</option>)}</select>
         <select value={fg} onChange={(e) => setFg(e.target.value)} style={ss}><option value="">All Grades</option>{GRADES.map((g) => <option key={g} value={g}>{g}</option>)}</select>
         <span style={{ fontSize: 11, color: T3, marginLeft: 4 }}>{filtered.length} trades</span>
+        {archivedCount > 0 && (
+          <button onClick={() => setShowArch((s) => !s)} style={{ display: "flex", alignItems: "center", gap: 5, background: showArch ? `${AM}18` : GL, border: `1px solid ${showArch ? AM + "44" : BD}`, borderRadius: 8, padding: "6px 10px", color: showArch ? AM : T3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+            <Archive size={11} />{showArch ? "Hide archived" : `Show archived (${archivedCount})`}
+          </button>
+        )}
         <div style={{ flex: 1 }} />
         <button onClick={onNew} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 15px", background: `linear-gradient(135deg,${CY},${PU})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
           <Plus size={14} />Log Trade
         </button>
       </div>
-      <div style={{ padding: "6px 22px", display: "grid", gridTemplateColumns: "62px 68px 55px 160px 70px 68px 60px 68px 50px", gap: 7 }}>
+      <div style={{ padding: "6px 22px", display: "grid", gridTemplateColumns: COLS, gap: 7 }}>
         {["Date", "Pair", "Dir", "Models", "Session", "P&L", "R:R", "Grade", ""].map((h) => (
           <div key={h} style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{h}</div>
         ))}
@@ -55,7 +64,7 @@ export function LogView({ trades, onView, onEdit, onDelete, onNew, stats, balanc
             <div
               key={t.id}
               onClick={() => onView(t)}
-              style={{ display: "grid", gridTemplateColumns: "62px 68px 55px 160px 70px 68px 60px 68px 50px", gap: 7, padding: "10px 11px", borderRadius: 10, marginBottom: 5, background: GL, border: `1px solid ${BD}`, borderLeft: `3px solid ${t.outcome ? ocol(t.outcome) : BD2}`, cursor: "pointer", transition: "background 0.15s" }}
+              style={{ display: "grid", gridTemplateColumns: COLS, gap: 7, padding: "10px 11px", borderRadius: 10, marginBottom: 5, background: GL, border: `1px solid ${BD}`, borderLeft: `3px solid ${t.outcome ? ocol(t.outcome) : BD2}`, cursor: "pointer", transition: "background 0.15s", opacity: t.archived ? 0.5 : 1 }}
               onMouseEnter={(e) => { e.currentTarget.style.background = GL2; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = GL; }}
             >
@@ -79,8 +88,10 @@ export function LogView({ trades, onView, onEdit, onDelete, onNew, stats, balanc
                 )}
               </span>
               <div style={{ display: "flex", gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => onEdit(t)} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: T2, display: "flex" }}><Edit3 size={11} /></button>
-                <button onClick={() => onDelete(t.id)} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={11} /></button>
+                <button onClick={() => onEdit(t)} title="Edit" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: T2, display: "flex" }}><Edit3 size={11} /></button>
+                {onDuplicate && <button onClick={() => onDuplicate(t.id)} title="Duplicate" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: CY, display: "flex" }}><Copy size={11} /></button>}
+                {onArchive && <button onClick={() => onArchive(t.id)} title={t.archived ? "Restore" : "Archive"} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: t.archived ? GR : AM, display: "flex" }}>{t.archived ? <ArchiveRestore size={11} /> : <Archive size={11} />}</button>}
+                <button onClick={() => onDelete(t.id)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={11} /></button>
               </div>
             </div>
           );

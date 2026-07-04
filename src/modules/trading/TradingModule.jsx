@@ -135,7 +135,7 @@ export function TradingModule() {
         {tv === "playbook" && <PlaybookBuilder trades={trades} />}
         {tv === "reports" && <TradingReports trades={trades} balance={bal + netPnl} />}
         {tv === "form" && <div style={{ height: "100%" }}><EntryForm onSubmit={saveTrade} onCancel={() => { setTv("log"); setEditT(null); setPendingChecklist(null); }} editTrade={editT} accountBalance={bal} checklistResult={pendingChecklist} /></div>}
-        {tv === "detail" && sel && <div style={{ overflowY: "auto", height: "100%" }}><DetailView trade={trades.find((t) => t.id === sel.id) || sel} onBack={() => setTv("log")} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} /></div>}
+        {tv === "detail" && sel && <div style={{ overflowY: "auto", height: "100%" }}><DetailView trade={trades.find((t) => t.id === sel.id) || sel} trades={trades} onBack={() => setTv("log")} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} /></div>}
       </div>
     </div>
   );

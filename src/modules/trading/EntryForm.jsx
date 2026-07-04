@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronLeft, ChevronRight, CheckCircle, Lock } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CheckCircle, ClipboardCheck } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, CY, PU, GR, RE, AM, OR, GL } from "../../shared/designTokens.js";
 import { Fld, Inp, Sel, DirTog, Radio, Tags, SL } from "../../shared/ui.jsx";
 import {
@@ -9,26 +9,33 @@ import {
 import { calcMetrics, calcActualRR, calcPnl, gcol, getPV, genId, initForm } from "./helpers.js";
 import { getActiveKillzone } from "./timezone.js";
 import { RiskMeter } from "./RiskMeter.jsx";
-import { ChecklistGate } from "./ChecklistGate.jsx";
 
-export function EntryForm({ onSubmit, onCancel, editTrade, accountBalance }) {
+export function EntryForm({ onSubmit, onCancel, editTrade, accountBalance, checklistResult }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(editTrade ? { ...editTrade } : initForm());
-  const [submitted, setSubmitted] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const m = calcMetrics(form, accountBalance);
-  const allChecked = form.checklist.every(Boolean);
-  const STEPS = ["Context", "ICT Model", "Execution", "Checklist"];
+  const STEPS = ["Context", "ICT Model", "Execution"];
   const kz = getActiveKillzone();
+  // The pre-trade checklist gate runs before this form. Capture its result for
+  // new trades; edited trades keep whatever checklist they were logged with.
+  const cl = checklistResult
+    ? {
+        checklist: checklistResult.checks,
+        checklistItems: checklistResult.items,
+        checklistScore: checklistResult.score,
+        checklistTotal: checklistResult.total,
+        checklistTemplate: checklistResult.template,
+        checklistSkipped: checklistResult.skipped,
+      }
+    : null;
 
   const submit = () => {
-    setSubmitted(true);
-    if (!allChecked) { setStep(3); return; }
     const id = editTrade?.id || genId();
     const actualRR = form.status === "CLOSED" ? calcActualRR({ ...form, ...m }) : null;
     const pnl = form.status === "CLOSED" ? calcPnl(form) : 0;
-    onSubmit({ ...form, id, ...m, actualRR, pnl, createdAt: editTrade?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() });
+    onSubmit({ ...form, ...(cl || {}), id, ...m, actualRR, pnl, createdAt: editTrade?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() });
   };
 
   return (
@@ -39,6 +46,14 @@ export function EntryForm({ onSubmit, onCancel, editTrade, accountBalance }) {
           <div style={{ fontSize: 11, color: T3, marginTop: 2 }}>ICT Master Methodology · FundedNext $15,000</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {cl && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", background: cl.checklistSkipped ? `${AM}14` : `${GR}14`, border: `1px solid ${cl.checklistSkipped ? AM : GR}44`, borderRadius: 8 }}>
+              <ClipboardCheck size={12} color={cl.checklistSkipped ? AM : GR} />
+              <span style={{ fontSize: 10, color: cl.checklistSkipped ? AM : GR, fontWeight: 600 }}>
+                {cl.checklistSkipped ? "Checklist skipped" : `Checklist ${cl.checklistScore}/${cl.checklistTotal}`}
+              </span>
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 11px", background: `${kz.color}11`, border: `1px solid ${kz.color}33`, borderRadius: 8 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: kz.active ? kz.color : T3 }} />
             <span style={{ fontSize: 10, color: kz.color, fontWeight: 600 }}>{kz.label.split("(")[0].trim()}</span>
@@ -165,7 +180,11 @@ export function EntryForm({ onSubmit, onCancel, editTrade, accountBalance }) {
             <RiskMeter rp={m.riskPercent} ra={m.riskAmount} />
             <div style={{ height: 1, background: BD, margin: "13px 0" }} />
             <Fld label="TradingView Chart URL"><Inp value={form.tvUrl} onChange={(v) => set("tvUrl", v)} placeholder="https://www.tradingview.com/chart/..." /></Fld>
-            <Fld label="Slippage (points)"><Inp type="number" value={form.slippage} onChange={(v) => set("slippage", v)} placeholder="0" mono /></Fld>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13 }}>
+              <Fld label="Slippage (points)"><Inp type="number" value={form.slippage} onChange={(v) => set("slippage", v)} placeholder="0" mono /></Fld>
+              <Fld label="Emotion Before Entry"><Inp value={form.emotionBefore} onChange={(v) => set("emotionBefore", v)} placeholder="Calm, confident, anxious, FOMO..." /></Fld>
+            </div>
+            <Fld label="Screenshot URLs" hint="Comma-separate multiple"><Inp value={form.screenshots} onChange={(v) => set("screenshots", v)} placeholder="Paste chart image / TradingView snapshot URLs" /></Fld>
             <div style={{ height: 1, background: BD, margin: "13px 0" }} />
             <div style={{ padding: "11px", background: `${PU}11`, border: `1px solid ${PU}22`, borderRadius: 10, marginBottom: 11 }}>
               <div style={{ fontSize: 12, color: PU, fontWeight: 600, marginBottom: 2 }}>Post-Trade (optional now)</div>
@@ -213,12 +232,27 @@ export function EntryForm({ onSubmit, onCancel, editTrade, accountBalance }) {
                     style={{ width: "100%", minHeight: 65, background: GL, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 13, color: T1, lineHeight: 1.6, resize: "none", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
                   />
                 </Fld>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 13 }}>
+                  <Fld label="Commission ($)"><Inp type="number" value={form.commission} onChange={(v) => set("commission", v)} placeholder="0" mono /></Fld>
+                  <Fld label="Swap / Fees ($)"><Inp type="number" value={form.swapFees} onChange={(v) => set("swapFees", v)} placeholder="0" mono /></Fld>
+                  <Fld label="Time Closed (NY)"><Inp type="time" value={form.timeClosed} onChange={(v) => set("timeClosed", v)} /></Fld>
+                </div>
+                {(form.commission || form.swapFees) && (
+                  <div style={{ padding: "8px 12px", background: `${AM}0A`, border: `1px solid ${AM}22`, borderRadius: 8, marginBottom: 11, fontSize: 11.5, color: T2 }}>
+                    <span style={{ color: AM, fontWeight: 700 }}>Net of costs: </span>P/L shown for this trade already subtracts ${((+form.commission || 0) + (+form.swapFees || 0)).toLocaleString()} in commission + fees.
+                  </div>
+                )}
+                <Fld label="Emotion After Close"><Inp value={form.emotionAfter} onChange={(v) => set("emotionAfter", v)} placeholder="Satisfied, frustrated, relieved, revenge-tempted..." /></Fld>
+                <Fld label="Mistakes Made">
+                  <textarea value={form.mistakes} onChange={(e) => set("mistakes", e.target.value)} placeholder="Any execution errors — early entry, moved stop, oversized, chased, hesitated..."
+                    style={{ width: "100%", minHeight: 55, background: GL, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 13, color: T1, lineHeight: 1.6, resize: "none", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+                  />
+                </Fld>
               </>
             )}
           </div>
         )}
 
-        {step === 3 && <ChecklistGate values={form.checklist} onChange={(v) => set("checklist", v)} submitted={submitted} />}
       </div>
 
       <div style={{ padding: "13px 22px", borderTop: `1px solid ${BD}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: B1 }}>
@@ -226,18 +260,13 @@ export function EntryForm({ onSubmit, onCancel, editTrade, accountBalance }) {
           <ChevronLeft size={14} />{step === 0 ? "Cancel" : "Back"}
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {step === 3 && !allChecked && (
-            <span style={{ fontSize: 12, color: AM, display: "flex", alignItems: "center", gap: 5 }}>
-              <Lock size={11} />{7 - form.checklist.filter(Boolean).length} remaining
-            </span>
-          )}
-          {step < 3
+          {step < 2
             ? (
               <button onClick={() => setStep((s) => s + 1)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 20px", background: `linear-gradient(135deg,${CY},${PU})`, border: "none", borderRadius: 10, color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                 Next<ChevronRight size={14} />
               </button>
             ) : (
-              <button onClick={submit} disabled={!allChecked} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 20px", background: allChecked ? `linear-gradient(135deg,${GR},${CY})` : GL, border: allChecked ? "none" : `1px solid ${BD}`, borderRadius: 10, color: allChecked ? "#000" : T3, fontSize: 13, fontWeight: 700, cursor: allChecked ? "pointer" : "not-allowed", fontFamily: "inherit", opacity: allChecked ? 1 : 0.6 }}>
+              <button onClick={submit} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 20px", background: `linear-gradient(135deg,${GR},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                 <CheckCircle size={14} />{editTrade ? "Update" : "Submit Trade"}
               </button>
             )}

@@ -4,20 +4,36 @@ import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, OR } from "../../shared/des
 import { callClaude } from "../../shared/anthropic.js";
 import { MACRO_CONFIG, SILVER_BULLET_CONFIG, CHECKLIST } from "./constants.js";
 import { calcPnl, gcol, ocol } from "./helpers.js";
+import { checklistEdge } from "./checklists.js";
 
-export function DetailView({ trade, onBack, onEdit }) {
+export function DetailView({ trade, trades = [], onBack, onEdit }) {
   const [aiReview, setAiReview] = useState("");
   const [ldState, setLdState] = useState(false);
   const loadingRef = useRef(false);
   const pnl = calcPnl(trade);
+
+  // Prefer the trade's own logged checklist items (customizable). Fall back to
+  // the legacy fixed 7-point CHECKLIST for older trades that predate templates.
+  const clItems = trade.checklistItems && trade.checklistItems.length ? trade.checklistItems : CHECKLIST;
+  const clChecks = trade.checklist || [];
+  const clScore = trade.checklistScore ?? clChecks.filter(Boolean).length;
+  const clTotal = trade.checklistTotal ?? clItems.length;
 
   const fetchReview = async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLdState(true);
     try {
+      // Per-item checklist detail for THIS trade.
+      const checklistDetail = clItems.map((text, i) => ({ item: text, done: !!clChecks[i] }));
+      // Cross-trade edge: which checklist items correlate with wins vs losses,
+      // so the coach can flag "the step you skip on your losers."
+      const edge = checklistEdge(trades)
+        .filter((e) => e.checkedN + e.skippedN >= 2)
+        .map((e) => ({ item: e.text, winRateWhenChecked: e.checkedWr, winRateWhenSkipped: e.skippedWr, timesChecked: e.checkedN, timesSkipped: e.skippedN }));
+
       const reply = await callClaude({
-        system: `You are ARCHITECT — master ICT trading coach with a Kaizen mindset. Analyze this trade from Irisu (Nairobi, Kenya) on a FundedNext $15,000 challenge. Use expert ICT methodology. Be direct, specific, under 300 words. Reference actual ICT concepts and praise real strengths. Be compassionate about losses — they are tuition, not failure. Measure this trade against Irisu's own past process, not perfection. End with the ONE smallest adjustment to apply on the very next trade. No guilt.`,
+        system: `You are ARCHITECT — master ICT trading coach with a Kaizen mindset. Analyze this trade from Irisu (Nairobi, Kenya) on a FundedNext $15,000 challenge. Use expert ICT methodology. Be direct, specific, under 320 words. Structure your review around: (1) how the COMPLETED PRE-TRADE CHECKLIST lines up with the outcome — call out any mandatory step that was skipped and whether that skip pattern shows up on losses; (2) emotional discipline before vs after, and any mistakes logged; (3) which of Irisu's habits are becoming a real edge. Reference actual ICT concepts and praise real strengths. Be compassionate about losses — they are tuition, not failure. Measure this trade against Irisu's OWN past process, not perfection. End with the ONE smallest Kaizen adjustment to apply on the very next trade. No guilt.`,
         messages: [{
           role: "user",
           content: `Analyze this trade:\n${JSON.stringify({
@@ -29,11 +45,15 @@ export function DetailView({ trade, onBack, onEdit }) {
             judasSwing: trade.judasSwing, smtDivergence: trade.smtDivergence,
             po3Phase: trade.po3Phase, entryTimeframe: trade.entryTimeframe,
             projectedRR: trade.projectedRR, actualRR: trade.actualRR,
-            riskPercent: trade.riskPercent, checklistScore: trade.checklistScore,
+            riskPercent: trade.riskPercent,
+            preTradeChecklist: { template: trade.checklistTemplate, score: `${clScore}/${clTotal}`, skipped: !!trade.checklistSkipped, items: checklistDetail },
             outcome: trade.outcome, grade: trade.grade,
             entryQuality: trade.entryQuality, exitQuality: trade.exitQuality,
             psychologyTag: trade.psychologyTag, executionScore: trade.executionScore,
+            emotionBefore: trade.emotionBefore, emotionAfter: trade.emotionAfter,
+            mistakes: trade.mistakes, commission: trade.commission, swapFees: trade.swapFees,
             notes: trade.notes, lessons: trade.lessons,
+            yourChecklistEdgeAcrossAllTrades: edge,
           }, null, 2)}`,
         }],
         maxTokens: 1000,
@@ -144,18 +164,23 @@ export function DetailView({ trade, onBack, onEdit }) {
               <Row label="Exit Quality"    value={trade.exitQuality} />
               <Row label="Psychology"      value={trade.psychologyTag} color={["Disciplined", "Patient", "Confident", "Process-Focused"].includes(trade.psychologyTag) ? GR : RE} />
               <Row label="Execution Score" value={trade.executionScore ? `${trade.executionScore}/10` : "—"} color={+(trade.executionScore || 0) >= 8 ? GR : +(trade.executionScore || 0) >= 5 ? AM : RE} />
-              <Row label="Checklist"       value={`${trade.checklistScore || 0}/7`} color={trade.checklistScore === 7 ? GR : AM} />
+              <Row label="Checklist"       value={`${clScore}/${clTotal}`} color={clScore === clTotal ? GR : AM} />
+              <Row label="Emotion Before"  value={trade.emotionBefore} />
+              <Row label="Emotion After"   value={trade.emotionAfter} color={/frustrat|revenge|angry|tilt|fomo/i.test(trade.emotionAfter || "") ? RE : T1} />
+              {(trade.commission || trade.swapFees) && <Row label="Costs" value={`$${((+trade.commission || 0) + (+trade.swapFees || 0)).toLocaleString()}`} color={AM} />}
             </div>
           </div>
         </div>
 
         <div>
-          <div style={{ fontSize: 11, color: trade.checklistScore === 7 ? GR : AM, letterSpacing: 1.5, marginBottom: 9, fontWeight: 700, textTransform: "uppercase" }}>
-            Pre-Trade Checklist — {trade.checklistScore || 0}/7
+          <div style={{ fontSize: 11, color: clScore === clTotal ? GR : AM, letterSpacing: 1.5, marginBottom: 9, fontWeight: 700, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 8 }}>
+            <span>Pre-Trade Checklist — {clScore}/{clTotal}</span>
+            {trade.checklistTemplate && <span style={{ fontSize: 9.5, color: T3, letterSpacing: 0.5, textTransform: "none" }}>· {trade.checklistTemplate}</span>}
+            {trade.checklistSkipped && <span style={{ fontSize: 9, color: AM, padding: "1px 7px", borderRadius: 8, background: `${AM}18`, border: `1px solid ${AM}44`, letterSpacing: 0.5 }}>SKIPPED</span>}
           </div>
           <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 12, padding: "13px", display: "flex", flexDirection: "column", gap: 7 }}>
-            {CHECKLIST.map((item, i) => {
-              const checked = (trade.checklist || [])[i];
+            {clItems.map((item, i) => {
+              const checked = clChecks[i];
               return (
                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
                   <div style={{ width: 16, height: 16, borderRadius: 5, background: checked ? `${GR}33` : `${RE}22`, border: `1.5px solid ${checked ? GR : RE}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
@@ -177,11 +202,20 @@ export function DetailView({ trade, onBack, onEdit }) {
                 <div style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>{trade.notes}</div>
               </div>
             )}
+            {trade.mistakes && (
+              <div style={{ marginBottom: 12, padding: "10px 11px", background: `${RE}0A`, borderRadius: 8 }}>
+                <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, marginBottom: 4, textTransform: "uppercase" }}>Mistakes Made</div>
+                <div style={{ fontSize: 12, color: RE, lineHeight: 1.6 }}>{trade.mistakes}</div>
+              </div>
+            )}
             {trade.lessons && (
               <div style={{ padding: "10px 11px", background: `${AM}0A`, borderRadius: 8 }}>
                 <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, marginBottom: 4, textTransform: "uppercase" }}>Lessons Learned</div>
                 <div style={{ fontSize: 12, color: AM, lineHeight: 1.6 }}>{trade.lessons}</div>
               </div>
+            )}
+            {!trade.notes && !trade.mistakes && !trade.lessons && (
+              <div style={{ fontSize: 12, color: T3 }}>No notes recorded for this trade.</div>
             )}
           </div>
         </div>
