@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { B1, BD2, T1, T3, CY } from "../../shared/designTokens.js";
 import { DOMAINS } from "./domains.js";
 
-export function LifeMatrix({ size = 280 }) {
+export function LifeMatrix({ size = 280, domains = DOMAINS }) {
   const [on, setOn] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setOn(true), 300);
     return () => clearTimeout(t);
   }, []);
   const cx = size / 2, cy = size / 2;
-  const overall = Math.round(DOMAINS.reduce((s, d) => s + d.score, 0) / DOMAINS.length);
+  const overall = Math.round(domains.reduce((s, d) => s + d.score, 0) / domains.length);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
       <div style={{ width: size, height: size, flexShrink: 0 }}>
@@ -21,10 +21,10 @@ export function LifeMatrix({ size = 280 }) {
           </radialGradient>
         </defs>
         <circle cx={cx} cy={cy} r={32} fill="url(#cg)" />
-        {DOMAINS.map(({ key, r, color }) => (
+        {domains.map(({ key, r, color }) => (
           <circle key={`b${key}`} cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={9} opacity={0.10} />
         ))}
-        {DOMAINS.map(({ key, r, color, score }) => {
+        {domains.map(({ key, r, color, score }) => {
           const c = 2 * Math.PI * r;
           const f = on ? (score / 100) * c : 0;
           return (
@@ -50,7 +50,7 @@ export function LifeMatrix({ size = 280 }) {
       </svg>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 11, flexShrink: 0 }}>
-        {DOMAINS.map(({ key, label, color, score }) => (
+        {domains.map(({ key, label, color, score }) => (
           <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: color, boxShadow: `0 0 8px ${color}` }} />
             <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1.2, width: 58 }}>{label}</span>

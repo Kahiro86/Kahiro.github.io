@@ -1,8 +1,8 @@
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { B1, B2, GL, BD, T1, T2, T3, RE, GR, CY, PU } from "./designTokens.js";
 
-export const Card = ({ children, style = {} }) => (
-  <div style={{ background: B1, border: `1px solid ${BD}`, borderRadius: 16, ...style }}>
+export const Card = ({ children, style = {}, ...rest }) => (
+  <div {...rest} style={{ background: B1, border: `1px solid ${BD}`, borderRadius: 16, ...style }}>
     {children}
   </div>
 );

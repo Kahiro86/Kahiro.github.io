@@ -7,7 +7,7 @@ import { calcPAYE, calcNSSF } from "./paye.js";
 import { incomeAnalytics } from "./income.js";
 import { financeHealth } from "./financeHealth.js";
 import { SEED_TRADES } from "../trading/seedTrades.js";
-import { getStats } from "../trading/helpers.js";
+import { getStats, tradingMetrics } from "../trading/helpers.js";
 import { OverviewTab } from "./OverviewTab.jsx";
 import { IncomeTab } from "./IncomeTab.jsx";
 import { AccountsTab } from "./AccountsTab.jsx";
@@ -36,6 +36,7 @@ export function FinanceOS() {
   const {
     currency, xRate, income = [], gross, opBal, savBal, efBal, efMMF, personalDebt,
     mmfs, tbills, nseStocks, saccoBal, saccoYield, reitUnits, reitNAV, budgets,
+    goals = [], tradingWithdrawals = 0, profitSplit = 80,
   } = state;
 
   const patch = (obj) => setState((s) => ({ ...s, ...obj }));
@@ -56,6 +57,9 @@ export function FinanceOS() {
   const setReitNAV = (v) => patch({ reitNAV: v });
   const setBudgets = (updater) => setState((s) => ({ ...s, budgets: typeof updater === "function" ? updater(s.budgets) : updater }));
   const setIncome = (updater) => setState((s) => ({ ...s, income: typeof updater === "function" ? updater(s.income || []) : updater }));
+  const setGoals = (updater) => setState((s) => ({ ...s, goals: typeof updater === "function" ? updater(s.goals || []) : updater }));
+  const setTradingWithdrawals = (v) => patch({ tradingWithdrawals: v });
+  const setProfitSplit = (v) => patch({ profitSplit: v });
 
   // Trading account is read-only here — the firewall never gives Finance OS a setter into Trading OS's own storage.
   const [trades] = useStorageState("ict_trades", SEED_TRADES);
@@ -80,7 +84,10 @@ export function FinanceOS() {
   const totalInvested = totalMMF + totalTbill + totalNSE + (+saccoBal || 0) + totalReit;
   const totalLiquid = (+opBal || 0) + (+savBal || 0) + (+efBal || 0);
   const tradingKES = tradingBalanceUSD * (+xRate || 130);
-  const netWorthKES = totalLiquid + totalInvested + tradingKES - (+personalDebt || 0);
+  // FIREWALL: the funded trading account is NOT part of personal net worth.
+  const netWorthKES = totalLiquid + totalInvested - (+personalDebt || 0);
+  // Trading account tracked independently, in its own USD environment.
+  const tMetrics = tradingMetrics(trades, bal, tradingWithdrawals, profitSplit);
 
   // ── PASSIVE INCOME ────────────────────────────────────────────────
   const monthlyPassive = Math.round(
@@ -147,8 +154,10 @@ export function FinanceOS() {
       <div style={{ flex: 1, overflowY: "auto" }}>
         {finTab === "overview" && (
           <OverviewTab fmtKES={fmtKES} netWorthKES={netWorthKES} totalLiquid={totalLiquid} totalInvested={totalInvested}
-            monthlyPassive={monthlyPassive} tradingKES={tradingKES} efBal={efBal} savBal={savBal} opBal={opBal}
-            personalDebt={personalDebt} setPersonalDebt={setPersonalDebt} />
+            monthlyPassive={monthlyPassive} efBal={efBal} savBal={savBal} opBal={opBal}
+            personalDebt={personalDebt} setPersonalDebt={setPersonalDebt}
+            tMetrics={tMetrics} xRate={xRate} tradingWithdrawals={tradingWithdrawals} setTradingWithdrawals={setTradingWithdrawals}
+            profitSplit={profitSplit} setProfitSplit={setProfitSplit} />
         )}
         {finTab === "income" && (
           <IncomeTab income={income} setIncome={setIncome} fmtKES={fmtKES}
@@ -181,8 +190,8 @@ export function FinanceOS() {
             reitNAV={reitNAV} setReitNAV={setReitNAV} />
         )}
         {finTab === "goals" && (
-          <GoalsTab efTarget6={efTarget6} efBal={efBal} efContrib={efContrib} totalInvested={totalInvested}
-            netWorthKES={netWorthKES} monthlyPassive={monthlyPassive} personalDebt={personalDebt} netPay={netPay} />
+          <GoalsTab goals={goals} setGoals={setGoals} fmtKES={fmtKES}
+            liveMetrics={{ efBal: +efBal || 0, totalInvested, netWorth: netWorthKES, monthlyPassive }} />
         )}
       </div>
     </div>
