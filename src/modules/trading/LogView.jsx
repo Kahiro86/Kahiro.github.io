@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Filter, Plus, Edit3, Trash2, Copy, Archive, ArchiveRestore } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, GL2, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Chip } from "../../shared/ui.jsx";
+import { useIsMobile } from "../../shared/useIsMobile.js";
 import { OUTCOMES, INSTRUMENTS, GRADES } from "./constants.js";
 import { calcPnl, gcol, ocol } from "./helpers.js";
 
 export function LogView({ trades, onView, onEdit, onDelete, onDuplicate, onArchive, onNew, stats, balance }) {
+  const isMobile = useIsMobile();
   const [fo, setFo] = useState("");
   const [fi, setFi] = useState("");
   const [fg, setFg] = useState("");
@@ -20,23 +22,32 @@ export function LogView({ trades, onView, onEdit, onDelete, onDuplicate, onArchi
   );
   const COLS = "62px 68px 55px 150px 66px 68px 56px 60px 96px";
   const netPnl = stats?.totalPnl || 0;
-  const ss = { background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, color: T2, outline: "none", fontFamily: "inherit", cursor: "pointer" };
+  const ss = { background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, color: T2, outline: "none", fontFamily: "inherit", cursor: "pointer", minWidth: 0 };
+
+  const RowActions = ({ t, size = 11, pad = "4px 5px" }) => (
+    <div style={{ display: "flex", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+      <button onClick={() => onEdit(t)} title="Edit" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: pad, cursor: "pointer", color: T2, display: "flex" }}><Edit3 size={size} /></button>
+      {onDuplicate && <button onClick={() => onDuplicate(t.id)} title="Duplicate" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: pad, cursor: "pointer", color: CY, display: "flex" }}><Copy size={size} /></button>}
+      {onArchive && <button onClick={() => onArchive(t.id)} title={t.archived ? "Restore" : "Archive"} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: pad, cursor: "pointer", color: t.archived ? GR : AM, display: "flex" }}>{t.archived ? <ArchiveRestore size={size} /> : <Archive size={size} />}</button>}
+      <button onClick={() => onDelete(t.id)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: pad, cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={size} /></button>
+    </div>
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "14px 22px", borderBottom: `1px solid ${BD}`, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 11 }}>
+      <div style={{ padding: isMobile ? "12px 14px" : "14px 22px", borderBottom: `1px solid ${BD}`, display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(5,1fr)", gap: 9 }}>
         <Chip label="Running Balance" value={`$${(balance + netPnl).toLocaleString()}`} color={netPnl >= 0 ? GR : RE} />
         <Chip label="Net P&L"         value={`${netPnl >= 0 ? "+" : ""}$${netPnl.toLocaleString()}`} color={netPnl >= 0 ? GR : RE} />
         <Chip label="Win Rate"         value={`${stats?.wr || 0}%`}   color={CY} />
         <Chip label="Profit Factor"    value={stats?.pf || "—"}        color={PU} />
-        <Chip label="Avg R:R (W)"      value={stats?.avgRR ? `${stats.avgRR}R` : "—"} color={AM} />
+        {!isMobile && <Chip label="Avg R:R (W)" value={stats?.avgRR ? `${stats.avgRR}R` : "—"} color={AM} />}
       </div>
-      <div style={{ padding: "11px 22px", borderBottom: `1px solid ${BD}`, display: "flex", gap: 9, alignItems: "center" }}>
+      <div style={{ padding: isMobile ? "10px 14px" : "11px 22px", borderBottom: `1px solid ${BD}`, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <Filter size={13} color={T3} />
         <select value={fo} onChange={(e) => setFo(e.target.value)} style={ss}><option value="">All Outcomes</option>{OUTCOMES.map((o) => <option key={o} value={o}>{o}</option>)}</select>
         <select value={fi} onChange={(e) => setFi(e.target.value)} style={ss}><option value="">All Pairs</option>{INSTRUMENTS.map((i) => <option key={i.l} value={i.l}>{i.l}</option>)}</select>
         <select value={fg} onChange={(e) => setFg(e.target.value)} style={ss}><option value="">All Grades</option>{GRADES.map((g) => <option key={g} value={g}>{g}</option>)}</select>
-        <span style={{ fontSize: 11, color: T3, marginLeft: 4 }}>{filtered.length} trades</span>
+        {!isMobile && <span style={{ fontSize: 11, color: T3, marginLeft: 4 }}>{filtered.length} trades</span>}
         {archivedCount > 0 && (
           <button onClick={() => setShowArch((s) => !s)} style={{ display: "flex", alignItems: "center", gap: 5, background: showArch ? `${AM}18` : GL, border: `1px solid ${showArch ? AM + "44" : BD}`, borderRadius: 8, padding: "6px 10px", color: showArch ? AM : T3, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
             <Archive size={11} />{showArch ? "Hide archived" : `Show archived (${archivedCount})`}
@@ -47,12 +58,16 @@ export function LogView({ trades, onView, onEdit, onDelete, onDuplicate, onArchi
           <Plus size={14} />Log Trade
         </button>
       </div>
-      <div style={{ padding: "6px 22px", display: "grid", gridTemplateColumns: COLS, gap: 7 }}>
-        {["Date", "Pair", "Dir", "Models", "Session", "P&L", "R:R", "Grade", ""].map((h) => (
-          <div key={h} style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{h}</div>
-        ))}
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 22px 22px" }}>
+
+      {!isMobile && (
+        <div style={{ padding: "6px 22px", display: "grid", gridTemplateColumns: COLS, gap: 7 }}>
+          {["Date", "Pair", "Dir", "Models", "Session", "P&L", "R:R", "Grade", ""].map((h) => (
+            <div key={h} style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{h}</div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "10px 14px 18px" : "0 22px 22px" }}>
         {filtered.length === 0 && (
           <div style={{ padding: "40px", textAlign: "center", color: T3, fontSize: 13 }}>
             No trades found. Log your first ICT trade to begin tracking your edge.
@@ -60,6 +75,33 @@ export function LogView({ trades, onView, onEdit, onDelete, onDuplicate, onArchi
         )}
         {filtered.map((t) => {
           const pnl = calcPnl(t);
+          const pnlEl = t.status === "OPEN"
+            ? <span style={{ color: CY, fontSize: isMobile ? 13 : 10, fontWeight: 800 }}>OPEN</span>
+            : <span style={{ fontWeight: 800, fontFamily: "monospace", color: pnl > 0 ? GR : pnl < 0 ? RE : AM }}>{pnl >= 0 ? "+" : "−"}${Math.abs(pnl).toLocaleString()}</span>;
+
+          if (isMobile) {
+            // Card layout — everything readable without horizontal scrolling.
+            return (
+              <div key={t.id} onClick={() => onView(t)}
+                style={{ padding: "12px 13px", borderRadius: 12, marginBottom: 8, background: GL, border: `1px solid ${BD}`, borderLeft: `3px solid ${t.outcome ? ocol(t.outcome) : BD2}`, cursor: "pointer", opacity: t.archived ? 0.5 : 1 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 13, color: T1, fontWeight: 800, fontFamily: "monospace" }}>{t.instrument}</span>
+                    <span style={{ fontSize: 10.5, fontWeight: 800, color: t.direction === "LONG" ? GR : RE }}>{t.direction}</span>
+                    {t.grade && <span style={{ fontSize: 9.5, fontWeight: 800, padding: "1px 6px", borderRadius: 5, background: `${gcol(t.grade)}22`, color: gcol(t.grade), border: `1px solid ${gcol(t.grade)}44` }}>{t.grade}</span>}
+                  </div>
+                  <span style={{ fontSize: 15 }}>{pnlEl}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ fontSize: 10.5, color: T3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {t.date?.slice(5)} · {(t.session || "").split(" (")[0] || "—"}{t.actualRR ? ` · ${t.actualRR}R` : ""}
+                  </span>
+                  <RowActions t={t} size={13} pad="6px 8px" />
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div
               key={t.id}
@@ -76,9 +118,7 @@ export function LogView({ trades, onView, onEdit, onDelete, onDuplicate, onArchi
                 {(t.models || []).length > 2 ? "…" : ""}
               </span>
               <span style={{ fontSize: 10, color: T3 }}>{(t.session || "").split(" (")[0]?.substring(0, 10)}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "monospace", color: pnl > 0 ? GR : pnl < 0 ? RE : AM }}>
-                {t.status === "OPEN" ? <span style={{ color: CY, fontSize: 10 }}>OPEN</span> : `${pnl >= 0 ? "+" : ""}$${Math.abs(pnl)}`}
-              </span>
+              <span style={{ fontSize: 12 }}>{pnlEl}</span>
               <span style={{ fontSize: 11, color: T2, fontFamily: "monospace" }}>{t.actualRR ? `${t.actualRR}R` : "—"}</span>
               <span>
                 {t.grade && (
@@ -87,12 +127,7 @@ export function LogView({ trades, onView, onEdit, onDelete, onDuplicate, onArchi
                   </span>
                 )}
               </span>
-              <div style={{ display: "flex", gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => onEdit(t)} title="Edit" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: T2, display: "flex" }}><Edit3 size={11} /></button>
-                {onDuplicate && <button onClick={() => onDuplicate(t.id)} title="Duplicate" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: CY, display: "flex" }}><Copy size={11} /></button>}
-                {onArchive && <button onClick={() => onArchive(t.id)} title={t.archived ? "Restore" : "Archive"} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: t.archived ? GR : AM, display: "flex" }}>{t.archived ? <ArchiveRestore size={11} /> : <Archive size={11} />}</button>}
-                <button onClick={() => onDelete(t.id)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 5px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={11} /></button>
-              </div>
+              <RowActions t={t} />
             </div>
           );
         })}

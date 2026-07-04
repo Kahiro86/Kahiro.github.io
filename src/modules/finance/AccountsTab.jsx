@@ -73,7 +73,7 @@ export function AccountsTab({ g, netPay, fmtKES, opBal, setOpBal, savBal, setSav
             {ac.bal !== null ? (
               <>
                 <div style={{ fontSize: 10, color: T3, marginBottom: 5 }}>Current Balance (KES)</div>
-                <input type="number" value={ac.bal || ""} onChange={(e) => ac.setBal(+e.target.value || 0)} placeholder="0"
+                <input type="text" inputMode="numeric" value={ac.bal ? (+ac.bal).toLocaleString("en-US") : ""} onChange={(e) => ac.setBal(+e.target.value.replace(/[^0-9]/g, "") || 0)} placeholder="0"
                   style={{ width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 12px", fontSize: 20, color: ac.color, outline: "none", fontFamily: "monospace", fontWeight: 700, boxSizing: "border-box", marginBottom: 14 }} />
               </>
             ) : (
