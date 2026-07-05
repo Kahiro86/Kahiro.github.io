@@ -37,6 +37,9 @@ export const DEFAULT_FINANCE_STATE = {
   // Trading account lives inside Finance but is firewalled from personal wealth.
   tradingWithdrawals: 0,
   profitSplit: 80,
+  // Interactive debts. remaining = original − Σ payments. Falls back to the
+  // legacy single `personalDebt` number when this list is empty.
+  debts: [],
   // Editable financial goals (persisted). history: [{ date, amount }] contribution log.
   goals: [
     { id: "g_ef",   name: "Emergency Fund (6 months)", icon: "🛡️", target: 300000, current: 0, monthly: 5000,  deadline: "", color: GR, archived: false, createdAt: "", history: [] },
