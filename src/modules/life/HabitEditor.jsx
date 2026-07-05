@@ -14,6 +14,8 @@ export function HabitEditor({ habit, categories, onSave, onCancel }) {
 
   const toggleDay = (i) => set("days", d.days.includes(i) ? d.days.filter((x) => x !== i) : [...d.days, i].sort());
   const daily = d.days.length === 7;
+  const weekly = d.freq === "weekly";
+  const PILLARS = [{ v: null, l: "None" }, { v: "wellness", l: "🌿 Wellness" }, { v: "nonneg", l: "🎯 Non-negotiable" }];
 
   const inp = { width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "9px 11px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
   const lbl = { fontSize: 10, color: T3, letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 5 };
@@ -64,10 +66,33 @@ export function HabitEditor({ habit, categories, onSave, onCancel }) {
         </div>
       </div>
 
-      <span style={lbl}>Schedule {daily ? "· every day" : `· ${d.days.length} days/week`}</span>
+      <span style={lbl}>Frequency</span>
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-        {WEEKDAYS.map((w, i) => (
-          <button key={w} onClick={() => toggleDay(i)} style={{ flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 10.5, fontWeight: 700, cursor: "pointer", background: d.days.includes(i) ? `${d.color}22` : GL, color: d.days.includes(i) ? d.color : T3, border: `1px solid ${d.days.includes(i) ? d.color + "55" : BD}`, fontFamily: "inherit" }}>{w}</button>
+        {[{ v: "daily", l: "Daily" }, { v: "weekly", l: "Weekly" }].map((f) => (
+          <button key={f.v} onClick={() => set("freq", f.v)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", background: d.freq === f.v ? `${CY}22` : GL, color: d.freq === f.v ? CY : T3, border: `1px solid ${d.freq === f.v ? CY + "55" : BD}`, fontFamily: "inherit" }}>{f.l}</button>
+        ))}
+      </div>
+
+      {weekly ? (
+        <div style={{ marginBottom: 12 }}>
+          <span style={lbl}>Times per week · {d.weeklyTarget}×</span>
+          <input type="number" min="1" max="7" value={d.weeklyTarget} onChange={(e) => set("weeklyTarget", Math.max(1, Math.min(7, +e.target.value || 1)))} style={{ ...inp, width: 90, fontFamily: "monospace" }} />
+        </div>
+      ) : (
+        <>
+          <span style={lbl}>Schedule {daily ? "· every day" : `· ${d.days.length} days/week`}</span>
+          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+            {WEEKDAYS.map((w, i) => (
+              <button key={w} onClick={() => toggleDay(i)} style={{ flex: 1, padding: "7px 0", borderRadius: 8, fontSize: 10.5, fontWeight: 700, cursor: "pointer", background: d.days.includes(i) ? `${d.color}22` : GL, color: d.days.includes(i) ? d.color : T3, border: `1px solid ${d.days.includes(i) ? d.color + "55" : BD}`, fontFamily: "inherit" }}>{w}</button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <span style={lbl}>Pillar</span>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {PILLARS.map((pl) => (
+          <button key={pl.l} onClick={() => set("pillar", pl.v)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", background: d.pillar === pl.v ? `${d.color}22` : GL, color: d.pillar === pl.v ? d.color : T3, border: `1px solid ${d.pillar === pl.v ? d.color + "55" : BD}`, fontFamily: "inherit" }}>{pl.l}</button>
         ))}
       </div>
 

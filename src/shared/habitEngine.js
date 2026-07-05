@@ -23,9 +23,12 @@ export const newHabit = (patch = {}) => ({
   icon: "✨",
   color: HABIT_COLORS[0],
   category: "Personal Growth",
+  freq: "daily",               // "daily" (weekday-scheduled) | "weekly" (N per week)
   days: [0, 1, 2, 3, 4, 5, 6], // scheduled weekdays; all 7 = daily
+  weeklyTarget: 3,             // completions per week when freq === "weekly"
   target: 1,                   // completions/quantity per day (1 = simple check)
   unit: "",                    // e.g. "L", "pages", "steps" — for target > 1
+  pillar: null,                // null | "wellness" | "nonneg" — surfaces specially in Life OS
   notes: "",
   paused: false,
   archived: false,
@@ -33,6 +36,22 @@ export const newHabit = (patch = {}) => ({
   log: {},
   ...patch,
 });
+
+// ── Preset packs (opt-in — never auto-injected) ─────────────────────
+export const NONNEG_PRESETS = [
+  { name: "Prayer", icon: "🙏", color: PU, category: "Spiritual" },
+  { name: "Journaling", icon: "📝", color: CY, category: "Personal Growth" },
+  { name: "Clean my space", icon: "🧹", color: GR, category: "Productivity" },
+  { name: "Exercise", icon: "💪", color: RE, category: "Fitness" },
+  { name: "Healthy eating", icon: "🥗", color: AM, category: "Nutrition" },
+];
+export const WELLNESS_PRESETS = [
+  { name: "Sleep", icon: "🛏️", color: PU, category: "Health", target: 8, unit: "h", wellnessMin: 7.5 },
+  { name: "Hydration", icon: "💧", color: CY, category: "Health", target: 2, unit: "L" },
+  { name: "Prayer & Bible study", icon: "📖", color: GR, category: "Spiritual", target: 15, unit: "min", wellnessMin: 15 },
+];
+export const makeNonNeg = () => NONNEG_PRESETS.map((p) => newHabit({ ...p, pillar: "nonneg" }));
+export const makeWellness = () => WELLNESS_PRESETS.map((p) => newHabit({ ...p, pillar: "wellness" }));
 
 // ── Migration: v1 habits had { name, icon, history:[dates], done, streak } ──
 export function migrateHabits(raw) {
@@ -58,8 +77,10 @@ export function migrateHabits(raw) {
 // ── Per-day queries ─────────────────────────────────────────────────
 const weekdayOf = (ds) => new Date(`${ds}T12:00:00`).getDay();
 
+// Daily scheduling only — weekly habits are handled by weekProgress, so they
+// never appear in the daily list or count toward daily perfect-days.
 export const isScheduled = (h, ds) =>
-  !h.archived && !h.paused && ds >= (h.createdAt || "0") && (h.days || []).includes(weekdayOf(ds));
+  !h.archived && !h.paused && h.freq !== "weekly" && ds >= (h.createdAt || "0") && (h.days || []).includes(weekdayOf(ds));
 
 export const valueOn = (h, ds) => h.log?.[ds]?.v || 0;
 export const isSkipped = (h, ds) => !!h.log?.[ds]?.s;
@@ -141,6 +162,41 @@ export function rangeStats(h, daysBack) {
 
 export const totalCompletions = (h) =>
   Object.entries(h.log || {}).filter(([, e]) => (e.v || 0) >= (h.target || 1)).length;
+
+// ── Weekly habits ───────────────────────────────────────────────────
+const addDaysStr = (ds, n) => { const d = new Date(`${ds}T12:00:00`); d.setDate(d.getDate() + n); return localDateStr(d); };
+export const weekStartStr = (ds = localDateStr()) => { const d = new Date(`${ds}T12:00:00`); d.setDate(d.getDate() - d.getDay()); return localDateStr(d); };
+export const isWeekly = (h) => h.freq === "weekly";
+
+// Completions logged within the week beginning `ws` (capped at today).
+export function weekProgress(h, ws = weekStartStr()) {
+  const today = localDateStr();
+  const target = h.weeklyTarget || 1;
+  let done = 0;
+  for (let i = 0; i < 7; i++) {
+    const day = addDaysStr(ws, i);
+    if (day > today) break;
+    if ((h.log?.[day]?.v || 0) >= (h.target || 1)) done++;
+  }
+  return { done, target, pct: Math.min(100, Math.round((done / target) * 100)), met: done >= target };
+}
+
+// Consecutive prior weeks that met their target (this week still in progress
+// never breaks it).
+export function weeklyStreak(h) {
+  let streak = 0;
+  for (let w = 0; w < 520; w++) {
+    const ws = addDaysStr(weekStartStr(), -7 * w);
+    if (ws < weekStartStr(h.createdAt || localDateStr())) break;
+    if (weekProgress(h, ws).met) streak++;
+    else if (w === 0) continue;
+    else break;
+  }
+  return streak;
+}
+
+export const isWellness = (h) => h.pillar === "wellness";
+export const isNonNeg = (h) => h.pillar === "nonneg";
 
 // A perfect day: every active habit scheduled that day was completed.
 export function perfectDays(habits, daysBack = 365) {
