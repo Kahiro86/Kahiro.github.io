@@ -7,7 +7,7 @@ const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
 
 export function OverviewTab({
   fmtKES, netWorthKES, totalLiquid, totalInvested, monthlyPassive,
-  efBal, savBal, opBal, personalDebt, setPersonalDebt,
+  efBal, savBal, opBal, personalDebt, setPersonalDebt, debtTotal = 0, debtCount = 0, onManageDebt,
   tMetrics, tradingWithdrawals, setTradingWithdrawals, profitSplit, setProfitSplit,
 }) {
   return (
@@ -133,16 +133,20 @@ export function OverviewTab({
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <Card style={{ padding: "20px", borderColor: RE + "33" }}>
-            <SH title="Liabilities" sub="Total debt position" />
+            <SH title="Liabilities" sub="Total debt position" action={
+              debtCount > 0 ? <button onClick={onManageDebt} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: CY, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" }}>Manage<ArrowUpRight size={12} /></button> : null
+            } />
             <div style={{ padding: "12px", background: `${RE}0D`, border: `1px solid ${RE}22`, borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 13, color: T1, fontWeight: 600 }}>Personal Loan</div>
-                <div style={{ fontSize: 10.5, color: T3 }}>Unsecured personal debt</div>
+                <div style={{ fontSize: 13, color: T1, fontWeight: 600 }}>{debtCount > 0 ? `${debtCount} debt${debtCount > 1 ? "s" : ""}` : "Personal debt"}</div>
+                <div style={{ fontSize: 10.5, color: T3 }}>{debtCount > 0 ? "Tracked with repayments & payoff dates" : "Add in the Debt tab for full tracking"}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: RE, fontFamily: "monospace" }}>KES {(+personalDebt || 0).toLocaleString()}</div>
-                <input type="text" inputMode="numeric" value={personalDebt ? (+personalDebt).toLocaleString("en-US") : ""} onChange={(e) => setPersonalDebt(+e.target.value.replace(/[^0-9]/g, "") || 0)} placeholder="0"
-                  style={{ width: 100, background: "transparent", border: `1px solid ${BD}`, borderRadius: 5, padding: "2px 6px", fontSize: 10, color: T3, outline: "none", fontFamily: "monospace", textAlign: "right", marginTop: 3 }} />
+                <div style={{ fontSize: 18, fontWeight: 800, color: RE, fontFamily: "monospace" }}>{fmtKES(debtCount > 0 ? debtTotal : (+personalDebt || 0))}</div>
+                {debtCount === 0 && (
+                  <input type="text" inputMode="numeric" value={personalDebt ? (+personalDebt).toLocaleString("en-US") : ""} onChange={(e) => setPersonalDebt(+e.target.value.replace(/[^0-9]/g, "") || 0)} placeholder="0"
+                    style={{ width: 100, background: "transparent", border: `1px solid ${BD}`, borderRadius: 5, padding: "2px 6px", fontSize: 10, color: T3, outline: "none", fontFamily: "monospace", textAlign: "right", marginTop: 3 }} />
+                )}
               </div>
             </div>
           </Card>

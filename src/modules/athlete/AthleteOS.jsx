@@ -124,6 +124,11 @@ export function AthleteOS() {
           <span style={{ fontSize: 12, fontWeight: 700, color: AM, fontFamily: "monospace" }}>{streak}</span>
           <span style={{ fontSize: 10, color: T3 }}>day streak</span>
         </div>
+        {workouts[0] && (
+          <button onClick={() => duplicateWorkout(workouts[0])} title={`Repeat: ${workouts[0].name}`} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 13px", background: GL, border: `1px solid ${CY}44`, borderRadius: 10, color: CY, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+            <Copy size={13} />Repeat last
+          </button>
+        )}
         <button onClick={() => startLog()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 15px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
           <Plus size={14} />Log Workout
         </button>

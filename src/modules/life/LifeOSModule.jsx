@@ -13,11 +13,14 @@ import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { ActivityHeatmap } from "../../shared/charts.jsx";
 import { REFLECTION_PROMPTS } from "../../shared/kaizen.js";
 import {
-  newHabit, newRoutine, isScheduled, isDone, isSkipped, valueOn, tapHabit, toggleSkip,
+  newHabit, newRoutine, isScheduled, isDone, isSkipped, valueOn, tapHabit, toggleSkip, setHabitValue,
   currentStreak, longestStreak, rangeStats, totalCompletions, perfectDays,
   xpOf, levelOf, xpForLevel, badges, completeRoutine, routineProgress,
+  isWeekly, weekProgress, weeklyStreak, isWellness, isNonNeg, makeNonNeg, makeWellness,
 } from "../../shared/habitEngine.js";
 import { HabitEditor } from "./HabitEditor.jsx";
+import { WellnessPanel } from "./WellnessPanel.jsx";
+import { NonNegotiables } from "./NonNegotiables.jsx";
 
 const today = () => localDateStr();
 
@@ -47,11 +50,17 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
   const toast = useToast();
 
   const active = habits.filter((h) => !h.archived);
-  const categories = [...new Set(active.map((h) => h.category))];
   const ds = today();
 
-  // Today's schedule
+  // Pillar groupings — surfaced in dedicated sections, not the category list.
+  const wellnessHabits = active.filter(isWellness);
+  const nonNegHabits = active.filter((h) => isNonNeg(h) && !isWeekly(h));
+  const weeklyHabits = active.filter(isWeekly);
+
+  // Today's schedule (all daily habits feed the ring; pillars render separately)
   const scheduledToday = active.filter((h) => isScheduled(h, ds));
+  const catHabitsToday = scheduledToday.filter((h) => !isWellness(h) && !isNonNeg(h));
+  const categories = [...new Set(catHabitsToday.map((h) => h.category))];
   const doneToday = scheduledToday.filter((h) => isDone(h, ds));
   const skippedToday = scheduledToday.filter((h) => isSkipped(h, ds) && !isDone(h, ds));
   const pctToday = scheduledToday.length ? Math.round((doneToday.length / scheduledToday.length) * 100) : 0;
@@ -74,6 +83,14 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
     }
   };
   const skip = (h) => setHabits((prev) => toggleSkip(prev, h.id));
+  const setValue = (id, v) => setHabits((prev) => setHabitValue(prev, id, v));
+  const tapId = (id) => setHabits((prev) => tapHabit(prev, id));
+  const addStarterPack = (kind) => {
+    const has = habits.some((h) => (kind === "nonneg" ? isNonNeg(h) : isWellness(h)) && !h.archived);
+    if (has) { toast(`${kind === "nonneg" ? "Non-Negotiables" : "Wellness"} already set up`, { tone: "info" }); return; }
+    setHabits((prev) => [...prev, ...(kind === "nonneg" ? makeNonNeg() : makeWellness())]);
+    toast(`${kind === "nonneg" ? "Non-Negotiables" : "Wellness trackers"} added 🌿`, { tone: "success" });
+  };
   const saveHabit = (h) => {
     setHabits((prev) => (prev.some((x) => x.id === h.id) ? prev.map((x) => (x.id === h.id ? { ...x, ...h } : x)) : [...prev, h]));
     setEditing(null);
@@ -227,6 +244,42 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
               </div>
             )}
 
+            {nonNegHabits.length > 0 && <NonNegotiables habits={nonNegHabits} onTap={tapId} />}
+            {wellnessHabits.length > 0 && <WellnessPanel habits={wellnessHabits} onSetValue={setValue} />}
+
+            {weeklyHabits.length > 0 && (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 10, color: T3, letterSpacing: 2, textTransform: "uppercase" }}>Weekly · resets Sunday</span>
+                  <span style={{ fontSize: 10.5, color: T3 }}>{weeklyHabits.filter((h) => weekProgress(h).met).length}/{weeklyHabits.length} met</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
+                  {weeklyHabits.map((h) => {
+                    const wp = weekProgress(h);
+                    const doneToday = isDone(h, ds);
+                    const wstreak = weeklyStreak(h);
+                    return (
+                      <Card key={h.id} style={{ padding: "13px 15px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 9 }}>
+                          <button onClick={() => tapId(h.id)} title={doneToday ? "Logged today — tap to undo" : "Log for today"} style={{ width: 32, height: 32, borderRadius: 9, background: doneToday ? `${h.color}33` : GL, border: `2px solid ${doneToday ? h.color : BD2}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer", flexShrink: 0 }}>
+                            {doneToday ? <Check size={14} color={h.color} /> : h.icon}
+                          </button>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 12.5, color: T1, fontWeight: 600 }}>{h.name}</div>
+                            <div style={{ fontSize: 10, color: T3 }}>{h.category}{wstreak > 0 ? ` · 🔥 ${wstreak}w` : ""}</div>
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: wp.met ? GR : h.color, fontFamily: "monospace" }}>{wp.done}/{wp.target}</span>
+                        </div>
+                        <div style={{ height: 5, background: BD, borderRadius: 3 }}>
+                          <div style={{ height: "100%", width: `${wp.pct}%`, background: wp.met ? GR : `linear-gradient(90deg,${h.color}77,${h.color})`, borderRadius: 3, transition: "width 0.4s" }} />
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {scheduledToday.length === 0 ? (
               <Card style={{ padding: "38px", textAlign: "center" }}>
                 <div style={{ fontSize: 28, marginBottom: 10 }}>🌱</div>
@@ -235,7 +288,7 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
               </Card>
             ) : (
               categories.map((cat) => {
-                const catHabits = scheduledToday.filter((h) => h.category === cat);
+                const catHabits = catHabitsToday.filter((h) => h.category === cat);
                 if (!catHabits.length) return null;
                 const catDone = catHabits.filter((h) => isDone(h, ds)).length;
                 return (
@@ -266,6 +319,17 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
             </div>
 
             {editing && <HabitEditor habit={editing} categories={categories} onSave={saveHabit} onCancel={() => setEditing(null)} />}
+
+            {!editing && (nonNegHabits.length === 0 || wellnessHabits.length === 0) && (
+              <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+                {nonNegHabits.length === 0 && (
+                  <button onClick={() => addStarterPack("nonneg")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${RE}12`, border: `1px dashed ${RE}44`, borderRadius: 10, color: RE, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add Non-Negotiables pack</button>
+                )}
+                {wellnessHabits.length === 0 && (
+                  <button onClick={() => addStarterPack("wellness")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${CY}12`, border: `1px dashed ${CY}44`, borderRadius: 10, color: CY, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add Wellness trackers</button>
+                )}
+              </div>
+            )}
 
             {[...active, ...habits.filter((h) => h.archived)].map((h) => {
               const s30 = rangeStats(h, 30);

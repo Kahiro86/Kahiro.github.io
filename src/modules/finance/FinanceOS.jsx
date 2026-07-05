@@ -1,8 +1,10 @@
-import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, Target, Activity, FileText } from "lucide-react";
+import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, TrendingDown, Target, Activity, FileText } from "lucide-react";
 import { useState } from "react";
 import { B1, BD, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { DEFAULT_FINANCE_STATE } from "./constants.js";
+import { totalDebtRemaining } from "./debt.js";
+import { DebtTab } from "./DebtTab.jsx";
 import { calcPAYE, calcNSSF } from "./paye.js";
 import { incomeAnalytics } from "./income.js";
 import { financeHealth } from "./financeHealth.js";
@@ -24,6 +26,7 @@ const FIN_TABS = [
   { id: "reports",   l: "Reports",     i: FileText      },
   { id: "accounts",  l: "Accounts",    i: Shield        },
   { id: "budget",    l: "Budget",      i: BarChart2     },
+  { id: "debt",      l: "Debt",        i: TrendingDown  },
   { id: "emergency", l: "Emergency",   i: AlertTriangle },
   { id: "portfolio", l: "Portfolio",   i: TrendingUp    },
   { id: "goals",     l: "Goals",       i: Target        },
@@ -35,7 +38,7 @@ export function FinanceOS() {
   const {
     currency, xRate, income = [], gross, opBal, savBal, efBal, efMMF, personalDebt,
     mmfs, tbills, nseStocks, saccoBal, saccoYield, reitUnits, reitNAV, budgets,
-    goals = [], tradingWithdrawals = 0, profitSplit = 80,
+    goals = [], tradingWithdrawals = 0, profitSplit = 80, debts = [],
   } = state;
 
   const patch = (obj) => setState((s) => ({ ...s, ...obj }));
@@ -57,6 +60,7 @@ export function FinanceOS() {
   const setBudgets = (updater) => setState((s) => ({ ...s, budgets: typeof updater === "function" ? updater(s.budgets) : updater }));
   const setIncome = (updater) => setState((s) => ({ ...s, income: typeof updater === "function" ? updater(s.income || []) : updater }));
   const setGoals = (updater) => setState((s) => ({ ...s, goals: typeof updater === "function" ? updater(s.goals || []) : updater }));
+  const setDebts = (updater) => setState((s) => ({ ...s, debts: typeof updater === "function" ? updater(s.debts || []) : updater }));
   const setTradingWithdrawals = (v) => patch({ tradingWithdrawals: v });
   const setProfitSplit = (v) => patch({ profitSplit: v });
 
@@ -83,8 +87,10 @@ export function FinanceOS() {
   const totalInvested = totalMMF + totalTbill + totalNSE + (+saccoBal || 0) + totalReit;
   const totalLiquid = (+opBal || 0) + (+savBal || 0) + (+efBal || 0);
   const tradingKES = tradingBalanceUSD * (+xRate || 130);
+  // Debt: sum of interactive debt balances, falling back to the legacy figure.
+  const debtTotal = totalDebtRemaining(debts, personalDebt);
   // FIREWALL: the funded trading account is NOT part of personal net worth.
-  const netWorthKES = totalLiquid + totalInvested - (+personalDebt || 0);
+  const netWorthKES = totalLiquid + totalInvested - debtTotal;
   // Trading account tracked independently, in its own USD environment.
   const tMetrics = tradingMetrics(trades, bal, tradingWithdrawals, profitSplit);
 
@@ -154,7 +160,7 @@ export function FinanceOS() {
         {finTab === "overview" && (
           <OverviewTab fmtKES={fmtKES} netWorthKES={netWorthKES} totalLiquid={totalLiquid} totalInvested={totalInvested}
             monthlyPassive={monthlyPassive} efBal={efBal} savBal={savBal} opBal={opBal}
-            personalDebt={personalDebt} setPersonalDebt={setPersonalDebt}
+            personalDebt={personalDebt} setPersonalDebt={setPersonalDebt} debtTotal={debtTotal} debtCount={debts.length} onManageDebt={() => setFinTab("debt")}
             tMetrics={tMetrics} xRate={xRate} tradingWithdrawals={tradingWithdrawals} setTradingWithdrawals={setTradingWithdrawals}
             profitSplit={profitSplit} setProfitSplit={setProfitSplit} />
         )}
@@ -176,6 +182,9 @@ export function FinanceOS() {
         )}
         {finTab === "budget" && (
           <BudgetTab netPay={netPay} budgets={budgets} setBudgets={setBudgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent} />
+        )}
+        {finTab === "debt" && (
+          <DebtTab debts={debts} setDebts={setDebts} fmtKES={fmtKES} legacyDebt={+personalDebt || 0} />
         )}
         {finTab === "emergency" && (
           <EmergencyFundTab efBal={efBal} setEfBal={setEfBal} efTarget3={efTarget3} efTarget6={efTarget6} efMMF={efMMF} setEfMMF={setEfMMF}
