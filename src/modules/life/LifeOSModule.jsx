@@ -158,7 +158,7 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: B1, borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, overflowX: "auto" }}>
+      <div style={{ background: "rgba(9,13,24,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, overflowX: "auto" }}>
         <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
           {TABS.map(({ id, l, i: Icon }) => (
             <button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === id ? `linear-gradient(135deg,${GR}22,${CY}22)` : "transparent", color: tab === id ? GR : T2, fontSize: 12, fontWeight: tab === id ? 600 : 400, fontFamily: "inherit", whiteSpace: "nowrap" }}>

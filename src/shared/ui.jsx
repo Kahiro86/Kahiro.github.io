@@ -1,8 +1,19 @@
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { B1, B2, GL, BD, T1, T2, T3, RE, GR, CY, PU } from "./designTokens.js";
 
-export const Card = ({ children, style = {}, ...rest }) => (
-  <div {...rest} style={{ background: B1, border: `1px solid ${BD}`, borderRadius: 16, ...style }}>
+// Frosted-glass surface: translucent so the module's ambient background shows
+// through the blur, with a thin illuminated top edge and soft floating shadow.
+// Callers can still override background/borderColor via `style`.
+export const Card = ({ children, style = {}, className = "", ...rest }) => (
+  <div {...rest} className={`glass-card ${className}`.trim()} style={{
+    background: "rgba(17,23,39,0.55)",
+    backdropFilter: "blur(20px) saturate(135%)",
+    WebkitBackdropFilter: "blur(20px) saturate(135%)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 16,
+    boxShadow: "0 10px 34px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.055)",
+    ...style,
+  }}>
     {children}
   </div>
 );
