@@ -37,7 +37,7 @@ function NudgeBell() {
   );
 }
 
-export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, streak = 0 }) {
+export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, streak = 0, xp = 0, level = 1 }) {
   const label = NAV.find((n) => n.id === module)?.label || "Command Center";
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
@@ -80,6 +80,13 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, streak = 
         <span style={{ fontSize: 10, color: kz.color, fontWeight: 600, letterSpacing: 0.5 }}>{kz.label.split("(")[0].trim()}</span>
         <span style={{ fontSize: 10, color: T3 }}>{eatTime} EAT</span>
       </div>
+
+      {xp > 0 && (
+        <div title={`${xp.toLocaleString()} XP — earned from real habit completions`} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 11px", background: `${AM}11`, borderRadius: 10, border: `1px solid ${AM}22` }}>
+          <span style={{ fontSize: 10.5, fontWeight: 800, color: AM, letterSpacing: 0.5 }}>LVL {level}</span>
+          <span style={{ fontSize: 10, color: T3, fontFamily: "monospace" }}>{xp.toLocaleString()} XP</span>
+        </div>
+      )}
 
       {streak > 0 && (
         <div title="Longest active habit streak" style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: GL, borderRadius: 10, border: `1px solid ${BD}` }}>

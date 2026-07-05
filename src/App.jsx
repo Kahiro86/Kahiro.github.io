@@ -3,10 +3,11 @@ import { B0, T1 } from "./shared/designTokens.js";
 import { storage } from "./shared/storage.js";
 import { useStorageState } from "./shared/useStorageState.js";
 import { useIsMobile } from "./shared/useIsMobile.js";
-import { materializeHabits, toggleHabitToday } from "./shared/habits.js";
+import { migrateHabits, toLegacy, tapHabit, xpOf, levelOf } from "./shared/habitEngine.js";
 import { localDateStr } from "./shared/dates.js";
 import { ToastProvider } from "./shared/toast.jsx";
 import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
+import { QuickLog } from "./shared/QuickLog.jsx";
 import { getStats } from "./modules/trading/helpers.js";
 import { financeSummary } from "./modules/finance/summary.js";
 import { HABITS_DEF } from "./modules/dashboard/domains.js";
@@ -30,12 +31,26 @@ export default function App() {
   const [aiOpen, setAiOpen] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 820 : true));
   const [showSettings, setShowSettings] = useState(false);
 
-  // Habits: history-backed. Completion + streaks derive from dated history,
-  // so checkmarks reset at local midnight and streaks are real.
+  // Habits: engine v2 — per-date logs with schedules, targets and skips.
+  // Completion + streaks derive from the log, so everything resets at local
+  // midnight and every streak is earned. Legacy v1 data migrates in place.
   const [rawHabits, setRawHabits] = useStorageState("habits", HABITS_DEF);
-  const habits = useMemo(() => materializeHabits(rawHabits), [rawHabits]);
-  const toggleHabit = useCallback((name) => setRawHabits((prev) => toggleHabitToday(prev, name)), [setRawHabits]);
+  const habitsV2 = useMemo(() => migrateHabits(rawHabits), [rawHabits]);
+  const setHabitsV2 = useCallback(
+    (updater) => setRawHabits((prev) => (typeof updater === "function" ? updater(migrateHabits(prev)) : updater)),
+    [setRawHabits]
+  );
+  // Legacy shape ({name, icon, done, streak}) for Dashboard / AI / kaizen.
+  const habits = useMemo(() => toLegacy(habitsV2), [habitsV2]);
+  const toggleHabit = useCallback((name) => {
+    setHabitsV2((prev) => {
+      const h = prev.find((x) => x.name === name && !x.archived);
+      return h ? tapHabit(prev, h.id) : prev;
+    });
+  }, [setHabitsV2]);
   const topStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
+  const xp = useMemo(() => xpOf(habitsV2), [habitsV2]);
+  const level = levelOf(xp);
 
   // Live cross-module context for the AI panel — real numbers only.
   const [aiCtx, setAiCtx] = useState(null);
@@ -66,7 +81,7 @@ export default function App() {
       case "trading": return <TradingModule />;
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
-      case "life": return <LifeOSModule habits={habits} onToggleHabit={toggleHabit} onNavigate={setModule} />;
+      case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} onNavigate={setModule} />;
       case "relations": return <PlaceholderModule title="Relationship System" sub="Quality Time · Shared Goals · Connection" features={[{ name: "Date Planner", icon: "💕", desc: "Schedule and plan meaningful experiences." }, { name: "Important Dates", icon: "📅", desc: "Never miss anniversaries or milestones." }, { name: "Relationship Journal", icon: "📝", desc: "Log shared moments and reflections." }, { name: "Shared Goals", icon: "🎯", desc: "Set and track goals together." }, { name: "Conversation Prompts", icon: "💬", desc: "Deep questions to strengthen connection." }, { name: "AI Coach", icon: "🤖", desc: "Relationship intelligence and guidance." }]} />;
       case "knowledge": return <PlaceholderModule title="Knowledge Base" sub="Second Brain · Reading · Ideas · Learning" features={[{ name: "Note Capture", icon: "📄", desc: "Capture and organise ideas and insights." }, { name: "Reading Tracker", icon: "📚", desc: "Track books, articles, and materials." }, { name: "Idea Vault", icon: "💡", desc: "Store and develop your best ideas." }, { name: "Book Summaries", icon: "🗂️", desc: "Synthesise key lessons from reading." }, { name: "Learning Tracker", icon: "🎓", desc: "Monitor skills and knowledge acquisition." }, { name: "AI Assistant", icon: "🤖", desc: "Search and expand your knowledge base." }]} />;
       case "productivity": return <PlaceholderModule title="Productivity OS" sub="Tasks · Projects · Deep Work · Focus" features={[{ name: "Task Manager", icon: "✅", desc: "Capture, prioritise, and execute tasks." }, { name: "Deep Work Timer", icon: "⏱️", desc: "Structured focus sessions with Pomodoro." }, { name: "Project Tracker", icon: "📊", desc: "Manage multi-step projects end-to-end." }, { name: "Daily Priorities", icon: "🎯", desc: "Select your 1–3 MITs each morning." }, { name: "Focus Mode", icon: "🔇", desc: "Distraction-free peak performance mode." }, { name: "Habit Streaks", icon: "🔥", desc: "Visual streak tracking for daily behaviours." }]} />;
@@ -99,7 +114,7 @@ export default function App() {
       <ToastProvider>
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: B0, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} streak={topStreak} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} streak={topStreak} xp={xp} level={level} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "fadeIn 0.25s ease" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
@@ -123,6 +138,7 @@ export default function App() {
             <AIPanel mobile onClose={() => setAiOpen(false)} ctx={aiCtx} habits={habits} />
           </div>
         )}
+        <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || aiOpen || mobileNavOpen} offsetRight={16} />
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       </div>
       </ToastProvider>
@@ -137,13 +153,14 @@ export default function App() {
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} streak={topStreak} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} streak={topStreak} xp={xp} level={level} />
         <div key={module} style={{ flex: 1, overflowY: module === "trading" ? "hidden" : "auto", overflow: module === "trading" ? "hidden" : "auto", animation: "fadeIn 0.25s ease" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
       </div>
 
       {aiOpen && <AIPanel onClose={() => setAiOpen(false)} ctx={aiCtx} habits={habits} />}
+      <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life"} offsetRight={aiOpen ? 364 : 24} />
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
     </ToastProvider>
