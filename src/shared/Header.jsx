@@ -49,7 +49,7 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, streak = 
 
   if (isMobile) {
     return (
-      <div style={{ height: 56, background: "rgba(9,13,24,0.6)", backdropFilter: "blur(22px) saturate(130%)", WebkitBackdropFilter: "blur(22px) saturate(130%)", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", padding: "0 12px", gap: 10, flexShrink: 0 }}>
+      <div style={{ height: 56, background: "rgba(9,13,24,0.6)", backdropFilter: "blur(15px) saturate(125%)", WebkitBackdropFilter: "blur(15px) saturate(125%)", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", padding: "0 12px", gap: 10, flexShrink: 0 }}>
         <button onClick={onMenu} aria-label="Open menu" style={{ width: 36, height: 36, borderRadius: 10, background: GL, border: `1px solid ${BD}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Menu size={18} color={T2} />
         </button>
@@ -69,7 +69,7 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, streak = 
   }
 
   return (
-    <div style={{ height: 60, background: "rgba(9,13,24,0.6)", backdropFilter: "blur(22px) saturate(130%)", WebkitBackdropFilter: "blur(22px) saturate(130%)", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", padding: "0 22px", gap: 16, flexShrink: 0 }}>
+    <div style={{ height: 60, background: "rgba(9,13,24,0.6)", backdropFilter: "blur(15px) saturate(125%)", WebkitBackdropFilter: "blur(15px) saturate(125%)", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", padding: "0 22px", gap: 16, flexShrink: 0 }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: T1 }}>{label}</div>
         <div style={{ fontSize: 10, color: T3 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>

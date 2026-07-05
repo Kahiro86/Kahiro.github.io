@@ -94,9 +94,11 @@ export const toggleSkip = (habits, id, ds = localDateStr()) =>
   patchLog(habits, id, ds, (e) => (e.s ? null : { s: true }));
 
 // ── Streaks ─────────────────────────────────────────────────────────
+// Bounded to ~2 years: far beyond any real streak, but caps the worst case so
+// the many places that call this (dashboard, header, insights) stay cheap.
 export function currentStreak(h) {
   let streak = 0;
-  for (let i = 0; i < 3650; i++) {
+  for (let i = 0; i < 800; i++) {
     const ds = daysAgoStr(i);
     if (ds < (h.createdAt || "0")) break;
     if (!isScheduled(h, ds)) continue;

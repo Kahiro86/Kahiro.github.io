@@ -135,7 +135,7 @@ export default function App() {
       <ToastProvider>
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
-        <AmbientBackground module={module} />
+        <AmbientBackground module={module} animate={!isMobile} />
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} streak={topStreak} xp={xp} level={level} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
@@ -171,7 +171,7 @@ export default function App() {
     <ToastProvider>
     <div style={{ display: "flex", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
       {globalStyle}
-      <AmbientBackground module={module} />
+      <AmbientBackground module={module} animate={!isMobile} />
 
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
