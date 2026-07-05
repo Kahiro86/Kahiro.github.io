@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Cpu, CheckCircle, Check, Flame, Activity as ActivityIcon, TrendingUp, DollarSign, Dumbbell, Target, ChevronRight } from "lucide-react";
 import { BD, T1, T2, T3, GL, GL2, CY, PU, GR, RE, AM, OR } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
@@ -32,20 +32,21 @@ export function Dashboard({ onNavigate, habits, onToggleHabit }) {
     return () => clearInterval(t);
   }, []);
 
-  // ── TRADING (own environment) ──────────────────────────────────────
-  const tStats = getStats(trades);
-  const tMetrics = tradingMetrics(trades, bal, finance.tradingWithdrawals || 0, finance.profitSplit || 80);
-  const openTrades = trades.filter((t) => t.status === "OPEN" && !t.archived).length;
+  // ── TRADING (own environment) — memoized so the 30s clock tick and habit
+  // toggles never re-run these O(n) reductions ─────────────────────────
+  const tStats = useMemo(() => getStats(trades), [trades]);
+  const tMetrics = useMemo(() => tradingMetrics(trades, bal, finance.tradingWithdrawals || 0, finance.profitSplit || 80), [trades, bal, finance.tradingWithdrawals, finance.profitSplit]);
+  const openTrades = useMemo(() => trades.filter((t) => t.status === "OPEN" && !t.archived).length, [trades]);
 
   // ── FINANCE ────────────────────────────────────────────────────────
-  const fin = financeSummary(finance);
+  const fin = useMemo(() => financeSummary(finance), [finance]);
   const fmtKES = (n) => (finance.currency === "USD" ? usd((+n || 0) / fin.xRate) : `KES ${Math.round(+n || 0).toLocaleString()}`);
-  const incomeStats = incomeAnalytics(finance.income || []);
-  const health = financeHealth({
+  const incomeStats = useMemo(() => incomeAnalytics(finance.income || []), [finance.income]);
+  const health = useMemo(() => financeHealth({
     incomeStats, totalBudgeted: fin.totalBudgeted, totalSpent: fin.totalSpent,
     efBal: +finance.efBal || 0, savBal: +finance.savBal || 0, totalInvested: fin.totalInvested,
     personalDebt: fin.personalDebt, tradingStats: tStats,
-  });
+  }), [incomeStats, fin, finance.efBal, finance.savBal, tStats]);
   const goals = (finance.goals || []).filter((g) => !g.archived);
   const goalAgg = goals.length
     ? Math.round(goals.reduce((s, g) => s + (g.target > 0 ? Math.min(1, (+g.current || 0) / g.target) : 0), 0) / goals.length * 100)
@@ -85,10 +86,10 @@ export function Dashboard({ onNavigate, habits, onToggleHabit }) {
   const undoneHabits = habits.filter((h) => !h.done);
 
   // ── DOMAINS (real) ─────────────────────────────────────────────────
-  const domains = computeDomains({
+  const domains = useMemo(() => computeDomains({
     tradingWr: tStats.wr, hasTrades: tStats.total > 0, sessionsWk,
     financeScore: health.overall, habitsPct, streak,
-  });
+  }), [tStats.wr, tStats.total, sessionsWk, health.overall, habitsPct, streak]);
   const domainPie = domains.map((d) => ({ name: d.label, value: d.score, color: d.color }));
   const lifeScore = Math.round(domains.reduce((s, d) => s + d.score, 0) / domains.length);
 
