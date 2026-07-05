@@ -10,7 +10,7 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
     ? { position: "fixed", top: 0, left: 0, zIndex: 46, boxShadow: "0 0 44px rgba(0,0,0,0.6)" }
     : {};
   return (
-    <div style={{ width: isCollapsed ? 64 : 226, height: "100vh", background: B1, borderRight: `1px solid ${BD}`, display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.28s cubic-bezier(0.4,0,0.2,1)", overflow: "hidden", ...overlayStyle }}>
+    <div style={{ width: isCollapsed ? 64 : 226, height: "100vh", background: "rgba(9,13,24,0.62)", backdropFilter: "blur(22px) saturate(130%)", WebkitBackdropFilter: "blur(22px) saturate(130%)", borderRight: `1px solid ${BD}`, display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.28s cubic-bezier(0.4,0,0.2,1)", overflow: "hidden", ...overlayStyle }}>
       <div style={{ padding: "16px 13px", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", gap: 10, height: 60 }}>
         <div style={{ width: 31, height: 31, borderRadius: 8, background: `linear-gradient(135deg,${CY},${PU})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 0 18px ${CY}44` }}>
           <Cpu size={15} color="#000" />

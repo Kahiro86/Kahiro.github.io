@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { B0, T1 } from "./shared/designTokens.js";
+import { T1 } from "./shared/designTokens.js";
 import { storage } from "./shared/storage.js";
 import { useStorageState } from "./shared/useStorageState.js";
 import { useIsMobile } from "./shared/useIsMobile.js";
@@ -8,6 +8,7 @@ import { localDateStr } from "./shared/dates.js";
 import { ToastProvider } from "./shared/toast.jsx";
 import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
 import { QuickLog } from "./shared/QuickLog.jsx";
+import { AmbientBackground } from "./shared/AmbientBackground.jsx";
 import { getStats } from "./modules/trading/helpers.js";
 import { financeSummary } from "./modules/finance/summary.js";
 import { HABITS_DEF } from "./modules/dashboard/domains.js";
@@ -94,28 +95,49 @@ export default function App() {
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      html, body { max-width: 100%; overflow-x: hidden; }
-      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      html, body { max-width: 100%; overflow-x: hidden; background: #05060d; }
+      body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+      /* tabular figures everywhere numbers matter — dashboards & finance line up */
+      [style*="monospace"], input { font-variant-numeric: tabular-nums; }
+      ::selection { background: rgba(143,211,255,0.25); }
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 2px; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
       input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
       input::placeholder, textarea::placeholder { color: rgba(136,151,179,0.45); }
-      input:focus, textarea:focus, select:focus { border-color: rgba(0,212,255,0.4) !important; box-shadow: 0 0 0 3px rgba(0,212,255,0.07); }
-      button { font-family: inherit; }
+      input, textarea, select { transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease; }
+      input:focus, textarea:focus, select:focus { border-color: rgba(143,211,255,0.45) !important; box-shadow: 0 0 0 3px rgba(143,211,255,0.08); }
+      button { font-family: inherit; transition: transform 0.14s cubic-bezier(0.34,1.4,0.64,1), background 0.22s ease, border-color 0.22s ease, color 0.22s ease, box-shadow 0.22s ease; }
       button:active { transform: scale(0.97); }
+      /* frosted cards float and gently lift toward the pointer */
+      .glass-card { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.3s ease; will-change: transform; }
+      .glass-card:hover { transform: translateY(-2px); box-shadow: 0 16px 44px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.08); }
+      @media (hover: none) { .glass-card:hover { transform: none; } }
       @keyframes dp { 0%,100% { opacity: 0.3; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.2); } }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes moduleIn { from { opacity: 0; transform: translateY(14px) scale(0.995); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
       @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+      @keyframes ambientDrift { 0%,100% { transform: translate(0,0); } 50% { transform: translate(6vw,4vh); } }
+      @keyframes ambientDrift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-5vw,-3vh); } }
+      @keyframes ambientScan { 0% { transform: translateY(-40%); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translateY(280%); opacity: 0; } }
+      @keyframes ambientRays { 0% { opacity: 0.35; } 100% { opacity: 0.62; } }
+      @keyframes ambientSpin { to { transform: rotate(360deg); } }
+      @keyframes ambientSpinRev { to { transform: rotate(-360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+      }
     `}</style>
   );
 
   if (isMobile) {
     return (
       <ToastProvider>
-      <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: B0, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
+      <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
+        <AmbientBackground module={module} />
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} streak={topStreak} xp={xp} level={level} />
-        <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "fadeIn 0.25s ease" }}>
+        <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
 
@@ -147,14 +169,15 @@ export default function App() {
 
   return (
     <ToastProvider>
-    <div style={{ display: "flex", height: "100vh", background: B0, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
       {globalStyle}
+      <AmbientBackground module={module} />
 
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} streak={topStreak} xp={xp} level={level} />
-        <div key={module} style={{ flex: 1, overflowY: module === "trading" ? "hidden" : "auto", overflow: module === "trading" ? "hidden" : "auto", animation: "fadeIn 0.25s ease" }}>
+        <div key={module} style={{ flex: 1, overflowY: module === "trading" ? "hidden" : "auto", overflow: module === "trading" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
       </div>
