@@ -2,11 +2,16 @@
 // deliberately NOT part of any of these totals — trading is its own financial
 // environment (see tradingMetrics) and never enters personal net worth.
 export function financeSummary(state) {
+  const s0 = state && typeof state === "object" ? state : {};
   const {
     opBal = 0, savBal = 0, efBal = 0, personalDebt = 0,
-    mmfs = [], tbills = [], nseStocks = [], saccoBal = 0, saccoYield = 0,
-    reitUnits = 0, reitNAV = 0, budgets = [], income = [], xRate = 130,
-  } = state || {};
+    saccoBal = 0, saccoYield = 0, reitUnits = 0, reitNAV = 0, xRate = 130,
+  } = s0;
+  // Array fields default to [] even when explicitly stored as null (a corrupt
+  // record can carry `mmfs: null`, which a default param would NOT catch).
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  const mmfs = arr(s0.mmfs), tbills = arr(s0.tbills), nseStocks = arr(s0.nseStocks),
+    budgets = arr(s0.budgets), income = arr(s0.income);
 
   const totalMMF = mmfs.reduce((s, m) => s + (+m.balance || 0), 0);
   const totalTbill = tbills.reduce((s, t) => s + (+t.faceValue || 0), 0);

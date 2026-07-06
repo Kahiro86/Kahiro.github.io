@@ -54,9 +54,16 @@ export const makeNonNeg = () => NONNEG_PRESETS.map((p) => newHabit({ ...p, pilla
 export const makeWellness = () => WELLNESS_PRESETS.map((p) => newHabit({ ...p, pillar: "wellness" }));
 
 // ── Migration: v1 habits had { name, icon, history:[dates], done, streak } ──
+// Defensive: silently drops null / non-object / nameless entries so one
+// corrupt record can never crash the whole app.
 export function migrateHabits(raw) {
-  return (raw || []).map((h, i) => {
-    if (h.log !== undefined && h.id) return h; // already v2
+  return (Array.isArray(raw) ? raw : [])
+    .filter((h) => h && typeof h === "object")
+    .map((h, i) => {
+    if (h.log && typeof h.log === "object" && h.id) {
+      // Already v2 — but normalise fields a stale record may be missing.
+      return { ...newHabit(), ...h, log: h.log, days: Array.isArray(h.days) ? h.days : [0, 1, 2, 3, 4, 5, 6] };
+    }
     const log = {};
     if (Array.isArray(h.history)) h.history.forEach((d) => { log[d] = { v: 1 }; });
     else if (h.done) log[localDateStr()] = { v: 1 };
@@ -212,6 +219,7 @@ export function perfectDays(habits, daysBack = 365) {
 
 // ── Gamification: XP earned only from real completions ──────────────
 export function xpOf(habits) {
+  habits = Array.isArray(habits) ? habits : [];
   const completions = habits.reduce((s, h) => s + totalCompletions(h), 0);
   const perfect = perfectDays(habits).length;
   const streakBonus = habits.reduce((s, h) => s + Math.min(currentStreak(h), 100), 0);
@@ -221,6 +229,7 @@ export const levelOf = (xp) => Math.floor(Math.sqrt(xp / 50)) + 1;
 export const xpForLevel = (lvl) => (lvl - 1) * (lvl - 1) * 50;
 
 export function badges(habits) {
+  habits = Array.isArray(habits) ? habits : [];
   const completions = habits.reduce((s, h) => s + totalCompletions(h), 0);
   const bestStreak = habits.reduce((m, h) => Math.max(m, longestStreak(h)), 0);
   const perfect = perfectDays(habits).length;
@@ -239,7 +248,7 @@ export function badges(habits) {
 
 // ── Legacy adapter: Dashboard / AI panel / kaizen read this shape ────
 export const toLegacy = (habits) =>
-  habits.filter((h) => !h.archived && !h.paused).map((h) => ({
+  (Array.isArray(habits) ? habits : []).filter((h) => !h.archived && !h.paused).map((h) => ({
     name: h.name, icon: h.icon,
     done: isDone(h, localDateStr()),
     streak: currentStreak(h),
@@ -251,16 +260,19 @@ export const newRoutine = (patch = {}) => ({
   name: "", icon: "🌅", habitIds: [], ...patch,
 });
 
-export const completeRoutine = (habits, routine, ds = localDateStr()) =>
-  habits.map((h) => {
-    if (!routine.habitIds.includes(h.id) || h.archived) return h;
+export const completeRoutine = (habits, routine, ds = localDateStr()) => {
+  const ids = Array.isArray(routine?.habitIds) ? routine.habitIds : [];
+  return (Array.isArray(habits) ? habits : []).map((h) => {
+    if (!ids.includes(h.id) || h.archived) return h;
     const target = h.target || 1;
     if ((h.log?.[ds]?.v || 0) >= target) return h;
     return { ...h, log: { ...(h.log || {}), [ds]: { v: target } } };
   });
+};
 
 export const routineProgress = (habits, routine, ds = localDateStr()) => {
-  const members = habits.filter((h) => routine.habitIds.includes(h.id) && !h.archived);
+  const ids = Array.isArray(routine?.habitIds) ? routine.habitIds : [];
+  const members = (Array.isArray(habits) ? habits : []).filter((h) => ids.includes(h.id) && !h.archived);
   if (!members.length) return { done: 0, total: 0, pct: 0 };
   const done = members.filter((h) => isDone(h, ds)).length;
   return { done, total: members.length, pct: Math.round((done / members.length) * 100) };

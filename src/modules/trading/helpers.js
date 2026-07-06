@@ -53,7 +53,7 @@ export const calcActualRR = (t) => {
 };
 
 export const getStats = (trades) => {
-  const cl = trades.filter((t) => t.status === "CLOSED" && !t.archived);
+  const cl = (Array.isArray(trades) ? trades : []).filter((t) => t && t.status === "CLOSED" && !t.archived);
   const wins = cl.filter((t) => t.outcome === "WIN" || t.outcome === "PARTIAL");
   const losses = cl.filter((t) => t.outcome === "LOSS");
   const wr = cl.length ? Math.round((wins.length / cl.length) * 100) : 0;
@@ -69,7 +69,7 @@ export const getStats = (trades) => {
 
 // Sum of closed (non-archived) trade P/L on/after a YYYY-MM-DD date string.
 export const periodPnl = (trades, sinceDate) =>
-  trades.filter((t) => t.status === "CLOSED" && !t.archived && t.date && t.date >= sinceDate)
+  (Array.isArray(trades) ? trades : []).filter((t) => t && t.status === "CLOSED" && !t.archived && t.date && t.date >= sinceDate)
     .reduce((s, t) => s + calcPnl(t), 0);
 
 // Trading account as its own financial environment — never mixed into personal
@@ -82,8 +82,8 @@ export const tradingMetrics = (trades, fundedSize = 15000, withdrawals = 0, prof
   const weekStart = localDateStr(ws);
   const monthStart = `${today.slice(0, 7)}-01`;
   const totalProfit = stats.totalPnl;
-  const openRisk = trades
-    .filter((t) => t.status === "OPEN" && !t.archived)
+  const openRisk = (Array.isArray(trades) ? trades : [])
+    .filter((t) => t && t.status === "OPEN" && !t.archived)
     .reduce((s, t) => s + (+t.riskAmount || 0), 0);
   return {
     fundedSize: +fundedSize || 0,
