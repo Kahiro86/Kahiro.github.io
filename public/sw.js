@@ -1,7 +1,7 @@
 // Minimal offline shell: network-first for page loads with cache fallback,
 // so deploys land immediately but the app still opens with no connection.
 // All user data lives in localStorage, untouched by this cache.
-const CACHE = "architect-v1";
+const CACHE = "architect-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
 

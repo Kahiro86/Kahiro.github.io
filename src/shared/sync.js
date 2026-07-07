@@ -1,40 +1,33 @@
-// ── Cloud sync engine ────────────────────────────────────────────────
-// Mirrors every `architect:` record to a Supabase (PostgREST) `kv` table so
-// all devices converge on the same data. Design:
+// ── Cloud sync engine (Supabase) ─────────────────────────────────────
+// Mirrors every `architect:` record to the per-user `kv` table. Design:
 //   · localStorage stays the source of truth for the running app — the UI
 //     never waits on the network and works fully offline.
 //   · Writes mark the key dirty and push (debounced, batched, retried).
-//   · Pulls run on start, on regaining focus/connectivity, and every 60s
-//     while visible. Conflict resolution is last-write-wins per key using
-//     the per-key timestamps kept by useStorageState (readMeta).
-//   · One row per key (primary key = key), so duplicates are impossible.
-//   · A pull never overwrites newer local data; a push never loses newer
-//     remote data (it is re-pulled and wins if genuinely newer).
-// Setup (one-time, free tier is fine): create a Supabase project and run
-// the SQL in SettingsPanel's setup box, then paste the project URL and
-// anon key into Settings → Cloud Sync.
+//   · A realtime postgres_changes subscription applies other devices'
+//     writes within a second or two; pulls on start/focus/online/60s are
+//     the belt-and-braces fallback when the socket is down.
+//   · Conflict resolution is last-write-wins per key using the per-key
+//     timestamps kept by useStorageState. A pull never overwrites newer
+//     local data; newer local data is re-pushed instead.
+//   · One row per (user, key) — duplicates are structurally impossible —
+//     and Row Level Security means a user can only ever read/write their
+//     own rows, even with the anon key public in the page source.
+//   · Sync runs only while signed in; signed out, data stays local.
 import { storage } from "./storage.js";
 import { readMeta, applyExternal, registerSyncNotify } from "./useStorageState.js";
+import { supabase, getSyncConfig, getSession, onAuth } from "./supabase.js";
 
-const CONFIG_KEY = "architect_sync"; // outside "architect:" — never synced/exported
+export { getSyncConfig } from "./supabase.js";
+
 const DIRTY_KEY = "architect_dirty";
 
-export function getSyncConfig() {
-  try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || null; } catch { return null; }
-}
-export function setSyncConfig(cfg) {
-  if (cfg) localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
-  else localStorage.removeItem(CONFIG_KEY);
-  status = cfg ? "idle" : "off";
-  notifyStatus();
-}
-
 // ── Status (subscribable — Settings shows it live) ───────────────────
-let status = "off"; // off | idle | syncing | error | offline
+let status = "off"; // off | auth | idle | syncing | live | error | offline
 let lastError = "";
 let lastSyncAt = null;
+let realtimeUp = false;
 const statusListeners = new Set();
-export const getSyncStatus = () => ({ status, lastError, lastSyncAt });
+export const getSyncStatus = () => ({ status, lastError, lastSyncAt, realtimeUp });
 export function onSyncStatus(fn) { statusListeners.add(fn); return () => statusListeners.delete(fn); }
 function notifyStatus() { statusListeners.forEach((fn) => fn(getSyncStatus())); }
 function setStatus(s, err = "") { status = s; lastError = err; notifyStatus(); }
@@ -48,27 +41,25 @@ function saveDirty(set) {
 }
 function markDirty(key) { const d = getDirty(); d.add(key); saveDirty(d); }
 
-const headers = (cfg) => ({
-  "Content-Type": "application/json",
-  apikey: cfg.anonKey,
-  Authorization: `Bearer ${cfg.anonKey}`,
-});
-const kvUrl = (cfg) => `${cfg.url.replace(/\/+$/, "")}/rest/v1/kv`;
+async function ready() {
+  if (!getSyncConfig()) { setStatus("off"); return null; }
+  const session = await getSession();
+  if (!session) { setStatus("auth"); return null; }
+  if (!navigator.onLine) { setStatus("offline"); return null; }
+  return session;
+}
 
 // ── Push: upsert all dirty keys in one batch ─────────────────────────
 let pushTimer = null;
 export function schedulePush(delay = 1200) {
-  const cfg = getSyncConfig();
-  if (!cfg) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(flush, delay);
 }
 
 export async function flush() {
-  const cfg = getSyncConfig();
+  const session = await ready();
   const dirty = getDirty();
-  if (!cfg || !dirty.size) return;
-  if (!navigator.onLine) { setStatus("offline"); return; } // retried on "online"
+  if (!session || !dirty.size) return;
   setStatus("syncing");
   const meta = readMeta();
   const rows = [];
@@ -76,70 +67,93 @@ export async function flush() {
     try {
       const raw = await storage.get(key);
       if (raw == null) continue;
-      rows.push({ key, value: JSON.parse(raw), updated_at: meta[key] || new Date().toISOString() });
-    } catch { /* unparseable record: leave local, drop from queue */ }
+      rows.push({ user_id: session.user.id, key, value: JSON.parse(raw), updated_at: meta[key] || new Date().toISOString() });
+    } catch { /* unparseable record: keep local, drop from queue */ }
   }
   try {
     if (rows.length) {
-      const res = await fetch(`${kvUrl(cfg)}?on_conflict=key`, {
-        method: "POST",
-        headers: { ...headers(cfg), Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify(rows),
-      });
-      if (!res.ok) throw new Error(`push failed (HTTP ${res.status})`);
+      const { error } = await supabase().from("kv").upsert(rows, { onConflict: "user_id,key" });
+      if (error) throw new Error(error.message);
     }
     saveDirty(new Set());
     lastSyncAt = new Date().toISOString();
-    setStatus("idle");
+    setStatus(realtimeUp ? "live" : "idle");
   } catch (err) {
     setStatus("error", err.message);
     schedulePush(15000); // automatic retry with backoff
   }
 }
 
-// ── Pull: fetch all rows, apply the newer side per key ───────────────
+// ── Pull: fetch all rows (RLS scopes to this user), newer side wins ──
 export async function pull() {
-  const cfg = getSyncConfig();
-  if (!cfg) return;
-  if (!navigator.onLine) { setStatus("offline"); return; }
+  const session = await ready();
+  if (!session) return;
   setStatus("syncing");
   try {
-    const res = await fetch(`${kvUrl(cfg)}?select=key,value,updated_at`, { headers: headers(cfg) });
-    if (!res.ok) throw new Error(`pull failed (HTTP ${res.status})`);
-    const rows = await res.json();
+    const { data: rows, error } = await supabase().from("kv").select("key,value,updated_at");
+    if (error) throw new Error(error.message);
     const meta = readMeta();
     const remoteKeys = new Set();
-    for (const row of Array.isArray(rows) ? rows : []) {
+    for (const row of rows || []) {
       if (!row || typeof row.key !== "string") continue;
       remoteKeys.add(row.key);
-      const localTs = meta[row.key] || "";
-      const remoteTs = row.updated_at || "";
-      if (remoteTs > localTs) {
-        applyExternal(row.key, JSON.stringify(row.value), remoteTs);
-      } else if (localTs > remoteTs) {
-        markDirty(row.key); // local is newer — push it back
-      }
+      applyRow(row, meta);
     }
     // First-connect upload: local records the cloud has never seen.
     for (const key of await storage.list()) {
       if (!remoteKeys.has(key)) markDirty(key);
     }
     lastSyncAt = new Date().toISOString();
-    setStatus("idle");
+    setStatus(realtimeUp ? "live" : "idle");
     if (getDirty().size) schedulePush(400);
   } catch (err) {
     setStatus("error", err.message);
   }
 }
 
-// ── Connection test (used by Settings) ───────────────────────────────
-export async function testSync(cfg) {
-  const res = await fetch(`${kvUrl(cfg)}?select=key&limit=1`, { headers: headers(cfg) });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status}${body ? ` — ${body.slice(0, 120)}` : ""}`);
+function applyRow(row, meta = readMeta()) {
+  const localTs = meta[row.key] || "";
+  const remoteTs = row.updated_at || "";
+  if (remoteTs > localTs) {
+    applyExternal(row.key, JSON.stringify(row.value), remoteTs);
+  } else if (localTs > remoteTs) {
+    markDirty(row.key); // local is newer — push it back
   }
+}
+
+// ── Realtime: other devices' writes land within a second or two ──────
+let channel = null;
+async function startRealtime() {
+  const session = await getSession();
+  const sb = supabase();
+  if (!sb || !session || channel) return;
+  channel = sb
+    .channel("kv-sync")
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "kv", filter: `user_id=eq.${session.user.id}` },
+      (payload) => { if (payload.new?.key) applyRow(payload.new); })
+    .subscribe((state) => {
+      realtimeUp = state === "SUBSCRIBED";
+      if (realtimeUp && (status === "idle" || status === "live")) setStatus("live");
+      if (state === "CHANNEL_ERROR" || state === "TIMED_OUT") realtimeUp = false; // pulls keep covering
+    });
+}
+function stopRealtime() {
+  if (channel) { supabase()?.removeChannel(channel); channel = null; realtimeUp = false; }
+}
+
+// ── Connection test (used by Settings before saving credentials) ─────
+export async function testConnection(cfg) {
+  const res = await fetch(`${cfg.url.replace(/\/+$/, "")}/auth/v1/settings`, { headers: { apikey: cfg.anonKey } });
+  if (!res.ok) throw new Error(`HTTP ${res.status} — check the project URL and anon key`);
   return true;
+}
+
+// Called by Settings after sign-in/out to (re)start or stop syncing.
+export async function onAuthChanged(signedIn) {
+  stopRealtime();
+  if (signedIn) { await pull(); await flush(); startRealtime(); }
+  else setStatus(getSyncConfig() ? "auth" : "off");
 }
 
 // ── Engine wiring — called once from main.jsx ────────────────────────
@@ -156,5 +170,11 @@ export function initSync() {
   setInterval(() => {
     if (document.visibilityState === "visible" && getSyncConfig()) pull();
   }, 60000);
-  if (getSyncConfig()) { status = "idle"; pull(); }
+  if (getSyncConfig()) {
+    onAuth((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") { if (!channel) onAuthChanged(true); }
+      if (event === "SIGNED_OUT") onAuthChanged(false);
+    });
+    onAuthChanged(true); // no-op path resolves to "auth" status when signed out
+  }
 }
