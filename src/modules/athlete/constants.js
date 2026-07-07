@@ -10,8 +10,3 @@ export const WEEK_PLAN = [
   { day: "SUN", type: "Rest",       icon: "😴", color: T3 },
 ];
 
-export const EXERCISE_LIBRARY = [
-  "Squat", "Deadlift", "Bench Press", "Overhead Press", "Pull-up", "Barbell Row",
-  "Hip Thrust", "Lunges", "Dips", "Bicep Curl", "Tricep Extension", "Lat Pulldown",
-  "Leg Press", "Leg Curl", "Calf Raise", "Shoulder Press", "Face Pulls", "Plank", "Custom",
-];
