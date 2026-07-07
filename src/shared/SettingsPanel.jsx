@@ -4,16 +4,21 @@ import { B0, B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "./designTokens.j
 import { getApiKey, setApiKey, callClaude } from "./anthropic.js";
 import { storage } from "./storage.js";
 import { localDateStr } from "./dates.js";
-import { getSyncConfig, setSyncConfig, getSyncStatus, onSyncStatus, testSync, pull, flush } from "./sync.js";
+import { getSyncStatus, onSyncStatus, testConnection, pull, flush, onAuthChanged } from "./sync.js";
+import { getSyncConfig, saveSyncConfig, signUp, signIn, signOut, resetPassword, updatePassword, getSession, onAuth } from "./supabase.js";
 
 const SETUP_SQL = `create table if not exists kv (
-  key text primary key,
+  user_id uuid not null default auth.uid(),
+  key text not null,
   value jsonb,
-  updated_at timestamptz default now()
+  updated_at timestamptz default now(),
+  primary key (user_id, key)
 );
 alter table kv enable row level security;
-create policy "kv anon access" on kv
-  for all using (true) with check (true);`;
+create policy "own rows only" on kv
+  for all using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+alter publication supabase_realtime add table kv;`;
 
 export function SettingsPanel({ onClose }) {
   const [key, setKey] = useState(getApiKey());
@@ -23,44 +28,108 @@ export function SettingsPanel({ onClose }) {
   const [armErase, setArmErase] = useState(false);
   const fileRef = useRef(null);
 
-  // ── Cloud Sync state ────────────────────────────────────────────────
+  // ── Account & Cloud Sync state ─────────────────────────────────────
   const cfg0 = getSyncConfig();
   const [syncUrl, setSyncUrl] = useState(cfg0?.url || "");
   const [syncKey, setSyncKey] = useState(cfg0?.anonKey || "");
+  const [connected, setConnected] = useState(!!cfg0);
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [recovery, setRecovery] = useState(false); // arrived via password-reset link
   const [syncState, setSyncState] = useState(getSyncStatus());
   const [syncMsg, setSyncMsg] = useState(null); // { text, tone }
   const [showSetup, setShowSetup] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+
   useEffect(() => onSyncStatus(setSyncState), []);
+  // Escape closes the panel — keyboard users shouldn't need the mouse.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  useEffect(() => {
+    getSession().then(setSession);
+    return onAuth((event, s) => {
+      setSession(s);
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
+    });
+  }, [connected]);
 
   const connectSync = async () => {
     const cfg = { url: syncUrl.trim(), anonKey: syncKey.trim() };
     if (!cfg.url || !cfg.anonKey) return;
     setSyncMsg({ text: "Testing connection…", tone: T2 });
     try {
-      await testSync(cfg);
-      setSyncConfig(cfg);
-      setSyncMsg({ text: "Connected. Syncing your data now…", tone: GR });
-      await pull();
-      await flush();
-      setSyncMsg({ text: "Connected — this device now syncs automatically.", tone: GR });
+      await testConnection(cfg);
+      saveSyncConfig(cfg);
+      setConnected(true);
+      setSyncMsg({ text: "Project connected. Now sign in (or create your account) below.", tone: GR });
     } catch (err) {
       setSyncMsg({ text: `Connection failed: ${err.message}`, tone: RE });
     }
   };
-  const disconnectSync = () => {
-    setSyncConfig(null);
-    setSyncMsg({ text: "Sync disconnected. Your data stays on this device; the cloud copy is kept.", tone: T2 });
+  const disconnectSync = async () => {
+    await signOut().catch(() => {});
+    saveSyncConfig(null);
+    setConnected(false);
+    setSession(null);
+    setSyncMsg({ text: "Disconnected. Your data stays on this device; the cloud copy is kept.", tone: T2 });
+  };
+  const doAuth = async (mode) => {
+    setAuthBusy(true);
+    setSyncMsg(null);
+    try {
+      if (mode === "signup") {
+        const res = await signUp(email.trim(), password);
+        if (res.session) { setSyncMsg({ text: "Account created — syncing this device now…", tone: GR }); await onAuthChanged(true); }
+        else setSyncMsg({ text: "Account created. Check your email to confirm, then sign in here.", tone: AM });
+      } else {
+        await signIn(email.trim(), password);
+        setSyncMsg({ text: "Signed in — syncing this device now…", tone: GR });
+        await onAuthChanged(true);
+        setSyncMsg({ text: "Signed in. This device now syncs automatically.", tone: GR });
+      }
+      setPassword("");
+    } catch (err) {
+      setSyncMsg({ text: err.message, tone: RE });
+    } finally { setAuthBusy(false); }
+  };
+  const doReset = async () => {
+    if (!email.trim()) { setSyncMsg({ text: "Enter your email first, then tap Forgot password.", tone: AM }); return; }
+    try {
+      await resetPassword(email.trim());
+      setSyncMsg({ text: "Password-reset email sent. Open the link on this device.", tone: GR });
+    } catch (err) { setSyncMsg({ text: err.message, tone: RE }); }
+  };
+  const doUpdatePw = async () => {
+    try {
+      await updatePassword(newPw);
+      setRecovery(false); setNewPw("");
+      setSyncMsg({ text: "Password updated — you're signed in.", tone: GR });
+      await onAuthChanged(true);
+    } catch (err) { setSyncMsg({ text: err.message, tone: RE }); }
+  };
+  const doSignOut = async () => {
+    await signOut();
+    await onAuthChanged(false);
+    setSyncMsg({ text: "Signed out. Data stays on this device; sync is paused.", tone: T2 });
   };
   const syncNow = async () => { await flush(); await pull(); };
 
-  const syncDot = { idle: GR, syncing: CY, error: RE, offline: AM, off: T3 }[syncState.status] || T3;
+  const syncDot = { live: GR, idle: GR, syncing: CY, error: RE, offline: AM, auth: AM, off: T3 }[syncState.status] || T3;
   const syncLabel = {
+    live: `Live sync on${syncState.lastSyncAt ? ` · ${new Date(syncState.lastSyncAt).toLocaleTimeString()}` : ""}`,
     idle: syncState.lastSyncAt ? `Synced · ${new Date(syncState.lastSyncAt).toLocaleTimeString()}` : "Connected",
     syncing: "Syncing…",
     error: `Sync error: ${syncState.lastError}`,
     offline: "Offline — changes queued, will sync when back online",
+    auth: "Sign in to sync",
     off: "Not connected",
   }[syncState.status] || "";
+  const inputStyle = { width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "'JetBrains Mono',monospace", boxSizing: "border-box", marginBottom: 8 };
 
   const save = () => {
     setApiKey(key.trim());
@@ -129,7 +198,7 @@ export function SettingsPanel({ onClose }) {
       <div style={{ width: 440, maxWidth: "100%", maxHeight: "90vh", overflowY: "auto", background: B1, border: `1px solid ${BD}`, borderRadius: 16, padding: 24 }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: T1 }}>Settings</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><X size={16} /></button>
+          <button onClick={onClose} aria-label="Close settings" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><X size={16} /></button>
         </div>
 
         <div style={{ fontSize: 11, color: CY, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Anthropic API Key</div>
@@ -163,32 +232,26 @@ export function SettingsPanel({ onClose }) {
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
-        {/* ── Cloud Sync ────────────────────────────────────────────── */}
+        {/* ── Account & Cloud Sync ──────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <div style={{ fontSize: 11, color: PU, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Cloud Sync</div>
+          <div style={{ fontSize: 11, color: PU, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Account & Cloud Sync</div>
           <div style={{ display: "flex", alignItems: "center", gap: 5, marginLeft: "auto" }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: syncDot, boxShadow: `0 0 6px ${syncDot}`, animation: syncState.status === "syncing" ? "pulse 1s infinite" : "none" }} />
             <span style={{ fontSize: 10.5, color: T3 }}>{syncLabel}</span>
           </div>
         </div>
-        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
-          Keep every device on the same data. Create a free <span style={{ color: T2 }}>supabase.com</span> project, run the one-time setup below, then paste your project URL and anon key. Changes made anywhere appear everywhere; offline edits queue and upload automatically.
-        </div>
-        {getSyncConfig() ? (
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <button onClick={syncNow} style={btn({ borderColor: `${CY}44`, color: CY })}><RefreshCw size={13} />Sync now</button>
-            <button onClick={disconnectSync} style={btn({ borderColor: `${RE}44`, color: RE })}><CloudOff size={13} />Disconnect</button>
-          </div>
-        ) : (
+
+        {!connected && (
           <>
-            <input value={syncUrl} onChange={(e) => setSyncUrl(e.target.value)} placeholder="https://your-project.supabase.co"
-              style={{ width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "'JetBrains Mono',monospace", boxSizing: "border-box", marginBottom: 8 }} />
-            <input type="password" value={syncKey} onChange={(e) => setSyncKey(e.target.value)} placeholder="anon key (eyJ…)"
-              style={{ width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "'JetBrains Mono',monospace", boxSizing: "border-box", marginBottom: 10 }} />
+            <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
+              Sign in on every device and your trades, habits, finances and journal stay identical everywhere — updates arrive live, and offline edits upload automatically. One-time setup: create a free <span style={{ color: T2 }}>supabase.com</span> project, run the SQL below, then paste your project URL and anon key.
+            </div>
+            <input value={syncUrl} onChange={(e) => setSyncUrl(e.target.value)} placeholder="https://your-project.supabase.co" style={inputStyle} />
+            <input type="password" value={syncKey} onChange={(e) => setSyncKey(e.target.value)} placeholder="anon key (eyJ…)" style={{ ...inputStyle, marginBottom: 10 }} />
             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               <button onClick={connectSync} disabled={!syncUrl.trim() || !syncKey.trim()}
                 style={btn({ background: syncUrl.trim() && syncKey.trim() ? `linear-gradient(135deg,${PU},${CY})` : GL, border: "none", color: syncUrl.trim() && syncKey.trim() ? "#000" : T3, fontWeight: 700 })}>
-                <Cloud size={13} />Connect & sync
+                <Cloud size={13} />Connect project
               </button>
               <button onClick={() => setShowSetup((s) => !s)} style={btn({ flex: "none" })}>{showSetup ? "Hide setup" : "Setup guide"}</button>
             </div>
@@ -196,15 +259,65 @@ export function SettingsPanel({ onClose }) {
               <div style={{ padding: "11px 13px", background: B0, border: `1px solid ${BD}`, borderRadius: 10, marginBottom: 10 }}>
                 <div style={{ fontSize: 11.5, color: T2, lineHeight: 1.7, marginBottom: 8 }}>
                   1. Create a project at supabase.com (free).<br />
-                  2. Open SQL Editor, paste and run this once:<br />
+                  2. Open SQL Editor, paste and run this once:
                 </div>
                 <pre style={{ fontSize: 10, color: CY, fontFamily: "'JetBrains Mono',monospace", whiteSpace: "pre-wrap", background: GL, padding: "9px 11px", borderRadius: 8, margin: "0 0 8px", lineHeight: 1.6 }}>{SETUP_SQL}</pre>
                 <div style={{ fontSize: 11.5, color: T2, lineHeight: 1.7 }}>
                   3. Project Settings → API: copy the <span style={{ color: T1 }}>URL</span> and <span style={{ color: T1 }}>anon public</span> key here.<br />
-                  4. Repeat the paste on each device — that's it.
+                  4. On your other devices just connect and sign in — same account, same data.
                 </div>
               </div>
             )}
+          </>
+        )}
+
+        {connected && recovery && (
+          <>
+            <div style={{ fontSize: 12, color: T2, lineHeight: 1.6, marginBottom: 10 }}>Set your new password:</div>
+            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="new password (min 6 chars)" style={inputStyle} />
+            <button onClick={doUpdatePw} disabled={newPw.length < 6} style={btn({ background: newPw.length >= 6 ? `linear-gradient(135deg,${PU},${CY})` : GL, border: "none", color: newPw.length >= 6 ? "#000" : T3, fontWeight: 700, marginBottom: 10 })}>Update password</button>
+          </>
+        )}
+
+        {connected && !recovery && !session && (
+          <>
+            <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
+              Project connected. Sign in — or create your account the first time — and this device joins your synced data.
+            </div>
+            <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email" style={inputStyle} />
+            <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="password" style={{ ...inputStyle, marginBottom: 10 }}
+              onKeyDown={(e) => e.key === "Enter" && email.trim() && password && doAuth("signin")} />
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <button onClick={() => doAuth("signin")} disabled={authBusy || !email.trim() || !password}
+                style={btn({ background: email.trim() && password ? `linear-gradient(135deg,${PU},${CY})` : GL, border: "none", color: email.trim() && password ? "#000" : T3, fontWeight: 700 })}>
+                {authBusy ? "Working…" : "Sign in"}
+              </button>
+              <button onClick={() => doAuth("signup")} disabled={authBusy || !email.trim() || password.length < 6} style={btn()}>Create account</button>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <button onClick={doReset} style={btn({ flex: "none", background: "none", border: "none", color: T3, padding: "4px 2px", fontSize: 11.5 })}>Forgot password?</button>
+              <div style={{ flex: 1 }} />
+              <button onClick={disconnectSync} style={btn({ flex: "none", background: "none", border: "none", color: T3, padding: "4px 2px", fontSize: 11.5 })}>Disconnect project</button>
+            </div>
+          </>
+        )}
+
+        {connected && !recovery && session && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 13px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, marginBottom: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: `linear-gradient(135deg,${PU},${CY})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#000", flexShrink: 0 }}>
+                {(session.user?.email || "?")[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, color: T1, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{session.user?.email}</div>
+                <div style={{ fontSize: 10.5, color: T3 }}>Signed in · data isolated to your account</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <button onClick={syncNow} style={btn({ borderColor: `${CY}44`, color: CY })}><RefreshCw size={13} />Sync now</button>
+              <button onClick={doSignOut} style={btn()}>Sign out</button>
+              <button onClick={disconnectSync} style={btn({ flex: "none", borderColor: `${RE}44`, color: RE })}><CloudOff size={13} /></button>
+            </div>
           </>
         )}
         {syncMsg && <div style={{ fontSize: 12, color: syncMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{syncMsg.text}</div>}
