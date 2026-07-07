@@ -5,6 +5,7 @@ import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { getStats, genId } from "./helpers.js";
 import { DEFAULT_CHECKLIST_TEMPLATES } from "./checklists.js";
+import { Hydrating } from "../../shared/ui.jsx";
 import { LogView } from "./LogView.jsx";
 import { TradingAnalytics } from "./TradingAnalytics.jsx";
 import { RiskCalculator } from "./RiskCalculator.jsx";
@@ -16,7 +17,7 @@ import { PreTradeChecklist } from "./PreTradeChecklist.jsx";
 
 export function TradingModule() {
   const [tv, setTv] = useState("log");
-  const [rawTrades, setTrades] = useStorageState("ict_trades", []);
+  const [rawTrades, setTrades, tradesLoaded] = useStorageState("ict_trades", []);
   // Sanitise at the read point: a single corrupt record (null, missing id)
   // must never take down the journal, analytics or reports.
   const trades = useMemo(
@@ -149,7 +150,8 @@ export function TradingModule() {
       </div>
 
       <div style={{ flex: 1, overflow: tv === "log" || tv === "form" || tv === "checklist" ? "hidden" : "auto" }} key={tv}>
-        {tv === "log" && <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        {!tradesLoaded && <Hydrating label="Loading your trade journal…" />}
+        {tradesLoaded && tv === "log" && <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
           {demoTrades.length > 0 && (
             <div style={{ margin: "10px 22px 0", padding: "9px 14px", background: `${AM}0D`, border: `1px solid ${AM}33`, borderRadius: 10, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               <span style={{ fontSize: 12, color: T2, flex: 1, lineHeight: 1.45 }}>
@@ -161,11 +163,11 @@ export function TradingModule() {
             </div>
           )}
           <LogView trades={trades} onView={(t) => { setSel(t); setTv("detail"); }} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} onDelete={delTrade} onDuplicate={duplicateTrade} onArchive={archiveTrade} onNew={() => { setEditT(null); setPendingChecklist(null); setTv("checklist"); }} stats={stats} balance={bal} /></div>}
-        {tv === "checklist" && <div style={{ height: "100%" }}><PreTradeChecklist templates={templates} setTemplates={setTemplates} activeId={activeChecklist} setActiveId={setActiveChecklist} allowSkip={allowSkip} setAllowSkip={setAllowSkip} onComplete={(res) => { setPendingChecklist(res); setTv("form"); }} onCancel={() => setTv("log")} /></div>}
-        {tv === "analytics" && <TradingAnalytics trades={trades} balance={bal} />}
-        {tv === "risk" && <RiskCalculator trades={trades} balance={bal + netPnl} />}
-        {tv === "playbook" && <PlaybookBuilder trades={trades} />}
-        {tv === "reports" && <TradingReports trades={trades} balance={bal + netPnl} />}
+        {tradesLoaded && tv === "checklist" && <div style={{ height: "100%" }}><PreTradeChecklist templates={templates} setTemplates={setTemplates} activeId={activeChecklist} setActiveId={setActiveChecklist} allowSkip={allowSkip} setAllowSkip={setAllowSkip} onComplete={(res) => { setPendingChecklist(res); setTv("form"); }} onCancel={() => setTv("log")} /></div>}
+        {tradesLoaded && tv === "analytics" && <TradingAnalytics trades={trades} balance={bal} />}
+        {tradesLoaded && tv === "risk" && <RiskCalculator trades={trades} balance={bal + netPnl} />}
+        {tradesLoaded && tv === "playbook" && <PlaybookBuilder trades={trades} />}
+        {tradesLoaded && tv === "reports" && <TradingReports trades={trades} balance={bal + netPnl} />}
         {tv === "form" && <div style={{ height: "100%" }}><EntryForm onSubmit={saveTrade} onCancel={() => { setTv("log"); setEditT(null); setPendingChecklist(null); }} editTrade={editT} accountBalance={bal} checklistResult={pendingChecklist} /></div>}
         {tv === "detail" && sel && <div style={{ overflowY: "auto", height: "100%" }}><DetailView trade={trades.find((t) => t.id === sel.id) || sel} trades={trades} onBack={() => setTv("log")} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} /></div>}
       </div>

@@ -5,7 +5,7 @@ import {
   Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy,
 } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
@@ -39,7 +39,7 @@ function Ring({ pct, size = 128, stroke = 10, color = GR, children }) {
   );
 }
 
-export function LifeOSModule({ habits, setHabits, onNavigate }) {
+export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
   const [tab, setTab] = useState("today");
   const [editing, setEditing] = useState(null);         // habit being edited or newHabit()
   const [rawRoutines, setRoutines] = useStorageState("routines", []);
@@ -207,8 +207,9 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
       </div>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
+        {!loaded && <Hydrating label="Loading your habits…" />}
         {/* ══ TODAY ══ */}
-        {tab === "today" && (
+        {loaded && tab === "today" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
             <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${GR}08,transparent)` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
@@ -321,7 +322,7 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
         )}
 
         {/* ══ HABITS (manage) ══ */}
-        {tab === "habits" && (
+        {loaded && tab === "habits" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
@@ -380,7 +381,7 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
         )}
 
         {/* ══ ROUTINES ══ */}
-        {tab === "routines" && (
+        {loaded && tab === "routines" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
@@ -457,7 +458,7 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
         )}
 
         {/* ══ INSIGHTS ══ */}
-        {tab === "insights" && (() => {
+        {loaded && tab === "insights" && (() => {
           const totalDone = habits.reduce((s, h) => s + totalCompletions(h), 0);
           const bestStreakAll = Math.max(0, ...habits.map(longestStreak));
           const perfect = perfectDays(habits);
@@ -593,7 +594,7 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
         })()}
 
         {/* ══ JOURNAL ══ */}
-        {tab === "journal" && (
+        {loaded && tab === "journal" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
             <Card style={{ padding: "20px" }}>
               <SH title="Daily Reflection" sub={new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} />

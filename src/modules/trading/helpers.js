@@ -6,7 +6,6 @@ export const genId = () => `t${Date.now().toString(36)}`;
 export const getPV = (i) => INSTRUMENTS.find((x) => x.l === i)?.pv ?? 20;
 export const gcol = (g) => (g === "A+" ? GR : g === "A" || g === "A-" ? CY : g === "B+" ? PU : g === "B" ? AM : RE);
 export const ocol = (o) => ({ WIN: GR, LOSS: RE, BE: AM, PARTIAL: CY }[o] ?? T2);
-export const suggestGrade = (s) => (s === 7 ? "A+" : s === 6 ? "A" : s === 5 ? "B+" : s === 4 ? "B" : "C");
 
 // Total commission + swap/fees for a trade (0 when unset — no effect on old trades).
 export const tradeFees = (t) => (+t.commission || 0) + (+t.swapFees || 0);

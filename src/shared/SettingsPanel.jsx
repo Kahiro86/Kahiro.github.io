@@ -1,9 +1,19 @@
-import { useRef, useState } from "react";
-import { X, Check, AlertCircle, Download, Upload, ShieldAlert } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Check, AlertCircle, Download, Upload, ShieldAlert, Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "./designTokens.js";
 import { getApiKey, setApiKey, callClaude } from "./anthropic.js";
 import { storage } from "./storage.js";
 import { localDateStr } from "./dates.js";
+import { getSyncConfig, setSyncConfig, getSyncStatus, onSyncStatus, testSync, pull, flush } from "./sync.js";
+
+const SETUP_SQL = `create table if not exists kv (
+  key text primary key,
+  value jsonb,
+  updated_at timestamptz default now()
+);
+alter table kv enable row level security;
+create policy "kv anon access" on kv
+  for all using (true) with check (true);`;
 
 export function SettingsPanel({ onClose }) {
   const [key, setKey] = useState(getApiKey());
@@ -12,6 +22,45 @@ export function SettingsPanel({ onClose }) {
   const [dataMsg, setDataMsg] = useState(null); // { text, tone }
   const [armErase, setArmErase] = useState(false);
   const fileRef = useRef(null);
+
+  // ── Cloud Sync state ────────────────────────────────────────────────
+  const cfg0 = getSyncConfig();
+  const [syncUrl, setSyncUrl] = useState(cfg0?.url || "");
+  const [syncKey, setSyncKey] = useState(cfg0?.anonKey || "");
+  const [syncState, setSyncState] = useState(getSyncStatus());
+  const [syncMsg, setSyncMsg] = useState(null); // { text, tone }
+  const [showSetup, setShowSetup] = useState(false);
+  useEffect(() => onSyncStatus(setSyncState), []);
+
+  const connectSync = async () => {
+    const cfg = { url: syncUrl.trim(), anonKey: syncKey.trim() };
+    if (!cfg.url || !cfg.anonKey) return;
+    setSyncMsg({ text: "Testing connection…", tone: T2 });
+    try {
+      await testSync(cfg);
+      setSyncConfig(cfg);
+      setSyncMsg({ text: "Connected. Syncing your data now…", tone: GR });
+      await pull();
+      await flush();
+      setSyncMsg({ text: "Connected — this device now syncs automatically.", tone: GR });
+    } catch (err) {
+      setSyncMsg({ text: `Connection failed: ${err.message}`, tone: RE });
+    }
+  };
+  const disconnectSync = () => {
+    setSyncConfig(null);
+    setSyncMsg({ text: "Sync disconnected. Your data stays on this device; the cloud copy is kept.", tone: T2 });
+  };
+  const syncNow = async () => { await flush(); await pull(); };
+
+  const syncDot = { idle: GR, syncing: CY, error: RE, offline: AM, off: T3 }[syncState.status] || T3;
+  const syncLabel = {
+    idle: syncState.lastSyncAt ? `Synced · ${new Date(syncState.lastSyncAt).toLocaleTimeString()}` : "Connected",
+    syncing: "Syncing…",
+    error: `Sync error: ${syncState.lastError}`,
+    offline: "Offline — changes queued, will sync when back online",
+    off: "Not connected",
+  }[syncState.status] || "";
 
   const save = () => {
     setApiKey(key.trim());
@@ -114,9 +163,57 @@ export function SettingsPanel({ onClose }) {
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
+        {/* ── Cloud Sync ────────────────────────────────────────────── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: PU, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Cloud Sync</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, marginLeft: "auto" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: syncDot, boxShadow: `0 0 6px ${syncDot}`, animation: syncState.status === "syncing" ? "pulse 1s infinite" : "none" }} />
+            <span style={{ fontSize: 10.5, color: T3 }}>{syncLabel}</span>
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
+          Keep every device on the same data. Create a free <span style={{ color: T2 }}>supabase.com</span> project, run the one-time setup below, then paste your project URL and anon key. Changes made anywhere appear everywhere; offline edits queue and upload automatically.
+        </div>
+        {getSyncConfig() ? (
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            <button onClick={syncNow} style={btn({ borderColor: `${CY}44`, color: CY })}><RefreshCw size={13} />Sync now</button>
+            <button onClick={disconnectSync} style={btn({ borderColor: `${RE}44`, color: RE })}><CloudOff size={13} />Disconnect</button>
+          </div>
+        ) : (
+          <>
+            <input value={syncUrl} onChange={(e) => setSyncUrl(e.target.value)} placeholder="https://your-project.supabase.co"
+              style={{ width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "'JetBrains Mono',monospace", boxSizing: "border-box", marginBottom: 8 }} />
+            <input type="password" value={syncKey} onChange={(e) => setSyncKey(e.target.value)} placeholder="anon key (eyJ…)"
+              style={{ width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "'JetBrains Mono',monospace", boxSizing: "border-box", marginBottom: 10 }} />
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <button onClick={connectSync} disabled={!syncUrl.trim() || !syncKey.trim()}
+                style={btn({ background: syncUrl.trim() && syncKey.trim() ? `linear-gradient(135deg,${PU},${CY})` : GL, border: "none", color: syncUrl.trim() && syncKey.trim() ? "#000" : T3, fontWeight: 700 })}>
+                <Cloud size={13} />Connect & sync
+              </button>
+              <button onClick={() => setShowSetup((s) => !s)} style={btn({ flex: "none" })}>{showSetup ? "Hide setup" : "Setup guide"}</button>
+            </div>
+            {showSetup && (
+              <div style={{ padding: "11px 13px", background: B0, border: `1px solid ${BD}`, borderRadius: 10, marginBottom: 10 }}>
+                <div style={{ fontSize: 11.5, color: T2, lineHeight: 1.7, marginBottom: 8 }}>
+                  1. Create a project at supabase.com (free).<br />
+                  2. Open SQL Editor, paste and run this once:<br />
+                </div>
+                <pre style={{ fontSize: 10, color: CY, fontFamily: "'JetBrains Mono',monospace", whiteSpace: "pre-wrap", background: GL, padding: "9px 11px", borderRadius: 8, margin: "0 0 8px", lineHeight: 1.6 }}>{SETUP_SQL}</pre>
+                <div style={{ fontSize: 11.5, color: T2, lineHeight: 1.7 }}>
+                  3. Project Settings → API: copy the <span style={{ color: T1 }}>URL</span> and <span style={{ color: T1 }}>anon public</span> key here.<br />
+                  4. Repeat the paste on each device — that's it.
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {syncMsg && <div style={{ fontSize: 12, color: syncMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{syncMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
         <div style={{ fontSize: 11, color: GR, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Your Data</div>
         <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
-          Everything is stored on this device. Export a backup regularly — clearing browser data would otherwise erase your trades, workouts, finances and journal.
+          {getSyncConfig() ? "Synced to your cloud project and stored on this device." : "Everything is stored on this device."} Export a backup regularly — clearing browser data would otherwise erase your trades, workouts, finances and journal.
         </div>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <button onClick={exportData} style={btn({ borderColor: `${GR}44`, color: GR })}><Download size={13} />Export backup</button>

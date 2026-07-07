@@ -201,3 +201,12 @@ export const SL = ({ value, onChange }) => (
     <span style={{ fontSize: 16, fontWeight: 800, color: CY, fontFamily: "monospace", width: 24, textAlign: "right" }}>{value}</span>
   </div>
 );
+
+// Hydration gate: shown for the instant between mount and the storage read
+// resolving, so data-backed views never flash an empty frame.
+export const Hydrating = ({ label = "Loading your data…" }) => (
+  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "40vh", gap: 12 }}>
+    <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2.5px solid ${BD}`, borderTopColor: CY, animation: "ambientSpin 0.8s linear infinite" }} />
+    <div style={{ fontSize: 12, color: T3 }}>{label}</div>
+  </div>
+);

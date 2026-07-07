@@ -35,7 +35,7 @@ export default function App() {
   // Habits: engine v2 — per-date logs with schedules, targets and skips.
   // Completion + streaks derive from the log, so everything resets at local
   // midnight and every streak is earned. Legacy v1 data migrates in place.
-  const [rawHabits, setRawHabits] = useStorageState("habits", HABITS_DEF);
+  const [rawHabits, setRawHabits, habitsLoaded] = useStorageState("habits", HABITS_DEF);
   const habitsV2 = useMemo(() => migrateHabits(rawHabits), [rawHabits]);
   const setHabitsV2 = useCallback(
     (updater) => setRawHabits((prev) => (typeof updater === "function" ? updater(migrateHabits(prev)) : updater)),
@@ -82,7 +82,7 @@ export default function App() {
       case "trading": return <TradingModule />;
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
-      case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} onNavigate={setModule} />;
+      case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} />;
       case "relations": return <PlaceholderModule title="Relationship System" sub="Quality Time · Shared Goals · Connection" features={[{ name: "Date Planner", icon: "💕", desc: "Schedule and plan meaningful experiences." }, { name: "Important Dates", icon: "📅", desc: "Never miss anniversaries or milestones." }, { name: "Relationship Journal", icon: "📝", desc: "Log shared moments and reflections." }, { name: "Shared Goals", icon: "🎯", desc: "Set and track goals together." }, { name: "Conversation Prompts", icon: "💬", desc: "Deep questions to strengthen connection." }, { name: "AI Coach", icon: "🤖", desc: "Relationship intelligence and guidance." }]} />;
       case "knowledge": return <PlaceholderModule title="Knowledge Base" sub="Second Brain · Reading · Ideas · Learning" features={[{ name: "Note Capture", icon: "📄", desc: "Capture and organise ideas and insights." }, { name: "Reading Tracker", icon: "📚", desc: "Track books, articles, and materials." }, { name: "Idea Vault", icon: "💡", desc: "Store and develop your best ideas." }, { name: "Book Summaries", icon: "🗂️", desc: "Synthesise key lessons from reading." }, { name: "Learning Tracker", icon: "🎓", desc: "Monitor skills and knowledge acquisition." }, { name: "AI Assistant", icon: "🤖", desc: "Search and expand your knowledge base." }]} />;
       case "productivity": return <PlaceholderModule title="Productivity OS" sub="Tasks · Projects · Deep Work · Focus" features={[{ name: "Task Manager", icon: "✅", desc: "Capture, prioritise, and execute tasks." }, { name: "Deep Work Timer", icon: "⏱️", desc: "Structured focus sessions with Pomodoro." }, { name: "Project Tracker", icon: "📊", desc: "Manage multi-step projects end-to-end." }, { name: "Daily Priorities", icon: "🎯", desc: "Select your 1–3 MITs each morning." }, { name: "Focus Mode", icon: "🔇", desc: "Distraction-free peak performance mode." }, { name: "Habit Streaks", icon: "🔥", desc: "Visual streak tracking for daily behaviours." }]} />;
