@@ -23,7 +23,8 @@ export function Dashboard({ onNavigate, habits, onToggleHabit }) {
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
   const [trades] = useStorageState("ict_trades", []);
-  const [bal] = useStorageState("ict_balance", 15000);
+  const [rawBal] = useStorageState("ict_balance", 15000);
+  const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
   const [workouts] = useStorageState("athlete_workouts", []);
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
 
@@ -47,7 +48,7 @@ export function Dashboard({ onNavigate, habits, onToggleHabit }) {
     efBal: +finance.efBal || 0, savBal: +finance.savBal || 0, totalInvested: fin.totalInvested,
     personalDebt: fin.personalDebt, tradingStats: tStats,
   }), [incomeStats, fin, finance.efBal, finance.savBal, tStats]);
-  const goals = (finance.goals || []).filter((g) => !g.archived);
+  const goals = (Array.isArray(finance.goals) ? finance.goals : []).filter((g) => g && !g.archived);
   const goalAgg = goals.length
     ? Math.round(goals.reduce((s, g) => s + (g.target > 0 ? Math.min(1, (+g.current || 0) / g.target) : 0), 0) / goals.length * 100)
     : 0;

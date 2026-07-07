@@ -10,7 +10,7 @@ export class ErrorBoundary extends Component {
   render() {
     if (!this.state.err) return this.props.children;
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", padding: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", minHeight: "60vh", padding: 24 }}>
         <div style={{ maxWidth: 420, background: B1, border: `1px solid ${RE}33`, borderRadius: 16, padding: "26px 28px", textAlign: "center" }}>
           <div style={{ fontSize: 30, marginBottom: 12 }}>🛠️</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: T1, marginBottom: 7 }}>This section hit a snag</div>

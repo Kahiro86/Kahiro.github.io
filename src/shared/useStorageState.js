@@ -10,9 +10,32 @@ export function useStorageState(key, initialValue) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const raw = await storage.get(key);
-      if (!cancelled && raw != null) setValue(JSON.parse(raw));
-      if (!cancelled) setLoaded(true);
+      try {
+        const raw = await storage.get(key);
+        // Corrupt/half-written JSON must never throw here — it would leave the
+        // store silently un-persisted. Fall back to the default and heal on
+        // the next write instead. A stored literal `null` (valid JSON) is also
+        // rejected: it would otherwise replace an array/object default with
+        // null and crash every `.filter`/`.map` downstream.
+        if (!cancelled && raw != null) {
+          const parsed = JSON.parse(raw);
+          // Reject values that can't stand in for the default: null/undefined,
+          // or a shape mismatch (an object stored where an array is expected,
+          // or vice-versa). Either would crash `.filter`/`.map` downstream.
+          const shapeOk =
+            parsed != null &&
+            (typeof initialValue !== "object" ||
+              initialValue == null ||
+              Array.isArray(parsed) === Array.isArray(initialValue));
+          // Null entries inside array stores are the one corruption that still
+          // crashes property reads downstream (`t.status` on null) — drop them.
+          if (shapeOk) setValue(Array.isArray(parsed) ? parsed.filter((x) => x != null) : parsed);
+        }
+      } catch {
+        /* keep initialValue; the next set() overwrites the bad record */
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
     })();
     return () => {
       cancelled = true;

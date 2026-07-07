@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { DollarSign, Edit3, Check, X, FileText, BarChart2, Shield, Star, AlertCircle } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -16,10 +16,17 @@ import { PreTradeChecklist } from "./PreTradeChecklist.jsx";
 
 export function TradingModule() {
   const [tv, setTv] = useState("log");
-  const [trades, setTrades] = useStorageState("ict_trades", []);
+  const [rawTrades, setTrades] = useStorageState("ict_trades", []);
+  // Sanitise at the read point: a single corrupt record (null, missing id)
+  // must never take down the journal, analytics or reports.
+  const trades = useMemo(
+    () => (Array.isArray(rawTrades) ? rawTrades : []).filter((t) => t && typeof t === "object" && t.id),
+    [rawTrades]
+  );
   const [sel, setSel] = useState(null);
   const [editT, setEditT] = useState(null);
-  const [bal, setBal] = useStorageState("ict_balance", 15000);
+  const [rawBal, setBal] = useStorageState("ict_balance", 15000);
+  const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
   const [editBal, setEditBal] = useState(false);
   const [balI, setBalI] = useState(String(bal));
 

@@ -1,5 +1,5 @@
 import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, TrendingDown, Target, Activity, FileText } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { B1, BD, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { DEFAULT_FINANCE_STATE } from "./constants.js";
@@ -32,9 +32,25 @@ const FIN_TABS = [
   { id: "goals",     l: "Goals",       i: Target        },
 ];
 
+// Records saved by older versions may miss fields added since (or carry nulls
+// where arrays belong) — merge defaults and coerce array fields so every tab
+// and setter can trust the shape.
+function normalizeFinance(raw) {
+  const s = { ...DEFAULT_FINANCE_STATE, ...(raw && typeof raw === "object" ? raw : {}) };
+  for (const k of ["income", "mmfs", "tbills", "nseStocks", "budgets", "goals", "debts"]) {
+    s[k] = Array.isArray(s[k]) ? s[k].filter((x) => x != null) : DEFAULT_FINANCE_STATE[k];
+  }
+  return s;
+}
+
 export function FinanceOS() {
   const [finTab, setFinTab] = useState("overview");
-  const [state, setState] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
+  const [rawState, setRawState] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
+  const state = useMemo(() => normalizeFinance(rawState), [rawState]);
+  // Setters always hand updaters the normalised shape, so tab code can trust
+  // arrays are arrays even when the stored record predates a field.
+  const setState = (updater) =>
+    setRawState((prev) => (typeof updater === "function" ? updater(normalizeFinance(prev)) : updater));
   const {
     currency, xRate, income = [], gross, opBal, savBal, efBal, efMMF, personalDebt,
     mmfs, tbills, nseStocks, saccoBal, saccoYield, reitUnits, reitNAV, budgets,
@@ -66,7 +82,8 @@ export function FinanceOS() {
 
   // Trading account is read-only here — the firewall never gives Finance OS a setter into Trading OS's own storage.
   const [trades] = useStorageState("ict_trades", []);
-  const [bal] = useStorageState("ict_balance", 15000);
+  const [rawBal] = useStorageState("ict_balance", 15000);
+  const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
   const tradingStats = getStats(trades);
   const tradingBalanceUSD = bal + tradingStats.totalPnl;
 
