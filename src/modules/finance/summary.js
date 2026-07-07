@@ -9,7 +9,7 @@ export function financeSummary(state) {
   } = s0;
   // Array fields default to [] even when explicitly stored as null (a corrupt
   // record can carry `mmfs: null`, which a default param would NOT catch).
-  const arr = (v) => (Array.isArray(v) ? v : []);
+  const arr = (v) => (Array.isArray(v) ? v.filter((x) => x != null) : []);
   const mmfs = arr(s0.mmfs), tbills = arr(s0.tbills), nseStocks = arr(s0.nseStocks),
     budgets = arr(s0.budgets), income = arr(s0.income);
 

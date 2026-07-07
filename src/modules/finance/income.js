@@ -20,7 +20,7 @@ function lastNMonths(n) {
 }
 
 export function incomeAnalytics(entries, trendMonths = 8) {
-  const list = Array.isArray(entries) ? entries : [];
+  const list = (Array.isArray(entries) ? entries : []).filter((e) => e && typeof e === "object");
   const byMonth = {};
   list.forEach((e) => {
     const k = monthKey(e.date);

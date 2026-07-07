@@ -168,7 +168,7 @@ export function rangeStats(h, daysBack) {
 }
 
 export const totalCompletions = (h) =>
-  Object.entries(h.log || {}).filter(([, e]) => (e.v || 0) >= (h.target || 1)).length;
+  Object.entries(h.log || {}).filter(([, e]) => (e?.v || 0) >= (h.target || 1)).length;
 
 // ── Weekly habits ───────────────────────────────────────────────────
 const addDaysStr = (ds, n) => { const d = new Date(`${ds}T12:00:00`); d.setDate(d.getDate() + n); return localDateStr(d); };

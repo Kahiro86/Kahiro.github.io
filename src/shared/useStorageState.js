@@ -27,7 +27,9 @@ export function useStorageState(key, initialValue) {
             (typeof initialValue !== "object" ||
               initialValue == null ||
               Array.isArray(parsed) === Array.isArray(initialValue));
-          if (shapeOk) setValue(parsed);
+          // Null entries inside array stores are the one corruption that still
+          // crashes property reads downstream (`t.status` on null) — drop them.
+          if (shapeOk) setValue(Array.isArray(parsed) ? parsed.filter((x) => x != null) : parsed);
         }
       } catch {
         /* keep initialValue; the next set() overwrites the bad record */

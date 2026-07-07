@@ -86,10 +86,11 @@ export function AthleteOS() {
   }).reverse();
 
   const exercisePRs = {};
-  workouts.filter((w) => w.type === "strength").forEach((w) => {
-    (w.exercises || []).forEach((ex) => {
-      (ex.sets || []).forEach((s) => {
-        const wt = +s.weight || 0;
+  workouts.filter((w) => w && w.type === "strength").forEach((w) => {
+    (Array.isArray(w.exercises) ? w.exercises : []).forEach((ex) => {
+      if (!ex || !ex.name) return;
+      (Array.isArray(ex.sets) ? ex.sets : []).forEach((s) => {
+        const wt = +s?.weight || 0;
         if (wt > 0 && (!exercisePRs[ex.name] || wt > exercisePRs[ex.name].weight)) {
           exercisePRs[ex.name] = { weight: wt, reps: +s.reps || 0, date: w.date };
         }
@@ -272,7 +273,7 @@ export function AthleteOS() {
                           <div style={{ fontSize: 11, color: T3, marginTop: 2 }}>{w.date}</div>
                           {w.type === "strength" && w.exercises?.length > 0 && (
                             <div style={{ fontSize: 11.5, color: T2, marginTop: 6 }}>
-                              {w.exercises.map((e) => e.name).join(", ")}
+                              {w.exercises.map((e) => e?.name).filter(Boolean).join(", ")}
                             </div>
                           )}
                           {w.type === "cardio" && (

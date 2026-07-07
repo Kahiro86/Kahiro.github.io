@@ -42,12 +42,25 @@ function Ring({ pct, size = 128, stroke = 10, color = GR, children }) {
 export function LifeOSModule({ habits, setHabits, onNavigate }) {
   const [tab, setTab] = useState("today");
   const [editing, setEditing] = useState(null);         // habit being edited or newHabit()
-  const [routines, setRoutines] = useStorageState("routines", []);
+  const [rawRoutines, setRoutines] = useStorageState("routines", []);
   const [routineDraft, setRoutineDraft] = useState(null);
   const [insightHabit, setInsightHabit] = useState(null);
   const [journal, setJournal] = useState("");
-  const [entries, setEntries] = useStorageState("journal_entries", []);
+  const [rawEntries, setEntries] = useStorageState("journal_entries", []);
   const toast = useToast();
+
+  // Stored records can be corrupt (null entries, habitIds missing) — sanitise
+  // once at the read point so every render below can trust the shape.
+  const routines = useMemo(
+    () => (Array.isArray(rawRoutines) ? rawRoutines : [])
+      .filter((r) => r && typeof r === "object" && r.id)
+      .map((r) => (Array.isArray(r.habitIds) ? r : { ...r, habitIds: [] })),
+    [rawRoutines]
+  );
+  const entries = useMemo(
+    () => (Array.isArray(rawEntries) ? rawEntries : []).filter((e) => e && typeof e === "object" && e.id),
+    [rawEntries]
+  );
 
   const active = habits.filter((h) => !h.archived);
   const ds = today();
@@ -513,7 +526,7 @@ export function LifeOSModule({ habits, setHabits, onNavigate }) {
                       <button key={h.id} onClick={() => setInsightHabit(h.id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 14, fontSize: 11.5, cursor: "pointer", background: sel.id === h.id ? `${h.color}18` : GL, color: sel.id === h.id ? h.color : T2, border: `1px solid ${sel.id === h.id ? h.color + "55" : BD}`, fontFamily: "inherit" }}>{h.icon} {h.name}</button>
                     ))}
                   </div>
-                  <ActivityHeatmap counts={Object.fromEntries(Object.entries(sel.log || {}).filter(([, e]) => (e.v || 0) >= (sel.target || 1)).map(([d]) => [d, 1]))} weeks={13} color={sel.color} />
+                  <ActivityHeatmap counts={Object.fromEntries(Object.entries(sel.log || {}).filter(([, e]) => (e?.v || 0) >= (sel.target || 1)).map(([d]) => [d, 1]))} weeks={13} color={sel.color} />
                   <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: T3 }}>
                     <span>🔥 {currentStreak(sel)}d current</span>
                     <span>🏆 {longestStreak(sel)}d best</span>

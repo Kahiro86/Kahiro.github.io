@@ -34,12 +34,12 @@ export const uidT = () => `tpl${Date.now().toString(36)}${Math.random().toString
 // Map exercise name → most recent logged sets, for one-tap autofill of prior values.
 export function lastValuesByExercise(workouts) {
   const map = {};
-  [...workouts]
-    .filter((w) => w.type === "strength")
+  (Array.isArray(workouts) ? [...workouts] : [])
+    .filter((w) => w && w.type === "strength")
     .sort((a, b) => new Date(a.date) - new Date(b.date)) // oldest→newest so latest wins
     .forEach((w) => {
-      (w.exercises || []).forEach((ex) => {
-        if (ex.name && (ex.sets || []).length) map[ex.name] = ex.sets.map((s) => ({ reps: s.reps, weight: s.weight }));
+      (Array.isArray(w.exercises) ? w.exercises : []).forEach((ex) => {
+        if (ex?.name && (ex.sets || []).length) map[ex.name] = ex.sets.map((s) => ({ reps: s?.reps, weight: s?.weight }));
       });
     });
   return map;
@@ -48,12 +48,13 @@ export function lastValuesByExercise(workouts) {
 // Per-exercise progressive-overload trend: latest top-set weight vs the one before.
 export function overloadTrend(workouts) {
   const byEx = {};
-  [...workouts]
-    .filter((w) => w.type === "strength")
+  (Array.isArray(workouts) ? [...workouts] : [])
+    .filter((w) => w && w.type === "strength")
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .forEach((w) => {
-      (w.exercises || []).forEach((ex) => {
-        const top = (ex.sets || []).reduce((m, s) => Math.max(m, +s.weight || 0), 0);
+      (Array.isArray(w.exercises) ? w.exercises : []).forEach((ex) => {
+        if (!ex) return;
+        const top = (ex.sets || []).reduce((m, s) => Math.max(m, +s?.weight || 0), 0);
         if (!ex.name || top <= 0) return;
         (byEx[ex.name] = byEx[ex.name] || []).push({ date: w.date, top });
       });

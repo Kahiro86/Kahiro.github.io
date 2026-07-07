@@ -60,8 +60,11 @@ export const DEFAULT_CHECKLIST_TEMPLATES = [
 
 export const newChecklistItem = (text = "") => mk(text, false);
 
+// Always returns a usable template — a corrupt/empty store falls back to the
+// built-in default rather than crashing the checklist gate.
 export function templateById(templates, id) {
-  return templates.find((t) => t.id === id) || templates[0];
+  const list = (Array.isArray(templates) ? templates : []).filter((t) => t && Array.isArray(t.items));
+  return list.find((t) => t.id === id) || list[0] || DEFAULT_CHECKLIST_TEMPLATES[0];
 }
 
 // Across trades, how often each checklist item (by text) was checked, and the
