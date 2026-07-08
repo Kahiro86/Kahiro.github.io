@@ -16,7 +16,7 @@ export function RiskCalculator({ trades, balance }) {
   // FundedNext limits (external)
   const DAILY_LIMIT = Math.round(balance * 0.05); // 5% daily loss limit
   const MAX_DD_LIMIT = Math.round(balance * 0.10); // 10% max trailing DD
-  // Internal limits (ARCHITECT best practice — half of external)
+  // Internal limits (KAHIRO best practice — half of external)
   const INT_DAILY = Math.round(DAILY_LIMIT * 0.5);
   const INT_DD = Math.round(MAX_DD_LIMIT * 0.5);
 
@@ -178,7 +178,7 @@ export function RiskCalculator({ trades, balance }) {
       </div>
 
       <Card style={{ padding: "22px" }}>
-        <SH title="FundedNext Limits Dashboard" sub="External limits · Internal ARCHITECT limits (50% of external) · Live daily usage" action={
+        <SH title="FundedNext Limits Dashboard" sub="External limits · Internal KAHIRO limits (50% of external) · Live daily usage" action={
           <div style={{ padding: "4px 10px", background: `${dailyLoss === 0 ? GR : dailyLoss < INT_DAILY ? AM : RE}22`, border: `1px solid ${dailyLoss === 0 ? GR : dailyLoss < INT_DAILY ? AM : RE}44`, borderRadius: 8, fontSize: 11, color: dailyLoss === 0 ? GR : dailyLoss < INT_DAILY ? AM : RE, fontWeight: 700 }}>
             Today: {todayPnl >= 0 ? "+" : ""}${todayPnl.toLocaleString()} P&L
           </div>

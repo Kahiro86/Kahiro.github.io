@@ -70,7 +70,7 @@ export function FinanceReports({ income, incomeStats, health, fmtKES, budgets, t
     setLoading(true); setSummary("");
     try {
       const reply = await callClaude({
-        system: `You are ARCHITECT — a Kaizen personal-finance analyst for Irisu (Nairobi, KES). ${KAIZEN_COACH_PREAMBLE}
+        system: `You are KAHIRO — a Kaizen personal-finance analyst for Irisu (Nairobi, KES). ${KAIZEN_COACH_PREAMBLE}
 Write a concise ${cfg.l} financial report. Sections: Executive summary · Income · Cash flow · What improved vs the previous period · Risks/watch-outs · Recommendations for next period (each a small, achievable step). Under 380 words. Measure against the prior period, never other people.`,
         messages: [{
           role: "user",
@@ -182,7 +182,7 @@ Financial health score: ${health.overall}/100 (${health.band})`,
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Cpu size={16} color={CY} />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>ARCHITECT {cfg.l} Executive Summary</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>KAHIRO {cfg.l} Executive Summary</div>
               <div style={{ fontSize: 11, color: T3 }}>AI-generated report with Kaizen recommendations</div>
             </div>
           </div>

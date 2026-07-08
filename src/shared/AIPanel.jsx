@@ -18,7 +18,7 @@ const contextBlock = (ctx, habits) => {
   ].filter(Boolean).join("\n");
 };
 
-const SYSTEM_PROMPT = (ctx, habits) => `You are ARCHITECT — elite AI operating system for Irisu (based in Nairobi, Kenya). Master ICT and hybrid athlete expertise.
+const SYSTEM_PROMPT = (ctx, habits) => `You are KAHIRO — elite AI operating system for Irisu (based in Nairobi, Kenya). Master ICT and hybrid athlete expertise.
 
 ${KAIZEN_COACH_PREAMBLE}
 
@@ -34,7 +34,7 @@ export function AIPanel({ onClose, ctx, habits = [], mobile }) {
   // current and never claims anything the data can't back.
   const t = ctx?.tradingStats || {};
   const doneHabits = habits.filter((h) => h.done).length;
-  const greeting = `ARCHITECT online.\n\n→ Trading: ${t.total || 0} trade${(t.total || 0) === 1 ? "" : "s"} · ${t.wr || 0}% WR · Net $${(t.totalPnl || 0).toLocaleString()}\n→ Training: ${ctx?.sessionsWk || 0} session${(ctx?.sessionsWk || 0) === 1 ? "" : "s"} this week${ctx?.workedToday ? " · trained today ✓" : ""}\n→ Finance: net worth KES ${Math.round(ctx?.netWorth || 0).toLocaleString()} · passive KES ${Math.round(ctx?.monthlyPassive || 0).toLocaleString()}/mo\n→ Habits: ${doneHabits}/${habits.length} today\n\n1% better than yesterday is enough. What's one small thing we can improve today?`;
+  const greeting = `KAHIRO online.\n\n→ Trading: ${t.total || 0} trade${(t.total || 0) === 1 ? "" : "s"} · ${t.wr || 0}% WR · Net $${(t.totalPnl || 0).toLocaleString()}\n→ Training: ${ctx?.sessionsWk || 0} session${(ctx?.sessionsWk || 0) === 1 ? "" : "s"} this week${ctx?.workedToday ? " · trained today ✓" : ""}\n→ Finance: net worth KES ${Math.round(ctx?.netWorth || 0).toLocaleString()} · passive KES ${Math.round(ctx?.monthlyPassive || 0).toLocaleString()}/mo\n→ Habits: ${doneHabits}/${habits.length} today\n\n1% better than yesterday is enough. What's one small thing we can improve today?`;
 
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
@@ -76,7 +76,7 @@ export function AIPanel({ onClose, ctx, habits = [], mobile }) {
           <Cpu size={17} color={CY} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 2.5 }}>ARCHITECT</div>
+          <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 2.5 }}>KAHIRO</div>
           <div style={{ fontSize: 10, color: GR, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
             <span style={{ width: 5, height: 5, background: GR, borderRadius: "50%", display: "inline-block", boxShadow: `0 0 6px ${GR}` }} />
             LIVE DATA · KAIZEN COACH
@@ -120,7 +120,7 @@ export function AIPanel({ onClose, ctx, habits = [], mobile }) {
         <input
           value={input} onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="Query ARCHITECT..."
+          placeholder="Query KAHIRO..."
           style={{ flex: 1, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "9px 12px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit" }}
         />
         <button

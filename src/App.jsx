@@ -43,12 +43,6 @@ export default function App() {
   );
   // Legacy shape ({name, icon, done, streak}) for Dashboard / AI / kaizen.
   const habits = useMemo(() => toLegacy(habitsV2), [habitsV2]);
-  const toggleHabit = useCallback((name) => {
-    setHabitsV2((prev) => {
-      const h = prev.find((x) => x.name === name && !x.archived);
-      return h ? tapHabit(prev, h.id) : prev;
-    });
-  }, [setHabitsV2]);
   const topStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
   const xp = useMemo(() => xpOf(habitsV2), [habitsV2]);
   const level = levelOf(xp);
@@ -78,16 +72,15 @@ export default function App() {
 
   const renderModule = () => {
     switch (module) {
-      case "dashboard": return <Dashboard onNavigate={setModule} habits={habits} onToggleHabit={toggleHabit} />;
+      case "dashboard": return <Dashboard onNavigate={setModule} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
       case "trading": return <TradingModule />;
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
       case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} />;
-      case "relations": return <PlaceholderModule title="Relationship System" sub="Quality Time · Shared Goals · Connection" features={[{ name: "Date Planner", icon: "💕", desc: "Schedule and plan meaningful experiences." }, { name: "Important Dates", icon: "📅", desc: "Never miss anniversaries or milestones." }, { name: "Relationship Journal", icon: "📝", desc: "Log shared moments and reflections." }, { name: "Shared Goals", icon: "🎯", desc: "Set and track goals together." }, { name: "Conversation Prompts", icon: "💬", desc: "Deep questions to strengthen connection." }, { name: "AI Coach", icon: "🤖", desc: "Relationship intelligence and guidance." }]} />;
-      case "knowledge": return <PlaceholderModule title="Knowledge Base" sub="Second Brain · Reading · Ideas · Learning" features={[{ name: "Note Capture", icon: "📄", desc: "Capture and organise ideas and insights." }, { name: "Reading Tracker", icon: "📚", desc: "Track books, articles, and materials." }, { name: "Idea Vault", icon: "💡", desc: "Store and develop your best ideas." }, { name: "Book Summaries", icon: "🗂️", desc: "Synthesise key lessons from reading." }, { name: "Learning Tracker", icon: "🎓", desc: "Monitor skills and knowledge acquisition." }, { name: "AI Assistant", icon: "🤖", desc: "Search and expand your knowledge base." }]} />;
-      case "productivity": return <PlaceholderModule title="Productivity OS" sub="Tasks · Projects · Deep Work · Focus" features={[{ name: "Task Manager", icon: "✅", desc: "Capture, prioritise, and execute tasks." }, { name: "Deep Work Timer", icon: "⏱️", desc: "Structured focus sessions with Pomodoro." }, { name: "Project Tracker", icon: "📊", desc: "Manage multi-step projects end-to-end." }, { name: "Daily Priorities", icon: "🎯", desc: "Select your 1–3 MITs each morning." }, { name: "Focus Mode", icon: "🔇", desc: "Distraction-free peak performance mode." }, { name: "Habit Streaks", icon: "🔥", desc: "Visual streak tracking for daily behaviours." }]} />;
-      case "health": return <PlaceholderModule title="Health OS" sub="Mental · Physical · Recovery · Vitals" features={[{ name: "Hydration", icon: "💧", desc: "Monitor water intake and electrolytes." }, { name: "Supplement Stack", icon: "💊", desc: "Log creatine, omega-3, Vitamin D, etc." }, { name: "Mood Tracking", icon: "😊", desc: "Monitor emotional states and stress." }, { name: "Sleep Analysis", icon: "😴", desc: "Track sleep quality and recovery." }, { name: "Stress Monitor", icon: "🧠", desc: "Identify patterns and apply interventions." }, { name: "Medical", icon: "🏥", desc: "Secure health data and appointments." }]} />;
-      default: return <Dashboard onNavigate={setModule} habits={habits} onToggleHabit={toggleHabit} />;
+      case "mind": return <PlaceholderModule title="Mind OS" sub="Reading · Learning · Notes · Decisions — Wave 3" features={[{ name: "Reading List", icon: "📚", desc: "Books with progress and key takeaways." }, { name: "Notes", icon: "📄", desc: "Capture and organise ideas and insights." }, { name: "Decision Journal", icon: "⚖️", desc: "Log decisions, expected outcomes, and review them later." }, { name: "Courses", icon: "🎓", desc: "Track learning programmes to completion." }]} />;
+      case "faith": return <PlaceholderModule title="Faith OS" sub="Prayer · Bible Study · Scripture Memory — Wave 3" features={[{ name: "Prayer", icon: "🙏", desc: "Long-horizon prayer consistency, beyond streaks." }, { name: "Bible Study", icon: "📖", desc: "Reading plans and study sessions." }, { name: "Scripture Memory", icon: "🧠", desc: "Spaced review of memorised verses." }, { name: "Devotional Notes", icon: "✍️", desc: "Reflections and church attendance." }]} />;
+      case "analytics": return <PlaceholderModule title="Analytics OS" sub="Cross-module trends & reports — Wave 6" features={[{ name: "Weekly → Yearly Reports", icon: "🗓️", desc: "Every OS aggregated into one review." }, { name: "Correlations", icon: "🔗", desc: "Sleep vs productivity, discipline vs P&L, and more." }, { name: "Trends", icon: "📈", desc: "Direction over isolated numbers." }]} />;
+      default: return <Dashboard onNavigate={setModule} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
     }
   };
 

@@ -6,6 +6,7 @@ import { storage } from "./storage.js";
 import { localDateStr } from "./dates.js";
 import { getSyncStatus, onSyncStatus, testConnection, pull, flush, onAuthChanged } from "./sync.js";
 import { getSyncConfig, saveSyncConfig, signUp, signIn, signOut, resetPassword, updatePassword, getSession, onAuth } from "./supabase.js";
+import { getGcalConfig, setGcalConfig, getToken as getGcalToken } from "./gcal.js";
 
 const SETUP_SQL = `create table if not exists kv (
   user_id uuid not null default auth.uid(),
@@ -119,6 +120,26 @@ export function SettingsPanel({ onClose }) {
   };
   const syncNow = async () => { await flush(); await pull(); };
 
+  // ── Google Calendar state ──────────────────────────────────────────
+  const [gcalId, setGcalId] = useState(getGcalConfig()?.clientId || "");
+  const [gcalMsg, setGcalMsg] = useState(null);
+  const [gcalOn, setGcalOn] = useState(!!getGcalConfig());
+  const connectGcal = async () => {
+    if (!gcalId.trim()) return;
+    setGcalConfig({ clientId: gcalId.trim() });
+    setGcalMsg({ text: "Opening Google consent…", tone: T2 });
+    try {
+      await getGcalToken(true); // interactive consent (must come from this click)
+      setGcalOn(true);
+      setGcalMsg({ text: "Connected — today's events will show on the Command Center.", tone: GR });
+    } catch (err) {
+      setGcalConfig(null);
+      setGcalOn(false);
+      setGcalMsg({ text: `Couldn't connect: ${err.message}. Check the Client ID and that this site's URL is an authorised JavaScript origin.`, tone: RE });
+    }
+  };
+  const disconnectGcal = () => { setGcalConfig(null); setGcalOn(false); setGcalMsg({ text: "Calendar disconnected.", tone: T2 }); };
+
   const syncDot = { live: GR, idle: GR, syncing: CY, error: RE, offline: AM, auth: AM, off: T3 }[syncState.status] || T3;
   const syncLabel = {
     live: `Live sync on${syncState.lastSyncAt ? ` · ${new Date(syncState.lastSyncAt).toLocaleTimeString()}` : ""}`,
@@ -158,14 +179,14 @@ export function SettingsPanel({ onClose }) {
   // ── Data: everything lives in this browser, so backups matter ──────
   const exportData = async () => {
     const keys = await storage.list();
-    const data = { _app: "ARCHITECT", _exported: new Date().toISOString(), _version: 1 };
+    const data = { _app: "KAHIRO", _exported: new Date().toISOString(), _version: 1 };
     for (const k of keys) {
       try { data[k] = JSON.parse(await storage.get(k)); } catch { /* skip unparseable */ }
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `architect-backup-${localDateStr()}.json`;
+    a.download = `kahiro-backup-${localDateStr()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
     setDataMsg({ text: `Backup saved (${keys.length} datasets). Keep it somewhere safe.`, tone: GR });
@@ -174,7 +195,7 @@ export function SettingsPanel({ onClose }) {
   const importData = async (file) => {
     try {
       const data = JSON.parse(await file.text());
-      if (data._app !== "ARCHITECT") throw new Error("Not an ARCHITECT backup file.");
+      if (data._app !== "KAHIRO" && data._app !== "ARCHITECT") throw new Error("Not a KAHIRO backup file.");
       const keys = Object.keys(data).filter((k) => !k.startsWith("_"));
       if (!keys.length) throw new Error("Backup contains no data.");
       for (const k of keys) await storage.set(k, JSON.stringify(data[k]));
@@ -321,6 +342,29 @@ export function SettingsPanel({ onClose }) {
           </>
         )}
         {syncMsg && <div style={{ fontSize: 12, color: syncMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{syncMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        {/* ── Google Calendar ───────────────────────────────────────── */}
+        <div style={{ fontSize: 11, color: AM, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Google Calendar</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
+          Shows today's events on the Command Center (read-only). One-time setup: in Google Cloud Console create an <span style={{ color: T2 }}>OAuth Client ID (Web application)</span>, add this site's URL as an authorised JavaScript origin, and paste the Client ID here.
+        </div>
+        {gcalOn ? (
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, padding: "9px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, fontSize: 12, color: GR }}><Check size={13} />Connected</div>
+            <button onClick={disconnectGcal} style={btn({ flex: "none", borderColor: `${RE}44`, color: RE })}>Disconnect</button>
+          </div>
+        ) : (
+          <>
+            <input value={gcalId} onChange={(e) => setGcalId(e.target.value)} placeholder="OAuth Client ID (…apps.googleusercontent.com)" style={inputStyle} />
+            <button onClick={connectGcal} disabled={!gcalId.trim()}
+              style={btn({ width: "100%", flex: "none", background: gcalId.trim() ? `${AM}18` : GL, borderColor: gcalId.trim() ? `${AM}44` : BD, color: gcalId.trim() ? AM : T3, fontWeight: 700, marginBottom: 8 })}>
+              Connect Google Calendar
+            </button>
+          </>
+        )}
+        {gcalMsg && <div style={{ fontSize: 12, color: gcalMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{gcalMsg.text}</div>}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 

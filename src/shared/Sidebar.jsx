@@ -17,8 +17,8 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
         </div>
         {!isCollapsed && (
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 3, whiteSpace: "nowrap" }}>ARCHITECT</div>
-            <div style={{ fontSize: 8.5, color: T3, letterSpacing: 2 }}>LIFE OS v2.1</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 3, whiteSpace: "nowrap" }}>KAHIRO</div>
+            <div style={{ fontSize: 8.5, color: T3, letterSpacing: 2 }}>KAIZEN OS v3</div>
           </div>
         )}
         {overlay && (
