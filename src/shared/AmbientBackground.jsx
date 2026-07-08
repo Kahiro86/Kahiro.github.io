@@ -136,8 +136,11 @@ export function AmbientBackground({ module, animate = true }) {
   const layer = { position: "absolute", inset: 0, pointerEvents: "none" };
   const anim = (v) => (doAnim ? v : "none"); // static layers still show; motion off when disabled
 
+  // zIndex -1 is load-bearing: a positioned layer at zIndex 0 paints ABOVE
+  // plain in-flow siblings, visually hiding any content that doesn't create
+  // its own stacking context (glass cards survive; plain rows vanish).
   return (
-    <div aria-hidden style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", background: t.base, transition: "background 1.2s ease", pointerEvents: "none" }}>
+    <div aria-hidden style={{ position: "fixed", inset: 0, zIndex: -1, overflow: "hidden", background: t.base, transition: "background 1.2s ease", pointerEvents: "none" }}>
       <div style={{ ...layer, background: `radial-gradient(120% 80% at 50% -10%, ${a}14, transparent 55%), radial-gradient(90% 70% at 85% 110%, ${t.accent2}10, transparent 60%)` }} />
 
       <div style={{ ...layer, background: `radial-gradient(closest-side, ${a}18, transparent)`, width: "60vw", height: "60vw", left: "-10vw", top: "-15vw", filter: "blur(30px)", animation: anim("ambientDrift 34s ease-in-out infinite") }} />
