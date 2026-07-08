@@ -61,7 +61,7 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, streak = 
           </div>
         </div>
         <NudgeBell />
-        <button onClick={onAIToggle} aria-label="ARCHITECT AI" style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${aiOpen ? CY + "55" : BD}`, cursor: "pointer", background: aiOpen ? `linear-gradient(135deg,${CY}22,${PU}22)` : GL, color: aiOpen ? CY : T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <button onClick={onAIToggle} aria-label="KAHIRO AI" style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${aiOpen ? CY + "55" : BD}`, cursor: "pointer", background: aiOpen ? `linear-gradient(135deg,${CY}22,${PU}22)` : GL, color: aiOpen ? CY : T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Cpu size={15} />
         </button>
       </div>
@@ -99,7 +99,7 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, streak = 
       <NudgeBell />
 
       <button onClick={onAIToggle} style={{ height: 34, padding: "0 13px", borderRadius: 10, border: `1px solid ${aiOpen ? CY + "55" : BD}`, cursor: "pointer", background: aiOpen ? `linear-gradient(135deg,${CY}22,${PU}22)` : GL, color: aiOpen ? CY : T2, fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s", fontFamily: "inherit" }}>
-        <Cpu size={13} />ARCHITECT
+        <Cpu size={13} />KAHIRO
       </button>
     </div>
   );

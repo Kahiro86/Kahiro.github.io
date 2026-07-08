@@ -33,7 +33,7 @@ export function DetailView({ trade, trades = [], onBack, onEdit }) {
         .map((e) => ({ item: e.text, winRateWhenChecked: e.checkedWr, winRateWhenSkipped: e.skippedWr, timesChecked: e.checkedN, timesSkipped: e.skippedN }));
 
       const reply = await callClaude({
-        system: `You are ARCHITECT — master ICT trading coach with a Kaizen mindset. Analyze this trade from Irisu (Nairobi, Kenya) on a FundedNext $15,000 challenge. Use expert ICT methodology. Be direct, specific, under 320 words. Structure your review around: (1) how the COMPLETED PRE-TRADE CHECKLIST lines up with the outcome — call out any mandatory step that was skipped and whether that skip pattern shows up on losses; (2) emotional discipline before vs after, and any mistakes logged; (3) which of Irisu's habits are becoming a real edge. Reference actual ICT concepts and praise real strengths. Be compassionate about losses — they are tuition, not failure. Measure this trade against Irisu's OWN past process, not perfection. End with the ONE smallest Kaizen adjustment to apply on the very next trade. No guilt.`,
+        system: `You are KAHIRO — master ICT trading coach with a Kaizen mindset. Analyze this trade from Irisu (Nairobi, Kenya) on a FundedNext $15,000 challenge. Use expert ICT methodology. Be direct, specific, under 320 words. Structure your review around: (1) how the COMPLETED PRE-TRADE CHECKLIST lines up with the outcome — call out any mandatory step that was skipped and whether that skip pattern shows up on losses; (2) emotional discipline before vs after, and any mistakes logged; (3) which of Irisu's habits are becoming a real edge. Reference actual ICT concepts and praise real strengths. Be compassionate about losses — they are tuition, not failure. Measure this trade against Irisu's OWN past process, not perfection. End with the ONE smallest Kaizen adjustment to apply on the very next trade. No guilt.`,
         messages: [{
           role: "user",
           content: `Analyze this trade:\n${JSON.stringify({
@@ -226,7 +226,7 @@ export function DetailView({ trade, trades = [], onBack, onEdit }) {
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <Cpu size={14} color={CY} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: CY }}>ARCHITECT — Expert ICT Trade Review</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: CY }}>KAHIRO — Expert ICT Trade Review</div>
               <div style={{ fontSize: 10.5, color: T3 }}>Master ICT methodology analysis · AI coaching</div>
             </div>
           </div>

@@ -1,16 +1,17 @@
 // Per-module atmosphere. Each module is a "world" — a mood, an accent, and a
 // particle behaviour. Text/data colours stay in designTokens; these only drive
 // the ambient background so each section feels distinct even with no text.
+// Palette is deliberately muted (~90% desaturated): dull, low-key accents so
+// the atmosphere recedes and the data carries the colour.
 export const MODULE_THEME = {
-  dashboard:    { name: "Command", accent: "#8FD3FF", accent2: "#E8EDF5", base: "#05070F", mode: "network", mood: "command" },
-  trading:      { name: "Trading", accent: "#4CC6FF", accent2: "#0EA5E9", base: "#050A13", mode: "data",    mood: "grid" },
-  finance:      { name: "Finance", accent: "#E7C77B", accent2: "#C99A34", base: "#0B0803", mode: "dust",    mood: "marble" },
-  athlete:      { name: "Athlete", accent: "#34D399", accent2: "#F0526B", base: "#07090A", mode: "embers",  mood: "arena" },
-  life:         { name: "Life OS", accent: "#C4B5FD", accent2: "#8CE0A6", base: "#08060F", mode: "petals",  mood: "night" },
-  relations:    { name: "Relationships", accent: "#F0A6C0", accent2: "#C4B5FD", base: "#0B060C", mode: "dust", mood: "night" },
-  knowledge:    { name: "Knowledge", accent: "#9DB4FF", accent2: "#C4B5FD", base: "#06080F", mode: "network", mood: "command" },
-  productivity: { name: "Productivity", accent: "#7DE0D0", accent2: "#8FD3FF", base: "#05090E", mode: "data", mood: "grid" },
-  health:       { name: "Health", accent: "#7BE0A6", accent2: "#8FD3FF", base: "#06090C", mode: "dust", mood: "arena" },
+  dashboard: { name: "Command",   accent: "#8E96A3", accent2: "#6B7280", base: "#07080A", mode: "network", mood: "command" }, // deep graphite, soft white
+  trading:   { name: "Trading",   accent: "#5E8A9C", accent2: "#8C5A62", base: "#060A0D", mode: "data",    mood: "grid" },    // muted cyan / crimson
+  finance:   { name: "Finance",   accent: "#6F8F7F", accent2: "#A5946B", base: "#090804", mode: "dust",    mood: "marble" },  // muted emerald / gold
+  athlete:   { name: "Athlete",   accent: "#6C8EB5", accent2: "#7A8E9C", base: "#07090B", mode: "embers",  mood: "arena" },   // muted electric blue
+  life:      { name: "Life OS",   accent: "#6E8B74", accent2: "#8FA58E", base: "#070907", mode: "petals",  mood: "night" },   // muted forest green
+  mind:      { name: "Mind",      accent: "#767FA6", accent2: "#8B8FB0", base: "#07080D", mode: "network", mood: "command" }, // muted indigo
+  faith:     { name: "Faith",     accent: "#B09A6F", accent2: "#C0AE8C", base: "#0A0906", mode: "dust",    mood: "night" },   // muted amber
+  analytics: { name: "Analytics", accent: "#8B7CA0", accent2: "#9C90AE", base: "#08070C", mode: "data",    mood: "grid" },    // muted purple
 };
 
 export const themeFor = (module) => MODULE_THEME[module] || MODULE_THEME.dashboard;

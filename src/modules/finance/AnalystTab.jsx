@@ -19,7 +19,7 @@ export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive }
       const srcLine = bySource.length ? bySource.map((s) => `${s.source} ${Math.round(s.pct)}%`).join(", ") : "none logged";
       const overBudget = budgets.filter((b) => +b.spent > +b.budget && +b.budget > 0).map((b) => b.cat);
       const reply = await callClaude({
-        system: `You are ARCHITECT — a Kaizen personal-finance analyst for Irisu (Nairobi, Kenya; KES). ${KAIZEN_COACH_PREAMBLE}
+        system: `You are KAHIRO — a Kaizen personal-finance analyst for Irisu (Nairobi, Kenya; KES). ${KAIZEN_COACH_PREAMBLE}
 Analyze the numbers below. Be specific and data-driven. Identify: unnecessary/rising spending, income sources getting stronger or weaker, savings opportunities, risks, and diversification. Give practical, achievable recommendations that improve long-term stability — not generic advice. Under 320 words. Structure: Verdict · What's working · What to watch · This week's one small step.`,
         messages: [{
           role: "user",
@@ -98,7 +98,7 @@ Sub-scores: ${SUBSCORE_META.map((m) => `${m.label} ${Math.round(health.sub[m.key
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Cpu size={16} color={CY} />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>ARCHITECT — Financial Analysis</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>KAHIRO — Financial Analysis</div>
               <div style={{ fontSize: 11, color: T3 }}>AI review of your habits, risks, and opportunities</div>
             </div>
           </div>
