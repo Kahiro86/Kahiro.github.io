@@ -40,6 +40,8 @@ export const DEFAULT_FINANCE_STATE = {
   // Interactive debts. remaining = original − Σ payments. Falls back to the
   // legacy single `personalDebt` number when this list is empty.
   debts: [],
+  // Recurring monthly bills: { id, name, amount, dueDay, lastPaidMonth }.
+  bills: [],
   // Editable financial goals (persisted). history: [{ date, amount }] contribution log.
   goals: [
     { id: "g_ef",   name: "Emergency Fund (6 months)", icon: "🛡️", target: 300000, current: 0, monthly: 5000,  deadline: "", color: GR, archived: false, createdAt: "", history: [] },

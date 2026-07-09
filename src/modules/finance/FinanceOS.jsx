@@ -37,7 +37,7 @@ const FIN_TABS = [
 // and setter can trust the shape.
 function normalizeFinance(raw) {
   const s = { ...DEFAULT_FINANCE_STATE, ...(raw && typeof raw === "object" ? raw : {}) };
-  for (const k of ["income", "mmfs", "tbills", "nseStocks", "budgets", "goals", "debts"]) {
+  for (const k of ["income", "mmfs", "tbills", "nseStocks", "budgets", "goals", "debts", "bills"]) {
     s[k] = Array.isArray(s[k]) ? s[k].filter((x) => x != null) : DEFAULT_FINANCE_STATE[k];
   }
   return s;
@@ -77,6 +77,7 @@ export function FinanceOS() {
   const setIncome = (updater) => setState((s) => ({ ...s, income: typeof updater === "function" ? updater(s.income || []) : updater }));
   const setGoals = (updater) => setState((s) => ({ ...s, goals: typeof updater === "function" ? updater(s.goals || []) : updater }));
   const setDebts = (updater) => setState((s) => ({ ...s, debts: typeof updater === "function" ? updater(s.debts || []) : updater }));
+  const setBills = (updater) => setState((s) => ({ ...s, bills: typeof updater === "function" ? updater(s.bills || []) : updater }));
   const setTradingWithdrawals = (v) => patch({ tradingWithdrawals: v });
   const setProfitSplit = (v) => patch({ profitSplit: v });
 
@@ -198,7 +199,7 @@ export function FinanceOS() {
           <AccountsTab g={g} netPay={netPay} fmtKES={fmtKES} opBal={opBal} setOpBal={setOpBal} savBal={savBal} setSavBal={setSavBal} />
         )}
         {finTab === "budget" && (
-          <BudgetTab netPay={netPay} budgets={budgets} setBudgets={setBudgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent} />
+          <BudgetTab netPay={netPay} budgets={budgets} setBudgets={setBudgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent} bills={state.bills} setBills={setBills} income={income} />
         )}
         {finTab === "debt" && (
           <DebtTab debts={debts} setDebts={setDebts} fmtKES={fmtKES} legacyDebt={+personalDebt || 0} />

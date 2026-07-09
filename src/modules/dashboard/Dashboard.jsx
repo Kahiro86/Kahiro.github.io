@@ -27,6 +27,8 @@ import { disciplineScore, disciplineSeries } from "../../shared/discipline.js";
 import { momentum } from "../../shared/momentum.js";
 import { sanitizeMissions, newMission, toggleMission, nextActions } from "../../shared/missions.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
+import { pendingReviews, sanitizeReviews } from "../trading/reviews.js";
+import { billsDueSoon } from "../finance/bills.js";
 import { NonNegotiables } from "../life/NonNegotiables.jsx";
 
 const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
@@ -55,6 +57,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [entries, setEntries] = useStorageState("journal_entries", []);
   const [rawMissions, setMissions] = useStorageState("missions", []);
+  const [rawReviews] = useStorageState("ict_reviews", []);
   const [missionDraft, setMissionDraft] = useState("");
   const [journalDraft, setJournalDraft] = useState("");
   const [journalSaved, setJournalSaved] = useState(false);
@@ -116,6 +119,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
   const tStats = useMemo(() => getStats(trades), [trades]);
   const tMetrics = useMemo(() => tradingMetrics(trades, bal, finance.tradingWithdrawals || 0, finance.profitSplit || 80), [trades, bal, finance.tradingWithdrawals, finance.profitSplit]);
   const openTrades = useMemo(() => trades.filter((t) => t.status === "OPEN" && !t.archived).length, [trades]);
+  const reviewsDue = useMemo(() => pendingReviews(trades, sanitizeReviews(rawReviews)).length, [trades, rawReviews]);
   const fin = useMemo(() => financeSummary(finance), [finance]);
   const fmtKES = (n) => (finance.currency === "USD" ? usd((+n || 0) / fin.xRate) : `KES ${Math.round(+n || 0).toLocaleString()}`);
   const incomeStats = useMemo(() => incomeAnalytics(finance.income || []), [finance.income]);
@@ -300,10 +304,10 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 14 }}>
         <ModuleCard color={CY} icon={<TrendingUp size={15} color={CY} />} title="Trading OS" onClick={() => onNavigate("trading")}
           main={usd(tMetrics.equity)} mainLabel="Equity" sub={`Today ${tMetrics.dailyPnl >= 0 ? "+" : ""}${usd(tMetrics.dailyPnl)} · ${tStats.total ? tStats.wr + "% WR" : "no trades yet"}`}
-          extra={openTrades > 0 ? `${openTrades} open` : kz.active ? "session live" : "market quiet"} extraColor={openTrades > 0 ? AM : tMetrics.totalProfit >= 0 ? GR : RE} />
+          extra={reviewsDue > 0 ? `${reviewsDue} review${reviewsDue > 1 ? "s" : ""} due` : openTrades > 0 ? `${openTrades} open` : kz.active ? "session live" : "market quiet"} extraColor={reviewsDue > 0 ? AM : openTrades > 0 ? AM : tMetrics.totalProfit >= 0 ? GR : RE} />
         <ModuleCard color={GR} icon={<DollarSign size={15} color={GR} />} title="Finance OS" onClick={() => onNavigate("finance")}
           main={fmtKES(fin.personalNetWorth)} mainLabel="Net Worth" sub={`Health ${health.overall}/100 · ${fmtKES(fin.monthlyPassive)}/mo passive`}
-          extra={health.band} extraColor={health.overall >= 66 ? GR : health.overall >= 40 ? AM : RE} />
+          extra={billsDueSoon(finance.bills).length > 0 ? `${billsDueSoon(finance.bills).length} bill${billsDueSoon(finance.bills).length > 1 ? "s" : ""} due` : health.band} extraColor={billsDueSoon(finance.bills).length > 0 ? AM : health.overall >= 66 ? GR : health.overall >= 40 ? AM : RE} />
         <ModuleCard color={PU} icon={<Dumbbell size={15} color={PU} />} title="Athlete OS" onClick={() => onNavigate("athlete")}
           main={todayLogged ? "Done ✓" : todayPlan?.type || "—"} mainLabel={todayLogged ? "Today's session logged" : "Today's session"} sub={`${sessionsWk} session${sessionsWk === 1 ? "" : "s"} this week`}
           extra={todayLogged ? "trained" : todayPlan?.type === "Rest" ? "recovery" : "pending"} extraColor={todayLogged ? GR : todayPlan?.type === "Rest" ? T3 : AM} />
