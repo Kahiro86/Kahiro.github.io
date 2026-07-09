@@ -19,7 +19,7 @@ import { FinanceOS } from "./modules/finance/FinanceOS.jsx";
 import { LifeOSModule } from "./modules/life/LifeOSModule.jsx";
 import { FaithOS } from "./modules/faith/FaithOS.jsx";
 import { MindOS } from "./modules/mind/MindOS.jsx";
-import { PlaceholderModule } from "./shared/PlaceholderModule.jsx";
+import { AnalyticsOS } from "./modules/analytics/AnalyticsOS.jsx";
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
 import { AIPanel } from "./shared/AIPanel.jsx";
@@ -81,7 +81,7 @@ export default function App() {
       case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} />;
       case "mind": return <MindOS />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
-      case "analytics": return <PlaceholderModule title="Analytics OS" sub="Cross-module trends & reports — Wave 6" features={[{ name: "Weekly → Yearly Reports", icon: "🗓️", desc: "Every OS aggregated into one review." }, { name: "Correlations", icon: "🔗", desc: "Sleep vs productivity, discipline vs P&L, and more." }, { name: "Trends", icon: "📈", desc: "Direction over isolated numbers." }]} />;
+      case "analytics": return <AnalyticsOS habits={habitsV2} />;
       default: return <Dashboard onNavigate={setModule} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
     }
   };
@@ -131,7 +131,7 @@ export default function App() {
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
         <AmbientBackground module={module} animate={!isMobile} />
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} streak={topStreak} xp={xp} level={level} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={setModule} streak={topStreak} xp={xp} level={level} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
@@ -171,7 +171,7 @@ export default function App() {
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} streak={topStreak} xp={xp} level={level} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={setModule} streak={topStreak} xp={xp} level={level} />
         <div key={module} style={{ flex: 1, overflowY: module === "trading" ? "hidden" : "auto", overflow: module === "trading" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
