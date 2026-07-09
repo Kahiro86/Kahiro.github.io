@@ -4,6 +4,7 @@ import { storage } from "./shared/storage.js";
 import { useStorageState } from "./shared/useStorageState.js";
 import { useIsMobile } from "./shared/useIsMobile.js";
 import { migrateHabits, toLegacy, tapHabit, xpOf, levelOf } from "./shared/habitEngine.js";
+import { purityXp } from "./modules/life/purity.js";
 import { localDateStr } from "./shared/dates.js";
 import { ToastProvider } from "./shared/toast.jsx";
 import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
@@ -46,7 +47,8 @@ export default function App() {
   // Legacy shape ({name, icon, done, streak}) for Dashboard / AI / kaizen.
   const habits = useMemo(() => toLegacy(habitsV2), [habitsV2]);
   const topStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
-  const xp = useMemo(() => xpOf(habitsV2), [habitsV2]);
+  const [purityLogRaw] = useStorageState("purity_log", {});
+  const xp = useMemo(() => xpOf(habitsV2) + purityXp(purityLogRaw), [habitsV2, purityLogRaw]);
   const level = levelOf(xp);
 
   // Live cross-module context for the AI panel — real numbers only.
@@ -119,6 +121,7 @@ export default function App() {
       @keyframes ambientRays { 0% { opacity: 0.35; } 100% { opacity: 0.62; } }
       @keyframes ambientSpin { to { transform: rotate(360deg); } }
       @keyframes ambientSpinRev { to { transform: rotate(-360deg); } }
+      @keyframes purityGlow { 0% { box-shadow: 0 0 0 rgba(140,224,166,0); } 30% { box-shadow: 0 0 34px rgba(140,224,166,0.35); } 100% { box-shadow: 0 0 0 rgba(140,224,166,0); } }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
       }

@@ -5,8 +5,9 @@ import { localDateStr } from "./dates.js";
 import { isScheduled, isDone, isSkipped, isNonNeg, isWeekly, currentStreak, rangeStats } from "./habitEngine.js";
 import { pendingReviews, sanitizeReviews } from "../modules/trading/reviews.js";
 import { billsDueSoon } from "../modules/finance/bills.js";
+import { sanitizePurity, statusOn } from "../modules/life/purity.js";
 
-// deps: { habits, trades, reviews, bills, verses, decisions }
+// deps: { habits, trades, reviews, bills, verses, decisions, purity }
 export function buildNudges(deps) {
   const ds = localDateStr();
   const habits = (deps.habits || []).filter((h) => h && !h.archived && !h.paused);
@@ -83,7 +84,14 @@ export function buildNudges(deps) {
     }
   }
 
-  // 9. Weekly focus: the weakest area over 30 days (Sundays only, one line).
+  // 9. Purity check-in still open (only once the practice has begun).
+  const purityLog = sanitizePurity(deps.purity);
+  if (Object.keys(purityLog).length && !statusOn(purityLog, ds)) {
+    out.push({ id: "purity", icon: "🛡️", tone: "info", nav: "life",
+      text: "Purity check-in is open — claim today." });
+  }
+
+  // 10. Weekly focus: the weakest area over 30 days (Sundays only, one line).
   if (new Date().getDay() === 0 && habits.length >= 3) {
     const byCat = {};
     for (const h of habits) {
