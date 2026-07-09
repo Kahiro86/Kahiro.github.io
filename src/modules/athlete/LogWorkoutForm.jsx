@@ -17,6 +17,7 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
       : [{ id: uidA(), name: "", sets: [{ reps: "", weight: "" }] }]
   );
   const [duration, setDuration] = useState(seed.duration || "");
+  const [distance, setDistance] = useState(seed.distance || "");
   const [intensity, setIntensity] = useState(seed.intensity || "Moderate");
   const [notes, setNotes] = useState("");
   const [newEx, setNewEx] = useState(null); // { forRowId, name, muscle, equipment, defSets, defReps, defWeight }
@@ -55,8 +56,10 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
     : 0;
 
   const buildWorkout = () => ({
-    id: uidA(), type, name: name || (type === "strength" ? "Strength Session" : "Cardio Session"),
-    date, duration: +duration || 0, intensity, notes, createdAt: new Date().toISOString(),
+    id: uidA(), type,
+    name: name || { strength: "Strength Session", cardio: "Cardio Session", mobility: "Mobility Session", recovery: "Recovery Session" }[type],
+    date, duration: +duration || 0, distance: type === "cardio" ? +distance || 0 : 0,
+    intensity, notes, createdAt: new Date().toISOString(),
     exercises: type === "strength" ? exercises.filter((e) => e.name.trim()) : [],
     totalVolume,
   });
@@ -101,10 +104,10 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
           </div>
         )}
 
-        <Fld label="Type"><DirTogGeneric value={type} onChange={setType} options={[{ v: "strength", l: "STRENGTH" }, { v: "cardio", l: "CARDIO" }]} /></Fld>
+        <Fld label="Type"><DirTogGeneric value={type} onChange={setType} options={[{ v: "strength", l: "STRENGTH" }, { v: "cardio", l: "CARDIO" }, { v: "mobility", l: "MOBILITY" }, { v: "recovery", l: "RECOVERY" }]} /></Fld>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13 }}>
           <Fld label="Date"><Inp type="date" value={date} onChange={setDate} /></Fld>
-          <Fld label="Session Name"><Inp value={name} onChange={setName} placeholder={type === "strength" ? "e.g. Push Day" : "e.g. Morning Run"} /></Fld>
+          <Fld label="Session Name"><Inp value={name} onChange={setName} placeholder={{ strength: "e.g. Push Day", cardio: "e.g. Morning Run", mobility: "e.g. Hip Mobility Flow", recovery: "e.g. Stretch & Foam Roll" }[type]} /></Fld>
         </div>
 
         {type === "strength" ? (
@@ -156,8 +159,9 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
             )}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13 }}>
+          <div style={{ display: "grid", gridTemplateColumns: type === "cardio" ? "1fr 1fr 1fr" : "1fr 1fr", gap: 13 }}>
             <Fld label="Duration (minutes)"><Inp type="number" value={duration} onChange={setDuration} placeholder="45" mono /></Fld>
+            {type === "cardio" && <Fld label="Distance (km, optional)"><Inp type="number" value={distance} onChange={setDistance} placeholder="5" mono /></Fld>}
             <Fld label="Intensity"><Radio value={intensity} onChange={setIntensity} options={["Easy", "Moderate", "Hard"]} color={CY} /></Fld>
           </div>
         )}
