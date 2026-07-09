@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { DollarSign, Edit3, Check, X, FileText, BarChart2, Shield, Star, AlertCircle } from "lucide-react";
+import { DollarSign, Edit3, Check, X, FileText, BarChart2, Shield, Star, AlertCircle, ClipboardCheck } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -11,6 +11,8 @@ import { TradingAnalytics } from "./TradingAnalytics.jsx";
 import { RiskCalculator } from "./RiskCalculator.jsx";
 import { PlaybookBuilder } from "./PlaybookBuilder.jsx";
 import { TradingReports } from "./TradingReports.jsx";
+import { ReviewsTab } from "./ReviewsTab.jsx";
+import { pendingReviews, sanitizeReviews } from "./reviews.js";
 import { EntryForm } from "./EntryForm.jsx";
 import { DetailView } from "./DetailView.jsx";
 import { PreTradeChecklist } from "./PreTradeChecklist.jsx";
@@ -33,6 +35,8 @@ export function TradingModule() {
 
   // Checklist templates + gate settings (persisted, customizable).
   const [templates, setTemplates] = useStorageState("ict_checklist_templates", DEFAULT_CHECKLIST_TEMPLATES);
+  const [reviews, setReviews] = useStorageState("ict_reviews", []);
+  const reviewsDue = useMemo(() => pendingReviews(trades, sanitizeReviews(reviews)).length, [trades, reviews]);
   const [activeChecklist, setActiveChecklist] = useStorageState("ict_active_checklist", "ict");
   const [allowSkip, setAllowSkip] = useStorageState("ict_checklist_skip", false);
   const [pendingChecklist, setPendingChecklist] = useState(null);
@@ -117,6 +121,7 @@ export function TradingModule() {
             { id: "risk",      l: "Risk Calc",  i: Shield      },
             { id: "playbook",  l: "Playbook",   i: Star        },
             { id: "reports",   l: "Reports",    i: AlertCircle },
+            { id: "reviews",   l: reviewsDue ? `Reviews (${reviewsDue})` : "Reviews", i: ClipboardCheck },
           ].map(({ id, l, i: Icon }) => (
             <button key={id} onClick={() => setTv(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tv === id ? `linear-gradient(135deg,${CY}22,${PU}22)` : "transparent", color: tv === id ? CY : T2, fontSize: 12, fontWeight: tv === id ? 600 : 400, fontFamily: "inherit", borderTop: tv === id ? `1px solid ${CY}44` : "1px solid transparent", whiteSpace: "nowrap" }}>
               <Icon size={11} />{l}
@@ -168,6 +173,7 @@ export function TradingModule() {
         {tradesLoaded && tv === "risk" && <RiskCalculator trades={trades} balance={bal + netPnl} />}
         {tradesLoaded && tv === "playbook" && <PlaybookBuilder trades={trades} />}
         {tradesLoaded && tv === "reports" && <TradingReports trades={trades} balance={bal + netPnl} />}
+        {tradesLoaded && tv === "reviews" && <div style={{ overflowY: "auto", height: "100%" }}><ReviewsTab trades={trades} reviews={reviews} setReviews={setReviews} /></div>}
         {tv === "form" && <div style={{ height: "100%" }}><EntryForm onSubmit={saveTrade} onCancel={() => { setTv("log"); setEditT(null); setPendingChecklist(null); }} editTrade={editT} accountBalance={bal} checklistResult={pendingChecklist} /></div>}
         {tv === "detail" && sel && <div style={{ overflowY: "auto", height: "100%" }}><DetailView trade={trades.find((t) => t.id === sel.id) || sel} trades={trades} onBack={() => setTv("log")} onEdit={(t) => { setEditT(t); setPendingChecklist(null); setTv("form"); }} /></div>}
       </div>
