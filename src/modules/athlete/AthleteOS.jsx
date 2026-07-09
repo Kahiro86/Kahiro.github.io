@@ -1,9 +1,9 @@
 import { useState } from "react";
 import {
-  BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus } from "lucide-react";
-import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
+import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler } from "lucide-react";
+import { B1, B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -21,6 +21,9 @@ export function AthleteOS() {
   const [templates, setTemplates] = useStorageState("athlete_templates", []);
   const [logInitial, setLogInitial] = useState(null);
   const [filterType, setFilterType] = useState("");
+  const [rawMeasures, setMeasures] = useStorageState("athlete_measurements", []);
+  const measures = (Array.isArray(rawMeasures) ? rawMeasures : []).filter((m) => m && m.id);
+  const [mDraft, setMDraft] = useState(null); // { weight, waist, chest, arms, thighs, notes }
 
   const toast = useToast();
   const startLog = (initial = null) => { setLogInitial(initial); setView("log"); };
@@ -35,7 +38,19 @@ export function AthleteOS() {
     setWorkouts((prev) => prev.filter((x) => x.id !== id));
     toast("Workout deleted", { action: "Undo", onAction: () => setWorkouts((p) => [w, ...p]), tone: "danger" });
   };
-  const duplicateWorkout = (w) => startLog({ type: w.type, name: w.name, exercises: w.exercises, duration: w.duration, intensity: w.intensity });
+  const TYPE_ICON = { strength: "💪", cardio: "🏃", mobility: "🧘", recovery: "😴" };
+  const duplicateWorkout = (w) => startLog({ type: w.type, name: w.name, exercises: w.exercises, duration: w.duration, distance: w.distance, intensity: w.intensity });
+  const saveMeasure = () => {
+    const vals = ["weight", "waist", "chest", "arms", "thighs"].reduce((o, k) => ({ ...o, [k]: +mDraft?.[k] || 0 }), {});
+    if (!Object.values(vals).some((v) => v > 0)) return;
+    setMeasures((prev) => [{ id: uidT(), date: localDateStr(), ...vals, notes: (mDraft.notes || "").trim() }, ...(Array.isArray(prev) ? prev : [])]);
+    setMDraft(null);
+    toast("Measurements logged 📏", { tone: "success", duration: 2500 });
+  };
+  const deleteMeasure = (m) => {
+    setMeasures((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x?.id !== m.id));
+    toast("Entry deleted", { action: "Undo", onAction: () => setMeasures((p) => [m, ...(Array.isArray(p) ? p : [])]), tone: "danger" });
+  };
   const saveTemplate = (tpl) => {
     setTemplates((prev) => [...prev, { id: uidT(), ...tpl }]);
     toast(`Template "${tpl.name}" saved — one tap to reuse it`, { tone: "success" });
@@ -54,6 +69,19 @@ export function AthleteOS() {
   const strengthCount = thisWeekWorkouts.filter((w) => w.type === "strength").length;
   const cardioCount = thisWeekWorkouts.filter((w) => w.type === "cardio").length;
   const cardioMinutes = thisWeekWorkouts.filter((w) => w.type === "cardio").reduce((s, w) => s + (+w.duration || 0), 0);
+  const mobilityCount = thisWeekWorkouts.filter((w) => w.type === "mobility" || w.type === "recovery").length;
+
+  // Running progression: cardio sessions with a distance, oldest -> newest.
+  const runs = workouts
+    .filter((w) => w && w.type === "cardio" && +w.distance > 0 && +w.duration > 0)
+    .map((w) => ({ date: (w.date || "").slice(5), km: +w.distance, pace: +((+w.duration) / (+w.distance)).toFixed(2) }))
+    .reverse();
+
+  // Body measurements, oldest -> newest, for trends and deltas.
+  const mAsc = [...measures].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const weightSeries = mAsc.filter((m) => +m.weight > 0).map((m) => ({ date: (m.date || "").slice(5), kg: +m.weight }));
+  const latestM = mAsc[mAsc.length - 1];
+  const prevM = mAsc[mAsc.length - 2];
 
   const streak = (() => {
     let count = 0, d = new Date();
@@ -107,6 +135,7 @@ export function AthleteOS() {
     { id: "week",     l: "This Week", i: Layers },
     { id: "history",  l: "History",   i: FileText },
     { id: "progress", l: "Progress",  i: TrendingUp },
+    { id: "body",     l: "Body",      i: Ruler },
   ];
 
   return (
@@ -169,10 +198,11 @@ export function AthleteOS() {
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 12 }}>
               <Chip label="Strength This Week" value={strengthCount} color={PU} />
               <Chip label="Cardio This Week"   value={cardioCount}   color={CY} />
               <Chip label="Cardio Minutes"     value={cardioMinutes} color={GR} />
+              <Chip label="Mobility & Recovery" value={mobilityCount} color={AM} />
               <Chip label="Day Streak"         value={streak}        color={AM} />
             </div>
 
@@ -251,7 +281,7 @@ export function AthleteOS() {
                 <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>{workouts.length} workouts logged</div>
               </div>
               <div style={{ display: "flex", gap: 6 }}>
-                {[{ v: "", l: "All" }, { v: "strength", l: "Strength" }, { v: "cardio", l: "Cardio" }].map((f) => (
+                {[{ v: "", l: "All" }, { v: "strength", l: "Strength" }, { v: "cardio", l: "Cardio" }, { v: "mobility", l: "Mobility" }, { v: "recovery", l: "Recovery" }].map((f) => (
                   <button key={f.v} onClick={() => setFilterType(f.v)} style={{ padding: "6px 13px", borderRadius: 9, border: `1px solid ${filterType === f.v ? PU + "66" : BD}`, background: filterType === f.v ? `${PU}22` : GL, color: filterType === f.v ? PU : T2, fontSize: 12, fontWeight: filterType === f.v ? 700 : 400, cursor: "pointer", fontFamily: "inherit" }}>
                     {f.l}
                   </button>
@@ -267,7 +297,7 @@ export function AthleteOS() {
                   <Card key={w.id} style={{ padding: "16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ display: "flex", gap: 12 }}>
-                        <span style={{ fontSize: 22 }}>{w.type === "strength" ? "💪" : "🏃"}</span>
+                        <span style={{ fontSize: 22 }}>{TYPE_ICON[w.type] || "🏃"}</span>
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 700, color: T1 }}>{w.name}</div>
                           <div style={{ fontSize: 11, color: T3, marginTop: 2 }}>{w.date}</div>
@@ -276,8 +306,8 @@ export function AthleteOS() {
                               {w.exercises.map((e) => e?.name).filter(Boolean).join(", ")}
                             </div>
                           )}
-                          {w.type === "cardio" && (
-                            <div style={{ fontSize: 11.5, color: T2, marginTop: 6 }}>{w.duration} min · {w.intensity}</div>
+                          {w.type !== "strength" && (
+                            <div style={{ fontSize: 11.5, color: T2, marginTop: 6 }}>{w.duration} min{w.type === "cardio" && +w.distance > 0 ? ` · ${w.distance} km · ${((+w.duration) / (+w.distance)).toFixed(1)} min/km` : ""} · {w.intensity}</div>
                           )}
                           {w.notes && <div style={{ fontSize: 11, color: T3, marginTop: 6, fontStyle: "italic" }}>"{w.notes}"</div>}
                         </div>
@@ -356,6 +386,30 @@ export function AthleteOS() {
                   </ResponsiveContainer>
                 </Card>
 
+                {runs.length >= 2 && (
+                  <Card style={{ padding: "20px" }}>
+                    <SH title="Running Progression" sub="Distance per run · pace (min/km) — lower pace line = faster" />
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={runs} margin={{ top: 0, right: 0, bottom: 0, left: -18 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={BD} />
+                        <XAxis dataKey="date" stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} />
+                        <YAxis stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} />
+                        <Tooltip content={mkTT("", " km")} />
+                        <Bar dataKey="km" radius={[5, 5, 0, 0]} fill={CY} fillOpacity={0.85} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <ResponsiveContainer width="100%" height={140}>
+                      <LineChart data={runs} margin={{ top: 8, right: 0, bottom: 0, left: -18 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={BD} />
+                        <XAxis dataKey="date" stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} />
+                        <YAxis stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
+                        <Tooltip content={mkTT("", " min/km")} />
+                        <Line type="monotone" dataKey="pace" stroke={GR} strokeWidth={2} dot={{ fill: GR, r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Card>
+                )}
+
                 {overload.length > 0 && (
                   <Card style={{ padding: "20px" }}>
                     <SH title="Progressive Overload" sub="Top-set weight this session vs the one before" />
@@ -401,6 +455,101 @@ export function AthleteOS() {
                   </Card>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {view === "body" && (
+          <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 820 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Body</div>
+                <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Measurements over months — the scale is one signal, not the verdict.</div>
+              </div>
+              {!mDraft && (
+                <button onClick={() => setMDraft({ weight: "", waist: "", chest: "", arms: "", thighs: "", notes: "" })}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 15px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  <Plus size={13} />Log measurements
+                </button>
+              )}
+            </div>
+
+            {mDraft && (
+              <Card style={{ padding: "16px", borderColor: `${PU}44` }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 10, marginBottom: 10 }}>
+                  {[["weight", "Weight (kg)"], ["waist", "Waist (cm)"], ["chest", "Chest (cm)"], ["arms", "Arms (cm)"], ["thighs", "Thighs (cm)"]].map(([k, l]) => (
+                    <label key={k}>
+                      <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{l}</span>
+                      <input type="number" value={mDraft[k]} onChange={(e) => setMDraft((d) => ({ ...d, [k]: e.target.value }))}
+                        style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, color: T1, outline: "none", fontFamily: "monospace", marginTop: 4, boxSizing: "border-box" }} />
+                    </label>
+                  ))}
+                </div>
+                <input value={mDraft.notes} onChange={(e) => setMDraft((d) => ({ ...d, notes: e.target.value }))} placeholder="Notes (optional)"
+                  style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "9px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", marginBottom: 10, boxSizing: "border-box" }} />
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button onClick={() => setMDraft(null)} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                  <button onClick={saveMeasure} style={{ padding: "8px 18px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 9, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save entry</button>
+                </div>
+              </Card>
+            )}
+
+            {measures.length === 0 && !mDraft && (
+              <Card style={{ padding: "40px", textAlign: "center" }}>
+                <div style={{ fontSize: 30, marginBottom: 10 }}>📏</div>
+                <div style={{ fontSize: 14, color: T2, marginBottom: 6 }}>No measurements yet</div>
+                <div style={{ fontSize: 12, color: T3 }}>Log weight and tape measurements every week or two — trends beat daily noise.</div>
+              </Card>
+            )}
+
+            {latestM && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 11 }}>
+                {[["weight", "Weight", "kg"], ["waist", "Waist", "cm"], ["chest", "Chest", "cm"], ["arms", "Arms", "cm"], ["thighs", "Thighs", "cm"]].map(([k, l, u]) => {
+                  const cur = +latestM[k] || 0;
+                  if (!cur) return null;
+                  const prev = prevM ? +prevM[k] || 0 : 0;
+                  const d = prev ? +(cur - prev).toFixed(1) : null;
+                  return (
+                    <Card key={k} style={{ padding: "13px 15px" }}>
+                      <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>{l}</div>
+                      <div style={{ fontSize: 19, fontWeight: 800, color: PU, fontFamily: "monospace" }}>{cur}<span style={{ fontSize: 11, color: T3 }}> {u}</span></div>
+                      {d != null && d !== 0 && <div style={{ fontSize: 10.5, fontWeight: 700, color: T2, marginTop: 3 }}>{d > 0 ? `▲ +${d}` : `▼ ${d}`} vs last</div>}
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {weightSeries.length >= 2 && (
+              <Card style={{ padding: "20px" }}>
+                <SH title="Weight Trend" sub="Every logged entry" />
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={weightSeries} margin={{ top: 6, right: 4, bottom: 0, left: -18 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={BD} />
+                    <XAxis dataKey="date" stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} />
+                    <YAxis stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
+                    <Tooltip content={mkTT("", " kg")} />
+                    <Line type="monotone" dataKey="kg" stroke={PU} strokeWidth={2} dot={{ fill: PU, r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+
+            {measures.length > 0 && (
+              <Card style={{ padding: "16px 18px" }}>
+                <SH title="History" sub={`${measures.length} entr${measures.length === 1 ? "y" : "ies"}`} />
+                {measures.map((m) => (
+                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, marginBottom: 7, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, color: T3, fontFamily: "monospace", width: 78 }}>{m.date}</span>
+                    <span style={{ flex: 1, fontSize: 12, color: T2 }}>
+                      {[["weight", "kg"], ["waist", "cm W"], ["chest", "cm C"], ["arms", "cm A"], ["thighs", "cm T"]]
+                        .filter(([k]) => +m[k] > 0).map(([k, u]) => `${m[k]}${u.split(" ")[0]}${u.includes(" ") ? " " + u.split(" ")[1] : ""}`).join(" · ")}
+                      {m.notes ? ` — ${m.notes}` : ""}
+                    </span>
+                    <button onClick={() => deleteMeasure(m)} aria-label="Delete entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", padding: 2 }}><Trash2 size={11} /></button>
+                  </div>
+                ))}
+              </Card>
             )}
           </div>
         )}
