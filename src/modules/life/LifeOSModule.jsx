@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Sun, ListChecks, Layers, TrendingUp, BookOpen, Plus, Check, Flame, SkipForward,
-  Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, FolderKanban,
+  Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, FolderKanban, ShieldCheck,
 } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
@@ -22,6 +22,7 @@ import {
 import { HabitEditor } from "./HabitEditor.jsx";
 import { WellnessPanel } from "./WellnessPanel.jsx";
 import { NonNegotiables } from "./NonNegotiables.jsx";
+import { PurityTab } from "./PurityTab.jsx";
 
 const today = () => localDateStr();
 
@@ -205,6 +206,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
     { id: "insights", l: "Insights", i: TrendingUp },
     { id: "journal",  l: "Journal",  i: BookOpen },
     { id: "projects", l: "Projects", i: FolderKanban },
+    { id: "purity",   l: "Purity",   i: ShieldCheck },
   ];
 
   return (
@@ -698,6 +700,9 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
             ))}
           </div>
         )}
+
+        {/* ══ PURITY ══ */}
+        {loaded && tab === "purity" && <PurityTab />}
       </div>
     </div>
   );
