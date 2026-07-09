@@ -10,5 +10,5 @@ export const NAV = [
   { id: "finance",   label: "Finance OS",     icon: DollarSign },
   { id: "mind",      label: "Mind OS",        icon: Brain },
   { id: "faith",     label: "Faith OS",       icon: Church },
-  { id: "analytics", label: "Analytics",      icon: BarChart3, soon: true },
+  { id: "analytics", label: "Analytics",      icon: BarChart3 },
 ];
