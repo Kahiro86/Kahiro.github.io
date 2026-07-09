@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Sun, ListChecks, Layers, TrendingUp, BookOpen, Plus, Check, Flame, SkipForward,
-  Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy,
+  Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, FolderKanban,
 } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
+import { Collapse } from "../../shared/Collapse.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
@@ -47,6 +48,8 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
   const [insightHabit, setInsightHabit] = useState(null);
   const [journal, setJournal] = useState("");
   const [rawEntries, setEntries] = useStorageState("journal_entries", []);
+  const [rawProjects, setProjects] = useStorageState("life_projects", []);
+  const [projectDraft, setProjectDraft] = useState("");
   const toast = useToast();
 
   // Stored records can be corrupt (null entries, habitIds missing) — sanitise
@@ -60,6 +63,10 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
   const entries = useMemo(
     () => (Array.isArray(rawEntries) ? rawEntries : []).filter((e) => e && typeof e === "object" && e.id),
     [rawEntries]
+  );
+  const projects = useMemo(
+    () => (Array.isArray(rawProjects) ? rawProjects : []).filter((p) => p && typeof p === "object" && p.id),
+    [rawProjects]
   );
 
   const active = habits.filter((h) => !h.archived);
@@ -141,6 +148,19 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
     setEntries((prev) => prev.filter((e) => e.id !== id));
     toast("Entry deleted", { action: "Undo", onAction: () => setEntries((prev) => [entry, ...prev]), tone: "danger" });
   };
+  const addProject = () => {
+    const name = projectDraft.trim();
+    if (!name) return;
+    setProjects((prev) => [{ id: `p${Date.now().toString(36)}`, name, status: "active", next: "", createdAt: today() }, ...(Array.isArray(prev) ? prev : [])]);
+    setProjectDraft("");
+    toast("Project added 🚀", { tone: "success", duration: 2200 });
+  };
+  const patchProject = (id, patch) =>
+    setProjects((prev) => (Array.isArray(prev) ? prev : []).map((p) => (p?.id === id ? { ...p, ...patch } : p)));
+  const deleteProject = (p) => {
+    setProjects((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x?.id !== p.id));
+    toast(`"${p.name}" deleted`, { action: "Undo", onAction: () => setProjects((prev2) => [p, ...(Array.isArray(prev2) ? prev2 : [])]), tone: "danger" });
+  };
 
   // ── Shared habit row (Today + quick contexts) ──────────────────────
   const HabitRow = ({ h }) => {
@@ -184,6 +204,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
     { id: "routines", l: "Routines", i: Layers },
     { id: "insights", l: "Insights", i: TrendingUp },
     { id: "journal",  l: "Journal",  i: BookOpen },
+    { id: "projects", l: "Projects", i: FolderKanban },
   ];
 
   return (
@@ -237,6 +258,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
             </Card>
 
             {routines.length > 0 && (
+              <Collapse id="life_routines" title="Routines" count={routines.length}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
                 {routines.map((r) => {
                   const p = routineProgress(habits, r);
@@ -256,17 +278,16 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
                   );
                 })}
               </div>
+              </Collapse>
             )}
 
             {nonNegHabits.length > 0 && <NonNegotiables habits={nonNegHabits} onTap={tapId} />}
             {wellnessHabits.length > 0 && <WellnessPanel habits={wellnessHabits} onSetValue={setValue} />}
 
             {weeklyHabits.length > 0 && (
+              <Collapse id="life_weekly" title="Weekly" sub="resets Sunday"
+                right={<span style={{ fontSize: 10.5, color: T3 }}>{weeklyHabits.filter((h) => weekProgress(h).met).length}/{weeklyHabits.length} met</span>}>
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 10, color: T3, letterSpacing: 2, textTransform: "uppercase" }}>Weekly · resets Sunday</span>
-                  <span style={{ fontSize: 10.5, color: T3 }}>{weeklyHabits.filter((h) => weekProgress(h).met).length}/{weeklyHabits.length} met</span>
-                </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
                   {weeklyHabits.map((h) => {
                     const wp = weekProgress(h);
@@ -292,6 +313,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
                   })}
                 </div>
               </div>
+              </Collapse>
             )}
 
             {scheduledToday.length === 0 ? (
@@ -301,7 +323,9 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
                 {!active.length && <button onClick={() => { setTab("habits"); setEditing(newHabit()); }} style={{ marginTop: 8, padding: "9px 18px", background: `linear-gradient(135deg,${GR},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Create your first habit</button>}
               </Card>
             ) : (
-              categories.map((cat) => {
+              <Collapse id="life_daily" title="Daily Habits" count={catHabitsToday.length}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {categories.map((cat) => {
                 const catHabits = catHabitsToday.filter((h) => h.category === cat);
                 if (!catHabits.length) return null;
                 const catDone = catHabits.filter((h) => isDone(h, ds)).length;
@@ -316,7 +340,9 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
                     </div>
                   </div>
                 );
-              })
+              })}
+              </div>
+              </Collapse>
             )}
           </div>
         )}
@@ -621,6 +647,54 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
                 </div>
                 <button onClick={() => deleteEntry(e.id)} title="Delete entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Trash2 size={11} /></button>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* ══ PROJECTS ══ */}
+        {loaded && tab === "projects" && (
+          <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: T1 }}>Personal Projects</div>
+              <div style={{ fontSize: 12.5, color: T3, marginTop: 2 }}>Each project only ever needs one thing: its next step.</div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={projectDraft} onChange={(e) => setProjectDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProject()}
+                placeholder="New project name…"
+                style={{ flex: 1, background: B2, border: `1px solid ${BD}`, borderRadius: 10, padding: "10px 13px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit" }} />
+              <button onClick={addProject} disabled={!projectDraft.trim()} aria-label="Add project"
+                style={{ padding: "0 16px", borderRadius: 10, border: "none", background: projectDraft.trim() ? `linear-gradient(135deg,${GR},${CY})` : GL, color: projectDraft.trim() ? "#000" : T3, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
+                <Plus size={14} />Add
+              </button>
+            </div>
+            {projects.length === 0 && (
+              <Card style={{ padding: "34px", textAlign: "center" }}>
+                <div style={{ fontSize: 26, marginBottom: 10 }}>🚀</div>
+                <div style={{ fontSize: 13, color: T2 }}>No projects yet. The side hustle, the room makeover, the certification — name it and define its next step.</div>
+              </Card>
+            )}
+            {[...projects].sort((a, b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0)).map((p) => (
+              <Card key={p.id} style={{ padding: "14px 16px", opacity: p.status === "done" ? 0.7 : p.status === "paused" ? 0.85 : 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 9 }}>
+                  <span style={{ fontSize: 14 }}>{p.status === "done" ? "✅" : p.status === "paused" ? "⏸️" : "🚀"}</span>
+                  <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T1, minWidth: 140, textDecoration: p.status === "done" ? "line-through" : "none" }}>{p.name}</span>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {["active", "paused", "done"].map((s) => (
+                      <button key={s} onClick={() => patchProject(p.id, { status: s })}
+                        style={{ padding: "4px 10px", borderRadius: 8, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${p.status === s ? (s === "done" ? GR : s === "paused" ? AM : CY) + "55" : BD}`, background: p.status === s ? `${s === "done" ? GR : s === "paused" ? AM : CY}18` : GL, color: p.status === s ? (s === "done" ? GR : s === "paused" ? AM : CY) : T3 }}>
+                        {s}
+                      </button>
+                    ))}
+                    <button onClick={() => deleteProject(p)} aria-label={`Delete ${p.name}`} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 8, padding: "4px 7px", cursor: "pointer", color: RE, display: "flex", alignItems: "center" }}><Trash2 size={11} /></button>
+                  </div>
+                </div>
+                {p.status !== "done" && (
+                  <input value={p.next || ""} onChange={(e) => patchProject(p.id, { next: e.target.value })}
+                    placeholder="Next step — small enough to do this week"
+                    aria-label={`Next step for ${p.name}`}
+                    style={{ width: "100%", background: GL, border: `1px dashed ${BD2}`, borderRadius: 9, padding: "8px 11px", fontSize: 12, color: T2, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                )}
+              </Card>
             ))}
           </div>
         )}

@@ -8,7 +8,7 @@ export const NAV = [
   { id: "trading",   label: "Trading OS",     icon: TrendingUp },
   { id: "athlete",   label: "Athlete OS",     icon: Dumbbell },
   { id: "finance",   label: "Finance OS",     icon: DollarSign },
-  { id: "mind",      label: "Mind OS",        icon: Brain,     soon: true },
-  { id: "faith",     label: "Faith OS",       icon: Church,    soon: true },
+  { id: "mind",      label: "Mind OS",        icon: Brain },
+  { id: "faith",     label: "Faith OS",       icon: Church },
   { id: "analytics", label: "Analytics",      icon: BarChart3, soon: true },
 ];

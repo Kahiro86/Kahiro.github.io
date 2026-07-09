@@ -17,6 +17,8 @@ import { TradingModule } from "./modules/trading/TradingModule.jsx";
 import { AthleteOS } from "./modules/athlete/AthleteOS.jsx";
 import { FinanceOS } from "./modules/finance/FinanceOS.jsx";
 import { LifeOSModule } from "./modules/life/LifeOSModule.jsx";
+import { FaithOS } from "./modules/faith/FaithOS.jsx";
+import { MindOS } from "./modules/mind/MindOS.jsx";
 import { PlaceholderModule } from "./shared/PlaceholderModule.jsx";
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
@@ -77,8 +79,8 @@ export default function App() {
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
       case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} />;
-      case "mind": return <PlaceholderModule title="Mind OS" sub="Reading · Learning · Notes · Decisions — Wave 3" features={[{ name: "Reading List", icon: "📚", desc: "Books with progress and key takeaways." }, { name: "Notes", icon: "📄", desc: "Capture and organise ideas and insights." }, { name: "Decision Journal", icon: "⚖️", desc: "Log decisions, expected outcomes, and review them later." }, { name: "Courses", icon: "🎓", desc: "Track learning programmes to completion." }]} />;
-      case "faith": return <PlaceholderModule title="Faith OS" sub="Prayer · Bible Study · Scripture Memory — Wave 3" features={[{ name: "Prayer", icon: "🙏", desc: "Long-horizon prayer consistency, beyond streaks." }, { name: "Bible Study", icon: "📖", desc: "Reading plans and study sessions." }, { name: "Scripture Memory", icon: "🧠", desc: "Spaced review of memorised verses." }, { name: "Devotional Notes", icon: "✍️", desc: "Reflections and church attendance." }]} />;
+      case "mind": return <MindOS />;
+      case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
       case "analytics": return <PlaceholderModule title="Analytics OS" sub="Cross-module trends & reports — Wave 6" features={[{ name: "Weekly → Yearly Reports", icon: "🗓️", desc: "Every OS aggregated into one review." }, { name: "Correlations", icon: "🔗", desc: "Sleep vs productivity, discipline vs P&L, and more." }, { name: "Trends", icon: "📈", desc: "Direction over isolated numbers." }]} />;
       default: return <Dashboard onNavigate={setModule} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
     }
