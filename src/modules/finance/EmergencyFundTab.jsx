@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { BD, GL, T1, T2, T3, CY, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Fld, Sel } from "../../shared/ui.jsx";
+import { Card, SH, Fld, Sel, Meter } from "../../shared/ui.jsx";
 
 export function EmergencyFundTab({ efBal, setEfBal, efTarget3, efTarget6, efMMF, setEfMMF, mmfs, efYield, efMonthInt, efContrib, efRemaining, efMonths }) {
   return (
@@ -32,9 +32,7 @@ export function EmergencyFundTab({ efBal, setEfBal, efTarget3, efTarget6, efMMF,
                 <span style={{ fontSize: 12, color: T2 }}>{x.label}</span>
                 <span style={{ fontSize: 12, color: x.color, fontFamily: "monospace" }}>KES {x.target.toLocaleString()}</span>
               </div>
-              <div style={{ height: 8, background: BD, borderRadius: 4 }}>
-                <div style={{ height: "100%", width: `${Math.min(x.target > 0 ? (+efBal / x.target) * 100 : 0, 100)}%`, background: `linear-gradient(90deg,${x.color}77,${x.color})`, borderRadius: 4, boxShadow: `0 0 8px ${x.color}44`, transition: "width 0.8s ease" }} />
-              </div>
+              <Meter pct={x.target > 0 ? (+efBal / x.target) * 100 : 0} height={8} fill={`linear-gradient(90deg,${x.color}77,${x.color})`} glow={`${x.color}44`} />
               <div style={{ fontSize: 10, color: T3, marginTop: 3 }}>
                 {x.target > 0 ? Math.min(Math.round((+efBal / x.target) * 100), 100) : 0}% funded
               </div>

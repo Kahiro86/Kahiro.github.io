@@ -5,7 +5,7 @@
 //   · an unlogged *today* is pending — it never breaks the streak
 //   · a relapse resets the current streak to 0, calmly and without shame:
 //     day 0 is where every streak starts.
-import { localDateStr, daysAgoStr } from "../../shared/dates.js";
+import { localDateStr, daysAgoStr, daysBetween } from "../../shared/dates.js";
 
 export const MILESTONES = [3, 7, 14, 21, 30, 60, 90, 180, 365];
 
@@ -15,7 +15,7 @@ export const TRIGGERS = [
 ];
 
 // Shown after a successful check-in — rotated by date so it feels alive.
-export const QUOTES = [
+const QUOTES = [
   "Discipline is choosing what you want most over what you want now.",
   "You are not fighting yourself — you are training yourself.",
   "Every clean day is a vote for the person you're becoming.",
@@ -80,9 +80,7 @@ export function longestStreak(log) {
   if (!dates.length) return 0;
   let best = 1, run = 1;
   for (let i = 1; i < dates.length; i++) {
-    const prev = new Date(`${dates[i - 1]}T12:00:00`);
-    const cur = new Date(`${dates[i]}T12:00:00`);
-    const gap = Math.round((cur - prev) / 86400000);
+    const gap = daysBetween(dates[i - 1], dates[i]);
     // a relapse between two pure days always shows as a logged red day, so a
     // 1-day gap of anything other than contiguity breaks the run
     run = gap === 1 ? run + 1 : 1;

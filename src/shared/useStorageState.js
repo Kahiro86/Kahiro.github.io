@@ -32,7 +32,7 @@ function stampMeta(key, iso = new Date().toISOString()) {
 // Parse a raw record, rejecting anything that can't stand in for the
 // default: bad JSON, null, or an array/object shape mismatch. Null entries
 // inside array stores are dropped. Returns undefined when unusable.
-export function safeParse(raw, initialValue) {
+function safeParse(raw, initialValue) {
   if (raw == null) return undefined;
   let parsed;
   try { parsed = JSON.parse(raw); } catch { return undefined; }

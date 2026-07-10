@@ -6,13 +6,14 @@ import { useMemo, useState } from "react";
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { BarChart3, GitCompareArrows, Trophy } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { periodReport, weeklySeries, pearson, rVerdict, checklistVsPnl } from "../../shared/analytics.js";
 import { useXp } from "../../shared/useXp.js";
 import { CAT_LABEL } from "../../shared/xpEngine.js";
+import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 
 const AN = "#8B7CA0"; // muted purple — this module's accent
 const PERIODS = [
@@ -105,14 +106,9 @@ export function AnalyticsOS({ habits }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: "rgba(8,7,12,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, overflowX: "auto" }}>
-        <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
-          {[{ id: "reports", l: "Reports", i: BarChart3 }, { id: "trends", l: "Trends", i: GitCompareArrows }, { id: "xp", l: "Progression", i: Trophy }].map(({ id, l, i: Icon }) => (
-            <button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === id ? `${AN}26` : "transparent", color: tab === id ? "#B4A6C8" : T2, fontSize: 12, fontWeight: tab === id ? 600 : 400, fontFamily: "inherit", whiteSpace: "nowrap" }}>
-              <Icon size={11} />{l}
-            </button>
-          ))}
-        </div>
+      <ModuleTabs tint="rgba(8,7,12,0.5)" activeBg={`${AN}26`} activeColor="#B4A6C8"
+        tabs={[{ id: "reports", l: "Reports", i: BarChart3 }, { id: "trends", l: "Trends", i: GitCompareArrows }, { id: "xp", l: "Progression", i: Trophy }]}
+        active={tab} onSelect={setTab}>
         <div style={{ flex: 1 }} />
         {tab === "reports" && (
           <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
@@ -123,7 +119,7 @@ export function AnalyticsOS({ habits }) {
             ))}
           </div>
         )}
-      </div>
+      </ModuleTabs>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {tab === "reports" && (
@@ -235,9 +231,7 @@ export function AnalyticsOS({ habits }) {
                       <span style={{ padding: "3px 12px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 13, fontSize: 11.5, fontWeight: 700, color: AM, letterSpacing: 1 }}>{xp.title}</span>
                       <span style={{ fontSize: 11, color: T3 }}>{(xp.nextLevelXp - xp.total).toLocaleString()} XP to level {xp.level + 1}</span>
                     </div>
-                    <div style={{ height: 8, background: BD, borderRadius: 4, marginBottom: 7 }}>
-                      <div style={{ height: "100%", width: `${xp.pctToNext}%`, background: `linear-gradient(90deg,${AM}77,${AM})`, borderRadius: 4, transition: "width 0.5s", boxShadow: `0 0 10px ${AM}55` }} />
-                    </div>
+                    <Meter pct={xp.pctToNext} height={8} fill={`linear-gradient(90deg,${AM}77,${AM})`} glow={`${AM}55`} style={{ marginBottom: 7 }} />
                     <div style={{ fontSize: 11.5, color: T2 }}>Lifetime: <span style={{ color: T1, fontWeight: 700, fontFamily: "monospace" }}>{xp.total.toLocaleString()} XP</span></div>
                   </div>
                 </div>
@@ -262,9 +256,7 @@ export function AnalyticsOS({ habits }) {
                         <span style={{ fontSize: 12, color: T2 }}>{CAT_LABEL[c] || c}</span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: CAT_COLOR[c] || T2, fontFamily: "monospace" }}>{v.toLocaleString()}</span>
                       </div>
-                      <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-                        <div style={{ height: "100%", width: `${Math.round((v / catMax) * 100)}%`, background: CAT_COLOR[c] || T3, borderRadius: 3 }} />
-                      </div>
+                      <Meter pct={Math.round((v / catMax) * 100)} color={CAT_COLOR[c] || T3} />
                     </div>
                   ))}
                   {xp.bestDay && (

@@ -1,6 +1,6 @@
 import { Lock, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH } from "../../shared/ui.jsx";
+import { Card, SH, Meter } from "../../shared/ui.jsx";
 import { DonutChart } from "../../shared/charts.jsx";
 
 const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
@@ -119,9 +119,7 @@ export function OverviewTab({
                             <span style={{ fontSize: 12, color: x.c, fontFamily: "monospace", fontWeight: 700 }}>{fmtKES(x.v)}</span>
                           </div>
                         </div>
-                        <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-                          <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg,${x.c}77,${x.c})`, borderRadius: 3 }} />
-                        </div>
+                        <Meter pct={pct} fill={`linear-gradient(90deg,${x.c}77,${x.c})`} />
                       </div>
                     );
                   })}
@@ -155,9 +153,7 @@ export function OverviewTab({
             <SH title="Passive Income Progress" sub="Monthly income from investments" />
             <div style={{ fontSize: 28, fontWeight: 900, color: AM, fontFamily: "monospace", marginBottom: 6 }}>{fmtKES(monthlyPassive)}</div>
             <div style={{ fontSize: 11, color: T3, marginBottom: 10 }}>Target: KES 20,000/month</div>
-            <div style={{ height: 6, background: BD, borderRadius: 3, marginBottom: 6 }}>
-              <div style={{ height: "100%", width: `${Math.min((monthlyPassive / 20000) * 100, 100)}%`, background: `linear-gradient(90deg,${AM}77,${AM})`, borderRadius: 3 }} />
-            </div>
+            <Meter pct={(monthlyPassive / 20000) * 100} height={6} fill={`linear-gradient(90deg,${AM}77,${AM})`} style={{ marginBottom: 6 }} />
             <div style={{ fontSize: 11, color: T3 }}>{Math.round((monthlyPassive / 20000) * 100)}% of target</div>
           </Card>
         </div>

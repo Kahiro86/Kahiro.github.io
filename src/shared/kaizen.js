@@ -15,7 +15,7 @@ export const KAIZEN_COACH_PREAMBLE = `You are also a Kaizen coach. Kaizen means 
 Never use guilt, shame, or pressure. End with ONE concrete, achievable next action for today.`;
 
 // Calm, action-oriented nudges — never guilt-based.
-export const KAIZEN_NUDGES = [
+const KAIZEN_NUDGES = [
   "What's one small win you can achieve today?",
   "One minute of progress still counts.",
   "Every small improvement compounds.",

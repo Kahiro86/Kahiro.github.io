@@ -2,7 +2,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import { B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { DonutChart, ChartLegend } from "../../shared/charts.jsx";
 import { SESSION_CONFIG, ICT_MODELS, GRADES, PSYCH } from "./constants.js";
@@ -143,9 +143,7 @@ export function TradingAnalytics({ trades, balance }) {
                       <span style={{ fontSize: 12, fontWeight: 700, color: s.wr >= 60 ? GR : s.wr >= 50 ? CY : AM, fontFamily: "monospace" }}>{s.wr}%</span>
                     </div>
                   </div>
-                  <div style={{ height: 4, background: BD, borderRadius: 3 }}>
-                    <div style={{ height: "100%", width: `${s.wr}%`, background: s.wr >= 60 ? GR : s.wr >= 50 ? CY : AM, borderRadius: 3 }} />
-                  </div>
+                  <Meter pct={s.wr} height={4} color={s.wr >= 60 ? GR : s.wr >= 50 ? CY : AM} />
                 </div>
               ))}
             </div>
@@ -235,18 +233,14 @@ export function TradingAnalytics({ trades, balance }) {
                         <span style={{ fontSize: 10, color: T3, letterSpacing: 0.5 }}>CHECKED · {e.checkedN}t</span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: GR, fontFamily: "monospace" }}>{e.checkedWr !== null ? `${e.checkedWr}%` : "—"}</span>
                       </div>
-                      <div style={{ height: 4, background: BD, borderRadius: 3 }}>
-                        <div style={{ height: "100%", width: `${e.checkedWr || 0}%`, background: GR, borderRadius: 3 }} />
-                      </div>
+                      <Meter pct={e.checkedWr || 0} height={4} color={GR} />
                     </div>
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <span style={{ fontSize: 10, color: T3, letterSpacing: 0.5 }}>SKIPPED · {e.skippedN}t</span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: hasSkips ? RE : T3, fontFamily: "monospace" }}>{hasSkips ? `${e.skippedWr}%` : "—"}</span>
                       </div>
-                      <div style={{ height: 4, background: BD, borderRadius: 3 }}>
-                        <div style={{ height: "100%", width: `${hasSkips ? e.skippedWr : 0}%`, background: RE, borderRadius: 3 }} />
-                      </div>
+                      <Meter pct={hasSkips ? e.skippedWr : 0} height={4} color={RE} />
                     </div>
                   </div>
                   {hurts && (

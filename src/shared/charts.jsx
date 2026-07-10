@@ -2,6 +2,22 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { localDateStr } from "./dates.js";
 import { B2, BD, BD2, T1, T2, T3 } from "./designTokens.js";
 
+// ── Progress ring — daily rings on Command Center and Life OS ───────
+export function Ring({ pct, size = 128, stroke = 10, color, glow = false, children }) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={BD} strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={`${(Math.min(100, pct || 0) / 100) * c} ${c}`}
+          style={{ transition: "stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1)", filter: glow ? `drop-shadow(0 0 8px ${color}66)` : undefined }} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>{children}</div>
+    </div>
+  );
+}
+
 // ── Donut / pie summary chart ──────────────────────────────────────
 export function DonutChart({ data, height = 190, centerLabel, centerSub, unit = "" }) {
   const total = data.reduce((s, d) => s + (d.value || 0), 0);

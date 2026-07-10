@@ -6,6 +6,7 @@ import { useToast } from "../../shared/toast.jsx";
 import { getStats, genId } from "./helpers.js";
 import { DEFAULT_CHECKLIST_TEMPLATES } from "./checklists.js";
 import { Hydrating } from "../../shared/ui.jsx";
+import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { LogView } from "./LogView.jsx";
 import { TradingAnalytics } from "./TradingAnalytics.jsx";
 import { RiskCalculator } from "./RiskCalculator.jsx";
@@ -95,7 +96,17 @@ export function TradingModule() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: "rgba(9,13,24,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 14, flexShrink: 0, overflowX: "auto" }}>
+      <ModuleTabs gap={14} activeBg={`linear-gradient(135deg,${CY}22,${PU}22)`} activeColor={CY} topBorder={`${CY}44`}
+        active={tv} onSelect={setTv}
+        tabs={[
+          { id: "log",       l: "Trade Log",  i: FileText    },
+          { id: "analytics", l: "Analytics",  i: BarChart2   },
+          { id: "risk",      l: "Risk Calc",  i: Shield      },
+          { id: "playbook",  l: "Playbook",   i: Star        },
+          { id: "reports",   l: "Reports",    i: AlertCircle },
+          { id: "reviews",   l: reviewsDue ? `Reviews (${reviewsDue})` : "Reviews", i: ClipboardCheck },
+        ]}
+        left={
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 10 }}>
           <DollarSign size={12} color={GR} />
           {editBal ? (
@@ -113,21 +124,7 @@ export function TradingModule() {
             </div>
           )}
         </div>
-
-        <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
-          {[
-            { id: "log",       l: "Trade Log",  i: FileText    },
-            { id: "analytics", l: "Analytics",  i: BarChart2   },
-            { id: "risk",      l: "Risk Calc",  i: Shield      },
-            { id: "playbook",  l: "Playbook",   i: Star        },
-            { id: "reports",   l: "Reports",    i: AlertCircle },
-            { id: "reviews",   l: reviewsDue ? `Reviews (${reviewsDue})` : "Reviews", i: ClipboardCheck },
-          ].map(({ id, l, i: Icon }) => (
-            <button key={id} onClick={() => setTv(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tv === id ? `linear-gradient(135deg,${CY}22,${PU}22)` : "transparent", color: tv === id ? CY : T2, fontSize: 12, fontWeight: tv === id ? 600 : 400, fontFamily: "inherit", borderTop: tv === id ? `1px solid ${CY}44` : "1px solid transparent", whiteSpace: "nowrap" }}>
-              <Icon size={11} />{l}
-            </button>
-          ))}
-        </div>
+        }>
 
         <div style={{ flex: 1 }} />
 
@@ -152,7 +149,7 @@ export function TradingModule() {
             </div>
           ))}
         </div>
-      </div>
+      </ModuleTabs>
 
       <div style={{ flex: 1, overflow: tv === "log" || tv === "form" || tv === "checklist" ? "hidden" : "auto" }} key={tv}>
         {!tradesLoaded && <Hydrating label="Loading your trade journal…" />}

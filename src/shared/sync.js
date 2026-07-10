@@ -51,7 +51,7 @@ async function ready() {
 
 // ── Push: upsert all dirty keys in one batch ─────────────────────────
 let pushTimer = null;
-export function schedulePush(delay = 1200) {
+function schedulePush(delay = 1200) {
   clearTimeout(pushTimer);
   pushTimer = setTimeout(flush, delay);
 }

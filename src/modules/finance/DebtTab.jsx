@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2, Check, X, CalendarClock, TrendingDown, ChevronDown } from "lucide-react";
 import { T1, T2, T3, BD, B2, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip, MoneyInp } from "../../shared/ui.jsx";
+import { Card, SH, Chip, MoneyInp, Meter } from "../../shared/ui.jsx";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { debtId, paidOf, remainingOf, progressOf, payoffMonths, daysUntilDue } from "./debt.js";
@@ -115,9 +115,7 @@ export function DebtTab({ debts = [], setDebts, fmtKES, legacyDebt = 0 }) {
                   <span style={{ fontSize: 22, fontWeight: 900, color: cleared ? GR : RE, fontFamily: "monospace" }}>{fmtKES(remaining)}</span>
                   <span style={{ fontSize: 11, color: T3 }}>left of {fmtKES(+d.original || 0)}</span>
                 </div>
-                <div style={{ height: 7, background: BD, borderRadius: 4, marginBottom: 6, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: cleared ? GR : `linear-gradient(90deg,${GR}77,${GR})`, borderRadius: 4, transition: "width 0.6s ease" }} />
-                </div>
+                <Meter pct={pct} height={7} fill={cleared ? GR : `linear-gradient(90deg,${GR}77,${GR})`} style={{ marginBottom: 6 }} />
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: T3, marginBottom: 11 }}>
                   <span>{pct}% paid · {fmtKES(paid)}</span>
                   {cleared ? <span style={{ color: GR, fontWeight: 700 }}>✓ Cleared</span>

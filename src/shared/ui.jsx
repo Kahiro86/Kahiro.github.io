@@ -202,6 +202,25 @@ export const SL = ({ value, onChange }) => (
   </div>
 );
 
+// Thin progress bar — the one meter used everywhere a percentage is shown.
+// ("Meter", not "Bar" — recharts owns that name in half the chart files.)
+// `fill` overrides the solid color with any CSS background (gradients).
+export const Meter = ({ pct, color = CY, fill, height = 5, radius, glow, style }) => (
+  <div style={{ height, background: BD, borderRadius: radius ?? Math.ceil(height / 2), overflow: "hidden", ...style }}>
+    <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, pct || 0))}%`, background: fill || color, borderRadius: radius ?? Math.ceil(height / 2), transition: "width 0.4s", boxShadow: glow ? `0 0 8px ${glow}` : undefined }} />
+  </div>
+);
+
+// Empty state: one voice for "nothing here yet" across every module.
+export const Empty = ({ icon, title, sub, children, pad = 38 }) => (
+  <Card style={{ padding: pad, textAlign: "center" }}>
+    <div style={{ fontSize: 28, marginBottom: 10 }}>{icon}</div>
+    {title && <div style={{ fontSize: 14, color: T2, marginBottom: sub ? 4 : 0 }}>{title}</div>}
+    {sub && <div style={{ fontSize: 12, color: T3, lineHeight: 1.6 }}>{sub}</div>}
+    {children}
+  </Card>
+);
+
 // Hydration gate: shown for the instant between mount and the storage read
 // resolving, so data-backed views never flash an empty frame.
 export const Hydrating = ({ label = "Loading your data…" }) => (

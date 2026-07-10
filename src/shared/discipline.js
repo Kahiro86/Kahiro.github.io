@@ -22,7 +22,7 @@ const ratioOverWindow = (habits, daysBack) => {
 
 // deps: { habits (v2, active), trades, workouts, entries, weekPlanDays }
 // weekPlanDays = planned training days per week (non-rest days).
-export function disciplineBreakdown(deps, daysBack = 30) {
+function disciplineBreakdown(deps, daysBack = 30) {
   const habits = (deps.habits || []).filter((h) => h && !h.archived && !h.paused);
   const trades = Array.isArray(deps.trades) ? deps.trades : [];
   const workouts = Array.isArray(deps.workouts) ? deps.workouts : [];

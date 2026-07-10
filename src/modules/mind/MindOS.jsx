@@ -5,18 +5,16 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Plus, Check, Trash2, StickyNote, Scale, GraduationCap } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, GR, RE, AM, CY } from "../../shared/designTokens.js";
-import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Hydrating, Meter } from "../../shared/ui.jsx";
+import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
-import { localDateStr } from "../../shared/dates.js";
+import { localDateStr, daysBetween } from "../../shared/dates.js";
 
 const MI = "#767FA6"; // muted indigo — this module's accent
 const REVIEW_AFTER_DAYS = 30;
 
-const daysSince = (ds) => {
-  if (!ds) return 0;
-  return Math.floor((new Date(`${localDateStr()}T12:00:00`) - new Date(`${ds}T12:00:00`)) / 86400000);
-};
+const daysSince = (ds) => (ds ? daysBetween(ds, localDateStr()) : 0);
 
 export function MindOS({ loaded = true }) {
   const [tab, setTab] = useState("library");
@@ -109,21 +107,14 @@ export function MindOS({ loaded = true }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: "rgba(7,8,13,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, overflowX: "auto" }}>
-        <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
-          {TABS.map(({ id, l, i: Icon }) => (
-            <button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === id ? `${MI}22` : "transparent", color: tab === id ? "#A8B0D6" : T2, fontSize: 12, fontWeight: tab === id ? 600 : 400, fontFamily: "inherit", whiteSpace: "nowrap" }}>
-              <Icon size={11} />{l}
-            </button>
-          ))}
-        </div>
+      <ModuleTabs tint="rgba(7,8,13,0.5)" activeBg={`${MI}22`} activeColor="#A8B0D6" tabs={TABS} active={tab} onSelect={setTab}>
         <div style={{ flex: 1 }} />
         {dueReviews.length > 0 && (
           <button onClick={() => setTab("decisions")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 9, color: AM, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             ⚖️ {dueReviews.length} decision{dueReviews.length > 1 ? "s" : ""} ready to review
           </button>
         )}
-      </div>
+      </ModuleTabs>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {!loaded && <Hydrating label="Opening Mind OS…" />}
@@ -210,9 +201,7 @@ export function MindOS({ loaded = true }) {
                     <button onClick={() => deleteItem(it)} aria-label={`Delete ${it.title}`} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 8px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
                   </div>
                   {!done && it.pagesTotal > 0 && (
-                    <div style={{ height: 4, background: BD, borderRadius: 2, marginTop: 11 }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: MI, borderRadius: 2, transition: "width 0.3s" }} />
-                    </div>
+                    <Meter pct={pct} height={4} color={MI} style={{ marginTop: 11 }} />
                   )}
                   {done && (
                     <textarea value={it.takeaway || ""} onChange={(e) => patchItem(it.id, { takeaway: e.target.value })}

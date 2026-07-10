@@ -5,9 +5,7 @@
 // bars above it. The answer to "what should I do now?" is nextActions().
 import { localDateStr } from "./dates.js";
 
-export const MISSION_LEVELS = ["year", "quarter", "month", "week", "day"];
-export const LEVEL_LABEL = { year: "Objective", quarter: "Goal", month: "Mission", week: "Priority", day: "Action" };
-
+const MISSION_LEVELS = ["year", "quarter", "month", "week", "day"];
 export const newMission = (patch = {}) => ({
   id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
   level: "day",
@@ -54,4 +52,3 @@ export function rollup(missions, id) {
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
-export const missionsOfLevel = (missions, level) => missions.filter((m) => m.level === level);

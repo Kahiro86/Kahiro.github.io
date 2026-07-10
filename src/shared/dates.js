@@ -13,3 +13,8 @@ export const daysAgoStr = (n) => {
   d.setDate(d.getDate() - n);
   return localDateStr(d);
 };
+
+// Whole days from date-string a to b (positive when b is later). Anchored at
+// noon so DST shifts can never round a day boundary the wrong way.
+export const daysBetween = (a, b) =>
+  Math.round((new Date(`${b}T12:00:00`) - new Date(`${a}T12:00:00`)) / 86400000);

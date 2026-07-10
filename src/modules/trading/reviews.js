@@ -30,7 +30,7 @@ const prevMonthOf = (today) => {
 };
 
 // Closed, non-archived trades inside a review period.
-export function tradesInPeriod(trades, kind, period) {
+function tradesInPeriod(trades, kind, period) {
   const cl = (Array.isArray(trades) ? trades : []).filter((t) => t && t.status === "CLOSED" && !t.archived && t.date);
   if (kind === "daily") return cl.filter((t) => t.date === period);
   if (kind === "weekly") { const end = addDays(period, 6); return cl.filter((t) => t.date >= period && t.date <= end); }

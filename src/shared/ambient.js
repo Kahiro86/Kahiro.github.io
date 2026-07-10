@@ -3,7 +3,7 @@
 // the ambient background so each section feels distinct even with no text.
 // Palette is deliberately muted (~90% desaturated): dull, low-key accents so
 // the atmosphere recedes and the data carries the colour.
-export const MODULE_THEME = {
+const MODULE_THEME = {
   dashboard: { name: "Command",   accent: "#8E96A3", accent2: "#6B7280", base: "#07080A", mode: "network", mood: "command" }, // deep graphite, soft white
   trading:   { name: "Trading",   accent: "#5E8A9C", accent2: "#8C5A62", base: "#060A0D", mode: "data",    mood: "grid" },    // muted cyan / crimson
   finance:   { name: "Finance",   accent: "#6F8F7F", accent2: "#A5946B", base: "#090804", mode: "dust",    mood: "marble" },  // muted emerald / gold

@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ShieldCheck, ChevronLeft, ChevronRight, Undo2, Flame, Trophy } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -176,9 +176,7 @@ export function PurityTab() {
           })}
         </div>
         {nextMilestone && (
-          <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-            <div style={{ height: "100%", width: `${mProgress}%`, background: `linear-gradient(90deg,${GR}77,${GR})`, borderRadius: 3, transition: "width 0.5s" }} />
-          </div>
+          <Meter pct={mProgress} fill={`linear-gradient(90deg,${GR}77,${GR})`} />
         )}
       </Card>
 
