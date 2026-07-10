@@ -13,6 +13,8 @@ export function useXp() {
   const [reviews] = useStorageState("ict_reviews", []);
   const [workouts] = useStorageState("athlete_workouts", []);
   const [measurements] = useStorageState("athlete_measurements", []);
+  const [nutrition] = useStorageState("nutrition_log", {});
+  const [nutritionProfile] = useStorageState("nutrition_profile", null);
   const [finance] = useStorageState("finance_state", null);
   const [entries] = useStorageState("journal_entries", []);
   const [missions] = useStorageState("missions", []);
@@ -29,11 +31,11 @@ export function useXp() {
     () => computeXp({
       habits, purity, trades, reviews, workouts, measurements, finance,
       entries, missions, church, verses, faithNotes, library, mindNotes,
-      decisions, unlocked, logins,
+      decisions, unlocked, logins, nutrition, nutritionProfile,
     }),
     [habits, purity, trades, reviews, workouts, measurements, finance,
      entries, missions, church, verses, faithNotes, library, mindNotes,
-     decisions, unlocked, logins]
+     decisions, unlocked, logins, nutrition, nutritionProfile]
   );
 
   return { ...xp, loaded: l1 && l2 && l3 && l4, setUnlocked, setLogins };

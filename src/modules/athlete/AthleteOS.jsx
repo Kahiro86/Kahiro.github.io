@@ -2,10 +2,11 @@ import { useState } from "react";
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler } from "lucide-react";
+import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler, Utensils } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
+import { NutritionTab } from "./NutritionTab.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -133,10 +134,11 @@ export function AthleteOS() {
     initial={logInitial} lastValues={lastValues} />;
 
   const TABS = [
-    { id: "week",     l: "This Week", i: Layers },
-    { id: "history",  l: "History",   i: FileText },
-    { id: "progress", l: "Progress",  i: TrendingUp },
-    { id: "body",     l: "Body",      i: Ruler },
+    { id: "week",      l: "This Week", i: Layers },
+    { id: "history",   l: "History",   i: FileText },
+    { id: "progress",  l: "Progress",  i: TrendingUp },
+    { id: "body",      l: "Body",      i: Ruler },
+    { id: "nutrition", l: "Nutrition", i: Utensils },
   ];
 
   return (
@@ -547,6 +549,9 @@ export function AthleteOS() {
             )}
           </div>
         )}
+
+        {/* ══ NUTRITION ══ */}
+        {view === "nutrition" && <NutritionTab />}
       </div>
     </div>
   );

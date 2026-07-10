@@ -55,6 +55,7 @@ export function AnalyticsOS({ habits }) {
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [entries] = useStorageState("journal_entries", []);
   const [church] = useStorageState("faith_church", []);
+  const [nutrition] = useStorageState("nutrition_log", {});
   const [library] = useStorageState("mind_library", []);
   const [decisions] = useStorageState("mind_decisions", []);
   const xp = useXp();
@@ -69,7 +70,8 @@ export function AnalyticsOS({ habits }) {
     church: Array.isArray(church) ? church : [],
     library: (Array.isArray(library) ? library : []).filter((b) => b && b.id),
     decisions: (Array.isArray(decisions) ? decisions : []).filter((d) => d && d.id),
-  }), [habits, trades, reviews, workouts, entries, finance, church, library, decisions]);
+    nutrition,
+  }), [habits, trades, reviews, workouts, entries, finance, church, library, decisions, nutrition]);
 
   const report = useMemo(() => periodReport(deps, days), [deps, days]);
   const weeks = useMemo(() => weeklySeries(deps, 10), [deps]);
@@ -154,6 +156,8 @@ export function AnalyticsOS({ habits }) {
                 <Metric label="Sessions" value={cur.sessions} cur={cur.sessions} prev={prev.sessions} color={PU} />
                 <Metric label="Volume lifted" value={cur.volume ? `${cur.volume.toLocaleString()}kg` : "—"} cur={cur.volume || null} prev={prev.volume || null} color={PU} fmt={(v) => `${Math.round(v).toLocaleString()}kg`} />
                 <Metric label="Cardio minutes" value={cur.cardioMin || "—"} cur={cur.cardioMin || null} prev={prev.cardioMin || null} color={CY} fmt={(v) => `${v}m`} />
+                <Metric label="Nutrition days" value={cur.nutriDays || "—"} cur={cur.nutriDays || null} prev={prev.nutriDays || null} color={GR} />
+                <Metric label="Avg calories" value={cur.nutriKcal == null ? "—" : cur.nutriKcal.toLocaleString()} cur={cur.nutriKcal} prev={prev.nutriKcal} color={AM} fmt={(v) => `${Math.round(v)}`} />
               </div>
             </div>
 

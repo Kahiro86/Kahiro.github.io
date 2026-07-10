@@ -19,6 +19,8 @@ function NudgeBell({ onNavigate }) {
   const [verses] = useStorageState("faith_scripture", []);
   const [decisions] = useStorageState("mind_decisions", []);
   const [purity] = useStorageState("purity_log", {});
+  const [nutrition] = useStorageState("nutrition_log", {});
+  const [nutritionProfile] = useStorageState("nutrition_profile", null);
   const nudges = useMemo(() => buildNudges({
     habits: migrateHabits(rawHabits),
     trades: (Array.isArray(trades) ? trades : []).filter((t) => t && t.id),
@@ -26,8 +28,8 @@ function NudgeBell({ onNavigate }) {
     bills: finance?.bills,
     verses: Array.isArray(verses) ? verses : [],
     decisions: (Array.isArray(decisions) ? decisions : []).filter((d) => d && d.id),
-    purity,
-  }), [rawHabits, trades, reviews, finance, verses, decisions, purity]);
+    purity, nutrition, nutritionProfile,
+  }), [rawHabits, trades, reviews, finance, verses, decisions, purity, nutrition, nutritionProfile]);
   const urgent = nudges.filter((n) => n.tone === "urgent").length;
   const TONE = { urgent: AM, celebrate: GR, info: T3 };
 
