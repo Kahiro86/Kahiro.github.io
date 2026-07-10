@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Cpu, Activity } from "lucide-react";
 import { BD, GL, T1, T2, T3, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { callClaude } from "../../shared/anthropic.js";
 import { KAIZEN_COACH_PREAMBLE } from "../../shared/kaizen.js";
 import { SUBSCORE_META } from "./financeHealth.js";
@@ -75,9 +75,7 @@ Sub-scores: ${SUBSCORE_META.map((m) => `${m.label} ${Math.round(health.sub[m.key
                     <span style={{ fontSize: 11.5, color: T2 }}>{m.label}</span>
                     <span style={{ fontSize: 11.5, color: c, fontFamily: "monospace", fontWeight: 700 }}>{v}</span>
                   </div>
-                  <div style={{ height: 4, background: BD, borderRadius: 3 }}>
-                    <div style={{ height: "100%", width: `${v}%`, background: `linear-gradient(90deg,${c}77,${c})`, borderRadius: 3 }} />
-                  </div>
+                  <Meter pct={v} height={4} fill={`linear-gradient(90deg,${c}77,${c})`} />
                 </div>
               );
             })}

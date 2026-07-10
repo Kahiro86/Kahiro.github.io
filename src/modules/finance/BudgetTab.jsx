@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Plus, Check, Trash2 } from "lucide-react";
 import { B2, BD, GL, T1, T2, T3, CY, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip, MoneyInp } from "../../shared/ui.jsx";
+import { Card, SH, Chip, MoneyInp, Meter } from "../../shared/ui.jsx";
 import { useIsMobile } from "../../shared/useIsMobile.js";
 import { localDateStr } from "../../shared/dates.js";
 import { newBill, sanitizeBills, daysUntilDue, isPaidThisCycle, billsDueSoon, monthlyBillsTotal } from "./bills.js";
@@ -146,9 +146,7 @@ export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpe
                     <div style={{ marginTop: 3 }}><MoneyInp value={b.spent || ""} onChange={(v) => setB(i, "spent", v)} /></div>
                   </label>
                 </div>
-                <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: over ? RE : `linear-gradient(90deg,${b.color}77,${b.color})`, borderRadius: 3 }} />
-                </div>
+                <Meter pct={pct} fill={over ? RE : `linear-gradient(90deg,${b.color}77,${b.color})`} />
               </div>
             );
           }
@@ -162,9 +160,7 @@ export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpe
               <MoneyInp value={b.budget || ""} onChange={(v) => setB(i, "budget", v)} />
               <MoneyInp value={b.spent || ""} onChange={(v) => setB(i, "spent", v)} />
               <div>
-                <div style={{ height: 6, background: BD, borderRadius: 3, marginBottom: 3 }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: over ? RE : `linear-gradient(90deg,${b.color}77,${b.color})`, borderRadius: 3 }} />
-                </div>
+                <Meter pct={pct} height={6} fill={over ? RE : `linear-gradient(90deg,${b.color}77,${b.color})`} style={{ marginBottom: 3 }} />
                 <div style={{ fontSize: 10, color: over ? RE : T3 }}>
                   {over ? `⚠ +${(+b.spent - +b.budget).toLocaleString()}` : `${pct}%`}
                 </div>

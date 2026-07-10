@@ -8,7 +8,7 @@ export const gcol = (g) => (g === "A+" ? GR : g === "A" || g === "A-" ? CY : g =
 export const ocol = (o) => ({ WIN: GR, LOSS: RE, BE: AM, PARTIAL: CY }[o] ?? T2);
 
 // Total commission + swap/fees for a trade (0 when unset — no effect on old trades).
-export const tradeFees = (t) => (+t.commission || 0) + (+t.swapFees || 0);
+const tradeFees = (t) => (+t.commission || 0) + (+t.swapFees || 0);
 
 export const calcPnl = (t) => {
   if (t.status === "CLOSED" && t.pnl !== undefined) return t.pnl;

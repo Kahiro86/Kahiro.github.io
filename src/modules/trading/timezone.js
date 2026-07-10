@@ -1,7 +1,7 @@
 import { T3 } from "../../shared/designTokens.js";
 import { SESSION_CONFIG } from "./constants.js";
 
-export function getNYMinutes() {
+function getNYMinutes() {
   try {
     const now = new Date();
     const parts = new Intl.DateTimeFormat("en-US", {

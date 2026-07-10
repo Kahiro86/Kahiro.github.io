@@ -10,7 +10,7 @@
 //     to edit, and no UI ever exposes these values or formulas
 // The only stored pieces are xp_achievements ({id: unlockDate}) and
 // xp_logins ({date: 1}) — both auto-stamped, never user-editable.
-import { localDateStr, daysAgoStr } from "./dates.js";
+import { localDateStr, daysAgoStr, daysBetween } from "./dates.js";
 import { migrateHabits, isScheduled, isDone, isSkipped, perfectDays } from "./habitEngine.js";
 import { sanitizePurity } from "../modules/life/purity.js";
 import { sanitizeReviews } from "../modules/trading/reviews.js";
@@ -35,14 +35,14 @@ const STREAK_LADDER = { 3: 15, 7: 35, 14: 60, 21: 80, 30: 120, 60: 200, 90: 300,
 // Per-day caps stop any single pillar from being farmable.
 const CAPS = { trades: 5, workouts: 3, income: 3, mindNotes: 5, prs: 2 };
 
-export const levelOfXp = (xp) => Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1;
+const levelOfXp = (xp) => Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1;
 export const xpForLevel = (lvl) => (lvl - 1) * (lvl - 1) * 100;
 
 const TITLES = [
   [40, "Legend"], [30, "Grandmaster"], [25, "Sage"], [20, "Master"], [16, "Veteran"],
   [12, "Architect"], [8, "Operator"], [5, "Disciplined"], [3, "Apprentice"], [1, "Beginner"],
 ];
-export const titleOf = (lvl) => (TITLES.find(([l]) => lvl >= l) || TITLES[TITLES.length - 1])[1];
+const titleOf = (lvl) => (TITLES.find(([l]) => lvl >= l) || TITLES[TITLES.length - 1])[1];
 
 export const CAT_LABEL = {
   life: "Life", trading: "Trading", fitness: "Fitness", finance: "Finance",
@@ -135,7 +135,7 @@ export function computeXp(deps = {}) {
       if (e.s === "pure") {
         push(d, V.purityClean, "life");
         stats.cleanDays++;
-        const gap = prev ? Math.round((new Date(`${d}T12:00:00`) - new Date(`${prev}T12:00:00`)) / 86400000) : null;
+        const gap = prev ? daysBetween(prev, d) : null;
         run = prev && gap === 1 ? run + 1 : 1;
         if (STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "life", true);
         if (run > stats.bestStreak) stats.bestStreak = run;

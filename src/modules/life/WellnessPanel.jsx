@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Minus, Plus, Moon, ChevronDown } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { BD, T1, T2, T3, GL, CY, PU, GR } from "../../shared/designTokens.js";
-import { Card, SH } from "../../shared/ui.jsx";
+import { Card, SH, Meter } from "../../shared/ui.jsx";
 import { daysAgoStr, localDateStr } from "../../shared/dates.js";
 
 const stepFor = (unit) => (unit === "h" ? 0.5 : unit === "L" ? 0.25 : unit === "min" ? 5 : 1);
@@ -61,9 +61,7 @@ export function WellnessPanel({ habits, onSetValue }) {
                 </div>
                 <button onClick={() => onSetValue(h.id, round2(v + step))} style={{ width: 30, height: 30, borderRadius: 8, background: `${h.color}18`, border: `1px solid ${h.color}44`, color: h.color, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Plus size={13} /></button>
               </div>
-              <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-                <div style={{ height: "100%", width: `${Math.min(100, (v / goal) * 100)}%`, background: `linear-gradient(90deg,${h.color}77,${h.color})`, borderRadius: 3, transition: "width 0.3s" }} />
-              </div>
+              <Meter pct={(v / goal) * 100} fill={`linear-gradient(90deg,${h.color}77,${h.color})`} />
             </div>
           );
         })}

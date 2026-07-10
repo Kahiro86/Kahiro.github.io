@@ -15,7 +15,7 @@ export const DEFAULT_CATEGORIES = [
 ];
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export const newHabitId = () => `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+const newHabitId = () => `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
 export const newHabit = (patch = {}) => ({
   id: newHabitId(),
@@ -38,14 +38,14 @@ export const newHabit = (patch = {}) => ({
 });
 
 // ── Preset packs (opt-in — never auto-injected) ─────────────────────
-export const NONNEG_PRESETS = [
+const NONNEG_PRESETS = [
   { name: "Prayer", icon: "🙏", color: PU, category: "Spiritual" },
   { name: "Journaling", icon: "📝", color: CY, category: "Personal Growth" },
   { name: "Clean my space", icon: "🧹", color: GR, category: "Productivity" },
   { name: "Exercise", icon: "💪", color: RE, category: "Fitness" },
   { name: "Healthy eating", icon: "🥗", color: AM, category: "Nutrition" },
 ];
-export const WELLNESS_PRESETS = [
+const WELLNESS_PRESETS = [
   { name: "Sleep", icon: "🛏️", color: PU, category: "Health", target: 8, unit: "h", wellnessMin: 7.5 },
   { name: "Hydration", icon: "💧", color: CY, category: "Health", target: 2, unit: "L" },
   { name: "Prayer & Bible study", icon: "📖", color: GR, category: "Spiritual", target: 15, unit: "min", wellnessMin: 15 },

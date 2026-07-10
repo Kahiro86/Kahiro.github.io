@@ -55,8 +55,6 @@ export async function getToken(interactive) {
   });
 }
 
-export const isGcalConnected = () => !!getGcalConfig() && !!token;
-
 // Today's events from the primary calendar, soonest first.
 export async function todaysEvents(interactive = false) {
   const access = await getToken(interactive);

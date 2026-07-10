@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus, Pencil, Archive, ArchiveRestore, Trash2, Check, X, TrendingUp, Cpu } from "lucide-react";
 import { T1, T2, T3, BD, BD2, GL, B2, CY, PU, GR, RE, AM, OR } from "../../shared/designTokens.js";
-import { Card, MoneyInp } from "../../shared/ui.jsx";
+import { Card, MoneyInp, Meter } from "../../shared/ui.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { useToast } from "../../shared/toast.jsx";
 
@@ -136,9 +136,7 @@ export function GoalsTab({ goals = [], setGoals, fmtKES, liveMetrics }) {
           <span style={{ fontSize: 11, color: T3, fontFamily: "monospace" }}>{fmtKES(+g.current || 0)} / {fmtKES(+g.target || 0)}</span>
           <span style={{ fontSize: 14, fontWeight: 800, color: g.color, fontFamily: "monospace" }}>{a.pct}%</span>
         </div>
-        <div style={{ height: 7, background: BD, borderRadius: 4, marginBottom: 11, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${a.pct}%`, background: `linear-gradient(90deg,${g.color}77,${g.color})`, borderRadius: 4, boxShadow: `0 0 6px ${g.color}44`, transition: "width 0.8s ease" }} />
-        </div>
+        <Meter pct={a.pct} height={7} fill={`linear-gradient(90deg,${g.color}77,${g.color})`} glow={`${g.color}44`} style={{ marginBottom: 11 }} />
 
         {contribFor === g.id && (
           <div style={{ display: "flex", gap: 7, marginBottom: 11 }}>

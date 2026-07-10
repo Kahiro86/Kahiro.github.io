@@ -1,7 +1,7 @@
 // ── Smart assistance (Kaizen phase 14) — no AI, just honest rules ────
 // Every nudge answers "what should I do now?", links to where to do it,
 // and celebrates real milestones. Quiet by design: only what's true today.
-import { localDateStr } from "./dates.js";
+import { localDateStr, daysBetween } from "./dates.js";
 import { isScheduled, isDone, isSkipped, isNonNeg, isWeekly, currentStreak, rangeStats } from "./habitEngine.js";
 import { pendingReviews, sanitizeReviews } from "../modules/trading/reviews.js";
 import { billsDueSoon } from "../modules/finance/bills.js";
@@ -56,7 +56,7 @@ export function buildNudges(deps) {
   const dueVerses = verses.filter((v) => {
     const last = v.lastReviewed || v.addedAt;
     if (!last) return false;
-    const daysSince = Math.floor((new Date(`${ds}T12:00:00`) - new Date(`${last}T12:00:00`)) / 86400000);
+    const daysSince = daysBetween(last, ds);
     const ivs = [1, 3, 7, 14, 30, 60];
     return daysSince >= ivs[Math.min(v.reviews || 0, ivs.length - 1)];
   });
@@ -68,7 +68,7 @@ export function buildNudges(deps) {
   // 7. Decisions ready to review (30 days elapsed).
   const dueDecisions = (deps.decisions || []).filter((d) => {
     if (!d || d.reviewedAt || !d.date) return false;
-    return Math.floor((new Date(`${ds}T12:00:00`) - new Date(`${d.date}T12:00:00`)) / 86400000) >= 30;
+    return daysBetween(d.date, ds) >= 30;
   });
   if (dueDecisions.length) {
     out.push({ id: "decisions", icon: "⚖️", tone: "info", nav: "mind",

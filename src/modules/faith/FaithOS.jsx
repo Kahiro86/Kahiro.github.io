@@ -8,9 +8,10 @@ import { useMemo, useState } from "react";
 import { BookOpen, Plus, Check, Trash2, Church as ChurchIcon, Sparkles, ScrollText } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, GR, RE, AM, PU, CY } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
+import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
-import { localDateStr, daysAgoStr } from "../../shared/dates.js";
+import { localDateStr, daysAgoStr, daysBetween } from "../../shared/dates.js";
 import { isScheduled, isDone, tapHabit, rangeStats, currentStreak, totalCompletions, newHabit } from "../../shared/habitEngine.js";
 
 const FA = "#B09A6F"; // muted amber — this module's accent
@@ -18,10 +19,7 @@ const FA = "#B09A6F"; // muted amber — this module's accent
 // Spaced review: due after 1, 3, 7, 14, 30 then every 60 days.
 const INTERVALS = [1, 3, 7, 14, 30, 60];
 const nextInterval = (reviews) => INTERVALS[Math.min(reviews, INTERVALS.length - 1)];
-const daysSince = (ds) => {
-  if (!ds) return Infinity;
-  return Math.floor((new Date(`${localDateStr()}T12:00:00`) - new Date(`${ds}T12:00:00`)) / 86400000);
-};
+const daysSince = (ds) => (ds ? daysBetween(ds, localDateStr()) : Infinity);
 const isDue = (v) => daysSince(v.lastReviewed || v.addedAt) >= nextInterval(v.reviews || 0);
 
 // 12-week consistency grid for one habit (weeks as columns, Sun→Sat rows).
@@ -134,21 +132,14 @@ export function FaithOS({ habits, setHabits, loaded = true }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: "rgba(10,9,6,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, overflowX: "auto" }}>
-        <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
-          {TABS.map(({ id, l, i: Icon }) => (
-            <button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === id ? `${FA}22` : "transparent", color: tab === id ? FA : T2, fontSize: 12, fontWeight: tab === id ? 600 : 400, fontFamily: "inherit", whiteSpace: "nowrap" }}>
-              <Icon size={11} />{l}
-            </button>
-          ))}
-        </div>
+      <ModuleTabs tint="rgba(10,9,6,0.5)" activeBg={`${FA}22`} activeColor={FA} tabs={TABS} active={tab} onSelect={setTab}>
         <div style={{ flex: 1 }} />
         {due.length > 0 && (
           <button onClick={() => setTab("scripture")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 9, color: AM, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             📖 {due.length} verse{due.length > 1 ? "s" : ""} due for review
           </button>
         )}
-      </div>
+      </ModuleTabs>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {!loaded && <Hydrating label="Opening Faith OS…" />}

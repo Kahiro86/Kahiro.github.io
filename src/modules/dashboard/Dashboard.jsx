@@ -6,10 +6,10 @@ import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Cpu, Check, Flame, Activity as ActivityIcon, TrendingUp, DollarSign, Dumbbell, Target, ChevronRight, Plus, Calendar, Zap, PenLine } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, OR, B2 } from "../../shared/designTokens.js";
-import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Hydrating, Meter } from "../../shared/ui.jsx";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { useStorageState } from "../../shared/useStorageState.js";
-import { ActivityHeatmap } from "../../shared/charts.jsx";
+import { ActivityHeatmap, Ring } from "../../shared/charts.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { nextSmallAction, nudgeOfTheDay } from "../../shared/kaizen.js";
 import { getStats, tradingMetrics } from "../trading/helpers.js";
@@ -32,20 +32,6 @@ import { billsDueSoon } from "../finance/bills.js";
 import { NonNegotiables } from "../life/NonNegotiables.jsx";
 
 const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
-
-function Ring({ pct, size = 108, stroke = 9, color = GR, children }) {
-  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
-  return (
-    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={BD} strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-          strokeDasharray={`${(Math.min(100, pct) / 100) * c} ${c}`} style={{ transition: "stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1)" }} />
-      </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>{children}</div>
-    </div>
-  );
-}
 
 export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = true }) {
   const [kz, setKz] = useState(getActiveKillzone);
@@ -191,7 +177,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
       {/* ── Hero: ring, discipline, momentum ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 14 }}>
         <Card style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 18 }}>
-          <Ring pct={ringPct} color={ringPct === 100 ? GR : CY}>
+          <Ring pct={ringPct} size={108} stroke={9} color={ringPct === 100 ? GR : CY}>
             <div style={{ fontSize: 22, fontWeight: 900, color: ringPct === 100 ? GR : T1, fontFamily: "'JetBrains Mono',monospace" }}>{ringPct}%</div>
             <div style={{ fontSize: 8, color: T3, letterSpacing: 1.5 }}>TODAY</div>
           </Ring>
@@ -331,9 +317,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
                     style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 11px", background: done ? `${h.color}0C` : GL, border: `1px solid ${done ? h.color + "44" : BD}`, borderRadius: 10, cursor: "pointer" }}>
                     <span style={{ fontSize: 14 }}>{h.icon}</span>
                     <span style={{ flex: 1, fontSize: 12.5, color: done ? T1 : T2, fontWeight: done ? 600 : 400 }}>{h.name}</span>
-                    <div style={{ width: 90, height: 4, background: BD, borderRadius: 2 }}>
-                      <div style={{ height: "100%", width: `${Math.min(100, (v / target) * 100)}%`, background: h.color, borderRadius: 2, transition: "width 0.3s" }} />
-                    </div>
+                    <Meter pct={(v / target) * 100} height={4} color={h.color} style={{ width: 90 }} />
                     <span style={{ fontSize: 10.5, color: T3, fontFamily: "monospace", width: 52, textAlign: "right" }}>{v}/{target}{h.unit ? ` ${h.unit}` : ""}</span>
                   </div>
                 );

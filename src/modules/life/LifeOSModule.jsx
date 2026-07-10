@@ -5,13 +5,14 @@ import {
   Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, FolderKanban, ShieldCheck,
 } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Hydrating, Meter, Empty } from "../../shared/ui.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
-import { ActivityHeatmap } from "../../shared/charts.jsx";
+import { ActivityHeatmap, Ring } from "../../shared/charts.jsx";
+import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { REFLECTION_PROMPTS } from "../../shared/kaizen.js";
 import {
   newHabit, newRoutine, isScheduled, isDone, isSkipped, valueOn, tapHabit, toggleSkip, setHabitValue,
@@ -25,21 +26,6 @@ import { NonNegotiables } from "./NonNegotiables.jsx";
 import { PurityTab } from "./PurityTab.jsx";
 
 const today = () => localDateStr();
-
-// ── Progress ring ────────────────────────────────────────────────────
-function Ring({ pct, size = 128, stroke = 10, color = GR, children }) {
-  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
-  return (
-    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={BD} strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-          strokeDasharray={`${(pct / 100) * c} ${c}`} style={{ transition: "stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1)", filter: `drop-shadow(0 0 8px ${color}66)` }} />
-      </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>{children}</div>
-    </div>
-  );
-}
 
 export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpInfo }) {
   const [tab, setTab] = useState("today");
@@ -182,9 +168,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
             {skipped && <span style={{ fontSize: 10, color: T3 }}>skipped — streak safe</span>}
             {multi && !skipped && (
               <div style={{ flex: 1, maxWidth: 130, display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ flex: 1, height: 4, background: BD, borderRadius: 2 }}>
-                  <div style={{ height: "100%", width: `${Math.min(100, (v / target) * 100)}%`, background: h.color, borderRadius: 2, transition: "width 0.3s" }} />
-                </div>
+                <Meter pct={(v / target) * 100} height={4} color={h.color} style={{ flex: 1 }} />
                 <span style={{ fontSize: 10, color: T3, fontFamily: "monospace", whiteSpace: "nowrap" }}>{v}/{target}{h.unit ? ` ${h.unit}` : ""}</span>
               </div>
             )}
@@ -212,23 +196,14 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: "rgba(9,13,24,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, overflowX: "auto" }}>
-        <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
-          {TABS.map(({ id, l, i: Icon }) => (
-            <button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === id ? `linear-gradient(135deg,${GR}22,${CY}22)` : "transparent", color: tab === id ? GR : T2, fontSize: 12, fontWeight: tab === id ? 600 : 400, fontFamily: "inherit", whiteSpace: "nowrap" }}>
-              <Icon size={11} />{l}
-            </button>
-          ))}
-        </div>
+      <ModuleTabs tabs={TABS} active={tab} onSelect={setTab} activeBg={`linear-gradient(135deg,${GR}22,${CY}22)`} activeColor={GR}>
         <div style={{ flex: 1 }} />
         <div title={`${xp - prevXp}/${nextXp - prevXp} XP to level ${level + 1}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: `${AM}11`, border: `1px solid ${AM}22`, borderRadius: 9 }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: AM, letterSpacing: 0.5 }}>LVL {level}</span>
-          <div style={{ width: 64, height: 4, background: BD, borderRadius: 2 }}>
-            <div style={{ height: "100%", width: `${Math.min(100, Math.round(((xp - prevXp) / Math.max(1, nextXp - prevXp)) * 100))}%`, background: `linear-gradient(90deg,${AM}88,${AM})`, borderRadius: 2 }} />
-          </div>
+          <Meter pct={Math.round(((xp - prevXp) / Math.max(1, nextXp - prevXp)) * 100)} height={4} fill={`linear-gradient(90deg,${AM}88,${AM})`} style={{ width: 64 }} />
           <span style={{ fontSize: 10, color: T3, fontFamily: "monospace" }}>{xp.toLocaleString()} XP</span>
         </div>
-      </div>
+      </ModuleTabs>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {!loaded && <Hydrating label="Loading your habits…" />}
@@ -237,7 +212,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
             <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${GR}08,transparent)` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
-                <Ring pct={pctToday} color={pctToday === 100 ? GR : CY}>
+                <Ring pct={pctToday} glow color={pctToday === 100 ? GR : CY}>
                   <div style={{ fontSize: 26, fontWeight: 900, color: pctToday === 100 ? GR : T1, fontFamily: "'JetBrains Mono',monospace" }}>{pctToday}%</div>
                   <div style={{ fontSize: 8.5, color: T3, letterSpacing: 1.5 }}>TODAY</div>
                 </Ring>
@@ -271,9 +246,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
                         <span style={{ fontSize: 13, fontWeight: 700, color: T1 }}>{r.icon} {r.name}</span>
                         <span style={{ fontSize: 11, color: p.pct === 100 ? GR : T3, fontFamily: "monospace" }}>{p.done}/{p.total}</span>
                       </div>
-                      <div style={{ height: 5, background: BD, borderRadius: 3, marginBottom: 10 }}>
-                        <div style={{ height: "100%", width: `${p.pct}%`, background: p.pct === 100 ? GR : `linear-gradient(90deg,${CY}77,${CY})`, borderRadius: 3, transition: "width 0.4s" }} />
-                      </div>
+                      <Meter pct={p.pct} fill={p.pct === 100 ? GR : `linear-gradient(90deg,${CY}77,${CY})`} style={{ marginBottom: 10 }} />
                       {p.pct === 100
                         ? <div style={{ fontSize: 11.5, color: GR, fontWeight: 700 }}>✓ Routine complete</div>
                         : <button onClick={() => runRoutine(r)} style={{ width: "100%", padding: "7px", background: `${GR}14`, border: `1px solid ${GR}44`, borderRadius: 8, color: GR, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Complete all →</button>}
@@ -308,9 +281,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
                           </div>
                           <span style={{ fontSize: 12, fontWeight: 800, color: wp.met ? GR : h.color, fontFamily: "monospace" }}>{wp.done}/{wp.target}</span>
                         </div>
-                        <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-                          <div style={{ height: "100%", width: `${wp.pct}%`, background: wp.met ? GR : `linear-gradient(90deg,${h.color}77,${h.color})`, borderRadius: 3, transition: "width 0.4s" }} />
-                        </div>
+                        <Meter pct={wp.pct} fill={wp.met ? GR : `linear-gradient(90deg,${h.color}77,${h.color})`} />
                       </Card>
                     );
                   })}
@@ -451,11 +422,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
             )}
 
             {routines.length === 0 && !routineDraft && (
-              <Card style={{ padding: "38px", textAlign: "center" }}>
-                <div style={{ fontSize: 28, marginBottom: 10 }}>🌅</div>
-                <div style={{ fontSize: 14, color: T2, marginBottom: 4 }}>No routines yet</div>
-                <div style={{ fontSize: 12, color: T3 }}>Bundle your morning, gym or night habits so one tap completes the whole block.</div>
-              </Card>
+              <Empty icon="🌅" title="No routines yet" sub="Bundle your morning, gym or night habits so one tap completes the whole block." />
             )}
 
             {routines.map((r) => {
@@ -598,9 +565,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
                         <span style={{ fontSize: 12, color: T2 }}>{c.cat} <span style={{ color: T3, fontSize: 10.5 }}>· {c.n} habit{c.n > 1 ? "s" : ""}</span></span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: c.pct >= 70 ? GR : c.pct >= 40 ? CY : RE, fontFamily: "monospace" }}>{c.pct}%</span>
                       </div>
-                      <div style={{ height: 5, background: BD, borderRadius: 3 }}>
-                        <div style={{ height: "100%", width: `${c.pct}%`, background: c.pct >= 70 ? GR : c.pct >= 40 ? CY : RE, borderRadius: 3 }} />
-                      </div>
+                      <Meter pct={c.pct} color={c.pct >= 70 ? GR : c.pct >= 40 ? CY : RE} />
                     </div>
                   ))}
                 </Card>
@@ -671,10 +636,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
               </button>
             </div>
             {projects.length === 0 && (
-              <Card style={{ padding: "34px", textAlign: "center" }}>
-                <div style={{ fontSize: 26, marginBottom: 10 }}>🚀</div>
-                <div style={{ fontSize: 13, color: T2 }}>No projects yet. The side hustle, the room makeover, the certification — name it and define its next step.</div>
-              </Card>
+              <Empty icon="🚀" pad={34} title="No projects yet. The side hustle, the room makeover, the certification — name it and define its next step." />
             )}
             {[...projects].sort((a, b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0)).map((p) => (
               <Card key={p.id} style={{ padding: "14px 16px", opacity: p.status === "done" ? 0.7 : p.status === "paused" ? 0.85 : 1 }}>

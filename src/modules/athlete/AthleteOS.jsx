@@ -5,6 +5,7 @@ import {
 import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
+import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -140,14 +141,7 @@ export function AthleteOS() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: "rgba(9,13,24,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, overflowX: "auto" }}>
-        <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
-          {TABS.map(({ id, l, i: Icon }) => (
-            <button key={id} onClick={() => setView(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 13px", borderRadius: 8, border: "none", cursor: "pointer", background: view === id ? `linear-gradient(135deg,${PU}22,${CY}22)` : "transparent", color: view === id ? PU : T2, fontSize: 12, fontWeight: view === id ? 600 : 400, fontFamily: "inherit" }}>
-              <Icon size={11} />{l}
-            </button>
-          ))}
-        </div>
+      <ModuleTabs tabs={TABS} active={view} onSelect={setView} pad="6px 13px" activeBg={`linear-gradient(135deg,${PU}22,${CY}22)`} activeColor={PU}>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 11px", background: `${AM}11`, border: `1px solid ${AM}22`, borderRadius: 9 }}>
           <Flame size={12} color={AM} />
@@ -162,7 +156,7 @@ export function AthleteOS() {
         <button onClick={() => startLog()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 15px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
           <Plus size={14} />Log Workout
         </button>
-      </div>
+      </ModuleTabs>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {view === "week" && (

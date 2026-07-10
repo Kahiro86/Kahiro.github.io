@@ -1,7 +1,7 @@
 // Swap `storage` for a Supabase-backed adapter later — same 4 methods, nothing else changes.
 const PREFIX = "architect:";
 
-export const localStorageAdapter = {
+const localStorageAdapter = {
   async get(key) {
     return localStorage.getItem(PREFIX + key);
   },

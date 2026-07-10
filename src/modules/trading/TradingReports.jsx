@@ -2,7 +2,7 @@ import { useState } from "react";
 import { localDateStr } from "../../shared/dates.js";
 import { Cpu, ArrowUp, ArrowDown } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH, Chip } from "../../shared/ui.jsx";
+import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { callClaude } from "../../shared/anthropic.js";
 import { PSYCH, GRADES } from "./constants.js";
 import { getStats, gcol } from "./helpers.js";
@@ -119,9 +119,7 @@ Include: Performance verdict, what went right, what to fix, specific action item
                 {gradeBreak.map((g) => (
                   <div key={g.grade} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ fontSize: 11, fontWeight: 800, width: 28, padding: "2px 6px", borderRadius: 5, background: `${g.color}22`, color: g.color, border: `1px solid ${g.color}44`, textAlign: "center" }}>{g.grade}</span>
-                    <div style={{ flex: 1, height: 5, background: BD, borderRadius: 3 }}>
-                      <div style={{ height: "100%", width: `${(g.count / periodTrades.length) * 100}%`, background: `linear-gradient(90deg,${g.color}77,${g.color})`, borderRadius: 3 }} />
-                    </div>
+                    <Meter pct={(g.count / periodTrades.length) * 100} style={{ flex: 1 }} />
                     <span style={{ fontSize: 12, color: g.color, fontFamily: "monospace", fontWeight: 700, width: 20, textAlign: "right" }}>{g.count}</span>
                   </div>
                 ))}

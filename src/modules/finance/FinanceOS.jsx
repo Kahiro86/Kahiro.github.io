@@ -2,6 +2,7 @@ import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, Trend
 import { useMemo, useState } from "react";
 import { B1, BD, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
+import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { DEFAULT_FINANCE_STATE } from "./constants.js";
 import { totalDebtRemaining } from "./debt.js";
 import { DebtTab } from "./DebtTab.jsx";
@@ -144,15 +145,8 @@ export function FinanceOS() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ background: "rgba(9,13,24,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0, overflowX: "auto" }}>
-        <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
-          {FIN_TABS.map(({ id, l, i: Icon }) => (
-            <button key={id} onClick={() => setFinTab(id)}
-              style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: finTab === id ? `linear-gradient(135deg,${CY}22,${PU}22)` : "transparent", color: finTab === id ? CY : T2, fontSize: 11.5, fontWeight: finTab === id ? 600 : 400, fontFamily: "inherit", borderTop: finTab === id ? `1px solid ${CY}44` : "1px solid transparent", whiteSpace: "nowrap" }}>
-              <Icon size={11} />{l}
-            </button>
-          ))}
-        </div>
+      <ModuleTabs tabs={FIN_TABS} active={finTab} onSelect={setFinTab} gap={10} pad="6px 11px" fontSize={11.5}
+        activeBg={`linear-gradient(135deg,${CY}22,${PU}22)`} activeColor={CY} topBorder={`${CY}44`}>
         <div style={{ flex: 1 }} />
         <div style={{ padding: "5px 13px", background: `${GR}11`, border: `1px solid ${GR}22`, borderRadius: 9, display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 10, color: T3, letterSpacing: 1 }}>NET WORTH</span>
@@ -172,7 +166,7 @@ export function FinanceOS() {
             style={{ width: 52, background: "transparent", border: "none", fontSize: 12, color: AM, fontFamily: "monospace", fontWeight: 700, outline: "none", textAlign: "right" }} />
           <span style={{ fontSize: 10, color: T3 }}>KES</span>
         </div>
-      </div>
+      </ModuleTabs>
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {finTab === "overview" && (

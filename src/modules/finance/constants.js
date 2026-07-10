@@ -62,7 +62,7 @@ export const INCOME_SOURCES = [
 export const INCOME_CATEGORIES = ["Active", "Passive", "Business", "Investment", "Windfall", "Other"];
 
 // Stable-ish palette so a source keeps a colour across the app.
-export const INCOME_PALETTE = [CY, GR, PU, AM, OR, RE, "#2DD4BF", "#F472B6", "#A78BFA", "#38BDF8"];
+const INCOME_PALETTE = [CY, GR, PU, AM, OR, RE, "#2DD4BF", "#F472B6", "#A78BFA", "#38BDF8"];
 export function sourceColor(source) {
   let h = 0;
   for (let i = 0; i < (source || "").length; i++) h = (h * 31 + source.charCodeAt(i)) >>> 0;
