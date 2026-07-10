@@ -228,12 +228,12 @@ export function xpOf(habits) {
 export const levelOf = (xp) => Math.floor(Math.sqrt(xp / 50)) + 1;
 export const xpForLevel = (lvl) => (lvl - 1) * (lvl - 1) * 50;
 
-export function badges(habits) {
+export function badges(habits, lvl = null) {
   habits = Array.isArray(habits) ? habits : [];
   const completions = habits.reduce((s, h) => s + totalCompletions(h), 0);
   const bestStreak = habits.reduce((m, h) => Math.max(m, longestStreak(h)), 0);
   const perfect = perfectDays(habits).length;
-  const lvl = levelOf(xpOf(habits));
+  if (lvl == null) lvl = levelOf(xpOf(habits));
   return [
     { icon: "🌱", name: "First Rep",     desc: "Complete 1 habit",        got: completions >= 1 },
     { icon: "🔥", name: "Kaizen Week",   desc: "7-day streak",            got: bestStreak >= 7 },

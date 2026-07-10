@@ -148,12 +148,3 @@ export function weeklyPurity(log, weeks = 12, today = localDateStr()) {
   }
   return out;
 }
-
-// Subtle XP: consistency pays, milestones bonus. Feeds the header total.
-export function purityXp(logRaw) {
-  const log = sanitizePurity(logRaw);
-  const totalPure = Object.values(log).filter((v) => v.s === "pure").length;
-  const best = longestStreak(log);
-  const milestoneBonus = MILESTONES.filter((m) => best >= m).length * 50;
-  return totalPure * 10 + milestoneBonus;
-}

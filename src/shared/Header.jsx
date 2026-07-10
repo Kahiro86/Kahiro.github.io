@@ -71,7 +71,7 @@ function NudgeBell({ onNavigate }) {
   );
 }
 
-export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigate, streak = 0, xp = 0, level = 1 }) {
+export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigate, streak = 0, xp = 0, level = 1, xpTitle = "", pctToNext = 0, toNext = 0 }) {
   const label = NAV.find((n) => n.id === module)?.label || "Command Center";
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
@@ -116,8 +116,12 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
       </div>
 
       {xp > 0 && (
-        <div title={`${xp.toLocaleString()} XP — earned from real habit completions`} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 11px", background: `${AM}11`, borderRadius: 10, border: `1px solid ${AM}22` }}>
+        <div title={`${xpTitle ? xpTitle + " · " : ""}${xp.toLocaleString()} lifetime XP · ${toNext.toLocaleString()} XP to level ${level + 1} — earned from real completions across every pillar`}
+          style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 11px", background: `${AM}11`, borderRadius: 10, border: `1px solid ${AM}22` }}>
           <span style={{ fontSize: 10.5, fontWeight: 800, color: AM, letterSpacing: 0.5 }}>LVL {level}</span>
+          <div style={{ width: 52, height: 4, background: BD, borderRadius: 2 }}>
+            <div style={{ height: "100%", width: `${pctToNext}%`, background: `linear-gradient(90deg,${AM}88,${AM})`, borderRadius: 2, transition: "width 0.4s" }} />
+          </div>
           <span style={{ fontSize: 10, color: T3, fontFamily: "monospace" }}>{xp.toLocaleString()} XP</span>
         </div>
       )}

@@ -41,7 +41,7 @@ function Ring({ pct, size = 128, stroke = 10, color = GR, children }) {
   );
 }
 
-export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
+export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpInfo }) {
   const [tab, setTab] = useState("today");
   const [editing, setEditing] = useState(null);         // habit being edited or newHabit()
   const [rawRoutines, setRoutines] = useStorageState("routines", []);
@@ -85,11 +85,12 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate }) {
   const doneToday = scheduledToday.filter((h) => isDone(h, ds));
   const skippedToday = scheduledToday.filter((h) => isSkipped(h, ds) && !isDone(h, ds));
   const pctToday = scheduledToday.length ? Math.round((doneToday.length / scheduledToday.length) * 100) : 0;
-  const xp = useMemo(() => xpOf(habits), [habits]);
-  const level = levelOf(xp);
-  const nextXp = xpForLevel(level + 1);
-  const prevXp = xpForLevel(level);
-  const badgeList = useMemo(() => badges(habits), [habits]);
+  // Global progression from App — the level here always matches the header.
+  const xp = xpInfo ? xpInfo.total : xpOf(habits);
+  const level = xpInfo ? xpInfo.level : levelOf(xp);
+  const nextXp = xpInfo ? xpInfo.nextLevelXp : xpForLevel(level + 1);
+  const prevXp = xpInfo ? xpInfo.prevLevelXp : xpForLevel(level);
+  const badgeList = useMemo(() => badges(habits, level), [habits, level]);
 
   // ── Actions ────────────────────────────────────────────────────────
   const tap = (h) => {
