@@ -4,13 +4,15 @@
 // behaviour. Trends over isolated numbers.
 import { useMemo, useState } from "react";
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { BarChart3, GitCompareArrows } from "lucide-react";
+import { BarChart3, GitCompareArrows, Trophy } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
-import { Card, SH } from "../../shared/ui.jsx";
+import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { periodReport, weeklySeries, pearson, rVerdict, checklistVsPnl } from "../../shared/analytics.js";
+import { useXp } from "../../shared/useXp.js";
+import { CAT_LABEL } from "../../shared/xpEngine.js";
 
 const AN = "#8B7CA0"; // muted purple — this module's accent
 const PERIODS = [
@@ -54,6 +56,7 @@ export function AnalyticsOS({ habits }) {
   const [church] = useStorageState("faith_church", []);
   const [library] = useStorageState("mind_library", []);
   const [decisions] = useStorageState("mind_decisions", []);
+  const xp = useXp();
 
   const deps = useMemo(() => ({
     habits: Array.isArray(habits) ? habits : [],
@@ -104,7 +107,7 @@ export function AnalyticsOS({ habits }) {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ background: "rgba(8,7,12,0.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: `1px solid ${BD}`, padding: "10px 24px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, overflowX: "auto" }}>
         <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
-          {[{ id: "reports", l: "Reports", i: BarChart3 }, { id: "trends", l: "Trends", i: GitCompareArrows }].map(({ id, l, i: Icon }) => (
+          {[{ id: "reports", l: "Reports", i: BarChart3 }, { id: "trends", l: "Trends", i: GitCompareArrows }, { id: "xp", l: "Progression", i: Trophy }].map(({ id, l, i: Icon }) => (
             <button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === id ? `${AN}26` : "transparent", color: tab === id ? "#B4A6C8" : T2, fontSize: 12, fontWeight: tab === id ? 600 : 400, fontFamily: "inherit", whiteSpace: "nowrap" }}>
               <Icon size={11} />{l}
             </button>
@@ -208,6 +211,101 @@ export function AnalyticsOS({ habits }) {
             </div>
           </div>
         )}
+
+        {tab === "xp" && (() => {
+          const cats = Object.entries(xp.byCat).filter(([c]) => c !== "awards").sort((a, b) => b[1] - a[1]);
+          const catMax = Math.max(1, ...cats.map(([, v]) => v));
+          const CAT_COLOR = { life: GR, trading: CY, fitness: PU, finance: AM, faith: "#B09A6F", mind: "#767FA6" };
+          const gotList = xp.achievements.filter((a) => a.got);
+          return (
+            <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 980 }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: T1 }}>Progression</div>
+                <div style={{ fontSize: 12.5, color: T3, marginTop: 2 }}>XP is earned by doing the work — every pillar reports in. The formulas stay under the hood.</div>
+              </div>
+
+              <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${AM}0A,transparent)` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+                  <div style={{ textAlign: "center", minWidth: 90 }}>
+                    <div style={{ fontSize: 44, fontWeight: 900, color: AM, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1, textShadow: `0 0 30px ${AM}44` }}>{xp.level}</div>
+                    <div style={{ fontSize: 9, color: T3, letterSpacing: 2, marginTop: 4 }}>LEVEL</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
+                      <span style={{ padding: "3px 12px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 13, fontSize: 11.5, fontWeight: 700, color: AM, letterSpacing: 1 }}>{xp.title}</span>
+                      <span style={{ fontSize: 11, color: T3 }}>{(xp.nextLevelXp - xp.total).toLocaleString()} XP to level {xp.level + 1}</span>
+                    </div>
+                    <div style={{ height: 8, background: BD, borderRadius: 4, marginBottom: 7 }}>
+                      <div style={{ height: "100%", width: `${xp.pctToNext}%`, background: `linear-gradient(90deg,${AM}77,${AM})`, borderRadius: 4, transition: "width 0.5s", boxShadow: `0 0 10px ${AM}55` }} />
+                    </div>
+                    <div style={{ fontSize: 11.5, color: T2 }}>Lifetime: <span style={{ color: T1, fontWeight: 700, fontFamily: "monospace" }}>{xp.total.toLocaleString()} XP</span></div>
+                  </div>
+                </div>
+              </Card>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 10 }}>
+                <Chip label="Today" value={xp.today.toLocaleString()} color={GR} />
+                <Chip label="Last 7 days" value={xp.week.toLocaleString()} color={CY} />
+                <Chip label="This month" value={xp.month.toLocaleString()} color={PU} />
+                <Chip label="This year" value={xp.year.toLocaleString()} color={AM} />
+                <Chip label="Avg/day (30d)" value={xp.avg30.toLocaleString()} color={T2} />
+                <Chip label="From streaks" value={xp.streakXp.toLocaleString()} color={GR} />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 16 }}>
+                <Card style={{ padding: "18px" }}>
+                  <SH title="XP by pillar" sub="Where your effort has been landing" />
+                  {cats.length === 0 && <div style={{ padding: "18px 4px", fontSize: 12, color: T3, textAlign: "center" }}>Complete anything — a habit, a trade, a workout — and it lands here.</div>}
+                  {cats.map(([c, v]) => (
+                    <div key={c} style={{ marginBottom: 11 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, color: T2 }}>{CAT_LABEL[c] || c}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: CAT_COLOR[c] || T2, fontFamily: "monospace" }}>{v.toLocaleString()}</span>
+                      </div>
+                      <div style={{ height: 5, background: BD, borderRadius: 3 }}>
+                        <div style={{ height: "100%", width: `${Math.round((v / catMax) * 100)}%`, background: CAT_COLOR[c] || T3, borderRadius: 3 }} />
+                      </div>
+                    </div>
+                  ))}
+                  {xp.bestDay && (
+                    <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
+                      Best day: <span style={{ color: AM, fontWeight: 700, fontFamily: "monospace" }}>{xp.bestDay[1].toLocaleString()} XP</span> on {new Date(`${xp.bestDay[0]}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </div>
+                  )}
+                </Card>
+
+                <Card style={{ padding: "18px" }}>
+                  <SH title="XP per week" sub="Last 12 weeks — consistency, not spikes" />
+                  <ResponsiveContainer width="100%" height={190}>
+                    <ComposedChart data={xp.weekly} margin={{ top: 4, right: 0, bottom: 0, left: -14 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={BD} />
+                      <XAxis dataKey="label" stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
+                      <Tooltip content={mkTT("", " XP")} />
+                      <Bar dataKey="xp" name="XP" fill={AM} fillOpacity={0.65} radius={[4, 4, 0, 0]} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </Card>
+              </div>
+
+              <Card style={{ padding: "18px" }}>
+                <SH title="Achievements" sub={`${gotList.length}/${xp.achievements.length} unlocked — each pays bonus XP the moment it's earned`} action={<Trophy size={13} color={AM} />} />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10 }}>
+                  {xp.achievements.map((a) => (
+                    <div key={a.id} style={{ padding: "13px 11px", textAlign: "center", background: a.got ? `${AM}0D` : GL, border: `1px solid ${a.got ? AM + "44" : BD}`, borderRadius: 11, opacity: a.got ? 1 : 0.45 }}>
+                      <div style={{ fontSize: 21, marginBottom: 5, filter: a.got ? "none" : "grayscale(1)" }}>{a.icon}</div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: a.got ? AM : T3 }}>{a.name}</div>
+                      <div style={{ fontSize: 9.5, color: T3, marginTop: 2, lineHeight: 1.45 }}>{a.desc}</div>
+                      <div style={{ fontSize: 9, color: a.got ? T2 : T3, marginTop: 5, fontFamily: "monospace" }}>
+                        {a.got ? (a.date ? new Date(`${a.date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "unlocked") : `+${a.xp} XP`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

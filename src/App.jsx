@@ -3,8 +3,9 @@ import { T1 } from "./shared/designTokens.js";
 import { storage } from "./shared/storage.js";
 import { useStorageState } from "./shared/useStorageState.js";
 import { useIsMobile } from "./shared/useIsMobile.js";
-import { migrateHabits, toLegacy, tapHabit, xpOf, levelOf } from "./shared/habitEngine.js";
-import { purityXp } from "./modules/life/purity.js";
+import { migrateHabits, toLegacy, tapHabit } from "./shared/habitEngine.js";
+import { useXp } from "./shared/useXp.js";
+import { XPCelebration } from "./shared/XPCelebration.jsx";
 import { localDateStr } from "./shared/dates.js";
 import { ToastProvider } from "./shared/toast.jsx";
 import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
@@ -47,9 +48,10 @@ export default function App() {
   // Legacy shape ({name, icon, done, streak}) for Dashboard / AI / kaizen.
   const habits = useMemo(() => toLegacy(habitsV2), [habitsV2]);
   const topStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
-  const [purityLogRaw] = useStorageState("purity_log", {});
-  const xp = useMemo(() => xpOf(habitsV2) + purityXp(purityLogRaw), [habitsV2, purityLogRaw]);
-  const level = levelOf(xp);
+  // Global progression: XP derives from every store, never stored directly.
+  const xpInfo = useXp();
+  const xp = xpInfo.total;
+  const level = xpInfo.level;
 
   // Live cross-module context for the AI panel — real numbers only.
   const [aiCtx, setAiCtx] = useState(null);
@@ -80,7 +82,7 @@ export default function App() {
       case "trading": return <TradingModule />;
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
-      case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} />;
+      case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} />;
       case "mind": return <MindOS />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
       case "analytics": return <AnalyticsOS habits={habitsV2} />;
@@ -122,6 +124,9 @@ export default function App() {
       @keyframes ambientSpin { to { transform: rotate(360deg); } }
       @keyframes ambientSpinRev { to { transform: rotate(-360deg); } }
       @keyframes purityGlow { 0% { box-shadow: 0 0 0 rgba(140,224,166,0); } 30% { box-shadow: 0 0 34px rgba(140,224,166,0.35); } 100% { box-shadow: 0 0 0 rgba(140,224,166,0); } }
+      @keyframes xpPill { 0% { opacity: 0; transform: translateY(8px) scale(0.94); } 12% { opacity: 1; transform: none; } 82% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
+      @keyframes levelUp { 0% { opacity: 0; transform: scale(0.55); } 16% { opacity: 1; transform: scale(1.07); } 28% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px) scale(0.98); } }
+      @keyframes levelGlow { 0% { opacity: 0; transform: scale(0.5); } 20% { opacity: 1; } 75% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.25); } }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
       }
@@ -134,7 +139,7 @@ export default function App() {
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
         <AmbientBackground module={module} animate={!isMobile} />
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={setModule} streak={topStreak} xp={xp} level={level} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={setModule} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
@@ -159,6 +164,7 @@ export default function App() {
           </div>
         )}
         <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || aiOpen || mobileNavOpen} offsetRight={16} />
+        <XPCelebration xp={xpInfo} />
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       </div>
       </ToastProvider>
@@ -174,7 +180,7 @@ export default function App() {
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={setModule} streak={topStreak} xp={xp} level={level} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={setModule} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
         <div key={module} style={{ flex: 1, overflowY: module === "trading" ? "hidden" : "auto", overflow: module === "trading" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
@@ -182,6 +188,7 @@ export default function App() {
 
       {aiOpen && <AIPanel onClose={() => setAiOpen(false)} ctx={aiCtx} habits={habits} />}
       <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life"} offsetRight={aiOpen ? 364 : 24} />
+      <XPCelebration xp={xpInfo} />
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
     </ToastProvider>
