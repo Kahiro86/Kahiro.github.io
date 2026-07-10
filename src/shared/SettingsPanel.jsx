@@ -7,6 +7,7 @@ import { localDateStr } from "./dates.js";
 import { getSyncStatus, onSyncStatus, testConnection, pull, flush, onAuthChanged } from "./sync.js";
 import { getSyncConfig, saveSyncConfig, signUp, signIn, signOut, resetPassword, updatePassword, getSession, onAuth } from "./supabase.js";
 import { getGcalConfig, setGcalConfig, getToken as getGcalToken } from "./gcal.js";
+import { hasLock, setPin, verifyPin, clearLock } from "./lock.js";
 
 const SETUP_SQL = `create table if not exists kv (
   user_id uuid not null default auth.uid(),
@@ -139,6 +140,33 @@ export function SettingsPanel({ onClose }) {
     }
   };
   const disconnectGcal = () => { setGcalConfig(null); setGcalOn(false); setGcalMsg({ text: "Calendar disconnected.", tone: T2 }); };
+
+  // ── App Lock state ─────────────────────────────────────────────────
+  const [lockOn, setLockOn] = useState(hasLock());
+  const [pinA, setPinA] = useState("");
+  const [pinB, setPinB] = useState("");
+  const [pinCur, setPinCur] = useState("");
+  const [lockMsg, setLockMsg] = useState(null);
+  const enableLock = async () => {
+    if (!/^\d{4,8}$/.test(pinA)) { setLockMsg({ text: "PIN must be 4–8 digits.", tone: AM }); return; }
+    if (pinA !== pinB) { setLockMsg({ text: "The two PINs don't match.", tone: RE }); return; }
+    await setPin(pinA);
+    setLockOn(true); setPinA(""); setPinB("");
+    setLockMsg({ text: "App lock enabled — you'll be asked for this PIN when the app opens on this device.", tone: GR });
+  };
+  const changeLock = async () => {
+    if (!(await verifyPin(pinCur))) { setLockMsg({ text: "Current PIN is wrong.", tone: RE }); setPinCur(""); return; }
+    if (!/^\d{4,8}$/.test(pinA)) { setLockMsg({ text: "New PIN must be 4–8 digits.", tone: AM }); return; }
+    await setPin(pinA);
+    setPinA(""); setPinCur("");
+    setLockMsg({ text: "PIN changed.", tone: GR });
+  };
+  const disableLock = async () => {
+    if (!(await verifyPin(pinCur))) { setLockMsg({ text: "Current PIN is wrong.", tone: RE }); setPinCur(""); return; }
+    clearLock();
+    setLockOn(false); setPinCur(""); setPinA("");
+    setLockMsg({ text: "App lock disabled on this device.", tone: T2 });
+  };
 
   const syncDot = { live: GR, idle: GR, syncing: CY, error: RE, offline: AM, auth: AM, off: T3 }[syncState.status] || T3;
   const syncLabel = {
@@ -365,6 +393,37 @@ export function SettingsPanel({ onClose }) {
           </>
         )}
         {gcalMsg && <div style={{ fontSize: 12, color: gcalMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{gcalMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        <div style={{ fontSize: 11, color: CY, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>App Lock</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
+          Asks for a PIN whenever the app opens (and after 5+ minutes in the background). It's a privacy screen for this device only — a PIN set here never locks your other devices, and only a salted hash is stored, never the PIN.
+        </div>
+        {!lockOn ? (
+          <>
+            <input type="password" inputMode="numeric" value={pinA} onChange={(e) => setPinA(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="New PIN (4–8 digits)" aria-label="New PIN" style={inputStyle} />
+            <input type="password" inputMode="numeric" value={pinB} onChange={(e) => setPinB(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="Confirm PIN" aria-label="Confirm PIN" style={inputStyle} />
+            <button onClick={enableLock} disabled={pinA.length < 4}
+              style={btn({ width: "100%", flex: "none", background: pinA.length >= 4 ? `${CY}18` : GL, borderColor: pinA.length >= 4 ? `${CY}44` : BD, color: pinA.length >= 4 ? CY : T3, fontWeight: 700, marginBottom: 8 })}>
+              Enable App Lock
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: GR }} />
+              <span style={{ fontSize: 12, color: T2 }}>App lock is on for this device.</span>
+            </div>
+            <input type="password" inputMode="numeric" value={pinCur} onChange={(e) => setPinCur(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="Current PIN" aria-label="Current PIN" style={inputStyle} />
+            <input type="password" inputMode="numeric" value={pinA} onChange={(e) => setPinA(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="New PIN (leave empty to keep)" aria-label="New PIN" style={inputStyle} />
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <button onClick={changeLock} disabled={pinCur.length < 4 || pinA.length < 4} style={btn({ color: pinCur.length >= 4 && pinA.length >= 4 ? CY : T3 })}>Change PIN</button>
+              <button onClick={disableLock} disabled={pinCur.length < 4} style={btn({ color: pinCur.length >= 4 ? RE : T3 })}>Disable lock</button>
+            </div>
+          </>
+        )}
+        {lockMsg && <div style={{ fontSize: 12, color: lockMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{lockMsg.text}</div>}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 

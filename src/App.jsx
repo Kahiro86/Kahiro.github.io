@@ -6,6 +6,8 @@ import { useIsMobile } from "./shared/useIsMobile.js";
 import { migrateHabits, toLegacy, tapHabit } from "./shared/habitEngine.js";
 import { useXp } from "./shared/useXp.js";
 import { XPCelebration } from "./shared/XPCelebration.jsx";
+import { hasLock } from "./shared/lock.js";
+import { LockScreen } from "./shared/LockScreen.jsx";
 import { localDateStr } from "./shared/dates.js";
 import { ToastProvider } from "./shared/toast.jsx";
 import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
@@ -35,6 +37,19 @@ export default function App() {
   // AI panel starts open on desktop, closed on phones (it's a full overlay there).
   const [aiOpen, setAiOpen] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 820 : true));
   const [showSettings, setShowSettings] = useState(false);
+
+  // App lock: gate the UI on open when a PIN is set, and re-lock after the
+  // tab has been in the background for 5+ minutes.
+  const [locked, setLocked] = useState(hasLock);
+  useEffect(() => {
+    let hiddenAt = null;
+    const onVis = () => {
+      if (document.hidden) hiddenAt = Date.now();
+      else if (hiddenAt && Date.now() - hiddenAt > 5 * 60 * 1000 && hasLock()) setLocked(true);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
 
   // Habits: engine v2 — per-date logs with schedules, targets and skips.
   // Completion + streaks derive from the log, so everything resets at local
@@ -127,11 +142,22 @@ export default function App() {
       @keyframes xpPill { 0% { opacity: 0; transform: translateY(8px) scale(0.94); } 12% { opacity: 1; transform: none; } 82% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
       @keyframes levelUp { 0% { opacity: 0; transform: scale(0.55); } 16% { opacity: 1; transform: scale(1.07); } 28% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px) scale(0.98); } }
       @keyframes levelGlow { 0% { opacity: 0; transform: scale(0.5); } 20% { opacity: 1; } 75% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.25); } }
+      @keyframes lockShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
       }
     `}</style>
   );
+
+  if (locked) {
+    return (
+      <>
+        {globalStyle}
+        <AmbientBackground module="dashboard" animate={!isMobile} />
+        <LockScreen onUnlock={() => setLocked(false)} />
+      </>
+    );
+  }
 
   if (isMobile) {
     return (
