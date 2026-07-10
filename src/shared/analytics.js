@@ -8,6 +8,7 @@
 import { daysAgoStr, localDateStr } from "./dates.js";
 import { isScheduled, isDone, valueOn, isWellness, perfectDays } from "./habitEngine.js";
 import { calcPnl } from "../modules/trading/helpers.js";
+import { sanitizeNutrition, dayTotals } from "../modules/athlete/nutrition.js";
 
 const inWindow = (ds, start, end) => ds && ds >= start && ds <= end;
 const win = (offsetDays, days) => ({ start: daysAgoStr(offsetDays + days - 1), end: daysAgoStr(offsetDays) });
@@ -38,6 +39,9 @@ function collect(deps, offsetDays, days) {
   const church = (deps.church || []).filter((d) => typeof d === "string" && inWindow(d, start, end));
   const finished = (deps.library || []).filter((b) => b && inWindow(b.finishedAt, start, end));
   const decisions = (deps.decisions || []).filter((d) => d && inWindow(d.date, start, end));
+  const nlog = sanitizeNutrition(deps.nutrition);
+  const nDays = Object.keys(nlog).filter((d) => inWindow(d, start, end));
+  const nKcal = nDays.map((d) => dayTotals(nlog[d]).kcal);
 
   return {
     habitPct: habitPct(habits, start, end),
@@ -55,6 +59,8 @@ function collect(deps, offsetDays, days) {
     church: church.length,
     booksDone: finished.length,
     decisionsLogged: decisions.length,
+    nutriDays: nDays.length,
+    nutriKcal: nKcal.length ? Math.round(nKcal.reduce((s, v) => s + v, 0) / nKcal.length) : null,
   };
 }
 

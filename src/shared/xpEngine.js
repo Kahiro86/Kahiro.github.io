@@ -14,6 +14,7 @@ import { localDateStr, daysAgoStr, daysBetween } from "./dates.js";
 import { migrateHabits, isScheduled, isDone, isSkipped, perfectDays } from "./habitEngine.js";
 import { sanitizePurity } from "../modules/life/purity.js";
 import { sanitizeReviews } from "../modules/trading/reviews.js";
+import { sanitizeNutrition, dayTotals, nutritionScore, calcTargets } from "../modules/athlete/nutrition.js";
 
 // Internal value table — tune freely for balance; the UI never shows it.
 const V = {
@@ -27,6 +28,7 @@ const V = {
   church: 20, verseAdded: 10, verseReview: 8, devotional: 15,
   mindNote: 5, decisionLogged: 15, decisionReviewed: 25, bookFinished: 100,
   mission: { day: 5, week: 15, month: 40, quarter: 100, year: 250 },
+  mealDay: 10, proteinHit: 10, healthyDay: 15,
 };
 
 // Consistency pays more the longer it runs — applied to habit AND purity runs.
@@ -62,6 +64,8 @@ export const ACHIEVEMENTS = [
   { id: "trades_100",    icon: "📊", name: "Hundred Trades",         desc: "100 trades journaled",             xp: 500,  test: (s) => s.tradeCount >= 100 },
   { id: "reviews_10",    icon: "📋", name: "Review Ritual",          desc: "10 trading reviews written",       xp: 200,  test: (s) => s.reviewCount >= 10 },
   { id: "clean_30",      icon: "🌿", name: "Thirty Clean Days",      desc: "30 pure days logged",              xp: 300,  test: (s) => s.cleanDays >= 30 },
+  { id: "first_meal",    icon: "🍽️", name: "First Plate Logged",     desc: "Log your first meal",              xp: 50,   test: (s) => s.mealDays >= 1 },
+  { id: "clean_week",    icon: "🥗", name: "A Clean Week",           desc: "7 straight healthy-eating days",   xp: 250,  test: (s) => s.healthyBest >= 7 },
   { id: "books_5",       icon: "📚", name: "Five Books Deep",        desc: "Finish 5 books or courses",        xp: 300,  test: (s) => s.booksFinished >= 5 },
   { id: "church_12",     icon: "⛪", name: "Twelve Sundays",         desc: "12 church attendances",            xp: 200,  test: (s) => s.churchCount >= 12 },
   { id: "month_consist", icon: "⚙️", name: "One Month Consistent",   desc: "Any 30-day streak",                xp: 500,  test: (s) => s.bestStreak >= 30 },
@@ -97,7 +101,7 @@ export function computeXp(deps = {}) {
   const stats = {
     habitCompletions: 0, perfectCount: 0, journalDays: 0, workoutCount: 0,
     tradeCount: 0, reviewCount: 0, cleanDays: 0, churchCount: 0,
-    booksFinished: 0, bestStreak: 0,
+    booksFinished: 0, bestStreak: 0, mealDays: 0, healthyBest: 0,
   };
 
   // Life — habits: every completed habit-day, perfect days, streak ladder.
@@ -206,6 +210,29 @@ export function computeXp(deps = {}) {
   }
   const mDays = new Set(arr(deps.measurements).map((m) => dOf(m.date)).filter(Boolean));
   for (const d of mDays) push(d, V.measurement, "fitness");
+
+  // Fitness — nutrition: logging pays, hitting protein pays, a healthy day
+  // (score ≥ 70) pays more, and healthy-day runs climb the streak ladder.
+  {
+    const nlog = sanitizeNutrition(deps.nutrition);
+    const nTargets = calcTargets(deps.nutritionProfile);
+    const nDates = Object.keys(nlog).sort();
+    let run = 0, prevD = null;
+    for (const d of nDates) {
+      const t = dayTotals(nlog[d]);
+      const score = nutritionScore(t, nTargets);
+      stats.mealDays++;
+      push(d, V.mealDay, "fitness");
+      if (t.p >= nTargets.p) push(d, V.proteinHit, "fitness");
+      if (score != null && score >= 70) {
+        push(d, V.healthyDay, "fitness");
+        run = prevD && daysBetween(prevD, d) === 1 ? run + 1 : 1;
+        if (STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "fitness", true);
+        if (run > stats.healthyBest) stats.healthyBest = run;
+        prevD = d;
+      } else { run = 0; prevD = null; }
+    }
+  }
 
   // Finance — income logs (capped/day) + bills paid on their recorded month.
   const perDayInc = {};

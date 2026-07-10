@@ -6,8 +6,9 @@ import { isScheduled, isDone, isSkipped, isNonNeg, isWeekly, currentStreak, rang
 import { pendingReviews, sanitizeReviews } from "../modules/trading/reviews.js";
 import { billsDueSoon } from "../modules/finance/bills.js";
 import { sanitizePurity, statusOn } from "../modules/life/purity.js";
+import { sanitizeNutrition, dayTotals, calcTargets, dayEntries } from "../modules/athlete/nutrition.js";
 
-// deps: { habits, trades, reviews, bills, verses, decisions, purity }
+// deps: { habits, trades, reviews, bills, verses, decisions, purity, nutrition, nutritionProfile }
 export function buildNudges(deps) {
   const ds = localDateStr();
   const habits = (deps.habits || []).filter((h) => h && !h.archived && !h.paused);
@@ -91,7 +92,26 @@ export function buildNudges(deps) {
       text: "Purity check-in is open — claim today." });
   }
 
-  // 10. Weekly focus: the weakest area over 30 days (Sundays only, one line).
+  // 10. Nutrition: once the tracker is in use — empty log after midday, or
+  // protein badly behind by evening. One nudge, never both.
+  const nlog = sanitizeNutrition(deps.nutrition);
+  if (Object.keys(nlog).length) {
+    const todayN = dayEntries(nlog, ds);
+    const hour = new Date().getHours();
+    if (!todayN.length && hour >= 12) {
+      out.push({ id: "nutrition", icon: "🍽️", tone: "info", nav: "athlete",
+        text: "Nothing logged in Nutrition yet — 10 seconds logs your last meal." });
+    } else if (todayN.length && hour >= 18) {
+      const nT = calcTargets(deps.nutritionProfile);
+      const t = dayTotals(todayN);
+      if (t.p < nT.p * 0.6) {
+        out.push({ id: "protein", icon: "🥩", tone: "info", nav: "athlete",
+          text: `Protein is at ${Math.round(t.p)}g of ${nT.p}g with the day winding down — dinner decides.` });
+      }
+    }
+  }
+
+  // 11. Weekly focus: the weakest area over 30 days (Sundays only, one line).
   if (new Date().getDay() === 0 && habits.length >= 3) {
     const byCat = {};
     for (const h of habits) {
