@@ -14,11 +14,13 @@ import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 import { migrateHabits, isWellness, valueOn } from "../../shared/habitEngine.js";
+import { callClaude, getApiKey } from "../../shared/anthropic.js";
 import {
   FOOD_DB, SLOTS, GOALS, ACTIVITY, NUTRIENTS, MICROS, DEFAULT_PROFILE,
   sanitizeNutrition, sanitizeFoods, sanitizeProfile, calcTargets,
   newEntry, scaleNutrients, dayTotals, dayEntries, coverage,
   nutritionScore, qualitySuggestions, nutritionSeries, healthyStreaks, nutritionReport,
+  AI_MEAL_SYSTEM, parseAiEstimate,
 } from "./nutrition.js";
 
 const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
@@ -111,6 +113,8 @@ export function NutritionTab() {
   const [grams, setGramsInput] = useState("100");
   const [custom, setCustom] = useState(null);       // custom-food / recipe draft
   const [quick, setQuick] = useState({ name: "", kcal: "", p: "", c: "", f: "" });
+  const [aiText, setAiText] = useState("");
+  const [aiState, setAiState] = useState({ busy: false, est: null, err: null });
 
   const results = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -121,7 +125,33 @@ export function NutritionTab() {
     return list.slice(0, 12);
   }, [q, allFoods, profile.favs]);
 
-  const closeAdd = () => { setAdding(null); setSel(null); setQ(""); setMode("search"); setCustom(null); };
+  const closeAdd = () => { setAdding(null); setSel(null); setQ(""); setMode("search"); setCustom(null); setAiState({ busy: false, est: null, err: null }); };
+
+  // AI estimation: describe → preview → confirm. Nothing logs without a look.
+  const runAiEstimate = async () => {
+    if (!aiText.trim() || aiState.busy) return;
+    setAiState({ busy: true, est: null, err: null });
+    try {
+      const reply = await callClaude({
+        system: AI_MEAL_SYSTEM,
+        messages: [{ role: "user", content: aiText.trim() }],
+        maxTokens: 600,
+      });
+      const est = parseAiEstimate(reply);
+      if (!est) throw new Error("Couldn't read the estimate — try describing the meal more concretely.");
+      setAiState({ busy: false, est, err: null });
+    } catch (err) {
+      setAiState({ busy: false, est: null, err: err.message });
+    }
+  };
+  const logAiEstimate = () => {
+    const { est } = aiState;
+    if (!est) return;
+    addEntry({ id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`, slot: adding, time: nowTime(),
+      name: est.name, grams: est.grams, proc: est.proc, ai: true, n: est.n });
+    setAiText("");
+    setAiState({ busy: false, est: null, err: null });
+  };
   const confirmAdd = () => {
     if (!sel || !(+grams > 0)) return;
     addEntry(newEntry(sel, +grams, adding, nowTime()));
@@ -240,7 +270,7 @@ export function NutritionTab() {
             {list.map((e) => (
               <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, marginBottom: 6 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: T1 }}>{e.name}</div>
+                  <div style={{ fontSize: 12, color: T1 }}>{e.name}{e.ai && <span title="AI estimate — approximate" style={{ color: CY, marginLeft: 5 }}>✦</span>}</div>
                   <div style={{ fontSize: 10, color: T3, fontFamily: "monospace" }}>{e.time ? `${e.time} · ` : ""}{Math.round(e.n.kcal || 0)} kcal · P{Math.round(e.n.p || 0)} C{Math.round(e.n.c || 0)} F{Math.round(e.n.f || 0)}</div>
                 </div>
                 {e.grams > 0 && (
@@ -255,13 +285,13 @@ export function NutritionTab() {
             {adding === slot.id && (
               <div style={{ marginTop: 4, padding: "12px", background: `${GR}06`, border: `1px dashed ${BD}`, borderRadius: 10 }}>
                 <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-                  {[["search", "Search"], ["quick", "Quick add"], ["custom", "New food"], ["recipe", "Recipe"]].map(([m, l]) => (
+                  {[["search", "Search"], ["ai", "✦ AI estimate"], ["quick", "Quick add"], ["custom", "New food"], ["recipe", "Recipe"]].map(([m, l]) => (
                     <button key={m} onClick={() => (m === "custom" || m === "recipe" ? startCustom(m === "recipe") : (setMode(m), setCustom(null)))}
                       style={{ padding: "4px 11px", borderRadius: 13, fontSize: 10.5, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${(mode === m || (custom && ((m === "recipe") === !!custom.recipe) && mode === "custom")) ? GR + "55" : BD}`, background: mode === m ? `${GR}14` : GL, color: mode === m ? GR : T3 }}>
                       {l}
                     </button>
                   ))}
-                  <span style={{ fontSize: 9.5, color: T3, alignSelf: "center", marginLeft: "auto" }}>Barcode & photo AI: future phase</span>
+                  <span style={{ fontSize: 9.5, color: T3, alignSelf: "center", marginLeft: "auto" }}>Barcode & photo: future phase</span>
                 </div>
 
                 {mode === "search" && (
@@ -295,6 +325,48 @@ export function NutritionTab() {
                       </div>
                     )}
                   </>
+                )}
+
+                {mode === "ai" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {!getApiKey() ? (
+                      <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.6, padding: "8px 10px", background: GL, border: `1px solid ${BD}`, borderRadius: 9 }}>
+                        AI estimation uses your Anthropic API key — add it in <b style={{ color: T2 }}>Settings → Anthropic API Key</b> and this box comes alive.
+                      </div>
+                    ) : (
+                      <>
+                        <textarea value={aiText} onChange={(e) => setAiText(e.target.value)} rows={2}
+                          placeholder='Describe the meal… e.g. "2 chapatis with beef stew and a mug of chai"'
+                          aria-label="Describe the meal"
+                          style={{ ...input, width: "100%", resize: "none", lineHeight: 1.6 }} />
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                          <button onClick={runAiEstimate} disabled={!aiText.trim() || aiState.busy}
+                            style={{ padding: "7px 15px", background: aiText.trim() && !aiState.busy ? `${CY}14` : GL, border: `1px solid ${aiText.trim() && !aiState.busy ? CY + "44" : BD}`, borderRadius: 9, color: aiText.trim() && !aiState.busy ? CY : T3, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                            {aiState.busy ? "Estimating…" : "✦ Estimate nutrients"}
+                          </button>
+                          <span style={{ fontSize: 9.5, color: T3 }}>AI estimates are approximate — you confirm before it logs.</span>
+                        </div>
+                        {aiState.err && <div style={{ fontSize: 11.5, color: RE, lineHeight: 1.5 }}>{aiState.err}</div>}
+                        {aiState.est && (
+                          <div style={{ padding: "10px 12px", background: `${CY}08`, border: `1px solid ${CY}33`, borderRadius: 10 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 12.5, fontWeight: 700, color: T1, flex: 1 }}>✦ {aiState.est.name}{aiState.est.grams ? ` · ~${aiState.est.grams}g` : ""}</span>
+                              <span style={{ fontSize: 11, color: T2, fontFamily: "monospace" }}>
+                                {Math.round(aiState.est.n.kcal)} kcal · P{Math.round(aiState.est.n.p || 0)} C{Math.round(aiState.est.n.c || 0)} F{Math.round(aiState.est.n.f || 0)}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: 10, color: T3, marginTop: 4 }}>
+                              {["fib", "na", "k", "fe", "vc"].filter((k) => aiState.est.n[k] != null).map((k) => `${NUTRIENTS.find((x) => x.k === k).l} ${aiState.est.n[k]}${NUTRIENTS.find((x) => x.k === k).u}`).join(" · ") || "Macros only"}
+                            </div>
+                            <button onClick={logAiEstimate}
+                              style={{ marginTop: 9, padding: "7px 16px", background: `linear-gradient(135deg,${GR},#5fae7c)`, border: "none", borderRadius: 9, color: "#04130a", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                              Log it
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 )}
 
                 {mode === "quick" && (

@@ -204,6 +204,7 @@ export function sanitizeNutrition(raw) {
         name: e.name,
         grams: Number.isFinite(+e.grams) && +e.grams > 0 ? +e.grams : 0,
         proc: [1, 2, 3, 4].includes(+e.proc) ? +e.proc : 2,
+        ...(e.ai ? { ai: true } : {}),
         n: cleanN(e.n),
       }));
     if (clean.length) out[d] = clean;
@@ -321,6 +322,36 @@ const statusScore = (log, targets, ds) => {
   if (!entries?.length) return null;
   return nutritionScore(dayTotals(entries), targets);
 };
+
+// ── AI meal estimation ───────────────────────────────────────────────
+// Free-text description → Claude estimates the full nutrient panel as
+// absolute amounts for the described portion. The user always previews
+// and confirms before anything is logged; entries carry ai:true so the
+// provenance stays visible, and everything remains editable afterwards.
+export const AI_MEAL_SYSTEM = `You are a nutrition estimator for a personal tracker used in Nairobi, Kenya (local dishes are common: ugali, sukuma wiki, githeri, chapati, nyama choma, pilau, mandazi, matoke).
+Given a meal description, estimate TOTAL nutrients for the described portion (not per 100 g).
+Reply with ONLY a JSON object, no prose, no markdown fences:
+{"name": short meal name (max 40 chars), "grams": estimated total weight in grams, "proc": processing level 1-4 (1 whole food, 4 ultra-processed),
+ "n": {"kcal": number, "p": protein g, "c": carbs g, "f": fat g, "fib": fiber g, "sug": sugars g, "sat": saturated fat g, "o3": omega-3 g, "chol": cholesterol mg, "na": sodium mg, "k": potassium mg, "ca": calcium mg, "mg": magnesium mg, "fe": iron mg, "zn": zinc mg, "ph": phosphorus mg, "va": vitamin A µg RAE, "vb": B-complex as % of a full day, "vc": vitamin C mg, "vd": vitamin D µg, "ve": vitamin E mg, "vk": vitamin K µg, "h2o": water content g}}
+Omit any nutrient you cannot reasonably estimate. Round to 1 decimal. Be realistic about typical serving sizes.`;
+
+export function parseAiEstimate(text) {
+  const m = String(text || "").match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  let raw;
+  try { raw = JSON.parse(m[0]); } catch { return null; }
+  if (!raw || typeof raw !== "object") return null;
+  const n = cleanN(raw.n);
+  if (!(n.kcal > 0) || n.kcal > 6000) return null;
+  // clamp everything to sane single-meal ranges — a bad guess must not poison totals
+  for (const [k, v] of Object.entries(n)) n[k] = Math.max(0, Math.min(v, k === "kcal" ? 6000 : k === "na" || k === "k" ? 8000 : 3000));
+  return {
+    name: (typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : "AI-estimated meal").slice(0, 40),
+    grams: Number.isFinite(+raw.grams) && +raw.grams > 0 ? Math.min(3000, Math.round(+raw.grams)) : 0,
+    proc: [1, 2, 3, 4].includes(+raw.proc) ? +raw.proc : 2,
+    n,
+  };
+}
 
 // ── Reports (trailing window) ────────────────────────────────────────
 export function nutritionReport(log, targets, days = 7) {
