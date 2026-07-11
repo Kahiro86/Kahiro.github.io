@@ -6,6 +6,7 @@ import { useIsMobile } from "./shared/useIsMobile.js";
 import { migrateHabits, toLegacy, tapHabit } from "./shared/habitEngine.js";
 import { useXp } from "./shared/useXp.js";
 import { XPCelebration } from "./shared/XPCelebration.jsx";
+import { NotifTicker } from "./shared/NotifTicker.jsx";
 import { hasLock } from "./shared/lock.js";
 import { LockScreen } from "./shared/LockScreen.jsx";
 import { localDateStr } from "./shared/dates.js";
@@ -191,6 +192,7 @@ export default function App() {
         )}
         <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || aiOpen || mobileNavOpen} offsetRight={16} />
         <XPCelebration xp={xpInfo} />
+        <NotifTicker />
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       </div>
       </ToastProvider>
@@ -215,6 +217,7 @@ export default function App() {
       {aiOpen && <AIPanel onClose={() => setAiOpen(false)} ctx={aiCtx} habits={habits} />}
       <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life"} offsetRight={aiOpen ? 364 : 24} />
       <XPCelebration xp={xpInfo} />
+        <NotifTicker />
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
     </ToastProvider>
