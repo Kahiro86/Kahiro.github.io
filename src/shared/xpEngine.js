@@ -29,13 +29,14 @@ const V = {
   mindNote: 5, decisionLogged: 15, decisionReviewed: 25, bookFinished: 100,
   mission: { day: 5, week: 15, month: 40, quarter: 100, year: 250 },
   mealDay: 10, proteinHit: 10, healthyDay: 15,
+  reminderDone: 5,
 };
 
 // Consistency pays more the longer it runs — applied to habit AND purity runs.
 const STREAK_LADDER = { 3: 15, 7: 35, 14: 60, 21: 80, 30: 120, 60: 200, 90: 300, 180: 500, 365: 1000 };
 
 // Per-day caps stop any single pillar from being farmable.
-const CAPS = { trades: 5, workouts: 3, income: 3, mindNotes: 5, prs: 2 };
+const CAPS = { trades: 5, workouts: 3, income: 3, mindNotes: 5, prs: 2, reminders: 10 };
 
 const levelOfXp = (xp) => Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1;
 export const xpForLevel = (lvl) => (lvl - 1) * (lvl - 1) * 100;
@@ -231,6 +232,18 @@ export function computeXp(deps = {}) {
         if (run > stats.healthyBest) stats.healthyBest = run;
         prevD = d;
       } else { run = 0; prevD = null; }
+    }
+  }
+
+  // Reminders completed in the Notification Center (capped/day; XP already
+  // earned is never removed — ignoring reminders just earns nothing).
+  {
+    const NCAT = { nutrition: "fitness", athlete: "fitness", trading: "trading", finance: "finance", faith: "faith", mind: "mind" };
+    const perDayRem = {};
+    for (const e of Array.isArray(deps.notifLog) ? deps.notifLog : []) {
+      if (!e || e.state !== "done" || !e.remId || !Number.isFinite(+e.doneAt)) continue;
+      const d = localDateStr(new Date(+e.doneAt));
+      if ((perDayRem[d] = (perDayRem[d] || 0) + 1) <= CAPS.reminders) push(d, V.reminderDone, NCAT[e.cat] || "life");
     }
   }
 
