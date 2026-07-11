@@ -19,7 +19,7 @@ renameSync(built, distIndex);
 copyFileSync(distIndex, rootIndex);
 
 // PWA assets must also live at the repo root for branch-mode Pages serving.
-const extras = ["manifest.webmanifest", "sw.js", "icon-192.png", "icon-512.png"];
+const extras = ["manifest.webmanifest", "sw.js", "icon-192.png", "icon-512.png", "athlete-bg.jpg"];
 for (const f of extras) {
   const src = resolve(root, "dist", f);
   if (existsSync(src)) copyFileSync(src, resolve(root, f));
