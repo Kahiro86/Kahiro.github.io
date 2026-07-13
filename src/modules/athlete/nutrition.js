@@ -45,7 +45,10 @@ export const LIMITS = ["sug", "sat", "chol", "na"];
 // ── Built-in food database (per 100 g, approximate) ──────────────────
 // proc: 1 whole food · 2 lightly processed · 3 processed · 4 ultra-processed
 // Curated for this user's kitchen: global basics + Kenyan staples.
-const F = (name, proc, n) => ({ id: `db_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, name, proc, per100: n });
+// `serving` (optional): a realistic single portion { l: label, g: grams },
+// so the add panel can offer a one-tap serving-size selector alongside the
+// gram editor. Foods without one fall back to 100 g.
+const F = (name, proc, n, serving = null) => ({ id: `db_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, name, proc, per100: n, ...(serving ? { serving } : {}) });
 export const FOOD_DB = [
   // Staples & grains
   F("Ugali (maize meal, cooked)", 2, { kcal: 112, p: 3, c: 23.5, f: 0.5, fib: 1.2, sug: 0.2, sat: 0.1, na: 2, k: 80, ca: 3, mg: 32, fe: 0.6, zn: 0.6, ph: 70, vb: 6, h2o: 72 }),
@@ -106,7 +109,78 @@ export const FOOD_DB = [
   F("Soda (cola)", 4, { kcal: 42, p: 0, c: 10.6, f: 0, sug: 10.6, na: 4, k: 2, ph: 10, h2o: 89 }),
   F("Fruit juice (packaged)", 4, { kcal: 46, p: 0.5, c: 11, f: 0.1, fib: 0.2, sug: 9.5, na: 5, k: 150, ca: 10, mg: 10, fe: 0.2, vb: 4, vc: 30, h2o: 88 }),
   F("Tea with milk & sugar", 3, { kcal: 40, p: 1, c: 6.5, f: 1.1, sug: 6, sat: 0.7, chol: 3, na: 15, k: 60, ca: 40, mg: 4, ph: 30, vb: 3, h2o: 91 }),
+
+  // ── Expanded database (per 100 g, with realistic serving sizes) ──────
+  // Premium cuts of meat
+  F("Sirloin steak (cooked)", 1, { kcal: 206, p: 27, c: 0, f: 10, sat: 4, chol: 80, na: 55, k: 330, ca: 18, mg: 24, fe: 2.3, zn: 4.5, ph: 210, vb: 40, vd: 0.1, h2o: 60 }, { l: "1 steak", g: 200 }),
+  F("Beef tenderloin (cooked)", 1, { kcal: 200, p: 26, c: 0, f: 10, sat: 3.8, chol: 75, na: 52, k: 350, ca: 16, mg: 25, fe: 2.6, zn: 4, ph: 220, vb: 38, vd: 0.1, h2o: 61 }, { l: "1 fillet", g: 180 }),
+  F("Ribeye steak (cooked)", 1, { kcal: 291, p: 24, c: 0, f: 21, sat: 9, chol: 85, na: 60, k: 300, ca: 12, mg: 22, fe: 2, zn: 5, ph: 195, vb: 40, vd: 0.1, h2o: 52 }, { l: "1 steak", g: 225 }),
+  F("Chicken thighs (cooked)", 1, { kcal: 209, p: 26, c: 0, f: 11, sat: 3, chol: 130, na: 88, k: 230, ca: 12, mg: 23, fe: 1.3, zn: 2.5, ph: 180, vb: 30, vd: 0.1, h2o: 62 }, { l: "1 thigh", g: 90 }),
+  F("Lamb ribs (cooked)", 1, { kcal: 361, p: 21, c: 0, f: 30, sat: 13, chol: 95, na: 70, k: 250, ca: 16, mg: 20, fe: 1.8, zn: 4, ph: 170, vb: 25, vd: 0.1, h2o: 48 }, { l: "1 serving", g: 150 }),
+  F("Pork belly (cooked)", 2, { kcal: 518, p: 9.3, c: 0, f: 53, sat: 19, chol: 72, na: 32, k: 180, ca: 6, mg: 10, fe: 0.7, zn: 1.5, ph: 120, vb: 12, h2o: 37 }, { l: "1 serving", g: 120 }),
+  F("Pork chops (cooked)", 1, { kcal: 231, p: 26, c: 0, f: 14, sat: 4.5, chol: 78, na: 62, k: 360, ca: 20, mg: 25, fe: 0.9, zn: 2.4, ph: 220, vb: 40, vd: 0.8, h2o: 57 }, { l: "1 chop", g: 150 }),
+  F("Ossobuco (veal shank, braised)", 1, { kcal: 172, p: 27, c: 0, f: 6, sat: 2.3, chol: 100, na: 80, k: 330, ca: 18, mg: 24, fe: 1.2, zn: 4, ph: 200, vb: 30, h2o: 65 }, { l: "1 piece", g: 200 }),
+  // Carbs
+  F("Quinoa (cooked)", 1, { kcal: 120, p: 4.4, c: 21.3, f: 1.9, fib: 2.8, sug: 0.9, na: 7, k: 172, ca: 17, mg: 64, fe: 1.5, zn: 1.1, ph: 152, vb: 12, ve: 0.6, h2o: 72 }, { l: "1 cup", g: 185 }),
+  // Fruits
+  F("Pineapple", 1, { kcal: 50, p: 0.5, c: 13.1, f: 0.1, fib: 1.4, sug: 9.9, na: 1, k: 109, ca: 13, mg: 12, fe: 0.3, zn: 0.1, ph: 8, va: 3, vb: 5, vc: 47.8, h2o: 86 }, { l: "1 slice", g: 80 }),
+  F("Strawberries", 1, { kcal: 32, p: 0.7, c: 7.7, f: 0.3, fib: 2, sug: 4.9, na: 1, k: 153, ca: 16, mg: 13, fe: 0.4, zn: 0.1, ph: 24, vc: 58.8, vb: 4, vk: 2.2, h2o: 91 }, { l: "1 cup", g: 150 }),
+  F("Blueberries", 1, { kcal: 57, p: 0.7, c: 14.5, f: 0.3, fib: 2.4, sug: 10, na: 1, k: 77, ca: 6, mg: 6, fe: 0.3, zn: 0.2, ph: 12, vc: 9.7, vb: 3, ve: 0.6, vk: 19.3, h2o: 84 }, { l: "1 cup", g: 148 }),
+  F("Grapes", 1, { kcal: 69, p: 0.7, c: 18.1, f: 0.2, fib: 0.9, sug: 15.5, na: 2, k: 191, ca: 10, mg: 7, fe: 0.4, zn: 0.1, ph: 20, vc: 3.2, vb: 4, vk: 14.6, h2o: 81 }, { l: "1 cup", g: 150 }),
+  // Yoghurt variants (Greek plain is above)
+  F("Yoghurt (plain)", 1, { kcal: 61, p: 3.5, c: 4.7, f: 3.3, sug: 4.7, sat: 2.1, chol: 13, na: 46, k: 155, ca: 121, mg: 12, zn: 0.6, ph: 95, va: 27, vb: 12, h2o: 88 }, { l: "1 cup", g: 245 }),
+  F("Yoghurt (low-fat)", 1, { kcal: 63, p: 5.3, c: 7, f: 1.6, sug: 7, sat: 1, chol: 6, na: 70, k: 234, ca: 183, mg: 17, zn: 0.9, ph: 144, vb: 14, h2o: 85 }, { l: "1 cup", g: 245 }),
+  F("Yoghurt (full-fat)", 1, { kcal: 66, p: 3.5, c: 4.7, f: 3.8, sug: 4.7, sat: 2.4, chol: 14, na: 46, k: 155, ca: 121, mg: 12, zn: 0.6, ph: 95, va: 30, vb: 12, h2o: 87 }, { l: "1 cup", g: 245 }),
+  F("Yoghurt (vanilla)", 2, { kcal: 85, p: 5, c: 13.8, f: 1.2, sug: 13.8, sat: 0.8, chol: 5, na: 66, k: 210, ca: 170, mg: 16, ph: 130, vb: 10, h2o: 79 }, { l: "1 pot", g: 150 }),
+  F("Yoghurt (fruit / flavoured)", 3, { kcal: 99, p: 3.9, c: 18.6, f: 1.4, sug: 18.6, sat: 0.9, chol: 5, na: 58, k: 180, ca: 152, mg: 14, ph: 120, vb: 8, vc: 1, h2o: 77 }, { l: "1 pot", g: 150 }),
+  // Drinks
+  F("Fresh fruit juice (squeezed)", 2, { kcal: 45, p: 0.7, c: 10.4, f: 0.2, fib: 0.2, sug: 8.4, na: 1, k: 200, ca: 11, mg: 11, fe: 0.2, ph: 17, vc: 50, vb: 6, h2o: 88 }, { l: "1 glass", g: 250 }),
 ];
+
+// Backfill realistic servings onto common existing foods (data-only; keeps
+// each food line short). Applied once at module load.
+const SERVING_BY_NAME = {
+  "Chicken breast (grilled)": { l: "1 breast", g: 120 },
+  "Beef (lean, cooked)": { l: "1 serving", g: 150 },
+  "Salmon (cooked)": { l: "1 fillet", g: 150 },
+  "Tilapia (cooked)": { l: "1 fillet", g: 150 },
+  "Nyama choma (grilled goat)": { l: "1 serving", g: 150 },
+  "Eggs (whole, cooked)": { l: "1 egg", g: 50 },
+  "White rice (cooked)": { l: "1 cup", g: 160 },
+  "Brown rice (cooked)": { l: "1 cup", g: 160 },
+  "Ugali (maize meal, cooked)": { l: "1 slab", g: 200 },
+  "Chapati": { l: "1 chapati", g: 90 },
+  "Pasta (cooked)": { l: "1 cup", g: 140 },
+  "Pilau rice": { l: "1 plate", g: 250 },
+  "Githeri (maize & beans)": { l: "1 plate", g: 250 },
+  "Matoke (cooked plantain)": { l: "1 serving", g: 200 },
+  "Oats (dry)": { l: "½ cup", g: 40 },
+  "Whole-wheat bread": { l: "1 slice", g: 40 },
+  "Beans (cooked)": { l: "1 cup", g: 170 },
+  "Lentils (cooked)": { l: "1 cup", g: 200 },
+  "Whey protein (powder)": { l: "1 scoop", g: 30 },
+  "Spinach (cooked)": { l: "1 cup", g: 180 },
+  "Broccoli (cooked)": { l: "1 cup", g: 155 },
+  "Sukuma wiki (collard greens)": { l: "1 serving", g: 120 },
+  "Avocado": { l: "½ avocado", g: 100 },
+  "Banana": { l: "1 medium", g: 120 },
+  "Apple": { l: "1 medium", g: 180 },
+  "Orange": { l: "1 medium", g: 130 },
+  "Mango": { l: "1 whole", g: 200 },
+  "Watermelon": { l: "1 slice", g: 280 },
+  "Greek yogurt (plain)": { l: "1 cup", g: 245 },
+  "Whole milk": { l: "1 glass", g: 250 },
+  "Cheddar cheese": { l: "1 slice", g: 30 },
+  "Peanut butter": { l: "1 tbsp", g: 16 },
+  "Almonds": { l: "1 handful", g: 28 },
+  "French fries": { l: "1 serving", g: 120 },
+  "Fruit juice (packaged)": { l: "1 glass", g: 250 },
+  "Soda (cola)": { l: "1 can", g: 330 },
+  "Mandazi": { l: "1 piece", g: 60 },
+  "Pizza (cheese)": { l: "1 slice", g: 107 },
+  "Beef burger (fast food)": { l: "1 burger", g: 150 },
+};
+for (const f of FOOD_DB) if (!f.serving && SERVING_BY_NAME[f.name]) f.serving = SERVING_BY_NAME[f.name];
 
 export const SLOTS = [
   { id: "breakfast", l: "Breakfast", icon: "🌅" },

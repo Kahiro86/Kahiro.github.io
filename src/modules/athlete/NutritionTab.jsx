@@ -204,7 +204,7 @@ export function NutritionTab() {
 
   const foodRow = (f) => (
     <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: sel?.id === f.id ? `${GR}12` : GL, border: `1px solid ${sel?.id === f.id ? GR + "44" : BD}`, borderRadius: 9 }}>
-      <button onClick={() => { setSel(f); setGramsInput(String(f.id.startsWith("db_olive") ? 15 : 100)); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", justifyContent: "space-between", gap: 8 }}>
+      <button onClick={() => { setSel(f); setGramsInput(String(f.serving ? f.serving.g : f.id.startsWith("db_olive") ? 15 : 100)); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", justifyContent: "space-between", gap: 8 }}>
         <span style={{ fontSize: 12, color: T1 }}>{f.name}</span>
         <span style={{ fontSize: 10.5, color: T3, fontFamily: "monospace", whiteSpace: "nowrap" }}>{Math.round(f.per100.kcal || 0)} kcal · {Math.round(f.per100.p || 0)}g P /100g</span>
       </button>
@@ -316,12 +316,29 @@ export function NutritionTab() {
                       {!results.length && <div style={{ fontSize: 11.5, color: T3, padding: "10px", textAlign: "center" }}>No match — create it under "New food".</div>}
                     </div>
                     {sel && (
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
-                        <span style={{ fontSize: 11.5, color: T2, flex: 1 }}>{sel.name}</span>
-                        <input type="number" value={grams} onChange={(e) => setGramsInput(e.target.value)} aria-label="Portion in grams" autoFocus
-                          style={{ ...input, width: 76, fontFamily: "monospace", textAlign: "right" }} />
-                        <span style={{ fontSize: 10.5, color: T3 }}>g = {Math.round((sel.per100.kcal || 0) * (+grams || 0) / 100)} kcal</span>
-                        <button onClick={confirmAdd} style={{ padding: "7px 16px", background: `linear-gradient(135deg,${GR},#5fae7c)`, border: "none", borderRadius: 9, color: "#04130a", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Log it</button>
+                      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 7 }}>
+                        {(() => {
+                          const s = sel.serving;
+                          const chips = [
+                            ...(s ? [{ l: `${s.l} · ${s.g}g`, g: s.g }, { l: `½ · ${Math.round(s.g / 2)}g`, g: Math.round(s.g / 2) }, { l: `2× · ${s.g * 2}g`, g: s.g * 2 }] : []),
+                            { l: "100 g", g: 100 },
+                          ];
+                          return (
+                            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }} aria-label="Serving size">
+                              {chips.map((c) => (
+                                <button key={c.l} onClick={() => setGramsInput(String(c.g))} aria-label={`Serving ${c.l}`}
+                                  style={{ padding: "4px 10px", borderRadius: 12, fontSize: 10.5, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${+grams === c.g ? GR + "66" : BD}`, background: +grams === c.g ? `${GR}14` : GL, color: +grams === c.g ? GR : T3 }}>{c.l}</button>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ fontSize: 11.5, color: T2, flex: 1 }}>{sel.name}</span>
+                          <input type="number" value={grams} onChange={(e) => setGramsInput(e.target.value)} aria-label="Portion in grams" autoFocus
+                            style={{ ...input, width: 76, fontFamily: "monospace", textAlign: "right" }} />
+                          <span style={{ fontSize: 10.5, color: T3 }}>g = {Math.round((sel.per100.kcal || 0) * (+grams || 0) / 100)} kcal</span>
+                          <button onClick={confirmAdd} style={{ padding: "7px 16px", background: `linear-gradient(135deg,${GR},#5fae7c)`, border: "none", borderRadius: 9, color: "#04130a", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Log it</button>
+                        </div>
                       </div>
                     )}
                   </>
