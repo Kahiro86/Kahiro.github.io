@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Sun, ListChecks, Layers, TrendingUp, BookOpen, Plus, Check, Flame, SkipForward,
   Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, FolderKanban, ShieldCheck,
@@ -504,13 +504,13 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
                 <Card style={{ padding: "18px" }}>
                   <SH title="Consistency Trend" sub="Completion rate per week — direction matters more than the number" />
                   <ResponsiveContainer width="100%" height={160}>
-                    <BarChart data={weeks} margin={{ top: 0, right: 0, bottom: 0, left: -22 }}>
+                    <LineChart data={weeks} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={BD} />
                       <XAxis dataKey="label" stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} />
                       <YAxis stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
                       <Tooltip content={mkTT("", "%")} />
-                      <Bar dataKey="pct" radius={[5, 5, 0, 0]} fill={GR} fillOpacity={0.85} />
-                    </BarChart>
+                      <Line type="monotone" dataKey="pct" stroke={GR} strokeWidth={2} dot={{ fill: GR, r: 2.5 }} />
+                    </LineChart>
                   </ResponsiveContainer>
                 </Card>
               )}

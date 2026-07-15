@@ -3,7 +3,7 @@
 // nutrition engine's full analysis. Water reads the Life OS Hydration
 // wellness habit — one hydration tracker across the whole app.
 import { useMemo, useState } from "react";
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Plus, Trash2, Star, Search, Copy, ChevronUp, Flame } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty } from "../../shared/ui.jsx";
@@ -20,6 +20,7 @@ import {
   sanitizeNutrition, sanitizeFoods, sanitizeProfile, calcTargets,
   newEntry, scaleNutrients, dayTotals, dayEntries, coverage,
   nutritionScore, qualitySuggestions, nutritionSeries, healthyStreaks, nutritionReport,
+  frequentEntries, slotForNow,
   AI_MEAL_SYSTEM, parseAiEstimate,
 } from "./nutrition.js";
 
@@ -94,6 +95,13 @@ export function NutritionTab() {
     const n = src ? scaleNutrients(src.per100, g) : (e.grams > 0 ? Object.fromEntries(Object.entries(e.n).map(([k, v]) => [k, Math.round((v / e.grams) * g * 10) / 10])) : e.n);
     return { ...e, grams: g, n };
   }));
+  // One-tap favourites: repeat meals log themselves into the slot the
+  // current hour suggests — zero questions asked.
+  const frequents = useMemo(() => frequentEntries(log), [log]);
+  const logFrequent = (r) => {
+    addEntry({ id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`, slot: slotForNow(), time: nowTime(),
+      name: r.name, grams: r.grams, proc: r.proc, n: r.n });
+  };
   const copyYesterday = () => {
     const prev = dayEntries(log, daysAgoStr(1));
     if (!prev.length) { toast("Nothing logged yesterday", { tone: "info" }); return; }
@@ -245,13 +253,23 @@ export function NutritionTab() {
         </div>
       </Card>
 
-      {/* ── Meal slots ── */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {entries.length === 0 && dayEntries(log, daysAgoStr(1)).length > 0 && (
-          <button onClick={copyYesterday} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 13px", background: GL, border: `1px solid ${CY}44`, borderRadius: 9, color: CY, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-          <Copy size={12} />Copy yesterday</button>
-        )}
-      </div>
+      {/* ── One-tap logging: frequent meals + copy yesterday ── */}
+      {(frequents.length > 0 || (entries.length === 0 && dayEntries(log, daysAgoStr(1)).length > 0)) && (
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+          {frequents.length > 0 && <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase" }}>One tap</span>}
+          {frequents.map((r) => (
+            <button key={`${r.name}|${r.grams}`} onClick={() => logFrequent(r)} aria-label={`Log ${r.name}`}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: `${GR}10`, border: `1px solid ${GR}33`, borderRadius: 9, color: T1, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" }}>
+              <span>{r.name}</span>
+              <span style={{ fontSize: 9.5, color: T3, fontFamily: "monospace" }}>{r.grams > 0 ? `${r.grams}g · ` : ""}{Math.round(r.n.kcal || 0)} kcal</span>
+            </button>
+          ))}
+          {entries.length === 0 && dayEntries(log, daysAgoStr(1)).length > 0 && (
+            <button onClick={copyYesterday} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 13px", background: GL, border: `1px solid ${CY}44`, borderRadius: 9, color: CY, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            <Copy size={12} />Copy yesterday</button>
+          )}
+        </div>
+      )}
       {SLOTS.map((slot) => {
         const list = entries.filter((e) => e.slot === slot.id);
         const slotKcal = Math.round(list.reduce((s, e) => s + (+e.n.kcal || 0), 0));
@@ -528,7 +546,7 @@ export function NutritionTab() {
       {/* ── Trends ── */}
       {Object.keys(log).length > 0 && (
         <Card style={{ padding: "16px 18px" }}>
-          <SH title="Trends" sub="Calories (bars) · nutrition score (line) — last 14 days" />
+          <SH title="Trends" sub="Calories · nutrition score — last 14 days" />
           <ResponsiveContainer width="100%" height={170}>
             <ComposedChart data={series} margin={{ top: 4, right: -12, bottom: 0, left: -18 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={BD} />
@@ -536,7 +554,7 @@ export function NutritionTab() {
               <YAxis yAxisId="l" stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
               <YAxis yAxisId="r" orientation="right" stroke={T3} fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
               <Tooltip content={mkTT("")} />
-              <Bar yAxisId="l" dataKey="kcal" name="kcal" fill={GR} fillOpacity={0.5} radius={[4, 4, 0, 0]} />
+              <Line yAxisId="l" type="monotone" dataKey="kcal" name="kcal" stroke={GR} strokeWidth={2} dot={false} connectNulls />
               <Line yAxisId="r" type="monotone" dataKey="score" name="score" stroke={AM} strokeWidth={1.5} dot={{ fill: AM, r: 2 }} connectNulls />
             </ComposedChart>
           </ResponsiveContainer>

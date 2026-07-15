@@ -11,6 +11,7 @@ const MODULE_THEME = {
   life:      { name: "Life OS",   accent: "#6E8B74", accent2: "#8FA58E", base: "#070907", mode: "petals",  mood: "night" },   // muted forest green
   mind:      { name: "Mind",      accent: "#767FA6", accent2: "#8B8FB0", base: "#07080D", mode: "network", mood: "command" }, // muted indigo
   faith:     { name: "Faith",     accent: "#B09A6F", accent2: "#C0AE8C", base: "#0A0906", mode: "dust",    mood: "night" },   // muted amber
+  journey:   { name: "Journey",   accent: "#A5946B", accent2: "#C9BB96", base: "#0A0906", mode: "embers",  mood: "night" },   // muted gold
   analytics: { name: "Analytics", accent: "#8B7CA0", accent2: "#9C90AE", base: "#08070C", mode: "data",    mood: "grid" },    // muted purple
 };
 

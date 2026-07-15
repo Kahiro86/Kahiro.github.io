@@ -3,7 +3,7 @@
 // vs the previous window, and the correlations that actually change
 // behaviour. Trends over isolated numbers.
 import { useMemo, useState } from "react";
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { BarChart3, GitCompareArrows, Trophy } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
@@ -46,7 +46,7 @@ function Metric({ label, value, cur, prev, color = AN, goodWhenUp = true, fmt = 
   );
 }
 
-export function AnalyticsOS({ habits }) {
+export function AnalyticsOS({ habits, onNavigate }) {
   const [tab, setTab] = useState("reports");
   const [days, setDays] = useState(30);
   const [trades] = useStorageState("ict_trades", []);
@@ -96,7 +96,7 @@ export function AnalyticsOS({ habits }) {
           <YAxis yAxisId="l" stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
           <YAxis yAxisId="r" orientation="right" stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
           <Tooltip content={mkTT("")} />
-          <Bar yAxisId="l" dataKey={barKey} name={barName} fill={barColor} fillOpacity={0.55} radius={[4, 4, 0, 0]} />
+          <Line yAxisId="l" type="monotone" dataKey={barKey} name={barName} stroke={barColor} strokeWidth={2} dot={false} connectNulls />
           <Line yAxisId="r" type="monotone" dataKey={lineKey} name={lineName} stroke={GR} strokeWidth={2} dot={{ fill: GR, r: 2.5 }} connectNulls />
         </ComposedChart>
       </ResponsiveContainer>
@@ -273,30 +273,22 @@ export function AnalyticsOS({ habits }) {
                 <Card style={{ padding: "18px" }}>
                   <SH title="XP per week" sub="Last 12 weeks — consistency, not spikes" />
                   <ResponsiveContainer width="100%" height={190}>
-                    <ComposedChart data={xp.weekly} margin={{ top: 4, right: 0, bottom: 0, left: -14 }}>
+                    <ComposedChart data={xp.weekly} margin={{ top: 4, right: 4, bottom: 0, left: -14 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={BD} />
                       <XAxis dataKey="label" stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
                       <YAxis stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
                       <Tooltip content={mkTT("", " XP")} />
-                      <Bar dataKey="xp" name="XP" fill={AM} fillOpacity={0.65} radius={[4, 4, 0, 0]} />
+                      <Line type="monotone" dataKey="xp" name="XP" stroke={AM} strokeWidth={2} dot={{ fill: AM, r: 2.5 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </Card>
               </div>
 
-              <Card style={{ padding: "18px" }}>
-                <SH title="Achievements" sub={`${gotList.length}/${xp.achievements.length} unlocked — each pays bonus XP the moment it's earned`} action={<Trophy size={13} color={AM} />} />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10 }}>
-                  {xp.achievements.map((a) => (
-                    <div key={a.id} style={{ padding: "13px 11px", textAlign: "center", background: a.got ? `${AM}0D` : GL, border: `1px solid ${a.got ? AM + "44" : BD}`, borderRadius: 11, opacity: a.got ? 1 : 0.45 }}>
-                      <div style={{ fontSize: 21, marginBottom: 5, filter: a.got ? "none" : "grayscale(1)" }}>{a.icon}</div>
-                      <div style={{ fontSize: 11.5, fontWeight: 700, color: a.got ? AM : T3 }}>{a.name}</div>
-                      <div style={{ fontSize: 9.5, color: T3, marginTop: 2, lineHeight: 1.45 }}>{a.desc}</div>
-                      <div style={{ fontSize: 9, color: a.got ? T2 : T3, marginTop: 5, fontFamily: "monospace" }}>
-                        {a.got ? (a.date ? new Date(`${a.date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "unlocked") : `+${a.xp} XP`}
-                      </div>
-                    </div>
-                  ))}
+              <Card onClick={onNavigate ? () => onNavigate("journey") : undefined}
+                style={{ padding: "18px", cursor: onNavigate ? "pointer" : "default" }}>
+                <SH title="Hall of Fame" sub={`${gotList.length}/${xp.achievements.length} milestones claimed across ${xp.journeys.length} lifelong journeys`} action={<Trophy size={13} color={AM} />} />
+                <div style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>
+                  Milestones, ranks and lifetime records live in <span style={{ color: AM, fontWeight: 700 }}>Journey → Hall of Fame</span>{onNavigate ? " — tap to open." : "."}
                 </div>
               </Card>
             </div>

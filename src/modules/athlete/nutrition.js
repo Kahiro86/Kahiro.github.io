@@ -360,6 +360,31 @@ export function qualitySuggestions(totals, targets, entries = []) {
 // ── Trends & streaks ─────────────────────────────────────────────────
 export const dayEntries = (log, ds) => log[ds] || [];
 
+// One-tap favourites: the (food, portion) pairs eaten most often in the
+// last 30 days. Needs 2+ repeats — a habit, not a one-off — so the row
+// stays personal and short. Expects a sanitized log.
+export function frequentEntries(log, days = 30, limit = 6) {
+  const seen = new Map();
+  for (let i = 0; i < days; i++) {
+    for (const e of dayEntries(log, daysAgoStr(i))) {
+      const key = `${e.name}|${e.grams}`;
+      const cur = seen.get(key);
+      if (cur) cur.count++;
+      else seen.set(key, { name: e.name, grams: e.grams, proc: e.proc, n: e.n, count: 1 });
+    }
+  }
+  return [...seen.values()].filter((x) => x.count >= 2).sort((a, b) => b.count - a.count).slice(0, limit);
+}
+
+// Which meal slot "now" most likely belongs to — lets one-tap logging
+// skip the where question entirely.
+export function slotForNow(hour = new Date().getHours()) {
+  if (hour < 11) return "breakfast";
+  if (hour < 15) return "lunch";
+  if (hour < 18) return "snack";
+  return "dinner";
+}
+
 export function nutritionSeries(log, targets, days = 14) {
   const out = [];
   for (let i = days - 1; i >= 0; i--) {
