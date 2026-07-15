@@ -340,13 +340,13 @@ export function AthleteOS() {
                 <Card style={{ padding: "20px" }}>
                   <SH title="Strength Volume" sub="Total kg lifted per week" />
                   <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={last8Weeks} margin={{ top: 0, right: 0, bottom: 0, left: -18 }}>
+                    <LineChart data={last8Weeks} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={BD} />
                       <XAxis dataKey="label" stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} />
                       <YAxis stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} />
                       <Tooltip content={mkTT("", "kg")} />
-                      <Bar dataKey="volume" radius={[5, 5, 0, 0]} fill={PU} fillOpacity={0.85} />
-                    </BarChart>
+                      <Line type="monotone" dataKey="volume" stroke={PU} strokeWidth={2} dot={{ fill: PU, r: 2.5 }} />
+                    </LineChart>
                   </ResponsiveContainer>
                 </Card>
 
@@ -372,13 +372,13 @@ export function AthleteOS() {
                 <Card style={{ padding: "20px" }}>
                   <SH title="Workout Frequency" sub="Sessions logged per week" />
                   <ResponsiveContainer width="100%" height={160}>
-                    <BarChart data={last8Weeks} margin={{ top: 0, right: 0, bottom: 0, left: -18 }}>
+                    <LineChart data={last8Weeks} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={BD} />
                       <XAxis dataKey="label" stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} />
                       <YAxis stroke={T3} fontSize={10.5} tickLine={false} axisLine={false} allowDecimals={false} />
                       <Tooltip content={mkTT("", " sessions")} />
-                      <Bar dataKey="count" radius={[5, 5, 0, 0]} fill={GR} fillOpacity={0.85} />
-                    </BarChart>
+                      <Line type="monotone" dataKey="count" stroke={GR} strokeWidth={2} dot={{ fill: GR, r: 2.5 }} />
+                    </LineChart>
                   </ResponsiveContainer>
                 </Card>
 

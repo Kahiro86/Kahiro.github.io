@@ -2,7 +2,7 @@
 // One honest daily check-in. Green days compound; a red day is data, not
 // judgment — the interface stays calm and points forward.
 import { useMemo, useState } from "react";
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ShieldCheck, ChevronLeft, ChevronRight, Undo2, Flame, Trophy } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
@@ -249,7 +249,7 @@ export function PurityTab() {
       {/* ── Insights ── */}
       {Object.keys(log).length >= 3 && (
         <Card style={{ padding: "16px 18px" }}>
-          <SH title="Patterns" sub="Weekly consistency (bars) · relapses per week (line) — last 12 weeks" action={<Flame size={13} color={GR} />} />
+          <SH title="Patterns" sub="Weekly clean % · relapses per week — last 12 weeks" action={<Flame size={13} color={GR} />} />
           <ResponsiveContainer width="100%" height={160}>
             <ComposedChart data={weeks} margin={{ top: 4, right: -14, bottom: 0, left: -18 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={BD} />
@@ -257,7 +257,7 @@ export function PurityTab() {
               <YAxis yAxisId="l" stroke={T3} fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
               <YAxis yAxisId="r" orientation="right" stroke={T3} fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip content={mkTT("")} />
-              <Bar yAxisId="l" dataKey="pct" name="clean %" fill={GR} fillOpacity={0.55} radius={[4, 4, 0, 0]} />
+              <Line yAxisId="l" type="monotone" dataKey="pct" name="clean %" stroke={GR} strokeWidth={2} dot={false} />
               <Line yAxisId="r" type="monotone" dataKey="relapses" name="relapses" stroke={RE} strokeWidth={1.5} dot={{ fill: RE, r: 2.5 }} />
             </ComposedChart>
           </ResponsiveContainer>

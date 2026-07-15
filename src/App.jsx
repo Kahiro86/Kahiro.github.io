@@ -25,6 +25,7 @@ import { LifeOSModule } from "./modules/life/LifeOSModule.jsx";
 import { FaithOS } from "./modules/faith/FaithOS.jsx";
 import { MindOS } from "./modules/mind/MindOS.jsx";
 import { AnalyticsOS } from "./modules/analytics/AnalyticsOS.jsx";
+import { JourneyModule } from "./modules/journey/JourneyModule.jsx";
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
 import { AIPanel } from "./shared/AIPanel.jsx";
@@ -101,7 +102,8 @@ export default function App() {
       case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} />;
       case "mind": return <MindOS />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
-      case "analytics": return <AnalyticsOS habits={habitsV2} />;
+      case "journey": return <JourneyModule xpInfo={xpInfo} />;
+      case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={setModule} />;
       default: return <Dashboard onNavigate={setModule} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
     }
   };

@@ -8,13 +8,14 @@ Supabase (per-user rows, RLS) driven entirely from the client.
 
 | Module | Folder | Accent | Purpose |
 |---|---|---|---|
-| Command Center | `dashboard/` | graphite | Daily cockpit: ring, discipline, momentum, missions, agenda, briefs |
+| Command Center | `dashboard/` | graphite | Today screen: ring, needs-attention nudges, done-today, missions, agenda; trends folded |
 | Life OS | `life/` | green | Habits v2, routines, wellness, non-negotiables, journal, projects, purity |
 | Trading OS | `trading/` | cyan/red | Journal, checklist gate, analytics, risk, playbook, reviews |
 | Athlete OS | `athlete/` | blue | Workouts, templates, PRs, measurements, running progression |
 | Finance OS | `finance/` | green/gold | Net worth, budgets, income, debts, goals, bills, reports |
 | Mind OS | `mind/` | indigo | Library, notes, decision journal |
 | Faith OS | `faith/` | amber | Spiritual habits, scripture memory, church, devotionals |
+| Journey | `journey/` | gold | Universal goals (12 life areas) + Hall of Fame (tiered lifelong milestones, titles, lifetime record) |
 | Analytics | `analytics/` | purple | Cross-OS reports, correlations, XP progression |
 
 Modules are self-contained (own engines + tabs) and consume shared services;
@@ -27,10 +28,14 @@ they never import from each other except through `src/shared/`.
 - **Sync**: `supabase.js` (auth) + `sync.js` — dirty queue, batched upserts,
   realtime, last-write-wins per key, offline-safe.
 - **XP / progression**: `xpEngine.js` (+ `useXp.js`, `XPCelebration.jsx`) —
-  XP derived from records, never stored; achievements auto-stamp.
+  XP derived from records, never stored; Hall of Fame journeys (tiered
+  milestones over derived stats) auto-stamp unlock dates; legacy flat
+  achievement ids remap losslessly.
 - **Engines**: `habitEngine.js`, `discipline.js`, `momentum.js`,
-  `missions.js`, `analytics.js`, `insights.js` (nudges), `kaizen.js`,
-  module engines (`trading/reviews.js`, `finance/bills.js`, `life/purity.js`).
+  `missions.js`, `goals.js` (universal goals; checkpoint/completion dates
+  auto-stamp for idempotent XP), `analytics.js`, `insights.js` (nudges),
+  `kaizen.js`, module engines (`trading/reviews.js`, `finance/bills.js`,
+  `life/purity.js`).
 - **Dates**: `dates.js` — `localDateStr`, `daysAgoStr`, `daysBetween`
   (local-timezone; noon-anchored). All date math goes through here.
 - **UI primitives**: `ui.jsx` (Card, SH, Chip, Meter, Empty, inputs,

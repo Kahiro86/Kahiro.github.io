@@ -12,6 +12,7 @@
 // xp_logins ({date: 1}) — both auto-stamped, never user-editable.
 import { localDateStr, daysAgoStr, daysBetween } from "./dates.js";
 import { migrateHabits, isScheduled, isDone, isSkipped, perfectDays } from "./habitEngine.js";
+import { sanitizeGoals, CHECKPOINTS } from "./goals.js";
 import { sanitizePurity } from "../modules/life/purity.js";
 import { sanitizeReviews } from "../modules/trading/reviews.js";
 import { sanitizeNutrition, dayTotals, nutritionScore, calcTargets } from "../modules/athlete/nutrition.js";
@@ -30,6 +31,7 @@ const V = {
   mission: { day: 5, week: 15, month: 40, quarter: 100, year: 250 },
   mealDay: 10, proteinHit: 10, healthyDay: 15,
   reminderDone: 5,
+  goalCheckpoint: 25, goalDone: 150,
 };
 
 // Consistency pays more the longer it runs — applied to habit AND purity runs.
@@ -41,7 +43,7 @@ const CAPS = { trades: 5, workouts: 3, income: 3, mindNotes: 5, prs: 2, reminder
 const levelOfXp = (xp) => Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1;
 export const xpForLevel = (lvl) => (lvl - 1) * (lvl - 1) * 100;
 
-const TITLES = [
+export const TITLES = [
   [40, "Legend"], [30, "Grandmaster"], [25, "Sage"], [20, "Master"], [16, "Veteran"],
   [12, "Architect"], [8, "Operator"], [5, "Disciplined"], [3, "Apprentice"], [1, "Beginner"],
 ];
@@ -52,27 +54,61 @@ export const CAT_LABEL = {
   faith: "Faith", mind: "Mind", awards: "Achievements",
 };
 
-// Cross-pillar achievements — unlock automatically, each worth bonus XP.
-// `test` runs against the aggregate stats collected while deriving events.
-export const ACHIEVEMENTS = [
-  { id: "first_rep",     icon: "🌱", name: "First Rep",              desc: "Complete your first habit",        xp: 50,   test: (s) => s.habitCompletions >= 1 },
-  { id: "first_journal", icon: "📓", name: "First Reflection",       desc: "Write your first journal entry",   xp: 50,   test: (s) => s.journalDays >= 1 },
-  { id: "first_workout", icon: "💪", name: "First Workout",          desc: "Log your first session",           xp: 100,  test: (s) => s.workoutCount >= 1 },
-  { id: "first_trade",   icon: "📈", name: "First Trade Logged",     desc: "Journal your first trade",         xp: 100,  test: (s) => s.tradeCount >= 1 },
-  { id: "perfect_7",     icon: "⭐", name: "Seven Perfect Days",     desc: "7 days with every habit done",     xp: 250,  test: (s) => s.perfectCount >= 7 },
-  { id: "habits_100",    icon: "💯", name: "Century Club",           desc: "100 habit completions",            xp: 250,  test: (s) => s.habitCompletions >= 100 },
-  { id: "workouts_50",   icon: "🏋️", name: "Fifty Sessions",         desc: "50 workouts logged",               xp: 300,  test: (s) => s.workoutCount >= 50 },
-  { id: "trades_100",    icon: "📊", name: "Hundred Trades",         desc: "100 trades journaled",             xp: 500,  test: (s) => s.tradeCount >= 100 },
-  { id: "reviews_10",    icon: "📋", name: "Review Ritual",          desc: "10 trading reviews written",       xp: 200,  test: (s) => s.reviewCount >= 10 },
-  { id: "clean_30",      icon: "🌿", name: "Thirty Clean Days",      desc: "30 pure days logged",              xp: 300,  test: (s) => s.cleanDays >= 30 },
-  { id: "first_meal",    icon: "🍽️", name: "First Plate Logged",     desc: "Log your first meal",              xp: 50,   test: (s) => s.mealDays >= 1 },
-  { id: "clean_week",    icon: "🥗", name: "A Clean Week",           desc: "7 straight healthy-eating days",   xp: 250,  test: (s) => s.healthyBest >= 7 },
-  { id: "books_5",       icon: "📚", name: "Five Books Deep",        desc: "Finish 5 books or courses",        xp: 300,  test: (s) => s.booksFinished >= 5 },
-  { id: "church_12",     icon: "⛪", name: "Twelve Sundays",         desc: "12 church attendances",            xp: 200,  test: (s) => s.churchCount >= 12 },
-  { id: "month_consist", icon: "⚙️", name: "One Month Consistent",   desc: "Any 30-day streak",                xp: 500,  test: (s) => s.bestStreak >= 30 },
-  { id: "quarter_disc",  icon: "🛡️", name: "Three Months Disciplined", desc: "Any 90-day streak",              xp: 1000, test: (s) => s.bestStreak >= 90 },
-  { id: "year_consist",  icon: "👑", name: "A Year of Consistency",  desc: "Any 365-day streak",               xp: 2000, test: (s) => s.bestStreak >= 365 },
+// ── Hall of Fame — lifelong tiered journeys ──────────────────────────
+// Every pillar is a journey that never ends: each milestone reached
+// reveals the next one. Tiers are [threshold, bonus XP] over the same
+// aggregate stats collected while deriving events, so unlocks stay fully
+// derived and idempotent — exactly like the old flat achievements.
+export const RANKS = ["First Step", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Immortal"];
+
+export const JOURNEYS = [
+  { key: "habits",   name: "Habit Mastery",  icon: "🔁", stat: "habitCompletions", unit: "completions",
+    tiers: [[1, 50], [25, 100], [100, 250], [250, 400], [500, 600], [1000, 1000], [2500, 1500], [5000, 2500]] },
+  { key: "streak",   name: "The Streak",     icon: "🔥", stat: "bestStreak", unit: "days in a row",
+    tiers: [[3, 25], [7, 75], [14, 150], [30, 500], [60, 700], [90, 1000], [180, 1500], [365, 2000], [730, 3000]] },
+  { key: "perfect",  name: "Perfect Days",   icon: "⭐", stat: "perfectCount", unit: "perfect days",
+    tiers: [[1, 50], [7, 250], [30, 500], [90, 800], [180, 1200], [365, 2000]] },
+  { key: "journal",  name: "Written Mind",   icon: "📓", stat: "journalDays", unit: "days journaled",
+    tiers: [[1, 50], [7, 100], [30, 250], [100, 500], [250, 800], [500, 1200], [1000, 2000]] },
+  { key: "workouts", name: "Iron Body",      icon: "💪", stat: "workoutCount", unit: "sessions",
+    tiers: [[1, 100], [10, 150], [50, 300], [100, 500], [250, 800], [500, 1200], [1000, 2500]] },
+  { key: "meals",    name: "Fuel Log",       icon: "🍽️", stat: "mealDays", unit: "days logged",
+    tiers: [[1, 50], [7, 100], [30, 250], [100, 500], [365, 1000], [730, 2000]] },
+  { key: "healthy",  name: "Clean Fuel",     icon: "🥗", stat: "healthyBest", unit: "healthy days straight",
+    tiers: [[3, 100], [7, 250], [14, 400], [30, 700], [60, 1000], [90, 1500]] },
+  { key: "trades",   name: "Market Craft",   icon: "📈", stat: "tradeCount", unit: "trades journaled",
+    tiers: [[1, 100], [10, 150], [50, 300], [100, 500], [250, 800], [500, 1200], [1000, 2500]] },
+  { key: "reviews",  name: "Review Ritual",  icon: "📋", stat: "reviewCount", unit: "reviews written",
+    tiers: [[1, 50], [10, 200], [25, 350], [50, 500], [100, 800], [250, 1500]] },
+  { key: "clean",    name: "Purity Road",    icon: "🌿", stat: "cleanDays", unit: "clean days",
+    tiers: [[7, 100], [30, 300], [90, 600], [180, 1000], [365, 1500], [730, 2500]] },
+  { key: "books",    name: "Scholar's Path", icon: "📚", stat: "booksFinished", unit: "books & courses",
+    tiers: [[1, 100], [5, 300], [10, 500], [25, 800], [50, 1200], [100, 2500]] },
+  { key: "church",   name: "Faithful",       icon: "⛪", stat: "churchCount", unit: "services",
+    tiers: [[1, 50], [12, 200], [26, 350], [52, 600], [104, 1200]] },
+  { key: "goals",    name: "Goal Getter",    icon: "🎯", stat: "goalsDone", unit: "goals completed",
+    tiers: [[1, 100], [3, 200], [5, 300], [10, 500], [25, 1000], [50, 2000]] },
 ];
+
+// Flat view of every tier — same {id, icon, name, desc, xp, test} interface
+// the celebration layer and notification history already consume.
+export const ACHIEVEMENTS = JOURNEYS.flatMap((j) =>
+  j.tiers.map(([threshold, xp], i) => ({
+    id: `${j.key}_${threshold}`, icon: j.icon,
+    name: `${j.name} · ${RANKS[i]}`,
+    desc: `${threshold.toLocaleString()} ${j.unit}`,
+    xp, journey: j.key, tier: i, threshold,
+    test: (s) => (s[j.stat] || 0) >= threshold,
+  }))
+);
+
+// Unlock dates stamped under the old flat achievement ids map onto the
+// journey tier with the same meaning — nothing already earned is lost.
+const LEGACY_IDS = {
+  first_rep: "habits_1", first_journal: "journal_1", first_workout: "workouts_1",
+  first_trade: "trades_1", first_meal: "meals_1", clean_week: "healthy_7",
+  month_consist: "streak_30", quarter_disc: "streak_90", year_consist: "streak_365",
+};
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const arr = (x) => (Array.isArray(x) ? x.filter(Boolean) : []);
@@ -82,7 +118,10 @@ export function sanitizeUnlocked(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const ids = new Set(ACHIEVEMENTS.map((a) => a.id));
   const out = {};
-  for (const [k, v] of Object.entries(raw)) if (ids.has(k) && dOf(v)) out[k] = v.slice(0, 10);
+  for (const [rawK, v] of Object.entries(raw)) {
+    const k = LEGACY_IDS[rawK] || rawK;
+    if (ids.has(k) && dOf(v) && !out[k]) out[k] = v.slice(0, 10);
+  }
   return out;
 }
 
@@ -102,7 +141,7 @@ export function computeXp(deps = {}) {
   const stats = {
     habitCompletions: 0, perfectCount: 0, journalDays: 0, workoutCount: 0,
     tradeCount: 0, reviewCount: 0, cleanDays: 0, churchCount: 0,
-    booksFinished: 0, bestStreak: 0, mealDays: 0, healthyBest: 0,
+    booksFinished: 0, bestStreak: 0, mealDays: 0, healthyBest: 0, goalsDone: 0,
   };
 
   // Life — habits: every completed habit-day, perfect days, streak ladder.
@@ -286,6 +325,18 @@ export function computeXp(deps = {}) {
     if (d) { push(d, V.bookFinished, "mind"); stats.booksFinished++; }
   }
 
+  // Goals — checkpoint and completion stamps are permanent dates written by
+  // the goals engine (achievements-style), so this derivation is idempotent.
+  // Archived goals still count: putting a finished goal away never un-earns it.
+  {
+    const AREA_CAT = { fitness: "fitness", health: "fitness", trading: "trading", finance: "finance", faith: "faith", learning: "mind", reading: "mind" };
+    for (const g of sanitizeGoals(deps.goals)) {
+      const c = AREA_CAT[g.area] || "life";
+      for (const p of CHECKPOINTS) if (g.ms[p]) push(g.ms[p], V.goalCheckpoint, c);
+      if (g.completedAt) { push(g.completedAt, V.goalDone, c); stats.goalsDone++; }
+    }
+  }
+
   // Achievements — bonus XP lands on the auto-stamped unlock date.
   const unlocked = sanitizeUnlocked(deps.unlocked);
   for (const a of ACHIEVEMENTS) if (unlocked[a.id]) push(unlocked[a.id], a.xp, "awards");
@@ -324,7 +375,26 @@ export function computeXp(deps = {}) {
   }));
   const newly = ACHIEVEMENTS.filter((a) => a.test(stats) && !unlocked[a.id]).map((a) => a.id);
 
+  // Hall of Fame view: each journey with its current stat, tier states and
+  // the next milestone — every milestone reached reveals the one after it.
+  const journeys = JOURNEYS.map((j) => {
+    const value = stats[j.stat] || 0;
+    const tiers = j.tiers.map(([threshold, xp], i) => {
+      const id = `${j.key}_${threshold}`;
+      return { id, threshold, xp, rank: RANKS[i], got: !!unlocked[id] || value >= threshold, date: unlocked[id] || null };
+    });
+    const done = tiers.filter((t) => t.got).length;
+    const next = tiers.find((t) => !t.got) || null;
+    const floor = done ? tiers[done - 1].threshold : 0;
+    return {
+      key: j.key, name: j.name, icon: j.icon, unit: j.unit, value, tiers, done, next,
+      rank: done ? tiers[done - 1].rank : null,
+      pctToNext: next ? Math.min(100, Math.max(0, Math.round(((value - floor) / Math.max(1, next.threshold - floor)) * 100))) : 100,
+    };
+  });
+
   return {
+    stats, journeys,
     total, level, title: titleOf(level), prevLevelXp, nextLevelXp,
     pctToNext: Math.min(100, Math.round(((total - prevLevelXp) / Math.max(1, nextLevelXp - prevLevelXp)) * 100)),
     byCat, byDay, streakXp, weekly, achievements, newly,

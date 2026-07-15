@@ -1,17 +1,20 @@
-// ── Command Center (Kaizen phase 2) ─────────────────────────────────
-// The OS home: only what matters today. Every card answers one of the
-// three questions — what should I do now, how am I improving, what's the
-// next step. All numbers are memoized reads of the real stores.
+// ── Command Center — the Today screen ────────────────────────────────
+// Opening the app answers three things at a glance: what matters today,
+// what needs attention, and what's already done. Everything actionable
+// sits at the top; trends and analytics fold away below. All numbers are
+// memoized reads of the real stores.
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Cpu, Check, Flame, Activity as ActivityIcon, TrendingUp, DollarSign, Dumbbell, Target, ChevronRight, Plus, Calendar, Zap, PenLine } from "lucide-react";
+import { Cpu, Check, Flame, Activity as ActivityIcon, TrendingUp, DollarSign, Dumbbell, Target, ChevronRight, Plus, Calendar, Zap, PenLine, BellRing } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, OR, B2 } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter } from "../../shared/ui.jsx";
+import { Collapse } from "../../shared/Collapse.jsx";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { ActivityHeatmap, Ring } from "../../shared/charts.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
-import { nextSmallAction, nudgeOfTheDay } from "../../shared/kaizen.js";
+import { nudgeOfTheDay } from "../../shared/kaizen.js";
+import { buildNudges } from "../../shared/insights.js";
 import { getStats, tradingMetrics } from "../trading/helpers.js";
 import { financeSummary } from "../finance/summary.js";
 import { financeHealth } from "../finance/financeHealth.js";
@@ -26,6 +29,8 @@ import {
 import { disciplineScore, disciplineSeries } from "../../shared/discipline.js";
 import { momentum } from "../../shared/momentum.js";
 import { sanitizeMissions, newMission, toggleMission, nextActions } from "../../shared/missions.js";
+import { goalsSummary, areaOf, goalPct } from "../../shared/goals.js";
+import { sanitizeNutrition, dayEntries } from "../athlete/nutrition.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
 import { pendingReviews, sanitizeReviews } from "../trading/reviews.js";
 import { billsDueSoon } from "../finance/bills.js";
@@ -44,6 +49,12 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
   const [entries, setEntries] = useStorageState("journal_entries", []);
   const [rawMissions, setMissions] = useStorageState("missions", []);
   const [rawReviews] = useStorageState("ict_reviews", []);
+  const [rawGoals] = useStorageState("goals", []);
+  const [purity] = useStorageState("purity_log", {});
+  const [nutritionLog] = useStorageState("nutrition_log", {});
+  const [nutritionProfile] = useStorageState("nutrition_profile", null);
+  const [verses] = useStorageState("faith_scripture", []);
+  const [decisions] = useStorageState("mind_decisions", []);
   const [missionDraft, setMissionDraft] = useState("");
   const [journalDraft, setJournalDraft] = useState("");
   const [journalSaved, setJournalSaved] = useState(false);
@@ -114,15 +125,8 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
     efBal: +finance.efBal || 0, savBal: +finance.savBal || 0, totalInvested: fin.totalInvested,
     personalDebt: fin.personalDebt, tradingStats: tStats,
   }), [incomeStats, fin, finance.efBal, finance.savBal, tStats]);
-  const goals = (Array.isArray(finance.goals) ? finance.goals : []).filter((g) => g && !g.archived);
-  const goalAgg = goals.length
-    ? Math.round(goals.reduce((s, g) => s + (g.target > 0 ? Math.min(1, (+g.current || 0) / g.target) : 0), 0) / goals.length * 100)
-    : 0;
-  const topGoal = [...goals].sort((a, b) => {
-    const pa = a.target > 0 ? (+a.current || 0) / a.target : 1;
-    const pb = b.target > 0 ? (+b.current || 0) / b.target : 1;
-    return pa - pb;
-  })[0];
+  // Universal goals (every life area) — the Goals card points at Journey.
+  const gsum = useMemo(() => goalsSummary(rawGoals), [rawGoals]);
 
   const now = new Date();
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
@@ -153,7 +157,24 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
     setTimeout(() => setJournalSaved(false), 2500);
   };
 
-  const action = nextSmallAction({ habits: active.map((h) => ({ name: h.name, done: isDone(h, ds) })), workouts, trades });
+  // ── THE ALIVE LAYER: what needs attention right now ────────────────
+  // The same rule-based nudge engine the app uses everywhere — surfaced
+  // where the day starts. Each one links straight to where it's handled.
+  const nudges = useMemo(
+    () => buildNudges({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, verses, decisions, purity, nutrition: nutritionLog, nutritionProfile }),
+    [habitsV2, trades, rawReviews, finance.bills, verses, decisions, purity, nutritionLog, nutritionProfile]
+  );
+
+  // ── DONE TODAY ──────────────────────────────────────────────────────
+  const mealsToday = useMemo(() => dayEntries(sanitizeNutrition(nutritionLog), ds).length, [nutritionLog, ds]);
+  const journaledToday = useMemo(() => entriesSafe.some((e) => (e.date || "").slice(0, 10) === ds), [entriesSafe, ds]);
+  const doneList = [
+    { icon: "✅", label: "Habits", done: scheduledToday.length > 0 && doneToday === scheduledToday.length, detail: scheduledToday.length ? `${doneToday}/${scheduledToday.length}` : "none scheduled" },
+    { icon: "🏋️", label: "Training", done: todayLogged, detail: todayLogged ? "logged" : todayPlan?.type === "Rest" ? "rest day" : todayPlan?.type || "—" },
+    { icon: "🍽️", label: "Meals", done: mealsToday > 0, detail: mealsToday ? `${mealsToday} logged` : "nothing yet" },
+    { icon: "📓", label: "Journal", done: journaledToday, detail: journaledToday ? "written" : "one line is enough" },
+  ];
+
   const nudge = nudgeOfTheDay();
 
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
@@ -174,7 +195,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
         </span>
       </div>
 
-      {/* ── Hero: ring, discipline, momentum ── */}
+      {/* ── Today hero: progress ring · needs attention · done ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 14 }}>
         <Card style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 18 }}>
           <Ring pct={ringPct} size={108} stroke={9} color={ringPct === 100 ? GR : CY}>
@@ -192,42 +213,29 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
           </div>
         </Card>
 
-        <Card style={{ padding: "18px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <span style={{ fontSize: 10, color: T3, letterSpacing: 2, textTransform: "uppercase" }}>Discipline Score</span>
-            <span style={{ fontSize: 22, fontWeight: 900, color: disc.score >= 70 ? GR : disc.score >= 40 ? AM : RE, fontFamily: "'JetBrains Mono',monospace" }}>{disc.empty ? "—" : disc.score}</span>
-          </div>
-          {disc.empty ? (
-            <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.6 }}>Complete habits, workouts, journal entries and checklist-gated trades — your score builds from real records.</div>
-          ) : disc.domains.map((d) => (
-            <div key={d.key} style={{ marginBottom: 7 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: T3, marginBottom: 3 }}>
-                <span>{d.label}</span><span style={{ fontFamily: "monospace" }}>{Math.round(d.ratio * 100)}%</span>
-              </div>
-              <div style={{ height: 3.5, background: BD, borderRadius: 2 }}>
-                <div style={{ height: "100%", width: `${Math.round(d.ratio * 100)}%`, background: d.ratio >= 0.7 ? GR : d.ratio >= 0.4 ? AM : RE, borderRadius: 2 }} />
-              </div>
-            </div>
+        <Card style={{ padding: "16px 18px" }}>
+          <SH title="Needs attention" sub={nudges.length ? "Tap anything to handle it" : "Nothing is waiting on you"} action={<BellRing size={13} color={nudges.length ? AM : GR} />} />
+          {nudges.length === 0 ? (
+            <div style={{ padding: "12px 6px", fontSize: 12, color: T2, textAlign: "center", lineHeight: 1.6 }}>All clear. 🌿 Protect the deep-work hours.</div>
+          ) : nudges.slice(0, 4).map((n) => (
+            <button key={n.id} onClick={() => onNavigate(n.nav)}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "7px 4px", background: "none", border: "none", borderBottom: `1px solid ${BD}`, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+              <span style={{ fontSize: 13, flexShrink: 0 }}>{n.icon}</span>
+              <span style={{ flex: 1, fontSize: 11.5, color: n.tone === "urgent" ? T1 : T2, lineHeight: 1.45 }}>{n.text}</span>
+              <ChevronRight size={12} color={T3} style={{ flexShrink: 0 }} />
+            </button>
           ))}
         </Card>
 
-        <Card style={{ padding: "18px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 10, color: T3, letterSpacing: 2, textTransform: "uppercase" }}>Momentum · 30d</span>
-              <Zap size={13} color={mom.delta >= 0 ? GR : AM} />
+        <Card style={{ padding: "16px 18px" }}>
+          <SH title="Done today" sub="The day's record so far" action={<Check size={13} color={GR} />} />
+          {doneList.map((d) => (
+            <div key={d.label} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 4px", borderBottom: `1px solid ${BD}` }}>
+              <span style={{ fontSize: 13, filter: d.done ? "none" : "grayscale(1)", opacity: d.done ? 1 : 0.5 }}>{d.icon}</span>
+              <span style={{ flex: 1, fontSize: 11.5, color: d.done ? T1 : T3, fontWeight: d.done ? 600 : 400 }}>{d.label}</span>
+              <span style={{ fontSize: 10.5, color: d.done ? GR : T3, fontFamily: "monospace" }}>{d.detail}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginTop: 8 }}>
-              <span style={{ fontSize: 30, fontWeight: 900, color: T1, fontFamily: "'JetBrains Mono',monospace" }}>{mom.value}</span>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: mom.delta > 0 ? GR : mom.delta < 0 ? RE : T3 }}>
-                {mom.delta > 0 ? `▲ +${mom.delta}` : mom.delta < 0 ? `▼ ${mom.delta}` : "· steady"} vs last week
-              </span>
-            </div>
-            <div style={{ fontSize: 11, color: T3, lineHeight: 1.55, marginTop: 6 }}>Recent days weigh most. A miss dents it — it never resets.</div>
-          </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 10, fontSize: 11, color: T2 }}>
-            <span>📋 Today's 1%: <span style={{ color: T1 }}>{action.text.length > 46 ? action.text.slice(0, 46) + "…" : action.text}</span></span>
-          </div>
+          ))}
         </Card>
       </div>
 
@@ -297,9 +305,11 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
         <ModuleCard color={PU} icon={<Dumbbell size={15} color={PU} />} title="Athlete OS" onClick={() => onNavigate("athlete")}
           main={todayLogged ? "Done ✓" : todayPlan?.type || "—"} mainLabel={todayLogged ? "Today's session logged" : "Today's session"} sub={`${sessionsWk} session${sessionsWk === 1 ? "" : "s"} this week`}
           extra={todayLogged ? "trained" : todayPlan?.type === "Rest" ? "recovery" : "pending"} extraColor={todayLogged ? GR : todayPlan?.type === "Rest" ? T3 : AM} />
-        <ModuleCard color={OR} icon={<Target size={15} color={OR} />} title="Goals" onClick={() => onNavigate("finance")}
-          main={`${goalAgg}%`} mainLabel={topGoal ? topGoal.name : "Avg progress"} sub={goals.length ? `${goals.length} active goal${goals.length > 1 ? "s" : ""}` : "No goals set"}
-          extra={topGoal ? `${topGoal.icon}` : ""} extraColor={OR} />
+        <ModuleCard color={OR} icon={<Target size={15} color={OR} />} title="Goals" onClick={() => onNavigate("journey")}
+          main={gsum.closest ? `${goalPct(gsum.closest)}%` : gsum.active.length ? `${gsum.avgPct}%` : "—"}
+          mainLabel={gsum.closest ? gsum.closest.name : "Set a goal in any life area"}
+          sub={gsum.active.length ? `${gsum.active.length} active · avg ${gsum.avgPct}%` : "Fitness, trading, faith, reading…"}
+          extra={gsum.closest ? areaOf(gsum.closest.area).icon : "🎯"} extraColor={OR} />
       </div>
 
       {/* ── Wellness + quick journal ── */}
@@ -337,44 +347,78 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
         </Card>
       </div>
 
-      {/* ── Consistency: unified heatmap + progression ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 14 }}>
-        <Card style={{ padding: "16px 18px" }}>
-          <SH title="Unified Consistency" sub="Every meaningful action across every OS — 13 weeks" action={
-            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T2 }}><ActivityIcon size={11} color={CY} />{activeDays} active days</span>
-          } />
-          <ActivityHeatmap counts={activityCounts} weeks={13} color={CY} />
-        </Card>
+      {/* ── Trends & analytics — folded away until asked for ── */}
+      <Collapse id="dash_trends" title="Trends & Analytics" sub="Discipline · momentum · consistency — open when you want the long view" defaultOpen={false}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 14 }}>
+            <Card style={{ padding: "18px 20px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 10, color: T3, letterSpacing: 2, textTransform: "uppercase" }}>Discipline Score</span>
+                <span style={{ fontSize: 22, fontWeight: 900, color: disc.score >= 70 ? GR : disc.score >= 40 ? AM : RE, fontFamily: "'JetBrains Mono',monospace" }}>{disc.empty ? "—" : disc.score}</span>
+              </div>
+              {disc.empty ? (
+                <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.6 }}>Complete habits, workouts, journal entries and checklist-gated trades — your score builds from real records.</div>
+              ) : disc.domains.map((d) => (
+                <div key={d.key} style={{ marginBottom: 7 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: T3, marginBottom: 3 }}>
+                    <span>{d.label}</span><span style={{ fontFamily: "monospace" }}>{Math.round(d.ratio * 100)}%</span>
+                  </div>
+                  <Meter pct={Math.round(d.ratio * 100)} height={3.5} color={d.ratio >= 0.7 ? GR : d.ratio >= 0.4 ? AM : RE} />
+                </div>
+              ))}
+            </Card>
 
-        <Card style={{ padding: "16px 18px" }}>
-          <SH title="Progression" sub="Weekly habit consistency — direction beats intensity" action={<Flame size={13} color={AM} />} />
-          <ResponsiveContainer width="100%" height={150}>
-            <LineChart data={discSeries} margin={{ top: 6, right: 4, bottom: 0, left: -24 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={BD} />
-              <XAxis dataKey="label" stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
-              <YAxis stroke={T3} fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-              <Tooltip content={mkTT("", "%")} />
-              <Line type="monotone" dataKey="score" stroke={GR} strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
+            <Card style={{ padding: "18px 20px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 10, color: T3, letterSpacing: 2, textTransform: "uppercase" }}>Momentum · 30d</span>
+                <Zap size={13} color={mom.delta >= 0 ? GR : AM} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginTop: 8 }}>
+                <span style={{ fontSize: 30, fontWeight: 900, color: T1, fontFamily: "'JetBrains Mono',monospace" }}>{mom.value}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: mom.delta > 0 ? GR : mom.delta < 0 ? RE : T3 }}>
+                  {mom.delta > 0 ? `▲ +${mom.delta}` : mom.delta < 0 ? `▼ ${mom.delta}` : "· steady"} vs last week
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: T3, lineHeight: 1.55, marginTop: 6 }}>Recent days weigh most. A miss dents it — it never resets.</div>
+            </Card>
 
-      {/* ── Daily brief ── */}
-      <Card style={{ padding: "16px 18px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 11 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 8, background: `${CY}18`, border: `1px solid ${CY}33`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Cpu size={12} color={CY} />
+            <Card style={{ padding: "16px 18px" }}>
+              <SH title="Progression" sub="Weekly habit consistency" action={<Flame size={13} color={AM} />} />
+              <ResponsiveContainer width="100%" height={120}>
+                <LineChart data={discSeries} margin={{ top: 6, right: 4, bottom: 0, left: -24 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={BD} />
+                  <XAxis dataKey="label" stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke={T3} fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                  <Tooltip content={mkTT("", "%")} />
+                  <Line type="monotone" dataKey="score" stroke={GR} strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card>
           </div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: CY, letterSpacing: 2.5 }}>KAHIRO DAILY BRIEF</div>
+
+          <Card style={{ padding: "16px 18px" }}>
+            <SH title="Unified Consistency" sub="Every meaningful action across every OS — 13 weeks" action={
+              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T2 }}><ActivityIcon size={11} color={CY} />{activeDays} active days</span>
+            } />
+            <ActivityHeatmap counts={activityCounts} weeks={13} color={CY} />
+          </Card>
+
+          <Card style={{ padding: "16px 18px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 11 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 8, background: `${CY}18`, border: `1px solid ${CY}33`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Cpu size={12} color={CY} />
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: CY, letterSpacing: 2.5 }}>KAHIRO DAILY BRIEF</div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
+              <Chip label="Trading Equity"   value={usd(tMetrics.equity)} color={GR} />
+              <Chip label="Weekly Sessions"  value={`${sessionsWk}`} color={PU} />
+              <Chip label="Financial Health" value={`${health.overall}/100`} color={health.overall >= 66 ? GR : AM} />
+              <Chip label="Discipline"       value={disc.empty ? "—" : `${disc.score}/100`} color={CY} />
+            </div>
+          </Card>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
-          <Chip label="Trading Equity"   value={usd(tMetrics.equity)} color={GR} />
-          <Chip label="Weekly Sessions"  value={`${sessionsWk}`} color={PU} />
-          <Chip label="Financial Health" value={`${health.overall}/100`} color={health.overall >= 66 ? GR : AM} />
-          <Chip label="Discipline"       value={disc.empty ? "—" : `${disc.score}/100`} color={CY} />
-        </div>
-      </Card>
+      </Collapse>
     </div>
   );
 }
