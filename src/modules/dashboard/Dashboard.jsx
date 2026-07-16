@@ -30,6 +30,7 @@ import { disciplineScore, disciplineSeries } from "../../shared/discipline.js";
 import { momentum } from "../../shared/momentum.js";
 import { sanitizeMissions, newMission, toggleMission, nextActions } from "../../shared/missions.js";
 import { goalsSummary, areaOf, goalPct } from "../../shared/goals.js";
+import { focusThisWeek, isDismissed, setFocus, dismissFocus, weakestArea } from "../../shared/review.js";
 import { sanitizeNutrition, dayEntries } from "../athlete/nutrition.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
 import { getSyncConfig } from "../../shared/sync.js";
@@ -51,6 +52,8 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
   const [rawMissions, setMissions] = useStorageState("missions", []);
   const [rawReviews] = useStorageState("ict_reviews", []);
   const [rawGoals] = useStorageState("goals", []);
+  const [rawFocus, setRawFocus] = useStorageState("weekly_focus", {});
+  const [focusDraft, setFocusDraft] = useState("");
   const [purity] = useStorageState("purity_log", {});
   const [nutritionLog] = useStorageState("nutrition_log", {});
   const [nutritionProfile] = useStorageState("nutrition_profile", null);
@@ -100,6 +103,20 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
   }, [active, ds]);
   const onTrackDays = weekDays.filter((d) => d.state === "perfect").length;
   const weekActiveDays = weekDays.filter((d) => d.state !== "rest" && d.state !== "future").length;
+
+  // ── WEEKLY FOCUS: one chosen focus per week, suggested from data ────
+  const focus = useMemo(() => focusThisWeek(rawFocus), [rawFocus]);
+  const weakest = useMemo(() => weakestArea(active), [active]);
+  const activeFocus = focus && !isDismissed(focus) ? focus : null;
+  // Prompt to set a focus once a week: only when none is set/skipped yet and
+  // there's enough habit history to suggest something meaningful.
+  const showReview = !focus && !!weakest;
+  const submitFocus = () => {
+    const text = focusDraft.trim() || (weakest ? weakest.cat : "");
+    if (!text) return;
+    setRawFocus((prev) => setFocus(prev, text));
+    setFocusDraft("");
+  };
 
   // ── ENGINES ────────────────────────────────────────────────────────
   const entriesSafe = useMemo(() => (Array.isArray(entries) ? entries : []).filter((e) => e && e.id), [entries]);
@@ -252,12 +269,44 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · {eatTime} EAT
           </div>
           <div style={{ fontSize: 12.5, color: T2, marginTop: 6, maxWidth: 460, lineHeight: 1.5 }}>{dayLine}</div>
+          {activeFocus && (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 9, padding: "5px 11px", background: `${PU}12`, border: `1px solid ${PU}33`, borderRadius: 9, fontSize: 11.5, color: T2 }}>
+              <Target size={12} color={PU} /> This week's focus: <span style={{ color: T1, fontWeight: 600 }}>{activeFocus}</span>
+            </div>
+          )}
         </div>
         <span style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: `${kz.color}11`, border: `1px solid ${kz.color}33`, borderRadius: 10, fontSize: 11, fontWeight: 700, color: kz.color, letterSpacing: 0.5 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: kz.active ? kz.color : T3 }} />
           {kz.active ? kz.label.toUpperCase() : "MARKET QUIET"}
         </span>
       </div>
+
+      {/* ── Weekly review: recap + choose one focus for the week ── */}
+      {showReview && (
+        <Card style={{ padding: "16px 18px", background: `linear-gradient(180deg,${PU}0C,transparent)`, borderColor: `${PU}3A` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+            <Target size={14} color={PU} />
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: T1 }}>Set your focus for the week</span>
+          </div>
+          <div style={{ fontSize: 12, color: T2, lineHeight: 1.55, marginBottom: 11 }}>
+            Last week you were on track {onTrackDays}/{weekActiveDays || 7} day{weekActiveDays === 1 ? "" : "s"}{weekXp > 0 ? ` and earned ${weekXp.toLocaleString()} XP` : ""}.
+            {weakest && weakest.pct < 100 ? <> Your lightest area lately is <span style={{ color: T1, fontWeight: 600 }}>{weakest.cat}</span> ({weakest.pct}% over 30 days) — a good place to aim one small rep a day.</> : " Pick one thing to give a little extra this week."}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input value={focusDraft} onChange={(e) => setFocusDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submitFocus()}
+              placeholder={weakest ? `This week, focus on ${weakest.cat}…` : "This week, I'll focus on…"} aria-label="Weekly focus"
+              style={{ flex: 1, minWidth: 200, background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit" }} />
+            <button onClick={submitFocus}
+              style={{ padding: "9px 16px", background: `${PU}18`, border: `1px solid ${PU}55`, borderRadius: 9, color: PU, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              {focusDraft.trim() ? "Set focus" : weakest ? `Focus on ${weakest.cat}` : "Set focus"}
+            </button>
+            <button onClick={() => setRawFocus((prev) => dismissFocus(prev))}
+              style={{ padding: "9px 12px", background: "none", border: `1px solid ${BD}`, borderRadius: 9, color: T3, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              Maybe later
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* ── Today hero: progress ring · needs attention · done ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 14 }}>
