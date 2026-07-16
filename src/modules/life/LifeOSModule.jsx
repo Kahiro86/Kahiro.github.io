@@ -4,7 +4,7 @@ import {
   Sun, ListChecks, Layers, TrendingUp, BookOpen, Plus, Check, Flame, SkipForward,
   Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, FolderKanban, ShieldCheck,
 } from "lucide-react";
-import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
+import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter, Empty } from "../../shared/ui.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -196,11 +196,11 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tabs={TABS} active={tab} onSelect={setTab} activeBg={`linear-gradient(135deg,${GR}22,${CY}22)`} activeColor={GR}>
+      <ModuleTabs tabs={TABS} active={tab} onSelect={setTab} activeBg={`linear-gradient(135deg,${CY}22,${CY}18)`} activeColor={CY}>
         <div style={{ flex: 1 }} />
-        <div title={`${xp - prevXp}/${nextXp - prevXp} XP to level ${level + 1}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: `${AM}11`, border: `1px solid ${AM}22`, borderRadius: 9 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: AM, letterSpacing: 0.5 }}>LVL {level}</span>
-          <Meter pct={Math.round(((xp - prevXp) / Math.max(1, nextXp - prevXp)) * 100)} height={4} fill={`linear-gradient(90deg,${AM}88,${AM})`} style={{ width: 64 }} />
+        <div title={`${xp - prevXp}/${nextXp - prevXp} XP to level ${level + 1}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: `${AC}11`, border: `1px solid ${AC}22`, borderRadius: 9 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: AC, letterSpacing: 0.5 }}>LVL {level}</span>
+          <Meter pct={Math.round(((xp - prevXp) / Math.max(1, nextXp - prevXp)) * 100)} height={4} fill={`linear-gradient(90deg,${AC}88,${AC})`} style={{ width: 64 }} />
           <span style={{ fontSize: 10, color: T3, fontFamily: "monospace" }}>{xp.toLocaleString()} XP</span>
         </div>
       </ModuleTabs>

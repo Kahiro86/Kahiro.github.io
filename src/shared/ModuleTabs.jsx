@@ -9,7 +9,7 @@ import { BD, GL, T2 } from "./designTokens.js";
 export function ModuleTabs({
   tabs, active, onSelect,
   activeBg, activeColor,
-  tint = "rgba(9,13,24,0.5)",
+  tint = "rgba(10,10,10,0.6)",
   topBorder,             // trading/finance style: accent hairline on the active tab
   pad = "6px 12px", fontSize = 12, gap = 12,
   left, children,

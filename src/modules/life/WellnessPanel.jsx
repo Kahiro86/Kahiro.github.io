@@ -84,7 +84,7 @@ export function WellnessPanel({ habits, onSetValue }) {
             <BarChart data={days} margin={{ top: 0, right: 0, bottom: 0, left: -24 }}>
               <XAxis dataKey="label" stroke={T3} fontSize={9.5} tickLine={false} axisLine={false} interval={range > 10 ? 4 : 0} />
               <YAxis stroke={T3} fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-              <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={({ active, payload }) => active && payload?.length ? <div style={{ background: "#101829", border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, color: T1 }}>{payload[0].value}% wellness</div> : null} />
+              <Tooltip cursor={{ fill: "rgba(255,255,255,0.04)" }} content={({ active, payload }) => active && payload?.length ? <div style={{ background: "#161616", border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 10px", fontSize: 11.5, color: T1 }}>{payload[0].value}% wellness</div> : null} />
               <Bar dataKey="pct" radius={[4, 4, 0, 0]}>
                 {days.map((d, i) => <Cell key={i} fill={d.pct === 100 ? GR : d.pct >= 50 ? CY : PU} fillOpacity={0.8} />)}
               </Bar>

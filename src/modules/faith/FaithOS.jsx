@@ -14,7 +14,7 @@ import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysAgoStr, daysBetween } from "../../shared/dates.js";
 import { isScheduled, isDone, tapHabit, rangeStats, currentStreak, totalCompletions, newHabit } from "../../shared/habitEngine.js";
 
-const FA = "#B09A6F"; // muted amber — this module's accent
+const FA = "#E5484D"; // crimson accent (monochrome theme)
 
 // Spaced review: due after 1, 3, 7, 14, 30 then every 60 days.
 const INTERVALS = [1, 3, 7, 14, 30, 60];
@@ -132,7 +132,7 @@ export function FaithOS({ habits, setHabits, loaded = true }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tint="rgba(10,9,6,0.5)" activeBg={`${FA}22`} activeColor={FA} tabs={TABS} active={tab} onSelect={setTab}>
+      <ModuleTabs tint="rgba(10,10,10,0.6)" activeBg={`${FA}22`} activeColor={FA} tabs={TABS} active={tab} onSelect={setTab}>
         <div style={{ flex: 1 }} />
         {due.length > 0 && (
           <button onClick={() => setTab("scripture")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 9, color: AM, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>

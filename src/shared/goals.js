@@ -8,18 +8,18 @@
 import { localDateStr, daysBetween } from "./dates.js";
 
 export const GOAL_AREAS = [
-  { id: "fitness",  label: "Fitness",      icon: "💪", color: "#6C8EB5" },
-  { id: "health",   label: "Health",       icon: "❤️", color: "#C96A6A" },
-  { id: "trading",  label: "Trading",      icon: "📈", color: "#5E8A9C" },
-  { id: "finance",  label: "Finance",      icon: "💰", color: "#6F8F7F" },
-  { id: "learning", label: "Learning",     icon: "🎓", color: "#767FA6" },
-  { id: "career",   label: "Career",       icon: "💼", color: "#8E96A3" },
-  { id: "faith",    label: "Spiritual",    icon: "⛪", color: "#B09A6F" },
-  { id: "habit",    label: "Habit",        icon: "🔁", color: "#6E8B74" },
-  { id: "reading",  label: "Reading",      icon: "📚", color: "#8B7CA0" },
-  { id: "social",   label: "Relationship", icon: "🤝", color: "#A5946B" },
-  { id: "growth",   label: "Personal",     icon: "🌱", color: "#8FA58E" },
-  { id: "custom",   label: "Custom",       icon: "🎯", color: "#9C90AE" },
+  { id: "fitness",  label: "Fitness",      icon: "💪", color: "#E5484D" },
+  { id: "health",   label: "Health",       icon: "❤️", color: "#E5484D" },
+  { id: "trading",  label: "Trading",      icon: "📈", color: "#E5484D" },
+  { id: "finance",  label: "Finance",      icon: "💰", color: "#E5484D" },
+  { id: "learning", label: "Learning",     icon: "🎓", color: "#E5484D" },
+  { id: "career",   label: "Career",       icon: "💼", color: "#E5484D" },
+  { id: "faith",    label: "Spiritual",    icon: "⛪", color: "#E5484D" },
+  { id: "habit",    label: "Habit",        icon: "🔁", color: "#E5484D" },
+  { id: "reading",  label: "Reading",      icon: "📚", color: "#E5484D" },
+  { id: "social",   label: "Relationship", icon: "🤝", color: "#E5484D" },
+  { id: "growth",   label: "Personal",     icon: "🌱", color: "#E5484D" },
+  { id: "custom",   label: "Custom",       icon: "🎯", color: "#E5484D" },
 ];
 export const areaOf = (id) => GOAL_AREAS.find((a) => a.id === id) || GOAL_AREAS[GOAL_AREAS.length - 1];
 
