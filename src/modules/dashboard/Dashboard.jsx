@@ -22,7 +22,7 @@ import { incomeAnalytics } from "../finance/income.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { WEEK_PLAN } from "../athlete/constants.js";
 import { getDayName } from "../athlete/helpers.js";
-import { localDateStr } from "../../shared/dates.js";
+import { localDateStr, daysBetween } from "../../shared/dates.js";
 import {
   isScheduled, isDone, isNonNeg, isWellness, isWeekly, valueOn, tapHabit,
 } from "../../shared/habitEngine.js";
@@ -171,6 +171,19 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
   }, [trades, workouts, entriesSafe, active]);
   const activeDays = Object.keys(activityCounts).length;
 
+  // ── WELCOME BACK: a compassionate re-entry after a gap ──────────────
+  // The single biggest risk to a tracker is a lapse that makes every screen
+  // feel accusatory. When someone returns after 3+ quiet days with nothing
+  // logged yet today, we lead with warmth, not a wall of missed states —
+  // and it vanishes the moment they do anything today.
+  const welcomeBack = useMemo(() => {
+    if (activityCounts[ds]) return null;               // already active today
+    const past = Object.keys(activityCounts).filter((d) => d < ds).sort();
+    if (!past.length) return null;                     // brand-new, not a return
+    const gap = daysBetween(past[past.length - 1], ds);
+    return gap >= 3 ? gap : null;
+  }, [activityCounts, ds]);
+
   // ── QUICK JOURNAL ──────────────────────────────────────────────────
   const saveJournal = () => {
     const text = journalDraft.trim();
@@ -214,6 +227,23 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
 
   return (
     <div style={{ padding: "22px 26px", display: "flex", flexDirection: "column", gap: 18 }}>
+      {/* ── Welcome back after a gap — warmth, never guilt ── */}
+      {welcomeBack && (
+        <Card style={{ padding: "15px 18px", background: `linear-gradient(180deg,${GR}10,transparent)`, borderColor: `${GR}44`, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 26 }}>🌱</span>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T1 }}>Welcome back, Irisu.</div>
+            <div style={{ fontSize: 12, color: T2, lineHeight: 1.55, marginTop: 3 }}>
+              It's been {welcomeBack} days — and that's completely fine. The habit that matters is returning, and you just did. Start with one small rep; today is a clean page.
+            </div>
+          </div>
+          <button onClick={() => onNavigate("life")}
+            style={{ padding: "9px 16px", background: `${GR}18`, border: `1px solid ${GR}55`, borderRadius: 10, color: GR, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+            Take the first step
+          </button>
+        </Card>
+      )}
+
       {/* ── Greeting + status ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div>
