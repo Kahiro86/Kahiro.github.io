@@ -8,7 +8,7 @@ Supabase (per-user rows, RLS) driven entirely from the client.
 
 | Module | Folder | Accent | Purpose |
 |---|---|---|---|
-| Command Center | `dashboard/` | graphite | Today screen: ring, needs-attention nudges, done-today, missions, agenda; trends folded |
+| Command Center | `dashboard/` | graphite | Today screen: welcome-back, time-aware greeting, weekly-focus review, ring, needs-attention, done-today, this-week strip, missions, agenda; trends folded |
 | Life OS | `life/` | green | Habits v2, routines, wellness, non-negotiables, journal, projects, purity |
 | Trading OS | `trading/` | cyan/red | Journal, checklist gate, analytics, risk, playbook, reviews |
 | Athlete OS | `athlete/` | blue | Workouts, templates, PRs, measurements, running progression |
@@ -36,8 +36,10 @@ they never import from each other except through `src/shared/`.
   auto-stamp for idempotent XP; goals may bind to a live `stats.*` source via
   `GOAL_SOURCES`/`syncAutoGoals`, write-through by the always-mounted
   `AutoGoalSync.jsx`), `analytics.js`, `insights.js` (nudges — incl. a
-  sync-off backup reminder), `kaizen.js`, module engines
-  (`trading/reviews.js`, `finance/bills.js`, `life/purity.js`).
+  sync-off backup reminder), `kaizen.js` (incl. `dayGreetingLine`),
+  `review.js` (weekly focus: `isoWeekKey`, `weakestArea`, `weekly_focus`
+  store), module engines (`trading/reviews.js`, `finance/bills.js`,
+  `life/purity.js`).
 - **Dates**: `dates.js` — `localDateStr`, `daysAgoStr`, `daysBetween`
   (local-timezone; noon-anchored). All date math goes through here.
 - **UI primitives**: `ui.jsx` (Card, SH, Chip, Meter, Empty, inputs,
