@@ -42,6 +42,38 @@ export function nudgeOfTheDay(offset = 0) {
   return KAIZEN_NUDGES[((day + offset) % KAIZEN_NUDGES.length + KAIZEN_NUDGES.length) % KAIZEN_NUDGES.length];
 }
 
+// A warm, time-aware line for the Command Center greeting. It adapts to the
+// real state of the day — morning leads with the plan, midday with progress,
+// evening with reflection — so the home screen feels like it knows where the
+// day is. Honest and compassionate; never guilt, never pressure.
+export function dayGreetingLine({
+  hour = new Date().getHours(), scheduled = 0, done = 0, openNonNegs = 0,
+  workoutPlanned = false, workoutDone = false, journaled = false,
+} = {}) {
+  const left = Math.max(0, scheduled - done);
+  const perfect = scheduled > 0 && left === 0;
+
+  // Evening (17:00+): close the day with reflection.
+  if (hour >= 17) {
+    if (perfect && journaled) return "A complete day. Rest well — you earned it. 🌙";
+    if (!journaled) return "Winding down — one honest line in the journal closes the day.";
+    if (left > 0) return `${left} habit${left === 1 ? "" : "s"} still open — a small rep still counts tonight.`;
+    return "Good evening. Note one thing that improved today.";
+  }
+  // Morning (before noon): lead with the plan.
+  if (hour < 12) {
+    if (openNonNegs > 0) return `${openNonNegs} non-negotiable${openNonNegs === 1 ? "" : "s"} to protect first${workoutPlanned && !workoutDone ? ", plus today's session" : ""}.`;
+    if (scheduled > 0 && done === 0) return `${scheduled} habit${scheduled === 1 ? "" : "s"} on today's plan. Start with the easiest one.`;
+    if (perfect) return "Habits already done — a rare, strong morning. ⭐";
+    return "A fresh day. Pick one small win to start with.";
+  }
+  // Afternoon: reflect the day's progress.
+  if (perfect) return "Every habit done. Now protect the momentum.";
+  if (scheduled > 0) return `${done}/${scheduled} habits done — ${left} to go before the day closes.`;
+  if (workoutPlanned && !workoutDone) return "Today's session is still on the plan — even a short one counts.";
+  return "Midday check-in: one small step keeps things moving.";
+}
+
 // Compounding factor for `days` at `rate`/day (default 1%). 365d ≈ 37.8×.
 export function compound(days, rate = 0.01) {
   return Math.pow(1 + rate, days);

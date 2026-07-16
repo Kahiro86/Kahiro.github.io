@@ -13,7 +13,7 @@ import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { ActivityHeatmap, Ring } from "../../shared/charts.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
-import { nudgeOfTheDay } from "../../shared/kaizen.js";
+import { nudgeOfTheDay, dayGreetingLine } from "../../shared/kaizen.js";
 import { buildNudges } from "../../shared/insights.js";
 import { getStats, tradingMetrics } from "../trading/helpers.js";
 import { financeSummary } from "../finance/summary.js";
@@ -201,6 +201,13 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
     { icon: "📓", label: "Journal", done: journaledToday, detail: journaledToday ? "written" : "one line is enough" },
   ];
 
+  // Warm, time-aware line for the greeting — knows where the day is.
+  const openNonNegs = useMemo(() => nonNegs.filter((h) => isScheduled(h, ds) && !isDone(h, ds)).length, [nonNegs, ds]);
+  const dayLine = dayGreetingLine({
+    hour, scheduled: scheduledToday.length, done: doneToday, openNonNegs,
+    workoutPlanned: !!todayPlan && todayPlan.type !== "Rest", workoutDone: todayLogged, journaled: journaledToday,
+  });
+
   const nudge = nudgeOfTheDay();
 
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
@@ -214,6 +221,7 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
           <div style={{ fontSize: 12, color: T3, marginTop: 3 }}>
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · {eatTime} EAT
           </div>
+          <div style={{ fontSize: 12.5, color: T2, marginTop: 6, maxWidth: 460, lineHeight: 1.5 }}>{dayLine}</div>
         </div>
         <span style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: `${kz.color}11`, border: `1px solid ${kz.color}33`, borderRadius: 10, fontSize: 11, fontWeight: 700, color: kz.color, letterSpacing: 0.5 }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: kz.active ? kz.color : T3 }} />
