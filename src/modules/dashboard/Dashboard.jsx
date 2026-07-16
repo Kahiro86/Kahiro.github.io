@@ -39,7 +39,7 @@ import { NonNegotiables } from "../life/NonNegotiables.jsx";
 
 const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
 
-export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHabits, loaded = true }) {
+export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHabits, loaded = true, weekXp = 0 }) {
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
   const [trades] = useStorageState("ict_trades", []);
@@ -77,6 +77,29 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
   const nonNegs = useMemo(() => active.filter((h) => isNonNeg(h) && !isWeekly(h)), [active]);
   const wellness = useMemo(() => active.filter(isWellness), [active]);
   const tapId = (id) => setHabits((prev) => tapHabit(prev, id));
+
+  // ── THIS WEEK: one dot per day (Sun→Sat), classified from the habit log ──
+  const weekDays = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now); start.setDate(now.getDate() - now.getDay()); // back to Sunday
+    const out = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const dstr = localDateStr(d);
+      const sched = active.filter((h) => isScheduled(h, dstr));
+      const done = sched.filter((h) => isDone(h, dstr)).length;
+      let state;
+      if (dstr > ds) state = "future";
+      else if (sched.length === 0) state = "rest";
+      else if (done >= sched.length) state = "perfect";
+      else if (done > 0) state = "partial";
+      else state = "missed";
+      out.push({ dstr, letter: "SMTWTFS"[i], state, isToday: dstr === ds, done, sched: sched.length });
+    }
+    return out;
+  }, [active, ds]);
+  const onTrackDays = weekDays.filter((d) => d.state === "perfect").length;
+  const weekActiveDays = weekDays.filter((d) => d.state !== "rest" && d.state !== "future").length;
 
   // ── ENGINES ────────────────────────────────────────────────────────
   const entriesSafe = useMemo(() => (Array.isArray(entries) ? entries : []).filter((e) => e && e.id), [entries]);
@@ -241,6 +264,41 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
           ))}
         </Card>
       </div>
+
+      {/* ── This week at a glance ── */}
+      {active.length > 0 && (
+        <Card style={{ padding: "13px 18px", display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 128 }}>
+            <div style={{ fontSize: 10, color: T3, letterSpacing: 1.5, textTransform: "uppercase" }}>This week</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: T1, marginTop: 2 }}>
+              {weekActiveDays === 0 ? "The week's ahead" : `${onTrackDays}/${weekActiveDays} day${weekActiveDays === 1 ? "" : "s"} on track`}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 9, flex: 1, justifyContent: "center", flexWrap: "wrap" }}>
+            {weekDays.map((d) => {
+              const col = d.state === "perfect" ? GR : d.state === "partial" ? AM : d.state === "missed" ? RE : T3;
+              const fill = d.state === "perfect" || d.state === "partial";
+              return (
+                <div key={d.dstr} title={`${d.dstr}${d.sched ? ` · ${d.done}/${d.sched} habits` : " · nothing scheduled"}`}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                  <span style={{ fontSize: 9, color: d.isToday ? T1 : T3, fontWeight: d.isToday ? 700 : 400 }}>{d.letter}</span>
+                  <span style={{ width: 15, height: 15, borderRadius: "50%",
+                    background: fill ? col : d.state === "missed" ? "transparent" : `${col}22`,
+                    border: `1.5px solid ${d.state === "future" ? BD : col + (fill ? "" : "66")}`,
+                    opacity: d.state === "future" ? 0.4 : 1,
+                    boxShadow: d.isToday ? `0 0 0 2px ${CY}55` : "none" }} />
+                </div>
+              );
+            })}
+          </div>
+          {weekXp > 0 && (
+            <div style={{ minWidth: 96, textAlign: "right" }}>
+              <div style={{ fontSize: 15, fontWeight: 900, color: AM, fontFamily: "'JetBrains Mono',monospace" }}>+{weekXp.toLocaleString()}</div>
+              <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>XP this week</div>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* ── Non-Negotiables ── */}
       {nonNegs.length > 0 && <NonNegotiables habits={nonNegs} onTap={tapId} />}
