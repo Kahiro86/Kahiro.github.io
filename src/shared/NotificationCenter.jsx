@@ -112,7 +112,11 @@ export function NotificationCenter({ onNavigate }) {
     setSnoozeFor(null);
     toast(`Snoozed ${min == null ? "until tomorrow 08:00" : `${min} min`} 💤`, { tone: "info", duration: 2200 });
   };
-  const removeEntry = (id) => setLog((prev) => sanitizeNotifLog(prev).filter((e) => e.id !== id));
+  const removeEntry = (id) => {
+    const item = sanitizeNotifLog(rawLog).find((e) => e.id === id);
+    setLog((prev) => sanitizeNotifLog(prev).filter((e) => e.id !== id));
+    if (item) toast("Removed from history", { action: "Undo", onAction: () => setLog((p) => [item, ...sanitizeNotifLog(p)]), tone: "danger" });
+  };
   const markAllRead = () => setLog((prev) => sanitizeNotifLog(prev).map((e) => (e.state === "unread" ? { ...e, state: "read" } : e)));
 
   // ── Reminder mutations ──────────────────────────────────────────────

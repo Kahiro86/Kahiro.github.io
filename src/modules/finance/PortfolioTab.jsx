@@ -2,6 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { localDateStr } from "../../shared/dates.js";
 import { B2, BD, GL, T1, T2, T3, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Fld } from "../../shared/ui.jsx";
+import { useToast } from "../../shared/toast.jsx";
 import { TBILL_TYPES } from "./constants.js";
 
 export function PortfolioTab({
@@ -10,6 +11,18 @@ export function PortfolioTab({
   nseStocks, setNseStocks, saccoBal, setSaccoBal, saccoYield, setSaccoYield,
   reitUnits, setReitUnits, reitNAV, setReitNAV,
 }) {
+  const toast = useToast();
+  // Index-based deletes with undo — reinsert the captured holding at its slot.
+  const delTbill = (i) => {
+    const item = tbills[i];
+    setTbills((prev) => prev.filter((_, j) => j !== i));
+    toast("T-bill removed", { action: "Undo", onAction: () => setTbills((prev) => { const n = [...prev]; n.splice(i, 0, item); return n; }), tone: "danger" });
+  };
+  const delStock = (i) => {
+    const item = nseStocks[i];
+    setNseStocks((prev) => prev.filter((_, j) => j !== i));
+    toast(`${item?.ticker || "Stock"} removed`, { action: "Undo", onAction: () => setNseStocks((prev) => { const n = [...prev]; n.splice(i, 0, item); return n; }), tone: "danger" });
+  };
   return (
     <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
@@ -84,7 +97,7 @@ export function PortfolioTab({
                 <div style={{ fontSize: 12, color: GR, fontFamily: "monospace" }}>
                   KES {Math.round((+t.faceValue || 0) * ((+t.rate || 0) / 100 / 12)).toLocaleString()}
                 </div>
-                <button onClick={() => setTbills((prev) => prev.filter((_, j) => j !== i))}
+                <button onClick={() => delTbill(i)} aria-label="Remove T-bill"
                   style={{ background: "none", border: `1px solid ${RE}33`, borderRadius: 6, padding: "4px 6px", cursor: "pointer", color: RE, display: "flex", alignItems: "center" }}>
                   <Trash2 size={11} />
                 </button>
@@ -123,7 +136,7 @@ export function PortfolioTab({
                     style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 6, padding: "6px 8px", fontSize: 12, color: T1, outline: "none", fontFamily: "inherit" }} />
                   <input type="number" value={st.shares || ""} onChange={(e) => setNseStocks((prev) => prev.map((x, j) => (j === i ? { ...x, shares: +e.target.value || 0 } : x)))} placeholder="Shares"
                     style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 6, padding: "6px 8px", fontSize: 12, color: T1, outline: "none", fontFamily: "monospace" }} />
-                  <button onClick={() => setNseStocks((prev) => prev.filter((_, j) => j !== i))}
+                  <button onClick={() => delStock(i)} aria-label="Remove stock"
                     style={{ background: "none", border: `1px solid ${RE}33`, borderRadius: 6, padding: "5px", cursor: "pointer", color: RE, display: "flex", alignItems: "center" }}>
                     <Trash2 size={11} />
                   </button>

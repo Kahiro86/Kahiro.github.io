@@ -111,6 +111,18 @@ export function buildNudges(deps) {
     }
   }
 
+  // 10b. Backup reminder: only when cloud sync is OFF (so this device is the
+  // sole copy) and no export in 30+ days — one gentle line, never nagging.
+  if (deps.syncOn === false) {
+    const last = +deps.lastExport || 0;
+    const staleDays = last ? daysBetween(localDateStr(new Date(last)), ds) : Infinity;
+    if (staleDays >= 30) {
+      out.push({ id: "backup", icon: "💾", tone: "info", nav: "settings",
+        text: last ? "It's been a while since your last backup — export one so a cleared browser can't erase your data."
+                   : "No backup yet — export one so a cleared browser can't erase your trades, workouts and journal." });
+    }
+  }
+
   // 11. Weekly focus: the weakest area over 30 days (Sundays only, one line).
   if (new Date().getDay() === 0 && habits.length >= 3) {
     const byCat = {};

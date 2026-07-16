@@ -3,11 +3,13 @@ import { Plus, Check, Trash2 } from "lucide-react";
 import { B2, BD, GL, T1, T2, T3, CY, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, MoneyInp, Meter } from "../../shared/ui.jsx";
 import { useIsMobile } from "../../shared/useIsMobile.js";
+import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { newBill, sanitizeBills, daysUntilDue, isPaidThisCycle, billsDueSoon, monthlyBillsTotal } from "./bills.js";
 
 export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpent, bills, setBills, income }) {
   const isMobile = useIsMobile();
+  const toast = useToast();
   const setB = (i, key, v) => setBudgets((prev) => prev.map((x, j) => (j === i ? { ...x, [key]: +v || 0 } : x)));
 
   // ── Bills ────────────────────────────────────────────────────────
@@ -23,7 +25,10 @@ export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpe
     setBillDraft(null);
   };
   const markPaid = (b) => setBills((prev) => sanitizeBills(prev).map((x) => (x.id === b.id ? { ...x, lastPaidMonth: isPaidThisCycle(x, today) ? "" : ym } : x)));
-  const deleteBill = (b) => setBills((prev) => sanitizeBills(prev).filter((x) => x.id !== b.id));
+  const deleteBill = (b) => {
+    setBills((prev) => sanitizeBills(prev).filter((x) => x.id !== b.id));
+    toast(`${b.name} removed`, { action: "Undo", onAction: () => setBills((prev) => [b, ...sanitizeBills(prev)]), tone: "danger" });
+  };
 
   // ── Cash flow this month (dated income vs planned outflow) ────────
   const incomeThisMonth = (Array.isArray(income) ? income : []).filter((e) => e && (e.date || "").slice(0, 7) === ym)

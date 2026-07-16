@@ -23,6 +23,25 @@ export const GOAL_AREAS = [
 ];
 export const areaOf = (id) => GOAL_AREAS.find((a) => a.id === id) || GOAL_AREAS[GOAL_AREAS.length - 1];
 
+// Auto-track sources: live counts the app already derives (they live on the XP
+// engine's `stats` object). A goal bound to one advances itself. Defined here
+// as a plain list rather than imported from xpEngine.js — xpEngine imports THIS
+// file, so importing back would be circular. Keys must match `stats.*` fields.
+export const GOAL_SOURCES = [
+  { stat: "booksFinished",    label: "Books & courses finished", icon: "📚" },
+  { stat: "tradeCount",       label: "Trades journaled",         icon: "📈" },
+  { stat: "reviewCount",      label: "Trading reviews written",  icon: "📋" },
+  { stat: "workoutCount",     label: "Workouts logged",          icon: "🏋️" },
+  { stat: "habitCompletions", label: "Habit completions",        icon: "🔁" },
+  { stat: "perfectCount",     label: "Perfect days",             icon: "⭐" },
+  { stat: "cleanDays",        label: "Clean days",               icon: "🌿" },
+  { stat: "churchCount",      label: "Church services",          icon: "⛪" },
+  { stat: "journalDays",      label: "Days journaled",           icon: "📓" },
+  { stat: "mealDays",         label: "Days of meals logged",     icon: "🍽️" },
+];
+export const sourceOf = (stat) => GOAL_SOURCES.find((s) => s.stat === stat) || null;
+export const isAuto = (g) => !!(g && g.source);
+
 // Checkpoint thresholds — each stamps a date the first time it's crossed.
 export const CHECKPOINTS = [25, 50, 75];
 
@@ -39,6 +58,10 @@ export function sanitizeGoals(raw) {
     if (g.ms && typeof g.ms === "object" && !Array.isArray(g.ms)) {
       for (const p of CHECKPOINTS) if (dOf(g.ms[p])) ms[p] = g.ms[p].slice(0, 10);
     }
+    // Auto-track binding: keep `source` only if it names a real source; drop it
+    // (falling back to manual) otherwise. `sourceBase` is the stat value at the
+    // moment tracking started, so a goal counts progress from then, not all-time.
+    const source = typeof g.source === "string" && GOAL_SOURCES.some((s) => s.stat === g.source) ? g.source : "";
     out.push({
       id: String(g.id),
       area: GOAL_AREAS.some((a) => a.id === g.area) ? g.area : "custom",
@@ -46,6 +69,8 @@ export function sanitizeGoals(raw) {
       unit: typeof g.unit === "string" ? g.unit.trim().slice(0, 24) : "",
       target: num(g.target) || 1,
       current: num(g.current),
+      source,
+      sourceBase: source ? num(g.sourceBase) : 0,
       deadline: dOf(g.deadline),
       note: typeof g.note === "string" ? g.note.slice(0, 500) : "",
       ms,
@@ -57,10 +82,11 @@ export function sanitizeGoals(raw) {
   return out;
 }
 
-export const newGoal = ({ area = "custom", name, target = 1, unit = "", deadline = null, note = "", current = 0 }) =>
+export const newGoal = ({ area = "custom", name, target = 1, unit = "", deadline = null, note = "", current = 0, source = "", sourceBase = 0 }) =>
   stamp({
     id: `g${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
     area, name: (name || "").trim(), unit, target: num(target) || 1, current: num(current),
+    source, sourceBase: num(sourceBase),
     deadline: dOf(deadline), note, ms: {}, createdAt: localDateStr(), completedAt: null, archived: false,
   });
 
@@ -85,6 +111,25 @@ export const addGoalProgress = (goals, id, delta) =>
 
 export const updateGoal = (goals, id, patch) =>
   sanitizeGoals(goals).map((g) => (g.id === id ? stamp(sanitizeGoals([{ ...g, ...patch, id: g.id }])[0] || g) : g));
+
+// Auto-progress: for each goal bound to a live source, set current from the
+// derived stat (relative to its baseline) and re-stamp. Idempotent — stamp()
+// only ever adds checkpoint/completion dates, so a source count that later
+// drops never un-earns anything. Returns the same array reference when nothing
+// changed, so callers can skip a redundant write.
+export function syncAutoGoals(goals, stats) {
+  const clean = sanitizeGoals(goals);
+  const s = stats && typeof stats === "object" ? stats : {};
+  let changed = false;
+  const next = clean.map((g) => {
+    if (!g.source) return g;
+    const derived = Math.max(0, (num(s[g.source])) - g.sourceBase);
+    if (derived === g.current) return g;
+    changed = true;
+    return stamp({ ...g, current: derived });
+  });
+  return changed ? next : clean;
+}
 
 // The next checkpoint (or the finish line) still ahead of this goal.
 export function nextCheckpoint(g) {
