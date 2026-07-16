@@ -217,6 +217,10 @@ export function SettingsPanel({ onClose }) {
     a.download = `kahiro-backup-${localDateStr()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+    // Record the export time device-locally (outside the architect: prefix, so
+    // it is never synced or written into the backup itself) — the dashboard's
+    // backup reminder reads this to know when a fresh export is overdue.
+    try { localStorage.setItem("kahiro_last_export", String(Date.now())); } catch { /* storage best-effort */ }
     setDataMsg({ text: `Backup saved (${keys.length} datasets). Keep it somewhere safe.`, tone: GR });
   };
 

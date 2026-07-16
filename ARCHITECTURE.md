@@ -33,9 +33,11 @@ they never import from each other except through `src/shared/`.
   achievement ids remap losslessly.
 - **Engines**: `habitEngine.js`, `discipline.js`, `momentum.js`,
   `missions.js`, `goals.js` (universal goals; checkpoint/completion dates
-  auto-stamp for idempotent XP), `analytics.js`, `insights.js` (nudges),
-  `kaizen.js`, module engines (`trading/reviews.js`, `finance/bills.js`,
-  `life/purity.js`).
+  auto-stamp for idempotent XP; goals may bind to a live `stats.*` source via
+  `GOAL_SOURCES`/`syncAutoGoals`, write-through by the always-mounted
+  `AutoGoalSync.jsx`), `analytics.js`, `insights.js` (nudges — incl. a
+  sync-off backup reminder), `kaizen.js`, module engines
+  (`trading/reviews.js`, `finance/bills.js`, `life/purity.js`).
 - **Dates**: `dates.js` — `localDateStr`, `daysAgoStr`, `daysBetween`
   (local-timezone; noon-anchored). All date math goes through here.
 - **UI primitives**: `ui.jsx` (Card, SH, Chip, Meter, Empty, inputs,

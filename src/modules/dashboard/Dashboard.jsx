@@ -32,13 +32,14 @@ import { sanitizeMissions, newMission, toggleMission, nextActions } from "../../
 import { goalsSummary, areaOf, goalPct } from "../../shared/goals.js";
 import { sanitizeNutrition, dayEntries } from "../athlete/nutrition.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
+import { getSyncConfig } from "../../shared/sync.js";
 import { pendingReviews, sanitizeReviews } from "../trading/reviews.js";
 import { billsDueSoon } from "../finance/bills.js";
 import { NonNegotiables } from "../life/NonNegotiables.jsx";
 
 const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
 
-export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = true }) {
+export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHabits, loaded = true }) {
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
   const [trades] = useStorageState("ict_trades", []);
@@ -160,9 +161,11 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
   // ── THE ALIVE LAYER: what needs attention right now ────────────────
   // The same rule-based nudge engine the app uses everywhere — surfaced
   // where the day starts. Each one links straight to where it's handled.
+  const syncOn = !!getSyncConfig();
+  const lastExport = useMemo(() => { try { return +localStorage.getItem("kahiro_last_export") || 0; } catch { return 0; } }, []);
   const nudges = useMemo(
-    () => buildNudges({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, verses, decisions, purity, nutrition: nutritionLog, nutritionProfile }),
-    [habitsV2, trades, rawReviews, finance.bills, verses, decisions, purity, nutritionLog, nutritionProfile]
+    () => buildNudges({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, verses, decisions, purity, nutrition: nutritionLog, nutritionProfile, syncOn, lastExport }),
+    [habitsV2, trades, rawReviews, finance.bills, verses, decisions, purity, nutritionLog, nutritionProfile, syncOn, lastExport]
   );
 
   // ── DONE TODAY ──────────────────────────────────────────────────────
@@ -218,7 +221,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
           {nudges.length === 0 ? (
             <div style={{ padding: "12px 6px", fontSize: 12, color: T2, textAlign: "center", lineHeight: 1.6 }}>All clear. 🌿 Protect the deep-work hours.</div>
           ) : nudges.slice(0, 4).map((n) => (
-            <button key={n.id} onClick={() => onNavigate(n.nav)}
+            <button key={n.id} onClick={() => (n.nav === "settings" ? onOpenSettings?.() : onNavigate(n.nav))}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "7px 4px", background: "none", border: "none", borderBottom: `1px solid ${BD}`, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
               <span style={{ fontSize: 13, flexShrink: 0 }}>{n.icon}</span>
               <span style={{ flex: 1, fontSize: 11.5, color: n.tone === "urgent" ? T1 : T2, lineHeight: 1.45 }}>{n.text}</span>

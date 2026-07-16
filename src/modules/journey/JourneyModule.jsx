@@ -4,7 +4,7 @@
 // everything in the Hall of Fame derives from the XP engine's stats, so
 // nothing here can drift or be edited into existence.
 import { useMemo, useState } from "react";
-import { Target, Trophy, Plus, Check, Pencil, Archive } from "lucide-react";
+import { Target, Trophy, Plus, Check, Pencil, Archive, Link2 } from "lucide-react";
 import { BD, T1, T2, T3, GL, B2, GR, RE, AM, CY } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty, Hydrating } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
@@ -12,8 +12,9 @@ import { Collapse } from "../../shared/Collapse.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import {
-  GOAL_AREAS, areaOf, CHECKPOINTS, sanitizeGoals, newGoal, goalPct,
-  setGoalProgress, updateGoal, nextCheckpoint, goalDaysLeft, goalsSummary,
+  GOAL_AREAS, GOAL_SOURCES, areaOf, sourceOf, isAuto, CHECKPOINTS,
+  sanitizeGoals, newGoal, goalPct, setGoalProgress, updateGoal,
+  nextCheckpoint, goalDaysLeft, goalsSummary,
 } from "../../shared/goals.js";
 import { TITLES } from "../../shared/xpEngine.js";
 
@@ -22,15 +23,33 @@ const JO = "#A5946B"; // muted gold — this module's accent
 const fmtDate = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
 
 // ── Goal editor (create + edit share one form) ───────────────────────
-function GoalForm({ initial, onSave, onCancel }) {
+function GoalForm({ initial, stats = {}, onSave, onCancel }) {
   const [area, setArea] = useState(initial?.area || "fitness");
   const [name, setName] = useState(initial?.name || "");
   const [target, setTarget] = useState(initial ? String(initial.target) : "");
   const [current, setCurrent] = useState(initial ? String(initial.current) : "0");
   const [unit, setUnit] = useState(initial?.unit || "");
   const [deadline, setDeadline] = useState(initial?.deadline || "");
+  const [source, setSource] = useState(initial?.source || "");
+  const auto = !!source;
   const canSave = name.trim() && Number.isFinite(+target) && +target > 0;
   const inp = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
+  const save = () => {
+    if (!canSave) return;
+    // Always carry source/sourceBase explicitly so switching auto→manual on an
+    // edit clears the old binding (a patch merge would otherwise keep it).
+    const payload = { area, name, target: +target, unit, deadline: deadline || null, source: "", sourceBase: 0 };
+    if (auto) {
+      // Baseline = the source's live count now (kept from the original goal when
+      // editing), so progress is counted from the moment tracking started.
+      payload.source = source;
+      payload.sourceBase = initial?.source === source ? initial.sourceBase : (+stats[source] || 0);
+      payload.current = Math.max(0, (+stats[source] || 0) - payload.sourceBase);
+    } else {
+      payload.current = +current || 0;
+    }
+    onSave(payload);
+  };
   return (
     <Card style={{ padding: "16px 18px", borderColor: `${JO}33` }}>
       <SH title={initial ? "Edit goal" : "New goal"} sub="Any area of life — a number moving toward a target" />
@@ -45,12 +64,35 @@ function GoalForm({ initial, onSave, onCancel }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 9 }}>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Goal name (e.g. Read 12 books)" style={{ ...inp, gridColumn: "1 / -1" }} aria-label="Goal name" />
         <input value={target} onChange={(e) => setTarget(e.target.value)} placeholder="Target (number)" inputMode="decimal" style={inp} aria-label="Goal target" />
-        <input value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="Current progress" inputMode="decimal" style={inp} aria-label="Goal current progress" />
+        {!auto && <input value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="Current progress" inputMode="decimal" style={inp} aria-label="Goal current progress" />}
         <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit (books, kg, KES…)" style={inp} aria-label="Goal unit" />
         <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} style={{ ...inp, colorScheme: "dark" }} aria-label="Goal deadline (optional)" />
       </div>
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={() => canSave && onSave({ area, name, target: +target, current: +current || 0, unit, deadline: deadline || null })} disabled={!canSave}
+
+      {/* Auto-track: bind progress to a count the app already keeps */}
+      <div style={{ marginTop: 12 }}>
+        <div style={{ fontSize: 10, color: T3, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 7 }}>Progress tracking</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <button onClick={() => setSource("")} aria-label="Track manually"
+            style={{ padding: "6px 11px", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: !auto ? 700 : 400, background: !auto ? `${JO}22` : GL, border: `1px solid ${!auto ? JO + "66" : BD}`, color: !auto ? "#C9BB96" : T3 }}>
+            ✍️ Manual
+          </button>
+          {GOAL_SOURCES.map((s) => (
+            <button key={s.stat} onClick={() => setSource(s.stat)} aria-label={`Auto-track from ${s.label}`}
+              style={{ padding: "6px 11px", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: source === s.stat ? 700 : 400, background: source === s.stat ? `${JO}22` : GL, border: `1px solid ${source === s.stat ? JO + "66" : BD}`, color: source === s.stat ? "#C9BB96" : T3 }}>
+              {s.icon} {s.label}
+            </button>
+          ))}
+        </div>
+        {auto && (
+          <div style={{ fontSize: 10.5, color: T3, marginTop: 7, lineHeight: 1.5 }}>
+            Advances automatically as you log {sourceOf(source)?.label.toLowerCase()} — counted from today. No manual updates needed.
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button onClick={save} disabled={!canSave}
           style={{ flex: 1, padding: "9px", background: canSave ? `${JO}1E` : GL, border: `1px solid ${canSave ? JO + "55" : BD}`, borderRadius: 9, color: canSave ? "#C9BB96" : T3, fontSize: 12.5, fontWeight: 700, cursor: canSave ? "pointer" : "default", fontFamily: "inherit" }}>
           {initial ? "Save changes" : "Create goal"}
         </button>
@@ -70,6 +112,8 @@ function GoalCard({ g, onSet, onEdit, onArchive }) {
   const next = nextCheckpoint(g);
   const left = goalDaysLeft(g);
   const done = !!g.completedAt;
+  const auto = isAuto(g);
+  const src = auto ? sourceOf(g.source) : null;
   return (
     <Card style={{ padding: "15px 17px", borderColor: done ? `${GR}44` : `${a.color}26` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 9 }}>
@@ -105,7 +149,11 @@ function GoalCard({ g, onSet, onEdit, onArchive }) {
         {!done && next && <span style={{ fontSize: 10, color: T3 }}>next checkpoint: {next.value.toLocaleString()}{g.unit ? ` ${g.unit}` : ""} ({next.pct}%)</span>}
       </div>
 
-      {!done && (
+      {auto ? (
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, padding: "5px 10px", background: `${JO}12`, border: `1px solid ${JO}33`, borderRadius: 8, fontSize: 10.5, color: T2 }}>
+          <Link2 size={11} color={JO} /> Auto-tracked from {src ? `${src.icon} ${src.label.toLowerCase()}` : "a live count"}
+        </div>
+      ) : !done && (
         <div style={{ display: "flex", gap: 7, marginTop: 10 }}>
           {draft == null ? (
             <>
@@ -259,7 +307,7 @@ export function JourneyModule({ xpInfo }) {
   };
   const archive = (id) => {
     setGoals((prev) => updateGoal(prev, id, { archived: true }));
-    toast("Goal archived", { tone: "info" });
+    toast("Goal archived", { action: "Undo", onAction: () => setGoals((prev) => updateGoal(prev, id, { archived: false })), tone: "danger" });
   };
 
   if (!goalsLoaded) return <Hydrating label="Loading your journey…" />;
@@ -296,7 +344,7 @@ export function JourneyModule({ xpInfo }) {
               </div>
             )}
 
-            {formOpen && <GoalForm initial={editing} onSave={saveGoal} onCancel={() => { setFormOpen(false); setEditing(null); }} />}
+            {formOpen && <GoalForm initial={editing} stats={xpInfo.stats} onSave={saveGoal} onCancel={() => { setFormOpen(false); setEditing(null); }} />}
 
             {active.length === 0 && !formOpen ? (
               <Empty icon={<Target size={26} color={JO} />} title="No active goals"
