@@ -343,11 +343,12 @@ export function computeXp(deps = {}) {
 
   // ── Aggregate ───────────────────────────────────────────────────────
   let total = 0, streakXp = 0;
-  const byDay = {}, byCat = {};
+  const byDay = {}, byCat = {}, todayByCat = {};
   for (const e of events) {
     total += e.xp;
     byDay[e.d] = (byDay[e.d] || 0) + e.xp;
     byCat[e.c] = (byCat[e.c] || 0) + e.xp;
+    if (e.d === today) todayByCat[e.c] = (todayByCat[e.c] || 0) + e.xp;
     if (e.s) streakXp += e.xp;
   }
 
@@ -397,7 +398,7 @@ export function computeXp(deps = {}) {
     stats, journeys,
     total, level, title: titleOf(level), prevLevelXp, nextLevelXp,
     pctToNext: Math.min(100, Math.round(((total - prevLevelXp) / Math.max(1, nextLevelXp - prevLevelXp)) * 100)),
-    byCat, byDay, streakXp, weekly, achievements, newly,
+    byCat, byDay, todayByCat, streakXp, weekly, achievements, newly,
     today: byDay[today] || 0,
     week: sumSince(daysAgoStr(6)),
     month: sumSince(`${today.slice(0, 7)}-01`),
