@@ -67,3 +67,11 @@ deliberately lives outside the synced prefix.
   every user's data.
 - Single-file deploy: no code-splitting/lazy chunks; keep dependencies lean
   (react, recharts, lucide-react, supabase-js only).
+
+## CI & tests
+
+`tests/qa.mjs` is the corruption harness (see `tests/README.md`): it boots the
+built app under Chromium across ~38 seeded data scenarios × desktop+mobile ×
+every module and asserts no screen renders blank or throws. `.github/workflows/
+ci.yml` runs `npm run build` + the harness on every push and PR; `deploy.yml`
+builds and publishes to Pages on `main`. Run locally with `npm run test:ci`.
