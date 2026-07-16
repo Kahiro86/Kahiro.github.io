@@ -18,7 +18,7 @@ import {
 } from "../../shared/goals.js";
 import { TITLES } from "../../shared/xpEngine.js";
 
-const JO = "#A5946B"; // muted gold — this module's accent
+const JO = "#E5484D"; // crimson accent (monochrome theme)
 
 const fmtDate = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
 
@@ -74,12 +74,12 @@ function GoalForm({ initial, stats = {}, onSave, onCancel }) {
         <div style={{ fontSize: 10, color: T3, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 7 }}>Progress tracking</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           <button onClick={() => setSource("")} aria-label="Track manually"
-            style={{ padding: "6px 11px", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: !auto ? 700 : 400, background: !auto ? `${JO}22` : GL, border: `1px solid ${!auto ? JO + "66" : BD}`, color: !auto ? "#C9BB96" : T3 }}>
+            style={{ padding: "6px 11px", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: !auto ? 700 : 400, background: !auto ? `${JO}22` : GL, border: `1px solid ${!auto ? JO + "66" : BD}`, color: !auto ? "#FFFFFF" : T3 }}>
             ✍️ Manual
           </button>
           {GOAL_SOURCES.map((s) => (
             <button key={s.stat} onClick={() => setSource(s.stat)} aria-label={`Auto-track from ${s.label}`}
-              style={{ padding: "6px 11px", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: source === s.stat ? 700 : 400, background: source === s.stat ? `${JO}22` : GL, border: `1px solid ${source === s.stat ? JO + "66" : BD}`, color: source === s.stat ? "#C9BB96" : T3 }}>
+              style={{ padding: "6px 11px", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: source === s.stat ? 700 : 400, background: source === s.stat ? `${JO}22` : GL, border: `1px solid ${source === s.stat ? JO + "66" : BD}`, color: source === s.stat ? "#FFFFFF" : T3 }}>
               {s.icon} {s.label}
             </button>
           ))}
@@ -93,7 +93,7 @@ function GoalForm({ initial, stats = {}, onSave, onCancel }) {
 
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         <button onClick={save} disabled={!canSave}
-          style={{ flex: 1, padding: "9px", background: canSave ? `${JO}1E` : GL, border: `1px solid ${canSave ? JO + "55" : BD}`, borderRadius: 9, color: canSave ? "#C9BB96" : T3, fontSize: 12.5, fontWeight: 700, cursor: canSave ? "pointer" : "default", fontFamily: "inherit" }}>
+          style={{ flex: 1, padding: "9px", background: canSave ? `${JO}1E` : GL, border: `1px solid ${canSave ? JO + "55" : BD}`, borderRadius: 9, color: canSave ? "#FFFFFF" : T3, fontSize: 12.5, fontWeight: 700, cursor: canSave ? "pointer" : "default", fontFamily: "inherit" }}>
           {initial ? "Save changes" : "Create goal"}
         </button>
         <button onClick={onCancel} style={{ padding: "9px 16px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>
@@ -189,7 +189,7 @@ function HallOfFame({ xp }) {
   const gotTiers = xp.journeys.reduce((s, j) => s + j.done, 0);
   const titleLadder = [...TITLES].reverse(); // Beginner → Legend
   const stats = [
-    ["Habit completions", xp.stats.habitCompletions, GR], ["Best streak", `${xp.stats.bestStreak}d`, "#C9BB96"],
+    ["Habit completions", xp.stats.habitCompletions, GR], ["Best streak", `${xp.stats.bestStreak}d`, "#FFFFFF"],
     ["Perfect days", xp.stats.perfectCount, AM], ["Days journaled", xp.stats.journalDays, CY],
     ["Workouts", xp.stats.workoutCount, "#6C8EB5"], ["Trades journaled", xp.stats.tradeCount, "#5E8A9C"],
     ["Reviews written", xp.stats.reviewCount, "#8B7CA0"], ["Clean days", xp.stats.cleanDays, "#6E8B74"],
@@ -212,7 +212,7 @@ function HallOfFame({ xp }) {
           </div>
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 7 }}>
-              <span style={{ padding: "3px 12px", background: `${JO}18`, border: `1px solid ${JO}55`, borderRadius: 13, fontSize: 11.5, fontWeight: 700, color: "#C9BB96", letterSpacing: 1 }}>{xp.title}</span>
+              <span style={{ padding: "3px 12px", background: `${JO}18`, border: `1px solid ${JO}55`, borderRadius: 13, fontSize: 11.5, fontWeight: 700, color: "#FFFFFF", letterSpacing: 1 }}>{xp.title}</span>
               <span style={{ fontSize: 11, color: T3 }}>{(xp.nextLevelXp - xp.total).toLocaleString()} XP to level {xp.level + 1}</span>
             </div>
             <Meter pct={xp.pctToNext} height={7} fill={`linear-gradient(90deg,${JO}77,${JO})`} glow={`${JO}55`} />
@@ -223,7 +223,7 @@ function HallOfFame({ xp }) {
             const got = xp.level >= lvl;
             const current = xp.title === t;
             return (
-              <span key={t} style={{ padding: "4px 10px", borderRadius: 10, fontSize: 10, fontWeight: got ? 700 : 400, letterSpacing: 0.5, background: current ? `${JO}22` : got ? GL : "transparent", border: `1px solid ${current ? JO + "66" : got ? BD : BD + "66"}`, color: current ? "#C9BB96" : got ? T2 : T3, opacity: got ? 1 : 0.55 }}>
+              <span key={t} style={{ padding: "4px 10px", borderRadius: 10, fontSize: 10, fontWeight: got ? 700 : 400, letterSpacing: 0.5, background: current ? `${JO}22` : got ? GL : "transparent", border: `1px solid ${current ? JO + "66" : got ? BD : BD + "66"}`, color: current ? "#FFFFFF" : got ? T2 : T3, opacity: got ? 1 : 0.55 }}>
                 {t} · L{lvl}
               </span>
             );
@@ -250,19 +250,19 @@ function HallOfFame({ xp }) {
                 <div style={{ fontSize: 10, color: T3 }}>{j.value.toLocaleString()} {j.unit}</div>
               </div>
               {j.rank && (
-                <span style={{ padding: "3px 10px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${JO}18`, border: `1px solid ${JO}55`, color: "#C9BB96", whiteSpace: "nowrap" }}>{j.rank}</span>
+                <span style={{ padding: "3px 10px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${JO}18`, border: `1px solid ${JO}55`, color: "#FFFFFF", whiteSpace: "nowrap" }}>{j.rank}</span>
               )}
             </div>
             <Meter pct={j.pctToNext} height={5} color={JO} style={{ marginBottom: 7 }} />
             <div style={{ fontSize: 10.5, color: j.next ? T2 : GR, marginBottom: 9 }}>
               {j.next
-                ? <>Next: <span style={{ color: "#C9BB96", fontWeight: 700 }}>{j.next.rank}</span> at {j.next.threshold.toLocaleString()} {j.unit} — {(j.next.threshold - j.value).toLocaleString()} to go</>
+                ? <>Next: <span style={{ color: "#FFFFFF", fontWeight: 700 }}>{j.next.rank}</span> at {j.next.threshold.toLocaleString()} {j.unit} — {(j.next.threshold - j.value).toLocaleString()} to go</>
                 : "Journey complete. Immortal. 👑"}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
               {j.tiers.map((t) => (
                 <span key={t.id} title={t.got ? `${t.rank} — ${t.date ? fmtDate(t.date) : "earned"}` : `${t.rank} at ${t.threshold.toLocaleString()}`}
-                  style={{ padding: "2px 8px", borderRadius: 8, fontSize: 9.5, fontFamily: "monospace", background: t.got ? `${JO}1C` : GL, border: `1px solid ${t.got ? JO + "55" : BD}`, color: t.got ? "#C9BB96" : T3, opacity: t.got ? 1 : 0.6 }}>
+                  style={{ padding: "2px 8px", borderRadius: 8, fontSize: 9.5, fontFamily: "monospace", background: t.got ? `${JO}1C` : GL, border: `1px solid ${t.got ? JO + "55" : BD}`, color: t.got ? "#FFFFFF" : T3, opacity: t.got ? 1 : 0.6 }}>
                   {t.threshold.toLocaleString()}
                 </span>
               ))}
@@ -314,7 +314,7 @@ export function JourneyModule({ xpInfo }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tint="rgba(10,9,6,0.5)" activeBg={`${JO}26`} activeColor="#C9BB96"
+      <ModuleTabs tint="rgba(10,10,10,0.6)" activeBg={`${JO}26`} activeColor="#FFFFFF"
         tabs={[{ id: "goals", l: "Goals", i: Target }, { id: "fame", l: "Hall of Fame", i: Trophy }]}
         active={tab} onSelect={setTab} />
 
@@ -330,7 +330,7 @@ export function JourneyModule({ xpInfo }) {
               </div>
               {!formOpen && (
                 <button onClick={() => { setEditing(null); setFormOpen(true); }}
-                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: `${JO}1E`, border: `1px solid ${JO}55`, borderRadius: 10, color: "#C9BB96", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: `${JO}1E`, border: `1px solid ${JO}55`, borderRadius: 10, color: "#FFFFFF", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   <Plus size={14} /> New goal
                 </button>
               )}
@@ -350,7 +350,7 @@ export function JourneyModule({ xpInfo }) {
               <Empty icon={<Target size={26} color={JO} />} title="No active goals"
                 sub="Set a target in any area — fitness, trading, faith, reading, anything. Progress checkpoints reveal themselves as you move.">
                 <button onClick={() => setFormOpen(true)}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 18px", background: `${JO}1E`, border: `1px solid ${JO}55`, borderRadius: 10, color: "#C9BB96", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 10 }}>
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 18px", background: `${JO}1E`, border: `1px solid ${JO}55`, borderRadius: 10, color: "#FFFFFF", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 10 }}>
                   <Plus size={14} /> Create your first goal
                 </button>
               </Empty>

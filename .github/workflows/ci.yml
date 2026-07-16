@@ -1,0 +1,33 @@
+name: CI
+
+# Build the app and run the corruption harness on every branch push and PR.
+# The harness boots the built single-file app under Chromium across ~38 seeded
+# data scenarios (including deliberately corrupt stores) on desktop + mobile
+# viewports and every module, asserting no screen ever renders blank or throws.
+# A failure here is a signal a bad change would otherwise have reached Pages.
+
+on:
+  push:
+    branches-ignore: []
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Corruption harness
+        run: node tests/qa.mjs

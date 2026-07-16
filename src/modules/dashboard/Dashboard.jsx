@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Cpu, Check, Flame, Activity as ActivityIcon, TrendingUp, DollarSign, Dumbbell, Target, ChevronRight, Plus, Calendar, Zap, PenLine, BellRing } from "lucide-react";
-import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, OR, B2 } from "../../shared/designTokens.js";
+import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, OR, B2, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter } from "../../shared/ui.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
@@ -380,7 +380,7 @@ export function Dashboard({ onNavigate, onOpenSettings, habits: habitsV2, setHab
           </div>
           {weekXp > 0 && (
             <div style={{ minWidth: 96, textAlign: "right" }}>
-              <div style={{ fontSize: 15, fontWeight: 900, color: AM, fontFamily: "'JetBrains Mono',monospace" }}>+{weekXp.toLocaleString()}</div>
+              <div style={{ fontSize: 15, fontWeight: 900, color: AC, fontFamily: "'JetBrains Mono',monospace" }}>+{weekXp.toLocaleString()}</div>
               <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>XP this week</div>
             </div>
           )}

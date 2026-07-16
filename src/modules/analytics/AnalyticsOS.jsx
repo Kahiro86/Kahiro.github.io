@@ -5,7 +5,7 @@
 import { useMemo, useState } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { BarChart3, GitCompareArrows, Trophy } from "lucide-react";
-import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
+import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -15,7 +15,7 @@ import { useXp } from "../../shared/useXp.js";
 import { CAT_LABEL } from "../../shared/xpEngine.js";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 
-const AN = "#8B7CA0"; // muted purple — this module's accent
+const AN = "#E5484D"; // crimson accent (monochrome theme)
 const PERIODS = [
   { id: 7,   l: "Week" },
   { id: 30,  l: "Month" },
@@ -108,14 +108,14 @@ export function AnalyticsOS({ habits, onNavigate }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tint="rgba(8,7,12,0.5)" activeBg={`${AN}26`} activeColor="#B4A6C8"
+      <ModuleTabs tint="rgba(10,10,10,0.6)" activeBg={`${AN}26`} activeColor="#FFFFFF"
         tabs={[{ id: "reports", l: "Reports", i: BarChart3 }, { id: "trends", l: "Trends", i: GitCompareArrows }, { id: "xp", l: "Progression", i: Trophy }]}
         active={tab} onSelect={setTab}>
         <div style={{ flex: 1 }} />
         {tab === "reports" && (
           <div style={{ display: "flex", gap: 3, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: 3 }}>
             {PERIODS.map((p) => (
-              <button key={p.id} onClick={() => setDays(p.id)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: days === p.id ? `${AN}26` : "transparent", color: days === p.id ? "#B4A6C8" : T2, fontSize: 12, fontWeight: days === p.id ? 600 : 400, fontFamily: "inherit" }}>
+              <button key={p.id} onClick={() => setDays(p.id)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: days === p.id ? `${AN}26` : "transparent", color: days === p.id ? "#FFFFFF" : T2, fontSize: 12, fontWeight: days === p.id ? 600 : 400, fontFamily: "inherit" }}>
                 {p.l}
               </button>
             ))}
@@ -215,7 +215,7 @@ export function AnalyticsOS({ habits, onNavigate }) {
         {tab === "xp" && (() => {
           const cats = Object.entries(xp.byCat).filter(([c]) => c !== "awards").sort((a, b) => b[1] - a[1]);
           const catMax = Math.max(1, ...cats.map(([, v]) => v));
-          const CAT_COLOR = { life: GR, trading: CY, fitness: PU, finance: AM, faith: "#B09A6F", mind: "#767FA6" };
+          const CAT_COLOR = { life: GR, trading: CY, fitness: PU, finance: AC, faith: "#9C9C9C", mind: "#B8B8B8" };
           const gotList = xp.achievements.filter((a) => a.got);
           return (
             <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 980 }}>
@@ -224,18 +224,18 @@ export function AnalyticsOS({ habits, onNavigate }) {
                 <div style={{ fontSize: 12.5, color: T3, marginTop: 2 }}>XP is earned by doing the work — every pillar reports in. The formulas stay under the hood.</div>
               </div>
 
-              <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${AM}0A,transparent)` }}>
+              <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${AC}0A,transparent)` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
                   <div style={{ textAlign: "center", minWidth: 90 }}>
-                    <div style={{ fontSize: 44, fontWeight: 900, color: AM, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1, textShadow: `0 0 30px ${AM}44` }}>{xp.level}</div>
+                    <div style={{ fontSize: 44, fontWeight: 900, color: AC, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1, textShadow: `0 0 30px ${AC}44` }}>{xp.level}</div>
                     <div style={{ fontSize: 9, color: T3, letterSpacing: 2, marginTop: 4 }}>LEVEL</div>
                   </div>
                   <div style={{ flex: 1, minWidth: 220 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
-                      <span style={{ padding: "3px 12px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 13, fontSize: 11.5, fontWeight: 700, color: AM, letterSpacing: 1 }}>{xp.title}</span>
+                      <span style={{ padding: "3px 12px", background: `${AC}14`, border: `1px solid ${AC}44`, borderRadius: 13, fontSize: 11.5, fontWeight: 700, color: AC, letterSpacing: 1 }}>{xp.title}</span>
                       <span style={{ fontSize: 11, color: T3 }}>{(xp.nextLevelXp - xp.total).toLocaleString()} XP to level {xp.level + 1}</span>
                     </div>
-                    <Meter pct={xp.pctToNext} height={8} fill={`linear-gradient(90deg,${AM}77,${AM})`} glow={`${AM}55`} style={{ marginBottom: 7 }} />
+                    <Meter pct={xp.pctToNext} height={8} fill={`linear-gradient(90deg,${AC}77,${AC})`} glow={`${AC}55`} style={{ marginBottom: 7 }} />
                     <div style={{ fontSize: 11.5, color: T2 }}>Lifetime: <span style={{ color: T1, fontWeight: 700, fontFamily: "monospace" }}>{xp.total.toLocaleString()} XP</span></div>
                   </div>
                 </div>
@@ -245,7 +245,7 @@ export function AnalyticsOS({ habits, onNavigate }) {
                 <Chip label="Today" value={xp.today.toLocaleString()} color={GR} />
                 <Chip label="Last 7 days" value={xp.week.toLocaleString()} color={CY} />
                 <Chip label="This month" value={xp.month.toLocaleString()} color={PU} />
-                <Chip label="This year" value={xp.year.toLocaleString()} color={AM} />
+                <Chip label="This year" value={xp.year.toLocaleString()} color={AC} />
                 <Chip label="Avg/day (30d)" value={xp.avg30.toLocaleString()} color={T2} />
                 <Chip label="From streaks" value={xp.streakXp.toLocaleString()} color={GR} />
               </div>
@@ -265,7 +265,7 @@ export function AnalyticsOS({ habits, onNavigate }) {
                   ))}
                   {xp.bestDay && (
                     <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
-                      Best day: <span style={{ color: AM, fontWeight: 700, fontFamily: "monospace" }}>{xp.bestDay[1].toLocaleString()} XP</span> on {new Date(`${xp.bestDay[0]}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      Best day: <span style={{ color: AC, fontWeight: 700, fontFamily: "monospace" }}>{xp.bestDay[1].toLocaleString()} XP</span> on {new Date(`${xp.bestDay[0]}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </div>
                   )}
                 </Card>
@@ -278,7 +278,7 @@ export function AnalyticsOS({ habits, onNavigate }) {
                       <XAxis dataKey="label" stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
                       <YAxis stroke={T3} fontSize={10} tickLine={false} axisLine={false} />
                       <Tooltip content={mkTT("", " XP")} />
-                      <Line type="monotone" dataKey="xp" name="XP" stroke={AM} strokeWidth={2} dot={{ fill: AM, r: 2.5 }} />
+                      <Line type="monotone" dataKey="xp" name="XP" stroke={AC} strokeWidth={2} dot={{ fill: AC, r: 2.5 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </Card>
@@ -286,9 +286,9 @@ export function AnalyticsOS({ habits, onNavigate }) {
 
               <Card onClick={onNavigate ? () => onNavigate("journey") : undefined}
                 style={{ padding: "18px", cursor: onNavigate ? "pointer" : "default" }}>
-                <SH title="Hall of Fame" sub={`${gotList.length}/${xp.achievements.length} milestones claimed across ${xp.journeys.length} lifelong journeys`} action={<Trophy size={13} color={AM} />} />
+                <SH title="Hall of Fame" sub={`${gotList.length}/${xp.achievements.length} milestones claimed across ${xp.journeys.length} lifelong journeys`} action={<Trophy size={13} color={AC} />} />
                 <div style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>
-                  Milestones, ranks and lifetime records live in <span style={{ color: AM, fontWeight: 700 }}>Journey → Hall of Fame</span>{onNavigate ? " — tap to open." : "."}
+                  Milestones, ranks and lifetime records live in <span style={{ color: AC, fontWeight: 700 }}>Journey → Hall of Fame</span>{onNavigate ? " — tap to open." : "."}
                 </div>
               </Card>
             </div>

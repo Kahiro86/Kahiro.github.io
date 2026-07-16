@@ -113,11 +113,11 @@ export default function App() {
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      html, body { max-width: 100%; overflow-x: hidden; background: #05060d; }
+      html, body { max-width: 100%; overflow-x: hidden; background: #000000; }
       body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
       /* tabular figures everywhere numbers matter — dashboards & finance line up */
       [style*="monospace"], input { font-variant-numeric: tabular-nums; }
-      ::selection { background: rgba(143,211,255,0.25); }
+      ::selection { background: rgba(229,72,77,0.30); }
       ::-webkit-scrollbar { width: 5px; height: 5px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 3px; }
@@ -125,7 +125,7 @@ export default function App() {
       input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
       input::placeholder, textarea::placeholder { color: rgba(136,151,179,0.45); }
       input, textarea, select { transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease; }
-      input:focus, textarea:focus, select:focus { border-color: rgba(143,211,255,0.45) !important; box-shadow: 0 0 0 3px rgba(143,211,255,0.08); }
+      input:focus, textarea:focus, select:focus { border-color: rgba(229,72,77,0.55) !important; box-shadow: 0 0 0 3px rgba(229,72,77,0.10); }
       button { font-family: inherit; transition: transform 0.14s cubic-bezier(0.34,1.4,0.64,1), background 0.22s ease, border-color 0.22s ease, color 0.22s ease, box-shadow 0.22s ease; }
       button:active { transform: scale(0.97); }
       /* frosted cards float and gently lift toward the pointer */

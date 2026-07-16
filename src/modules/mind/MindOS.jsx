@@ -11,7 +11,7 @@ import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysBetween } from "../../shared/dates.js";
 
-const MI = "#767FA6"; // muted indigo — this module's accent
+const MI = "#E5484D"; // crimson accent (monochrome theme)
 const REVIEW_AFTER_DAYS = 30;
 
 const daysSince = (ds) => (ds ? daysBetween(ds, localDateStr()) : 0);
@@ -107,7 +107,7 @@ export function MindOS({ loaded = true }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tint="rgba(7,8,13,0.5)" activeBg={`${MI}22`} activeColor="#A8B0D6" tabs={TABS} active={tab} onSelect={setTab}>
+      <ModuleTabs tint="rgba(7,8,13,0.5)" activeBg={`${MI}22`} activeColor="#FFFFFF" tabs={TABS} active={tab} onSelect={setTab}>
         <div style={{ flex: 1 }} />
         {dueReviews.length > 0 && (
           <button onClick={() => setTab("decisions")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 9, color: AM, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>

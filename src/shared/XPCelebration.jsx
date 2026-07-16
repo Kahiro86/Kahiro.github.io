@@ -6,7 +6,7 @@
 //   · the daily check-in stamp (xp_logins) — one per day, silent bookkeeping
 // It renders above everything but passes every pointer event through.
 import { useEffect, useRef, useState } from "react";
-import { T1, T2, T3, BD, GL, GR, AM } from "./designTokens.js";
+import { T1, T2, T3, BD, GL, GR, AC } from "./designTokens.js";
 import { useToast } from "./toast.jsx";
 import { localDateStr } from "./dates.js";
 import { CAT_LABEL, ACHIEVEMENTS, sanitizeUnlocked, sanitizeLogins } from "./xpEngine.js";
@@ -86,19 +86,19 @@ export function XPCelebration({ xp }) {
     <>
       {pill && (
         <div key={pill.key} style={{ position: "fixed", top: 62, right: 20, zIndex: 70, pointerEvents: "none", animation: "xpPill 2.1s ease forwards" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", background: "rgba(9,13,24,0.92)", border: `1px solid ${AM}44`, borderRadius: 20, boxShadow: `0 6px 22px rgba(0,0,0,0.4), 0 0 18px ${AM}22`, backdropFilter: "blur(10px)" }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: AM, fontFamily: "'JetBrains Mono',monospace" }}>+{pill.delta} XP</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", background: "rgba(10,10,10,0.94)", border: `1px solid ${AC}44`, borderRadius: 20, boxShadow: `0 6px 22px rgba(0,0,0,0.4), 0 0 18px ${AC}22`, backdropFilter: "blur(10px)" }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: AC, fontFamily: "'JetBrains Mono',monospace" }}>+{pill.delta} XP</span>
             {pill.label && <span style={{ fontSize: 10.5, color: T3, letterSpacing: 0.5 }}>· {pill.label}</span>}
           </div>
         </div>
       )}
       {levelUp && (
         <div key={levelUp.key} style={{ position: "fixed", inset: 0, zIndex: 80, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ position: "absolute", width: 420, height: 420, borderRadius: "50%", background: `radial-gradient(circle, ${AM}2E, transparent 65%)`, animation: "levelGlow 2.7s ease forwards" }} />
+          <div style={{ position: "absolute", width: 420, height: 420, borderRadius: "50%", background: `radial-gradient(circle, ${AC}2E, transparent 65%)`, animation: "levelGlow 2.7s ease forwards" }} />
           <div style={{ textAlign: "center", animation: "levelUp 2.7s cubic-bezier(0.2,0.8,0.3,1) forwards" }}>
-            <div style={{ fontSize: 12, color: AM, letterSpacing: 6, fontWeight: 700 }}>LEVEL UP</div>
-            <div style={{ fontSize: 74, fontWeight: 900, color: T1, lineHeight: 1.15, fontFamily: "'JetBrains Mono',monospace", textShadow: `0 0 44px ${AM}66` }}>{levelUp.level}</div>
-            <div style={{ display: "inline-block", padding: "5px 16px", background: GL, border: `1px solid ${AM}44`, borderRadius: 16, fontSize: 12.5, fontWeight: 700, color: T2, letterSpacing: 1 }}>{levelUp.title}</div>
+            <div style={{ fontSize: 12, color: AC, letterSpacing: 6, fontWeight: 700 }}>LEVEL UP</div>
+            <div style={{ fontSize: 74, fontWeight: 900, color: T1, lineHeight: 1.15, fontFamily: "'JetBrains Mono',monospace", textShadow: `0 0 44px ${AC}66` }}>{levelUp.level}</div>
+            <div style={{ display: "inline-block", padding: "5px 16px", background: GL, border: `1px solid ${AC}44`, borderRadius: 16, fontSize: 12.5, fontWeight: 700, color: T2, letterSpacing: 1 }}>{levelUp.title}</div>
           </div>
         </div>
       )}
