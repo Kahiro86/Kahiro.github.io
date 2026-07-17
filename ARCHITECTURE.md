@@ -43,8 +43,12 @@ they never import from each other except through `src/shared/`.
   `suppress` ids so the directive never echoes a Priority Alert),
   `kaizen.js` (incl. `dayGreetingLine`),
   `review.js` (weekly focus: `isoWeekKey`, `weakestArea`, `weekly_focus`
-  store), module engines (`trading/reviews.js`, `finance/bills.js`,
-  `life/purity.js`).
+  store), `weekReview.js` (`buildWeekReview` — the Sunday "did I win?" recap:
+  week score vs last week, habits held/slipped, honest wins, weakest area →
+  next focus; surfaced by `WeeklyReview.jsx`'s `WeeklyReviewGate`, which
+  auto-opens on Sundays until the coming week has a focus, and by a manual
+  button on the cockpit), module engines (`trading/reviews.js`,
+  `finance/bills.js`, `life/purity.js`).
 - **Dates**: `dates.js` — `localDateStr`, `daysAgoStr`, `daysBetween`
   (local-timezone; noon-anchored). All date math goes through here.
 - **UI primitives**: `ui.jsx` (Card, SH, Chip, Meter, Empty, inputs,

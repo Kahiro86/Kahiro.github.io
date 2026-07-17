@@ -8,6 +8,7 @@ import { useXp } from "./shared/useXp.js";
 import { XPCelebration } from "./shared/XPCelebration.jsx";
 import { NotifTicker } from "./shared/NotifTicker.jsx";
 import { AutoGoalSync } from "./shared/AutoGoalSync.jsx";
+import { WeeklyReviewGate } from "./shared/WeeklyReview.jsx";
 import { hasLock } from "./shared/lock.js";
 import { LockScreen } from "./shared/LockScreen.jsx";
 import { localDateStr } from "./shared/dates.js";
@@ -40,6 +41,7 @@ export default function App() {
   // AI panel starts open on desktop, closed on phones (it's a full overlay there).
   const [aiOpen, setAiOpen] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 820 : true));
   const [showSettings, setShowSettings] = useState(false);
+  const [reviewSignal, setReviewSignal] = useState(0); // ticks to open Week in Review
 
   // App lock: gate the UI on open when a PIN is set, and re-lock after the
   // tab has been in the background for 5+ minutes.
@@ -96,7 +98,7 @@ export default function App() {
 
   const renderModule = () => {
     switch (module) {
-      case "dashboard": return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
+      case "dashboard": return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
       case "trading": return <TradingModule />;
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
@@ -105,7 +107,7 @@ export default function App() {
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
       case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={setModule} />;
-      default: return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
+      default: return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
     }
   };
 
@@ -156,8 +158,11 @@ export default function App() {
       .cockpit > *:nth-child(5) { animation-delay: 0.20s; }
       .cockpit > *:nth-child(6) { animation-delay: 0.25s; }
       .cockpit > *:nth-child(7) { animation-delay: 0.30s; }
+      .cockpit > *:nth-child(8) { animation-delay: 0.35s; }
       /* a slow warm pulse for the perfect-day hero */
       @keyframes emberPulse { 0%,100% { box-shadow: 0 0 0 rgba(240,180,41,0.0), inset 0 0 0 rgba(240,180,41,0); } 50% { box-shadow: 0 0 46px rgba(240,180,41,0.22), inset 0 0 40px rgba(240,180,41,0.06); } }
+      /* Week in Review modal entrance */
+      @keyframes reviewRise { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
       }
@@ -208,6 +213,7 @@ export default function App() {
         <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
+        <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
       </div>
       </ToastProvider>
@@ -234,6 +240,7 @@ export default function App() {
       <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
+        <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
     </ToastProvider>

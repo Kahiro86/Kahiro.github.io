@@ -56,7 +56,7 @@ function StatCard({ onClick, children, style }) {
 const HEALTH = { good: GR, low: AM, bad: RE };
 const DTONE = { urgent: AC, info: AM, good: GR }; // directive rail colour by tone
 
-export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = true, xp }) {
+export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabits, loaded = true, xp }) {
   const [kz, setKz] = useState(getActiveKillzone);
   const [, setEatTime] = useState(getEATTimeStr);
   const [trades] = useStorageState("ict_trades", []);
@@ -389,6 +389,16 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
           ))}
         </div>
       </div>
+
+      {/* ── 📅 WEEK IN REVIEW — the reflective bookend ── */}
+      {onOpenReview && (
+        <button onClick={onOpenReview} aria-label="Open Week in Review"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "none", border: `1px dashed ${BD}`, borderRadius: 12, padding: "12px 0", color: T3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", transition: "border-color .2s ease, color .2s ease" }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${AC}66`; e.currentTarget.style.color = T2; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = BD; e.currentTarget.style.color = T3; }}>
+          📅 Week in Review
+        </button>
+      )}
     </div>
   );
 }
