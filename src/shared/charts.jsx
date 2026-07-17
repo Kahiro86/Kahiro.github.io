@@ -1,17 +1,28 @@
+import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { localDateStr } from "./dates.js";
 import { B2, BD, BD2, T1, T2, T3 } from "./designTokens.js";
 
 // ── Progress ring — daily rings on Command Center and Life OS ───────
+// Sweeps from 0 to its value on mount (and eases whenever the value
+// changes), so the ring feels like it's filling rather than snapping.
 export function Ring({ pct, size = 128, stroke = 10, color, glow = false, children }) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const target = Math.min(100, Math.max(0, pct || 0));
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { setShown(target); return; }
+    const id = requestAnimationFrame(() => setShown(target)); // next frame → CSS transition runs
+    return () => cancelAnimationFrame(id);
+  }, [target]);
   return (
     <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={BD} strokeWidth={stroke} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-          strokeDasharray={`${(Math.min(100, pct || 0) / 100) * c} ${c}`}
-          style={{ transition: "stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1)", filter: glow ? `drop-shadow(0 0 8px ${color}66)` : undefined }} />
+          strokeDasharray={`${(shown / 100) * c} ${c}`}
+          style={{ transition: "stroke-dasharray 0.9s cubic-bezier(0.4,0,0.2,1)", filter: glow ? `drop-shadow(0 0 8px ${color}66)` : undefined }} />
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>{children}</div>
     </div>
