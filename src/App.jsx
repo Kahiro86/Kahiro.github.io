@@ -96,7 +96,7 @@ export default function App() {
 
   const renderModule = () => {
     switch (module) {
-      case "dashboard": return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} weekXp={xpInfo.week} />;
+      case "dashboard": return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
       case "trading": return <TradingModule />;
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
@@ -105,7 +105,7 @@ export default function App() {
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
       case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={setModule} />;
-      default: return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} weekXp={xpInfo.week} />;
+      default: return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
     }
   };
 
