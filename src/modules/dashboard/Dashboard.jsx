@@ -19,12 +19,12 @@ import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { getStats, tradingMetrics } from "../trading/helpers.js";
 import { financeSummary } from "../finance/summary.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
-import { WEEK_PLAN } from "../athlete/constants.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 import {
   isScheduled, isDone, isNonNeg, isWellness, isWeekly, valueOn, currentStreak,
 } from "../../shared/habitEngine.js";
 import { buildNudges } from "../../shared/insights.js";
+import { buildDirective, isRestDay } from "../../shared/directive.js";
 import {
   sanitizeNutrition, dayEntries, dayTotals, calcTargets, healthyStreaks,
 } from "../athlete/nutrition.js";
@@ -32,8 +32,8 @@ import { sanitizePurity } from "../life/purity.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
 
 const kes0 = (n) => Math.round(+n || 0).toLocaleString();
-const weekdayName = (ds) => new Date(`${ds}T12:00:00`).toLocaleDateString("en-US", { weekday: "long" });
-const isRestDay = (ds) => WEEK_PLAN.find((d) => d.day === weekdayName(ds))?.type === "Rest";
+// isRestDay comes from directive.js (indexed against WEEK_PLAN, MON→SUN) —
+// the old local copy compared "Monday" to "MON" and never matched.
 
 // ── Small shared pieces ──────────────────────────────────────────────
 const SectionLabel = ({ icon, children }) => (
@@ -54,6 +54,7 @@ function StatCard({ onClick, children, style }) {
 }
 
 const HEALTH = { good: GR, low: AM, bad: RE };
+const DTONE = { urgent: AC, info: AM, good: GR }; // directive rail colour by tone
 
 export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = true, xp }) {
   const [kz, setKz] = useState(getActiveKillzone);
@@ -97,12 +98,6 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
   const xpToNext = xp ? Math.max(0, xp.nextLevelXp - xp.total) : 0;
   const estMin = mission.left * 12; // gentle estimate: ~12 min per remaining commitment
 
-  // ── ⚠️ PRIORITY ALERTS: the urgent nudges only, max 3 ──
-  const alerts = useMemo(() => {
-    const all = buildNudges({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, verses, decisions, purity, nutrition: nutritionLog, nutritionProfile });
-    return all.filter((n) => n.tone === "urgent").slice(0, 3);
-  }, [habitsV2, trades, rawReviews, finance.bills, verses, decisions, purity, nutritionLog, nutritionProfile]);
-
   // ── 📈 DAILY SCORE (Life Score): one composite %, vs yesterday ──
   const dayScore = (d) => {
     const parts = [];
@@ -116,6 +111,21 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
   const lifeScore = useMemo(() => dayScore(ds), [active, workouts, nutrition, entriesSafe, ds]);
   const yestScore = useMemo(() => dayScore(daysAgoStr(1)), [active, workouts, nutrition, entriesSafe, ds]);
   const scoreDelta = lifeScore - yestScore;
+
+  // ── 🧭 THE DIRECTIVE: the single most important thing to do now, ranked
+  //    across every domain, with a reason. The coach on top of the mirror. ──
+  const directive = useMemo(
+    () => buildDirective({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, workouts, ds, mission, scoreDelta }),
+    [habitsV2, trades, rawReviews, finance.bills, workouts, ds, mission, scoreDelta]
+  );
+
+  // ── ⚠️ PRIORITY ALERTS: the urgent nudges only, max 3 (minus any the
+  //    directive already voices, so the coach line never echoes the list) ──
+  const alerts = useMemo(() => {
+    const all = buildNudges({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, verses, decisions, purity, nutrition: nutritionLog, nutritionProfile });
+    const hide = directive.suppress || [];
+    return all.filter((n) => n.tone === "urgent" && !hide.some((p) => n.id.startsWith(p))).slice(0, 3);
+  }, [habitsV2, trades, rawReviews, finance.bills, verses, decisions, purity, nutritionLog, nutritionProfile, directive]);
 
   // ── 🔥 STREAKS: strongest four, across habits + derived domains ──
   const streaks = useMemo(() => {
@@ -207,9 +217,34 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
 
   const big = { fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, color: T1, lineHeight: 1 };
+  const dcol = DTONE[directive.tone] || AC;
 
   return (
     <div className="cockpit" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 1080, margin: "0 auto" }}>
+
+      {/* ── 🧭 THE DIRECTIVE — one ranked order, above everything ── */}
+      <button onClick={() => onNavigate(directive.nav)} aria-label={directive.headline}
+        style={{ textAlign: "left", width: "100%", cursor: "pointer", fontFamily: "inherit",
+          display: "flex", alignItems: "center", gap: 15, padding: "16px 20px",
+          background: "linear-gradient(90deg, #151515, #0F0F0F)",
+          border: `1px solid ${dcol}33`, borderLeft: `3px solid ${dcol}`, borderRadius: 14, transition: "border-color .2s ease" }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${dcol}66`; e.currentTarget.style.borderLeftColor = dcol; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${dcol}33`; e.currentTarget.style.borderLeftColor = dcol; }}>
+        <span style={{ fontSize: 22, flexShrink: 0 }}>{directive.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 9.5, letterSpacing: 2.5, textTransform: "uppercase", color: dcol, fontWeight: 700 }}>
+            {directive.tone === "good" ? "You're clear" : "Do this first"}
+          </div>
+          <div style={{ fontSize: 16.5, fontWeight: 800, color: T1, marginTop: 3, lineHeight: 1.25 }}>{directive.headline}</div>
+          <div style={{ fontSize: 12, color: T3, marginTop: 3 }}>{directive.why}</div>
+          {directive.also && (
+            <div style={{ fontSize: 11.5, color: T3, marginTop: 6 }}>
+              <span style={{ color: dcol, fontWeight: 700 }}>Then</span> {directive.also}
+            </div>
+          )}
+        </div>
+        <ChevronRight size={16} color={T3} style={{ flexShrink: 0 }} />
+      </button>
 
       {/* ── 🎯 PRIMARY FOCUS ── */}
       <Card className={perfect ? "ember" : ""} style={{ padding: "20px 24px", background: "#121212", display: "flex", alignItems: "center", gap: 26, flexWrap: "wrap", borderColor: perfect ? `${GOLD}55` : BD, animation: perfect ? "emberPulse 3.4s ease-in-out infinite" : undefined }}>

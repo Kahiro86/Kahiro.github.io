@@ -36,7 +36,12 @@ they never import from each other except through `src/shared/`.
   auto-stamp for idempotent XP; goals may bind to a live `stats.*` source via
   `GOAL_SOURCES`/`syncAutoGoals`, write-through by the always-mounted
   `AutoGoalSync.jsx`), `analytics.js`, `insights.js` (nudges — incl. a
-  sync-off backup reminder), `kaizen.js` (incl. `dayGreetingLine`),
+  sync-off backup reminder), `directive.js` (the Command Center coach line:
+  ranks concerns across every domain into one order + a reason, incl. the
+  cross-domain trade-checklist-discipline and workout-pace signals; also owns
+  the corrected `isRestDay`, indexed against `WEEK_PLAN` MON→SUN, and returns
+  `suppress` ids so the directive never echoes a Priority Alert),
+  `kaizen.js` (incl. `dayGreetingLine`),
   `review.js` (weekly focus: `isoWeekKey`, `weakestArea`, `weekly_focus`
   store), module engines (`trading/reviews.js`, `finance/bills.js`,
   `life/purity.js`).
