@@ -147,6 +147,17 @@ export default function App() {
       @keyframes levelUp { 0% { opacity: 0; transform: scale(0.55); } 16% { opacity: 1; transform: scale(1.07); } 28% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px) scale(0.98); } }
       @keyframes levelGlow { 0% { opacity: 0; transform: scale(0.5); } 20% { opacity: 1; } 75% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.25); } }
       @keyframes lockShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+      /* cockpit sections rise + fade in, staggered so it assembles top-down */
+      @keyframes cockpitRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      .cockpit > * { animation: cockpitRise 0.42s cubic-bezier(0.22,0.8,0.3,1) both; }
+      .cockpit > *:nth-child(2) { animation-delay: 0.05s; }
+      .cockpit > *:nth-child(3) { animation-delay: 0.10s; }
+      .cockpit > *:nth-child(4) { animation-delay: 0.15s; }
+      .cockpit > *:nth-child(5) { animation-delay: 0.20s; }
+      .cockpit > *:nth-child(6) { animation-delay: 0.25s; }
+      .cockpit > *:nth-child(7) { animation-delay: 0.30s; }
+      /* a slow warm pulse for the perfect-day hero */
+      @keyframes emberPulse { 0%,100% { box-shadow: 0 0 0 rgba(240,180,41,0.0), inset 0 0 0 rgba(240,180,41,0); } 50% { box-shadow: 0 0 46px rgba(240,180,41,0.22), inset 0 0 40px rgba(240,180,41,0.06); } }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
       }

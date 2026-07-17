@@ -11,6 +11,9 @@ import {
 import { BD, T1, T2, T3, GL, B2, AC, GR, AM, RE } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
 import { Ring } from "../../shared/charts.jsx";
+import { useCountUp } from "../../shared/useCountUp.js";
+
+const GOLD = "#F0B429"; // reserved for the perfect-day hero only
 import { useStorageState } from "../../shared/useStorageState.js";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { getStats, tradingMetrics } from "../trading/helpers.js";
@@ -193,23 +196,32 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
     ];
   }, [active, nutrition, nTargets, workouts, ds]);
 
+  // Animated figures — roll up on load, tick on change.
+  const perfect = mission.pct === 100 && mission.total > 0;
+  const cuPct = useCountUp(mission.pct);
+  const cuScore = useCountUp(lifeScore);
+  const cuXp = useCountUp(xp?.total ?? 0);
+  const cuNet = useCountUp(fin.personalNetWorth);
+  const cuPnl = useCountUp(Math.round(tMetrics.dailyPnl));
+
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
 
   const big = { fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, color: T1, lineHeight: 1 };
 
   return (
-    <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 1080, margin: "0 auto" }}>
+    <div className="cockpit" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 1080, margin: "0 auto" }}>
 
       {/* ── 🎯 PRIMARY FOCUS ── */}
-      <Card style={{ padding: "20px 24px", background: "#121212", display: "flex", alignItems: "center", gap: 26, flexWrap: "wrap" }}>
-        <Ring pct={mission.pct} size={116} stroke={10} color={mission.pct === 100 ? GR : AC}>
-          <div style={{ fontSize: 24, ...big, color: mission.pct === 100 ? GR : T1 }}>{mission.pct}%</div>
+      <Card className={perfect ? "ember" : ""} style={{ padding: "20px 24px", background: "#121212", display: "flex", alignItems: "center", gap: 26, flexWrap: "wrap", borderColor: perfect ? `${GOLD}55` : BD, animation: perfect ? "emberPulse 3.4s ease-in-out infinite" : undefined }}>
+        <Ring pct={mission.pct} size={116} stroke={10} color={perfect ? GOLD : AC} glow={perfect}>
+          <div style={{ fontSize: 24, ...big, color: perfect ? GOLD : T1 }}>{cuPct}%</div>
         </Ring>
         <div style={{ flex: 1, minWidth: 220 }}>
-          <div style={{ fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: AC, fontWeight: 700 }}>Today's Mission</div>
+          <div style={{ fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: perfect ? GOLD : AC, fontWeight: 700 }}>Today's Mission</div>
           <div style={{ fontSize: 25, fontWeight: 800, color: T1, marginTop: 4 }}>
-            {mission.pct === 100 ? "Mission complete." : `Complete ${mission.done}/${mission.total} ${mission.label}`}
+            {perfect ? "Mission complete." : `Complete ${mission.done}/${mission.total} ${mission.label}`}
           </div>
+          {perfect && <div style={{ fontSize: 13, color: GOLD, marginTop: 4, fontWeight: 600 }}>Nothing left today. Dominate tomorrow. 🔥</div>}
           <div style={{ display: "flex", gap: 26, marginTop: 14, flexWrap: "wrap" }}>
             <div><div style={{ fontSize: 17, ...big, color: AC }}>{xpToNext.toLocaleString()}</div><div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>XP to next level</div></div>
             <div><div style={{ fontSize: 17, ...big }}>{mission.left}</div><div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>Remaining</div></div>
@@ -244,7 +256,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
         <StatCard onClick={() => onNavigate("analytics")}>
           <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Life Score</SectionLabel>
           <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-            <span style={{ fontSize: 46, ...big, color: lifeScore >= 80 ? GR : lifeScore >= 50 ? AM : RE }}>{lifeScore}%</span>
+            <span style={{ fontSize: 46, ...big, color: lifeScore >= 80 ? GR : lifeScore >= 50 ? AM : RE }}>{cuScore}%</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: scoreDelta > 0 ? GR : scoreDelta < 0 ? RE : T3 }}>
               {scoreDelta > 0 ? `↑ +${scoreDelta}%` : scoreDelta < 0 ? `↓ ${scoreDelta}%` : "· even"}
             </span>
@@ -257,7 +269,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <span style={{ fontSize: 30, ...big }}>Level {xp?.level ?? 1}</span>
           </div>
-          <div style={{ fontSize: 12, color: T2, fontFamily: "monospace", marginTop: 6 }}>{(xp?.total ?? 0).toLocaleString()} / {(xp?.nextLevelXp ?? 100).toLocaleString()} XP</div>
+          <div style={{ fontSize: 12, color: T2, fontFamily: "monospace", marginTop: 6 }}>{cuXp.toLocaleString()} / {(xp?.nextLevelXp ?? 100).toLocaleString()} XP</div>
           <div style={{ height: 4, background: BD, borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${xp?.pctToNext ?? 0}%`, background: AC, borderRadius: 2 }} />
           </div>
@@ -300,7 +312,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
         {(incomeToday > 0 || fin.personalNetWorth !== 0) && (
           <StatCard onClick={() => onNavigate("finance")}>
             <SectionLabel icon={<DollarSign size={12} color={AC} />}>Finance</SectionLabel>
-            <div style={{ fontSize: 28, ...big, color: fin.personalNetWorth >= 0 ? T1 : RE }}>KES {kes0(fin.personalNetWorth)}</div>
+            <div style={{ fontSize: 28, ...big, color: fin.personalNetWorth >= 0 ? T1 : RE }}>KES {kes0(cuNet)}</div>
             <div style={{ fontSize: 10.5, color: T3, marginTop: 3 }}>Net worth</div>
             {incomeToday > 0 && <div style={{ fontSize: 12, color: GR, marginTop: 8 }}>+KES {kes0(incomeToday)} income today</div>}
           </StatCard>
@@ -311,7 +323,7 @@ export function Dashboard({ onNavigate, habits: habitsV2, setHabits, loaded = tr
             <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Live" : ""}</SectionLabel>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
               <span style={{ fontSize: 26, ...big, color: tMetrics.dailyPnl > 0 ? GR : tMetrics.dailyPnl < 0 ? RE : T1 }}>
-                {tMetrics.dailyPnl >= 0 ? "+" : "−"}${Math.abs(Math.round(tMetrics.dailyPnl)).toLocaleString()}
+                {tMetrics.dailyPnl >= 0 ? "+" : "−"}${Math.abs(cuPnl).toLocaleString()}
               </span>
               <span style={{ fontSize: 11, color: T3 }}>today</span>
             </div>
