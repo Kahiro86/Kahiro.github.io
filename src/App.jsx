@@ -164,6 +164,8 @@ export default function App() {
       .cockpit > *:nth-child(6) { animation-delay: 0.25s; }
       .cockpit > *:nth-child(7) { animation-delay: 0.30s; }
       .cockpit > *:nth-child(8) { animation-delay: 0.35s; }
+      .cockpit > *:nth-child(9) { animation-delay: 0.40s; }
+      .cockpit > *:nth-child(10) { animation-delay: 0.45s; }
       /* a slow warm pulse for the perfect-day hero */
       @keyframes emberPulse { 0%,100% { box-shadow: 0 0 0 rgba(240,180,41,0.0), inset 0 0 0 rgba(240,180,41,0); } 50% { box-shadow: 0 0 46px rgba(240,180,41,0.22), inset 0 0 40px rgba(240,180,41,0.06); } }
       /* Week in Review modal entrance */

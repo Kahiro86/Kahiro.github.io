@@ -62,7 +62,10 @@ export const DEFAULT_FIRM_CONFIG = {
   riskPerTradePct: 0.5,
   aggregateExposureCap: 1.5,
   fleetFormula: { ...DEFAULT_FORMULA },
-  vaultTargetKsh: 15000000,
+  vaultTargetKsh: 15000000,      // the freedom line (sovereign capital)
+  freedomNumberKsh: 85100,       // passive income/month that ends the season
+  lifeCostKsh: 30000,            // the frozen life the surplus stands on
+  monthlyVaultKsh: 20000,        // automated payday deposit (drives the projection)
   accounts: [{ id: 2, firm: "", size: 0 }, { id: 3, firm: "", size: 0 }],
 };
 
@@ -81,6 +84,9 @@ export function sanitizeFirmConfig(raw) {
     aggregateExposureCap: num(src.aggregateExposureCap, DEFAULT_FIRM_CONFIG.aggregateExposureCap),
     fleetFormula: sanitizeFormula(src.fleetFormula),
     vaultTargetKsh: Math.max(1, num(src.vaultTargetKsh, DEFAULT_FIRM_CONFIG.vaultTargetKsh)),
+    freedomNumberKsh: Math.max(1, num(src.freedomNumberKsh, DEFAULT_FIRM_CONFIG.freedomNumberKsh)),
+    lifeCostKsh: Math.max(0, num(src.lifeCostKsh, DEFAULT_FIRM_CONFIG.lifeCostKsh)),
+    monthlyVaultKsh: Math.max(0, num(src.monthlyVaultKsh, DEFAULT_FIRM_CONFIG.monthlyVaultKsh)),
     accounts,
   };
 }
