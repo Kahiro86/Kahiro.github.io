@@ -9,6 +9,7 @@ Supabase (per-user rows, RLS) driven entirely from the client.
 | Module | Folder | Accent | Purpose |
 |---|---|---|---|
 | Command Center | `dashboard/` | graphite | Today screen: welcome-back, time-aware greeting, weekly-focus review, ring, needs-attention, done-today, this-week strip, missions, agenda; trends folded |
+| The Firm | `firm/` | crimson | The One-Man-Firm doctrine: Fleet (real Account #1 + locked gated slots), Vault (MMF sum + editable Fleet Formula + withdrawal ledger), Gate (scaling proof, breach-resets), Covenant (Ten Laws, signed). Reads across trading + finance; single-account for now |
 | Life OS | `life/` | green | Habits v2, routines, wellness, non-negotiables, journal, projects, purity |
 | Trading OS | `trading/` | cyan/red | Journal, checklist gate, analytics, risk, playbook, reviews |
 | Athlete OS | `athlete/` | blue | Workouts, templates, PRs, measurements, running progression |
@@ -45,6 +46,10 @@ they never import from each other except through `src/shared/`.
   cross-domain trade-checklist-discipline and workout-pace signals; also owns
   the corrected `isRestDay`, indexed against `WEEK_PLAN` MON→SUN, and returns
   `suppress` ids so the directive never echoes a Priority Alert),
+  `firm.js` (The Firm doctrine engine — `fleetFormulaSplit`, `vaultBalance`,
+  `scalingGate` with the "breach resets the count" rule anchored at the most
+  recent full month, `sanitizeWithdrawals`/`sanitizeFirmConfig`/
+  `sanitizeCovenant`; stores `firm_withdrawals`/`firm_config`/`firm_covenant`),
   `kaizen.js` (incl. `dayGreetingLine`),
   `review.js` (weekly focus: `isoWeekKey`, `weakestArea`, `weekly_focus`
   store), `weekReview.js` (`buildWeekReview` — the Sunday "did I win?" recap:
