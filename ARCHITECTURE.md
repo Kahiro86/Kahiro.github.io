@@ -26,7 +26,11 @@ they never import from each other except through `src/shared/`.
 - **Storage**: `storage.js` (adapter) + `useStorageState.js` — write-through
   synced store; all keys `architect:`-prefixed; shape-guarded reads.
 - **Sync**: `supabase.js` (auth) + `sync.js` — dirty queue, batched upserts,
-  realtime, last-write-wins per key, offline-safe.
+  realtime, last-write-wins per key, offline-safe. LWW is decided by real edit
+  time: `flush` reads remote timestamps for its dirty keys first and takes the
+  newer remote instead of overwriting it, and reconnect pulls before it pushes
+  — so a device edited offline with stale data can't clobber newer changes made
+  elsewhere.
 - **XP / progression**: `xpEngine.js` (+ `useXp.js`, `XPCelebration.jsx`) —
   XP derived from records, never stored; Hall of Fame journeys (tiered
   milestones over derived stats) auto-stamp unlock dates; legacy flat

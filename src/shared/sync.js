@@ -62,20 +62,46 @@ export async function flush() {
   if (!session || !dirty.size) return;
   setStatus("syncing");
   const meta = readMeta();
+
+  // Guard against a stale local edit clobbering a newer cloud value: before
+  // pushing, read the remote timestamps for exactly the dirty keys. Any key
+  // the cloud has changed more recently than our local edit is a genuine
+  // cross-device conflict — we take the newer remote instead of overwriting
+  // it, so last-write-wins is decided by real edit time, never by whichever
+  // device happened to reconnect last. (Best-effort: if the read fails we
+  // fall back to the previous optimistic push rather than block syncing.)
+  let remote = {};
+  try {
+    const { data } = await supabase().from("kv").select("key,value,updated_at").in("key", [...dirty]);
+    for (const row of data || []) if (row && typeof row.key === "string") remote[row.key] = row;
+  } catch { /* proceed optimistically */ }
+
   const rows = [];
+  const handled = new Set(); // keys we can clear from the dirty queue
   for (const key of dirty) {
+    const localTs = meta[key] || "";
+    const rt = remote[key];
+    if (rt && (rt.updated_at || "") > localTs) {
+      applyExternal(key, JSON.stringify(rt.value), rt.updated_at); // cloud is newer — keep it
+      handled.add(key);
+      continue;
+    }
     try {
       const raw = await storage.get(key);
-      if (raw == null) continue;
-      rows.push({ user_id: session.user.id, key, value: JSON.parse(raw), updated_at: meta[key] || new Date().toISOString() });
-    } catch { /* unparseable record: keep local, drop from queue */ }
+      if (raw == null) { handled.add(key); continue; } // deleted locally: nothing to push
+      rows.push({ user_id: session.user.id, key, value: JSON.parse(raw), updated_at: localTs || new Date().toISOString() });
+      handled.add(key);
+    } catch { /* unparseable record: keep local, leave dirty for a later retry */ }
   }
   try {
     if (rows.length) {
       const { error } = await supabase().from("kv").upsert(rows, { onConflict: "user_id,key" });
       if (error) throw new Error(error.message);
     }
-    saveDirty(new Set());
+    // Clear only the keys we actually resolved; anything that errored stays queued.
+    const remaining = getDirty();
+    for (const k of handled) remaining.delete(k);
+    saveDirty(remaining);
     lastSyncAt = new Date().toISOString();
     setStatus(realtimeUp ? "live" : "idle");
   } catch (err) {
@@ -162,7 +188,11 @@ export function initSync() {
   if (started) return;
   started = true;
   registerSyncNotify((key) => { markDirty(key); schedulePush(); });
-  window.addEventListener("online", () => { flush(); pull(); });
+  // Reconcile the cloud *before* pushing on reconnect, so a device that was
+  // edited offline with stale data can't overwrite newer changes made
+  // elsewhere while it was away (pull applies newer remote; flush then pushes
+  // only what's genuinely newer locally).
+  window.addEventListener("online", () => { pull().then(flush); });
   window.addEventListener("offline", () => setStatus("offline"));
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") pull();
