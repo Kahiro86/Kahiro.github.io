@@ -19,6 +19,7 @@ const MODULE_THEME = {
   faith:     { name: "Faith",     ...M("dust",    "night") },
   journey:   { name: "Journey",   ...M("embers",  "night") },
   analytics: { name: "Analytics", ...M("data",    "grid") },
+  firm:      { name: "The Firm",  ...M("network", "command") },
 };
 
 export const themeFor = (module) => MODULE_THEME[module] || MODULE_THEME.dashboard;

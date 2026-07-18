@@ -97,6 +97,22 @@ export function buildDirective(deps = {}) {
       why: `${bills.length} bill${bills.length > 1 ? "s" : ""} due within 7 days.` });
   }
 
+  // 7. Month-end: close the month clean to keep the scaling gate alive. Only
+  //    in the final days of a month that has closed trades but no monthly
+  //    review yet — the strategic bookend to the trade-by-trade reviews.
+  const lastDay = new Date(+ds.slice(0, 4), +ds.slice(5, 7), 0).getDate();
+  const daysLeft = lastDay - +ds.slice(8, 10);
+  if (daysLeft <= 4) {
+    const curMonth = ds.slice(0, 7);
+    const closedThisMonth = trades.filter((t) => t.status === "CLOSED" && (t.date || "").slice(0, 7) === curMonth).length;
+    const reviewedMonth = sanitizeReviews(deps.reviews).some((r) => r.kind === "monthly" && r.period === curMonth);
+    if (closedThisMonth > 0 && !reviewedMonth) {
+      c.push({ score: 55, key: "monthclose", icon: "🏛️", tone: "info", nav: "firm",
+        headline: `Close the month clean — ${daysLeft === 0 ? "today's the last day" : `${daysLeft} day${daysLeft > 1 ? "s" : ""} left`}.`,
+        why: "A withdrawal and a breach-free monthly review keep your scaling gate alive." });
+    }
+  }
+
   // Rank. If nothing needs fixing, affirm honestly from where the day stands.
   c.sort((a, b) => b.score - a.score);
   const mission = deps.mission;

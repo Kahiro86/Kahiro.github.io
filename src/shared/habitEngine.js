@@ -46,7 +46,7 @@ const NONNEG_PRESETS = [
   { name: "Healthy eating", icon: "🥗", color: AM, category: "Nutrition" },
 ];
 const WELLNESS_PRESETS = [
-  { name: "Sleep", icon: "🛏️", color: PU, category: "Health", target: 8, unit: "h", wellnessMin: 7.5 },
+  { name: "Sleep", icon: "🛏️", color: PU, category: "Health", target: 8, unit: "h", wellnessMin: 6.5 },
   { name: "Hydration", icon: "💧", color: CY, category: "Health", target: 2, unit: "L" },
   { name: "Prayer & Bible study", icon: "📖", color: GR, category: "Spiritual", target: 15, unit: "min", wellnessMin: 15 },
 ];

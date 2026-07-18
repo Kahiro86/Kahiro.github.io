@@ -14,7 +14,7 @@ if (!existsSync(distPath)) {
 const EXE = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // [module id, sidebar label] pairs — we navigate by clicking the sidebar button.
 const MODULES = [
-  ["dashboard", "Command Center"], ["trading", "Trading OS"], ["athlete", "Athlete OS"],
+  ["dashboard", "Command Center"], ["firm", "The Firm"], ["trading", "Trading OS"], ["athlete", "Athlete OS"],
   ["finance", "Finance OS"], ["life", "Life OS"], ["mind", "Mind OS"], ["faith", "Faith OS"],
   ["journey", "Journey"], ["analytics", "Analytics"],
 ];
@@ -137,6 +137,25 @@ const SCENARIOS = {
   corruptFocusShape: {
     "architect:weekly_focus": JSON.stringify([1, 2, 3]),
   },
+  corruptFirm: {
+    "architect:firm_withdrawals": JSON.stringify([
+      null, "junk", { id: 5 },
+      { id: "w1", date: "2026-06-01", amount: "x", split: null },
+      { id: "w2", date: 99, amount: 500, split: { fleet: "a", vault: 1, book: 1, life: 1 } },
+      { id: "w3", date: "2026-06-20", amount: 500, split: { fleet: 200, vault: 150, book: 100, life: 50 } },
+    ]),
+    "architect:firm_config": JSON.stringify({
+      riskPerTradePct: "nope", aggregateExposureCap: null,
+      fleetFormula: { fleet: "x", vault: -5 }, vaultTargetKsh: "lots",
+      accounts: [null, { id: "bad" }, "junk", { firm: 123, size: -9 }],
+    }),
+    "architect:firm_covenant": JSON.stringify({ signedAt: 12345 }),
+  },
+  corruptFirmShape: {
+    "architect:firm_withdrawals": JSON.stringify({ not: "an array" }),
+    "architect:firm_config": JSON.stringify([1, 2, 3]),
+    "architect:firm_covenant": JSON.stringify("nope"),
+  },
 };
 
 const viewports = { desktop: { width: 1280, height: 800 }, mobile: { width: 390, height: 844 } };
@@ -196,6 +215,7 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
         finance: ["Budget", "Reports", "Net Worth"],
         analytics: ["Trends", "Progression", "Reports"],
         journey: ["Hall of Fame", "Goals"],
+        firm: ["Vault", "Gate", "Covenant", "Fleet"],
       }[mod] || [];
       for (const st of SUBTABS) {
         try { await page.locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }

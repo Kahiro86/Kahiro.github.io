@@ -28,6 +28,7 @@ import { FaithOS } from "./modules/faith/FaithOS.jsx";
 import { MindOS } from "./modules/mind/MindOS.jsx";
 import { AnalyticsOS } from "./modules/analytics/AnalyticsOS.jsx";
 import { JourneyModule } from "./modules/journey/JourneyModule.jsx";
+import { FirmOS } from "./modules/firm/FirmOS.jsx";
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
 import { AIPanel } from "./shared/AIPanel.jsx";
@@ -102,6 +103,7 @@ export default function App() {
   const renderModule = () => {
     switch (module) {
       case "dashboard": return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
+      case "firm": return <FirmOS />;
       case "trading": return <TradingModule />;
       case "athlete": return <AthleteOS />;
       case "finance": return <FinanceOS />;
