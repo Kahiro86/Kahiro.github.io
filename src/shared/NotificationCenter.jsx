@@ -12,6 +12,7 @@ import { localDateStr, daysAgoStr } from "./dates.js";
 import { migrateHabits, isScheduled, isDone } from "./habitEngine.js";
 import { buildNudges } from "./insights.js";
 import { nudgeOfTheDay } from "./kaizen.js";
+import { getSyncConfig } from "./supabase.js";
 import { getActiveKillzone } from "../modules/trading/timezone.js";
 import { WEEK_PLAN } from "../modules/athlete/constants.js";
 import { billsDueSoon } from "../modules/finance/bills.js";
@@ -23,7 +24,7 @@ import {
 } from "./notify.js";
 
 const input = { width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
-const NUDGE_CAT = { nonneg: "habits", reviews: "trading", bills: "finance", verses: "faith", decisions: "mind", purity: "life", nutrition: "nutrition", protein: "nutrition", focus: "life" };
+const NUDGE_CAT = { nonneg: "habits", reviews: "trading", bills: "finance", verses: "faith", decisions: "mind", purity: "life", nutrition: "nutrition", protein: "nutrition", focus: "life", backup: "system" };
 const nudgeCat = (id) => NUDGE_CAT[id] || (id.startsWith("risk_") || id.startsWith("mile_") ? "streaks" : id.startsWith("miss_") ? "habits" : "life");
 const timeAgo = (ts) => {
   const m = Math.round((Date.now() - ts) / 60000);
@@ -85,6 +86,10 @@ export function NotificationCenter({ onNavigate }) {
     bills: finance?.bills, verses: Array.isArray(verses) ? verses : [],
     decisions: (Array.isArray(decisions) ? decisions : []).filter((d) => d && d.id),
     purity, nutrition, nutritionProfile,
+    // Backup reminder needs to know whether the cloud is the safety net and
+    // when the last local export was — without these it never fires.
+    syncOn: !!getSyncConfig(),
+    lastExport: (() => { try { return +localStorage.getItem("kahiro_last_export") || 0; } catch { return 0; } })(),
   }).filter((n) => catEnabled(prefs, nudgeCat(n.id))), [habits, trades, reviews, finance, verses, decisions, purity, nutrition, nutritionProfile, prefs]);
 
   const { active, overdue } = useMemo(() => bucketLog(log), [log, open]);
