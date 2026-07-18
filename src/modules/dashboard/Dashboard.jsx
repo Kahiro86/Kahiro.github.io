@@ -25,6 +25,8 @@ import {
 } from "../../shared/habitEngine.js";
 import { buildNudges } from "../../shared/insights.js";
 import { buildDirective, isRestDay } from "../../shared/directive.js";
+import { freedomMath } from "../../shared/freedom.js";
+import { scalingGate } from "../../shared/firm.js";
 import {
   sanitizeNutrition, dayEntries, dayTotals, calcTargets, healthyStreaks,
 } from "../athlete/nutrition.js";
@@ -71,6 +73,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [nutritionProfile] = useStorageState("nutrition_profile", null);
   const [verses] = useStorageState("faith_scripture", []);
   const [decisions] = useStorageState("mind_decisions", []);
+  const [firmConfig] = useStorageState("firm_config", null);
+  const [firmWithdrawals] = useStorageState("firm_withdrawals", []);
 
   useEffect(() => {
     const t = setInterval(() => { setKz(getActiveKillzone()); setEatTime(getEATTimeStr()); }, 30000);
@@ -206,6 +210,13 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     ];
   }, [active, nutrition, nTargets, workouts, ds]);
 
+  // ── 🎯 THE MISSION + the two pillars (Batman / Stark) ──
+  // The doctrine's north star: freedom by real numbers, and the two builds it
+  // rests on — the Man (internal discipline) and the Machine (external firm).
+  const freedom = useMemo(() => freedomMath(finance, firmConfig), [finance, firmConfig]);
+  const gate = useMemo(() => scalingGate(trades, rawReviews, firmWithdrawals), [trades, rawReviews, firmWithdrawals]);
+  const topStreakDays = streaks.length ? streaks[0].days : 0;
+
   // Animated figures — roll up on load, tick on change.
   const perfect = mission.pct === 100 && mission.total > 0;
   const cuPct = useCountUp(mission.pct);
@@ -213,14 +224,77 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const cuXp = useCountUp(xp?.total ?? 0);
   const cuNet = useCountUp(fin.personalNetWorth);
   const cuPnl = useCountUp(Math.round(tMetrics.dailyPnl));
+  const cuFreedom = useCountUp(freedom.freedomPct);
 
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
 
   const big = { fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, color: T1, lineHeight: 1 };
   const dcol = DTONE[directive.tone] || AC;
 
+  const kesShort = (n) => {
+    const v = Math.round(+n || 0);
+    if (v >= 1e6) return `${(v / 1e6).toFixed(v >= 1e7 ? 0 : 1)}M`;
+    if (v >= 1e3) return `${Math.round(v / 1e3)}K`;
+    return `${v}`;
+  };
+
   return (
     <div className="cockpit" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 1080, margin: "0 auto" }}>
+
+      {/* ── 🎯 THE MISSION — the freedom north star, above everything ── */}
+      <Card style={{ padding: "18px 22px", background: "linear-gradient(110deg,#161616,#0C0C0C)", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
+        <Ring pct={freedom.capitalPct} size={104} stroke={9} color={AC}>
+          <div style={{ fontSize: 20, ...big, color: AC }}>{cuFreedom}%</div>
+          <div style={{ fontSize: 7.5, color: T3, letterSpacing: 1, marginTop: 2 }}>FREEDOM</div>
+        </Ring>
+        <div style={{ flex: 1, minWidth: 230 }}>
+          <div style={{ fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: AC, fontWeight: 700 }}>The Mission · Freedom</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T1, marginTop: 3 }}>
+            {freedom.yearsOut === 0 ? "The line is crossed." : freedom.yearsOut == null ? "Build the engines." : `≈ ${freedom.yearsOut} years to freedom`}
+          </div>
+          <div style={{ display: "flex", gap: 24, marginTop: 13, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 15, ...big, color: freedom.freedomPct >= 100 ? GR : T1 }}>KES {kesShort(freedom.passiveMonthly)}<span style={{ fontSize: 10, color: T3, fontWeight: 500 }}> /mo</span></div>
+              <div style={{ fontSize: 9, color: T3, letterSpacing: 1, textTransform: "uppercase", marginTop: 3 }}>Passive · goal {kesShort(freedom.freedomNumber)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 15, ...big }}>KES {kesShort(freedom.capital)}</div>
+              <div style={{ fontSize: 9, color: T3, letterSpacing: 1, textTransform: "uppercase", marginTop: 3 }}>Capital · line {kesShort(freedom.target)}</div>
+            </div>
+          </div>
+        </div>
+        <button onClick={() => onNavigate("firm")} aria-label="Open The Firm"
+          style={{ background: "none", border: `1px solid ${BD}`, borderRadius: 10, padding: "9px 12px", color: T2, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit", fontSize: 12 }}>
+          The Firm <ChevronRight size={13} />
+        </button>
+      </Card>
+
+      {/* ── ⚔️ THE MAN · THE MACHINE — the two builds ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 14 }}>
+        <StatCard onClick={() => onNavigate("life")}>
+          <SectionLabel icon={<span style={{ fontSize: 12 }}>🦇</span>}>The Man · Batman</SectionLabel>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span style={{ fontSize: 34, ...big, color: lifeScore >= 80 ? GR : lifeScore >= 50 ? AM : RE }}>{cuScore}%</span>
+            <span style={{ fontSize: 12, color: T2 }}>discipline</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: scoreDelta > 0 ? GR : scoreDelta < 0 ? RE : T3 }}>
+              {scoreDelta > 0 ? `↑ +${scoreDelta}%` : scoreDelta < 0 ? `↓ ${scoreDelta}%` : "· even"}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
+            {mission.done}/{mission.total} {mission.label.toLowerCase()} · {topStreakDays > 0 ? `${topStreakDays}-day top streak` : "no streak yet"}
+          </div>
+        </StatCard>
+        <StatCard onClick={() => onNavigate("firm")}>
+          <SectionLabel icon={<span style={{ fontSize: 12 }}>⚙️</span>}>The Machine · Stark</SectionLabel>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span style={{ fontSize: 34, ...big, color: gate.met ? GR : T1 }}>{gate.have}<span style={{ fontSize: 15, color: T3 }}>/{gate.need}</span></span>
+            <span style={{ fontSize: 12, color: T2 }}>clean months · the gate</span>
+          </div>
+          <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
+            Fleet ${Math.round(tMetrics.equity).toLocaleString()} · vault KES {kesShort(freedom.capital)}
+          </div>
+        </StatCard>
+      </div>
 
       {/* ── 🧭 THE DIRECTIVE — one ranked order, above everything ── */}
       <button onClick={() => onNavigate(directive.nav)} aria-label={directive.headline}
@@ -286,19 +360,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         </div>
       )}
 
-      {/* ── 📈 DAILY SCORE + 🏆 XP ── */}
+      {/* ── 🏆 XP / PROGRESSION (Life Score now lives in The Man pillar) ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 14 }}>
-        <StatCard onClick={() => onNavigate("analytics")}>
-          <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Life Score</SectionLabel>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-            <span style={{ fontSize: 46, ...big, color: lifeScore >= 80 ? GR : lifeScore >= 50 ? AM : RE }}>{cuScore}%</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: scoreDelta > 0 ? GR : scoreDelta < 0 ? RE : T3 }}>
-              {scoreDelta > 0 ? `↑ +${scoreDelta}%` : scoreDelta < 0 ? `↓ ${scoreDelta}%` : "· even"}
-            </span>
-          </div>
-          <div style={{ fontSize: 10.5, color: T3, marginTop: 4 }}>vs yesterday</div>
-        </StatCard>
-
         <StatCard onClick={() => onNavigate("journey")}>
           <SectionLabel icon={<Trophy size={12} color={AC} />}>Progression</SectionLabel>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>

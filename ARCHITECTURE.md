@@ -22,6 +22,15 @@ Supabase (per-user rows, RLS) driven entirely from the client.
 Modules are self-contained (own engines + tabs) and consume shared services;
 they never import from each other except through `src/shared/`.
 
+The sidebar groups these into the firm's doctrine (`NAV_SECTIONS` in `nav.js`):
+**Command** (Command Center), **The Machine** (Stark — Firm, Trading, Finance),
+**The Man** (Batman — Life, Athlete, Faith, Mind), **Insight** (Journey,
+Analytics). The Command Center leads with the freedom mission (`freedom.js`:
+`freedomMath` — passive income vs the freedom number, capital vs the ~KSh 15M
+line, and a month-by-month years-to-freedom projection) and two pillars, The
+Man (daily discipline score) and The Machine (scaling-gate progress). Modules
+were regrouped and reframed, not merged — each keeps its own depth.
+
 ## Core services (`src/shared/`)
 
 - **Storage**: `storage.js` (adapter) + `useStorageState.js` — write-through
