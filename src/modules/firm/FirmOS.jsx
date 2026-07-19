@@ -6,7 +6,7 @@
 // real where the data exists and honestly empty where it doesn't — nothing
 // here is mocked. Phase 1: single funded account, locked fleet slots.
 import { useState } from "react";
-import { Building2, TrendingUp, Vault, Target, ScrollText, Map } from "lucide-react";
+import { Building2, TrendingUp, Vault, Target, ScrollText, Map, LifeBuoy } from "lucide-react";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { Hydrating } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -15,6 +15,7 @@ import { FleetTab } from "./FleetTab.jsx";
 import { VaultTab } from "./VaultTab.jsx";
 import { GateTab } from "./GateTab.jsx";
 import { CampaignTab } from "./CampaignTab.jsx";
+import { ContingencyTab } from "./ContingencyTab.jsx";
 import { CovenantTab } from "./CovenantTab.jsx";
 
 const FI = "#E5484D"; // crimson accent (monochrome theme)
@@ -43,6 +44,7 @@ export function FirmOS() {
           { id: "vault", l: "Vault", i: Vault },
           { id: "gate", l: "Gate", i: Target },
           { id: "campaign", l: "Campaign", i: Map },
+          { id: "contingency", l: "Contingency", i: LifeBuoy },
           { id: "covenant", l: "Covenant", i: ScrollText },
         ]}
         active={tab} onSelect={setTab}
@@ -53,6 +55,7 @@ export function FirmOS() {
         {tab === "vault" && <VaultTab {...shared} />}
         {tab === "gate" && <GateTab {...shared} />}
         {tab === "campaign" && <CampaignTab trades={trades} reviews={reviews} withdrawals={withdrawals} campaign={campaign} setCampaign={setCampaign} />}
+        {tab === "contingency" && <ContingencyTab />}
         {tab === "covenant" && <CovenantTab covenant={covenant} setCovenant={setCovenant} />}
       </div>
     </div>
