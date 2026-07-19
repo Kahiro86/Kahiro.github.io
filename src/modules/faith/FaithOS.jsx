@@ -14,7 +14,7 @@ import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysAgoStr, daysBetween } from "../../shared/dates.js";
 import { isScheduled, isDone, tapHabit, rangeStats, currentStreak, totalCompletions, newHabit } from "../../shared/habitEngine.js";
 
-const FA = "#E5484D"; // crimson accent (monochrome theme)
+const FA = CY; // Nocturne cyan accent (monochrome theme)
 
 // Spaced review: due after 1, 3, 7, 14, 30 then every 60 days.
 const INTERVALS = [1, 3, 7, 14, 30, 60];

@@ -15,7 +15,7 @@ import { useXp } from "../../shared/useXp.js";
 import { CAT_LABEL } from "../../shared/xpEngine.js";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 
-const AN = "#E5484D"; // crimson accent (monochrome theme)
+const AN = AC; // Nocturne cyan accent (monochrome theme)
 const PERIODS = [
   { id: 7,   l: "Week" },
   { id: 30,  l: "Month" },
