@@ -220,7 +220,7 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
         finance: ["Budget", "Reports", "Net Worth"],
         analytics: ["Trends", "Progression", "Reports"],
         journey: ["Hall of Fame", "Goals"],
-        firm: ["Vault", "Gate", "Campaign", "Covenant", "Fleet"],
+        firm: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"],
       }[mod] || [];
       for (const st of SUBTABS) {
         try { await page.locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }
