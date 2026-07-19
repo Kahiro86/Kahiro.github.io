@@ -158,20 +158,6 @@ export function AmbientBackground({ module, animate = true }) {
     <div aria-hidden style={{ position: "fixed", inset: 0, zIndex: -1, overflow: "hidden", background: t.base, transition: "background 1.2s ease", pointerEvents: "none" }}>
       <div style={{ ...layer, background: `radial-gradient(120% 80% at 50% -10%, ${a}14, transparent 55%), radial-gradient(90% 70% at 85% 110%, ${t.accent2}10, transparent 60%)` }} />
 
-      {/* Athlete OS wears the Spartan: a real image under heavy dark scrims so
-          the glass UI keeps full contrast. Served as its own file (not inlined)
-          to keep the app bundle lean; browsers cache it after the first view. */}
-      {module === "athlete" && t.mood !== "collage" && (
-        <>
-          {/* Desktop (animate=true) anchors the full figure to the right; the
-              portrait crop fills the screen on phones. */}
-          <div style={{ ...layer, backgroundImage: "url(athlete-bg.jpg)", backgroundRepeat: "no-repeat", backgroundSize: animate ? "auto 118%" : "cover", backgroundPosition: animate ? "86% 24%" : "72% 20%", opacity: 0.6, filter: "saturate(0.95) brightness(0.82)", animation: "fadeIn 1.4s ease",
-            ...(animate ? { maskImage: "linear-gradient(90deg, transparent 52%, #000 76%)", WebkitMaskImage: "linear-gradient(90deg, transparent 52%, #000 76%)" } : {}) }} />
-          <div style={{ ...layer, background: "linear-gradient(90deg, rgba(5,6,13,0.85) 0%, rgba(5,6,13,0.45) 42%, rgba(5,6,13,0.15) 100%)" }} />
-          <div style={{ ...layer, background: "linear-gradient(180deg, rgba(5,6,13,0.3) 0%, transparent 28%, rgba(5,6,13,0.78) 96%)" }} />
-        </>
-      )}
-
       {/* Live Collage: personal moodboard behind every module's glass UI.
           Desktop wears the full seven-tile grid; mobile (animate=false)
           gets a single full-bleed crop — the seven-tile layout is authored

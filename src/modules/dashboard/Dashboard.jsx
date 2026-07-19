@@ -284,7 +284,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
             {mission.done}/{mission.total} {mission.label.toLowerCase()} · {topStreakDays > 0 ? `${topStreakDays}-day top streak` : "no streak yet"}
           </div>
         </StatCard>
-        <StatCard onClick={() => onNavigate("firm")}>
+        <StatCard onClick={() => onNavigate("firm:doctrine")}>
           <SectionLabel icon={<span style={{ fontSize: 12 }}>⚙️</span>}>The Machine · Stark</SectionLabel>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <span style={{ fontSize: 34, ...big, color: gate.met ? GR : T1 }}>{gate.have}<span style={{ fontSize: 15, color: T3 }}>/{gate.need}</span></span>
@@ -408,7 +408,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         )}
 
         {(incomeToday > 0 || fin.personalNetWorth !== 0) && (
-          <StatCard onClick={() => onNavigate("finance")}>
+          <StatCard onClick={() => onNavigate("firm:wealth")}>
             <SectionLabel icon={<DollarSign size={12} color={AC} />}>Finance</SectionLabel>
             <div style={{ fontSize: 28, ...big, color: fin.personalNetWorth >= 0 ? T1 : RE }}>KES {kes0(cuNet)}</div>
             <div style={{ fontSize: 10.5, color: T3, marginTop: 3 }}>Net worth</div>
@@ -417,7 +417,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         )}
 
         {isTradingDay && (
-          <StatCard onClick={() => onNavigate("trading")} style={{ borderColor: kz.active ? `${AC}44` : BD }}>
+          <StatCard onClick={() => onNavigate("firm:trading")} style={{ borderColor: kz.active ? `${AC}44` : BD }}>
             <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Live" : ""}</SectionLabel>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
               <span style={{ fontSize: 26, ...big, color: tMetrics.dailyPnl > 0 ? GR : tMetrics.dailyPnl < 0 ? RE : T1 }}>

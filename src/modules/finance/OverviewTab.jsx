@@ -37,6 +37,7 @@ export function OverviewTab({
           </div>
           <div style={{ fontSize: 10.5, color: T3 }}>Not included in Net Worth or Assets</div>
         </div>
+        <div style={{ fontSize: 10, color: T3, marginTop: -2, marginBottom: 6 }}>Combined withdrawal total shown in The Firm → Fleet</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 11, marginTop: 14 }}>
           {[
             { l: "Funded Size",    v: usd(tMetrics.fundedSize), c: T1 },
