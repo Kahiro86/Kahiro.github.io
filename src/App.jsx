@@ -20,12 +20,8 @@ import { getStats } from "./modules/trading/helpers.js";
 import { financeSummary } from "./modules/finance/summary.js";
 import { HABITS_DEF } from "./modules/dashboard/domains.js";
 import { Dashboard } from "./modules/dashboard/Dashboard.jsx";
-import { TradingModule } from "./modules/trading/TradingModule.jsx";
-import { AthleteOS } from "./modules/athlete/AthleteOS.jsx";
-import { FinanceOS } from "./modules/finance/FinanceOS.jsx";
 import { LifeOSModule } from "./modules/life/LifeOSModule.jsx";
 import { FaithOS } from "./modules/faith/FaithOS.jsx";
-import { MindOS } from "./modules/mind/MindOS.jsx";
 import { AnalyticsOS } from "./modules/analytics/AnalyticsOS.jsx";
 import { JourneyModule } from "./modules/journey/JourneyModule.jsx";
 import { FirmOS } from "./modules/firm/FirmOS.jsx";
@@ -44,8 +40,18 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [reviewSignal, setReviewSignal] = useState(0); // ticks to open Week in Review
   // Nav that also understands non-module destinations (e.g. the backup nudge
-  // links to "settings", which is a panel, not a module).
-  const navTo = useCallback((id) => { if (id === "settings") setShowSettings(true); else setModule(id); }, []);
+  // links to "settings", which is a panel, not a module) and compound ids
+  // like "firm:wealth" — a merged module's outer shell plus which of its
+  // inner groups a deep link should land on. navHint carries the group (a
+  // nonce forces the shell's effect to re-fire even when clicked twice in a
+  // row for the same group, same idea as reviewSignal below).
+  const [navHint, setNavHint] = useState(null); // { module, group, nonce }
+  const navTo = useCallback((id) => {
+    if (id === "settings") return setShowSettings(true);
+    const [base, group] = id.split(":");
+    setModule(base);
+    if (group) setNavHint({ module: base, group, nonce: Date.now() });
+  }, []);
 
   // App lock: gate the UI on open when a PIN is set, and re-lock after the
   // tab has been in the background for 5+ minutes.
@@ -102,17 +108,13 @@ export default function App() {
 
   const renderModule = () => {
     switch (module) {
-      case "dashboard": return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
-      case "firm": return <FirmOS />;
-      case "trading": return <TradingModule />;
-      case "athlete": return <AthleteOS />;
-      case "finance": return <FinanceOS />;
-      case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} />;
-      case "mind": return <MindOS />;
-      case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
+      case "dashboard": return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
+      case "firm": return <FirmOS navHint={navHint?.module === "firm" ? navHint : null} />;
+      case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} navHint={navHint?.module === "life" ? navHint : null} />;
+      case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} navHint={navHint?.module === "faith" ? navHint : null} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
-      case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={setModule} />;
-      default: return <Dashboard onNavigate={setModule} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
+      case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={navTo} />;
+      default: return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
     }
   };
 
@@ -240,7 +242,7 @@ export default function App() {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
-        <div key={module} style={{ flex: 1, overflowY: module === "trading" ? "hidden" : "auto", overflow: module === "trading" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
+        <div key={module} style={{ flex: 1, overflowY: module === "firm" ? "hidden" : "auto", overflow: module === "firm" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
       </div>

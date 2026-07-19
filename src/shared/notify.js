@@ -64,12 +64,19 @@ export const SNOOZES = [
 ];
 
 // Modules a reminder can deep-link to ("attach" targets — habit, goal,
-// workout, finance task, trading task all live inside their module).
+// workout, finance task, trading task all live inside their module). Compound
+// ids ("firm:wealth") land on a merged module's specific inner group instead
+// of always its default — see App.jsx's navTo/navHint.
 export const NAV_TARGETS = [
-  { id: "", l: "None" }, { id: "life", l: "Life OS / habit" }, { id: "athlete", l: "Athlete / workout" },
-  { id: "trading", l: "Trading task" }, { id: "finance", l: "Finance task" },
-  { id: "faith", l: "Faith" }, { id: "mind", l: "Mind" }, { id: "dashboard", l: "Command Center / goals" },
+  { id: "", l: "None" }, { id: "life", l: "Life OS / habit" }, { id: "life:athlete", l: "Athlete / workout" },
+  { id: "firm:trading", l: "Trading task" }, { id: "firm:wealth", l: "Finance task" },
+  { id: "faith", l: "Faith" }, { id: "faith:mind", l: "Mind" }, { id: "dashboard", l: "Command Center / goals" },
 ];
+
+// Reminders saved before the module merge may still carry a bare legacy id —
+// map those forward so they keep deep-linking correctly instead of silently
+// landing on the dashboard once the old id is gone from NAV_TARGETS.
+const LEGACY_NAV = { trading: "firm:trading", finance: "firm:wealth", athlete: "life:athlete", mind: "faith:mind" };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
@@ -99,7 +106,7 @@ export function sanitizeReminders(raw) {
       priority: PRIORITY_IDS.has(r.priority) ? r.priority : "medium",
       icon: typeof r.icon === "string" && r.icon ? r.icon.slice(0, 4) : "🔔",
       notes: typeof r.notes === "string" ? r.notes : "",
-      nav: typeof r.nav === "string" ? r.nav : "",
+      nav: typeof r.nav === "string" ? (LEGACY_NAV[r.nav] ?? r.nav) : "",
       paused: !!r.paused,
       createdAt: DATE_RE.test(r.createdAt) ? r.createdAt : localDateStr(),
     }));

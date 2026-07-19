@@ -52,7 +52,7 @@ export function buildDirective(deps = {}) {
   if (recent.length >= 3) {
     const gaps = recent.filter((t) => (+t.checklistScore || 0) < +t.checklistTotal).length;
     if (gaps >= 2) {
-      c.push({ score: 80, key: "discipline", icon: "🎯", tone: "urgent", nav: "trading",
+      c.push({ score: 80, key: "discipline", icon: "🎯", tone: "urgent", nav: "firm:trading",
         headline: "Tighten your trade discipline before the next entry.",
         why: `${gaps} of your last ${recent.length} trades skipped the checklist — that's where the edge leaks.` });
     }
@@ -61,7 +61,7 @@ export function buildDirective(deps = {}) {
   // 4. Trade reviews owed — the loss only teaches once it's written.
   const owed = pendingReviews(trades, sanitizeReviews(deps.reviews));
   if (owed.length) {
-    c.push({ score: 68, key: "reviews", icon: "📋", tone: "urgent", nav: "trading",
+    c.push({ score: 68, key: "reviews", icon: "📋", tone: "urgent", nav: "firm:trading",
       headline: `Close your ${owed.length} open trade review${owed.length > 1 ? "s" : ""}.`,
       why: "The edge compounds when you journal the loss, not just take it." });
   }
@@ -83,7 +83,7 @@ export function buildDirective(deps = {}) {
     const doneThisWeek = new Set(workouts.map((w) => w.date).filter((k) => weekDates.includes(k))).size;
     const behind = expected - doneThisWeek;
     if (behind >= 2) {
-      c.push({ score: 62 + behind * 4, key: "pace", icon: "🏋️", tone: "info", nav: "athlete",
+      c.push({ score: 62 + behind * 4, key: "pace", icon: "🏋️", tone: "info", nav: "life:athlete",
         headline: `You're ${behind} workout${behind > 1 ? "s" : ""} behind this week's plan.`,
         why: "Catch one back today before the gap sets the tone for the week." });
     }
@@ -92,7 +92,7 @@ export function buildDirective(deps = {}) {
   // 6. Bills due soon.
   const bills = billsDueSoon(deps.bills || []);
   if (bills.length) {
-    c.push({ score: 60, key: "bills", icon: "💰", tone: "info", nav: "finance",
+    c.push({ score: 60, key: "bills", icon: "💰", tone: "info", nav: "firm:wealth",
       headline: `Handle ${bills[0].name} before it's late.`,
       why: `${bills.length} bill${bills.length > 1 ? "s" : ""} due within 7 days.` });
   }
@@ -107,7 +107,7 @@ export function buildDirective(deps = {}) {
     const closedThisMonth = trades.filter((t) => t.status === "CLOSED" && (t.date || "").slice(0, 7) === curMonth).length;
     const reviewedMonth = sanitizeReviews(deps.reviews).some((r) => r.kind === "monthly" && r.period === curMonth);
     if (closedThisMonth > 0 && !reviewedMonth) {
-      c.push({ score: 55, key: "monthclose", icon: "🏛️", tone: "info", nav: "firm",
+      c.push({ score: 55, key: "monthclose", icon: "🏛️", tone: "info", nav: "firm:doctrine",
         headline: `Close the month clean — ${daysLeft === 0 ? "today's the last day" : `${daysLeft} day${daysLeft > 1 ? "s" : ""} left`}.`,
         why: "A withdrawal and a breach-free monthly review keep your scaling gate alive." });
     }

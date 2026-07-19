@@ -11,16 +11,12 @@ const BASE = "#000000";
 const M = (mode, mood) => ({ accent: A, accent2: A2, base: BASE, mode, mood });
 
 const MODULE_THEME = {
-  dashboard: { name: "Command",   ...M("network", "collage") },
-  trading:   { name: "Trading",   ...M("data",    "collage") },
-  finance:   { name: "Finance",   ...M("dust",    "collage") },
-  athlete:   { name: "Athlete",   ...M("embers",  "collage") },
-  life:      { name: "Life OS",   ...M("petals",  "collage") },
-  mind:      { name: "Mind",      ...M("network", "collage") },
-  faith:     { name: "Faith",     ...M("dust",    "collage") },
-  journey:   { name: "Journey",   ...M("embers",  "collage") },
-  analytics: { name: "Analytics", ...M("data",    "collage") },
-  firm:      { name: "The Firm",  ...M("network", "collage") },
+  dashboard: { name: "Command",     ...M("network", "collage") },
+  firm:      { name: "The Firm",    ...M("network", "collage") },
+  life:      { name: "Life OS",     ...M("petals",  "collage") },
+  faith:     { name: "Faith & Mind", ...M("dust",   "collage") },
+  journey:   { name: "Journey",     ...M("embers",  "collage") },
+  analytics: { name: "Analytics",   ...M("data",    "collage") },
 };
 
 export const themeFor = (module) => MODULE_THEME[module] || MODULE_THEME.dashboard;

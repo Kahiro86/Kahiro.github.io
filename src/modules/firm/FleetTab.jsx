@@ -87,6 +87,7 @@ export function FleetTab({ trades, rawBal, finance, reviews, withdrawals, config
             </div>
           ))}
         </div>
+        <div style={{ fontSize: 9.5, color: T3, marginTop: 8 }}>Includes Finance-logged withdrawals (Wealth → Net Worth)</div>
       </Card>
 
       {/* Locked slots */}

@@ -41,14 +41,14 @@ export function buildNudges(deps) {
   // 4. Trading reviews owed.
   const reviews = pendingReviews(deps.trades || [], sanitizeReviews(deps.reviews));
   if (reviews.length) {
-    out.push({ id: "reviews", icon: "📋", tone: "urgent", nav: "trading",
+    out.push({ id: "reviews", icon: "📋", tone: "urgent", nav: "firm:trading",
       text: `${reviews.length} trading review${reviews.length > 1 ? "s" : ""} pending — the loop closes when it's written.` });
   }
 
   // 5. Bills due soon.
   const bills = billsDueSoon(deps.bills || []);
   if (bills.length) {
-    out.push({ id: "bills", icon: "💰", tone: "urgent", nav: "finance",
+    out.push({ id: "bills", icon: "💰", tone: "urgent", nav: "firm:wealth",
       text: `${bills.length} bill${bills.length > 1 ? "s" : ""} due within 7 days — ${bills[0].name} first.` });
   }
 
@@ -72,7 +72,7 @@ export function buildNudges(deps) {
     return daysBetween(d.date, ds) >= 30;
   });
   if (dueDecisions.length) {
-    out.push({ id: "decisions", icon: "⚖️", tone: "info", nav: "mind",
+    out.push({ id: "decisions", icon: "⚖️", tone: "info", nav: "faith:mind",
       text: `${dueDecisions.length} decision${dueDecisions.length > 1 ? "s" : ""} ready for outcome review — judgment compounds when checked.` });
   }
 
@@ -99,13 +99,13 @@ export function buildNudges(deps) {
     const todayN = dayEntries(nlog, ds);
     const hour = new Date().getHours();
     if (!todayN.length && hour >= 12) {
-      out.push({ id: "nutrition", icon: "🍽️", tone: "info", nav: "athlete",
+      out.push({ id: "nutrition", icon: "🍽️", tone: "info", nav: "life:athlete",
         text: "Nothing logged in Nutrition yet — 10 seconds logs your last meal." });
     } else if (todayN.length && hour >= 18) {
       const nT = calcTargets(deps.nutritionProfile);
       const t = dayTotals(todayN);
       if (t.p < nT.p * 0.6) {
-        out.push({ id: "protein", icon: "🥩", tone: "info", nav: "athlete",
+        out.push({ id: "protein", icon: "🥩", tone: "info", nav: "life:athlete",
           text: `Protein is at ${Math.round(t.p)}g of ${nT.p}g with the day winding down — dinner decides.` });
       }
     }

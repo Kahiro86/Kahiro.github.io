@@ -13,11 +13,36 @@ if (!existsSync(distPath)) {
 }
 const EXE = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // [module id, sidebar label] pairs — we navigate by clicking the sidebar button.
+// Trading/Finance live inside "firm" now (Trading/Wealth/Doctrine groups);
+// Athlete lives inside "life" (Life/Athlete groups); Mind lives inside
+// "faith" (Faith/Mind groups) — see SUBTABS_MAP below for how each merged
+// module's inner groups get exercised.
 const MODULES = [
-  ["dashboard", "Command Center"], ["firm", "The Firm"], ["trading", "Trading OS"], ["athlete", "Athlete OS"],
-  ["finance", "Finance OS"], ["life", "Life OS"], ["mind", "Mind OS"], ["faith", "Faith OS"],
-  ["journey", "Journey"], ["analytics", "Analytics"],
+  ["dashboard", "Command Center"], ["firm", "The Firm"], ["life", "Life OS"],
+  ["faith", "Faith & Mind"], ["journey", "Journey"], ["analytics", "Analytics"],
 ];
+
+// Per-module sub-tab labels to click through. A merged module (firm/life/
+// faith) uses a grouped shape — click the outer group pill first, then each
+// of that group's own inner tabs; an unmerged module keeps the old flat
+// array (click each label directly).
+const SUBTABS_MAP = {
+  firm: [
+    { group: "Trading", subtabs: ["Analytics", "Risk Calc", "Playbook", "Reports", "Reviews", "Trade Log"] },
+    { group: "Wealth", subtabs: ["Budget", "Reports", "Net Worth"] },
+    { group: "Doctrine", subtabs: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"] },
+  ],
+  life: [
+    { group: "Life", subtabs: ["Habits", "Routines", "Insights", "Journal", "Projects", "Purity", "Today"] },
+    { group: "Athlete", subtabs: ["History", "Progress", "Body", "Nutrition", "This Week"] },
+  ],
+  faith: [
+    { group: "Faith", subtabs: ["Scripture", "Devotional", "The Walk"] },
+    { group: "Mind", subtabs: ["Notes", "Decisions", "Library"] },
+  ],
+  analytics: ["Trends", "Progression", "Reports"],
+  journey: ["Hall of Fame", "Goals"],
+};
 
 // Data scenarios: each seeds localStorage BEFORE the app boots.
 const SCENARIOS = {
@@ -210,22 +235,28 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
       };
       await check(mod);
 
-      // Exercise the sub-tabs where most rendering lives.
-      const SUBTABS = {
-        athlete: ["History", "Progress", "Body", "Nutrition", "This Week"],
-        trading: ["Analytics", "Risk Calc", "Playbook", "Reports", "Reviews", "Trade Log"],
-        life: ["Habits", "Routines", "Insights", "Journal", "Projects", "Purity", "Today"],
-        mind: ["Notes", "Decisions", "Library"],
-        faith: ["Scripture", "Devotional", "The Walk"],
-        finance: ["Budget", "Reports", "Net Worth"],
-        analytics: ["Trends", "Progression", "Reports"],
-        journey: ["Hall of Fame", "Goals"],
-        firm: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"],
-      }[mod] || [];
-      for (const st of SUBTABS) {
-        try { await page.locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }
-        await page.waitForTimeout(120);
-        await check(`${mod}/${st}`);
+      // Exercise the sub-tabs where most rendering lives. Grouped modules
+      // (firm/life/faith) click the outer group pill first, then each of
+      // that group's own inner tabs; flat modules click each label directly.
+      const entry = SUBTABS_MAP[mod] || [];
+      const grouped = entry.length > 0 && typeof entry[0] === "object";
+      if (grouped) {
+        for (const { group, subtabs } of entry) {
+          try { await page.locator(`button:has-text("${group}")`).first().click({ timeout: 900 }); } catch { continue; }
+          await page.waitForTimeout(120);
+          await check(`${mod}/${group}`);
+          for (const st of subtabs) {
+            try { await page.locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }
+            await page.waitForTimeout(120);
+            await check(`${mod}/${group}/${st}`);
+          }
+        }
+      } else {
+        for (const st of entry) {
+          try { await page.locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }
+          await page.waitForTimeout(120);
+          await check(`${mod}/${st}`);
+        }
       }
     }
     if (errors.length) {
