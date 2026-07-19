@@ -150,11 +150,13 @@ const SCENARIOS = {
       accounts: [null, { id: "bad" }, "junk", { firm: 123, size: -9 }],
     }),
     "architect:firm_covenant": JSON.stringify({ signedAt: 12345 }),
+    "architect:firm_campaign": JSON.stringify({ currentQuarter: "Z9Q9" }),
   },
   corruptFirmShape: {
     "architect:firm_withdrawals": JSON.stringify({ not: "an array" }),
     "architect:firm_config": JSON.stringify([1, 2, 3]),
     "architect:firm_covenant": JSON.stringify("nope"),
+    "architect:firm_campaign": JSON.stringify([1, 2, 3]),
   },
 };
 
@@ -178,6 +180,9 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
 
     await page.goto(BASE, { waitUntil: "load" });
     await page.waitForTimeout(400);
+    // Dismiss any auto-opened overlay (e.g. the Sunday Week-in-Review) so it
+    // can't intercept the navigation clicks below.
+    try { await page.keyboard.press("Escape"); await page.waitForTimeout(60); } catch {}
     const isMobile = vpName === "mobile";
 
     for (const [mod, label] of MODULES) {
@@ -215,7 +220,7 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
         finance: ["Budget", "Reports", "Net Worth"],
         analytics: ["Trends", "Progression", "Reports"],
         journey: ["Hall of Fame", "Goals"],
-        firm: ["Vault", "Gate", "Covenant", "Fleet"],
+        firm: ["Vault", "Gate", "Campaign", "Covenant", "Fleet"],
       }[mod] || [];
       for (const st of SUBTABS) {
         try { await page.locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }

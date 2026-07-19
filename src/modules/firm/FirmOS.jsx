@@ -6,7 +6,7 @@
 // real where the data exists and honestly empty where it doesn't — nothing
 // here is mocked. Phase 1: single funded account, locked fleet slots.
 import { useState } from "react";
-import { Building2, TrendingUp, Vault, Target, ScrollText } from "lucide-react";
+import { Building2, TrendingUp, Vault, Target, ScrollText, Map } from "lucide-react";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { Hydrating } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -14,6 +14,7 @@ import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { FleetTab } from "./FleetTab.jsx";
 import { VaultTab } from "./VaultTab.jsx";
 import { GateTab } from "./GateTab.jsx";
+import { CampaignTab } from "./CampaignTab.jsx";
 import { CovenantTab } from "./CovenantTab.jsx";
 
 const FI = "#E5484D"; // crimson accent (monochrome theme)
@@ -27,8 +28,9 @@ export function FirmOS() {
   const [withdrawals, setWithdrawals, wdLoaded] = useStorageState("firm_withdrawals", []);
   const [config, setConfig, cfgLoaded] = useStorageState("firm_config", null);
   const [covenant, setCovenant, covLoaded] = useStorageState("firm_covenant", null);
+  const [campaign, setCampaign, campLoaded] = useStorageState("firm_campaign", null);
 
-  const loaded = tradesLoaded && wdLoaded && cfgLoaded && covLoaded;
+  const loaded = tradesLoaded && wdLoaded && cfgLoaded && covLoaded && campLoaded;
   if (!loaded) return <Hydrating label="Opening the firm…" />;
 
   const shared = { trades, rawBal, finance, reviews, withdrawals, setWithdrawals, config, setConfig };
@@ -40,6 +42,7 @@ export function FirmOS() {
           { id: "fleet", l: "Fleet", i: TrendingUp },
           { id: "vault", l: "Vault", i: Vault },
           { id: "gate", l: "Gate", i: Target },
+          { id: "campaign", l: "Campaign", i: Map },
           { id: "covenant", l: "Covenant", i: ScrollText },
         ]}
         active={tab} onSelect={setTab}
@@ -49,6 +52,7 @@ export function FirmOS() {
         {tab === "fleet" && <FleetTab {...shared} />}
         {tab === "vault" && <VaultTab {...shared} />}
         {tab === "gate" && <GateTab {...shared} />}
+        {tab === "campaign" && <CampaignTab trades={trades} reviews={reviews} withdrawals={withdrawals} campaign={campaign} setCampaign={setCampaign} />}
         {tab === "covenant" && <CovenantTab covenant={covenant} setCovenant={setCovenant} />}
       </div>
     </div>

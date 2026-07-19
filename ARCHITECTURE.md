@@ -9,7 +9,7 @@ Supabase (per-user rows, RLS) driven entirely from the client.
 | Module | Folder | Accent | Purpose |
 |---|---|---|---|
 | Command Center | `dashboard/` | graphite | Today screen: welcome-back, time-aware greeting, weekly-focus review, ring, needs-attention, done-today, this-week strip, missions, agenda; trends folded |
-| The Firm | `firm/` | crimson | The One-Man-Firm doctrine: Fleet (real Account #1 + locked gated slots), Vault (MMF sum + editable Fleet Formula + withdrawal ledger), Gate (scaling proof, breach-resets), Covenant (Ten Laws, signed). Reads across trading + finance; single-account for now |
+| The Firm | `firm/` | crimson | The One-Man-Firm doctrine: Fleet (real Account #1 + locked gated slots), Vault (MMF sum + editable Fleet Formula + withdrawal ledger), Gate (scaling proof, breach-resets), Campaign (the 5-year, 20-quarter map — mission + gate per quarter, current position settable, live gate where known), Covenant (Ten Laws, signed). Reads across trading + finance; single-account for now |
 | Life OS | `life/` | green | Habits v2, routines, wellness, non-negotiables, journal, projects, purity |
 | Trading OS | `trading/` | cyan/red | Journal, checklist gate, analytics, risk, playbook, reviews |
 | Athlete OS | `athlete/` | blue | Workouts, templates, PRs, measurements, running progression |
@@ -58,7 +58,9 @@ were regrouped and reframed, not merged — each keeps its own depth.
   `firm.js` (The Firm doctrine engine — `fleetFormulaSplit`, `vaultBalance`,
   `scalingGate` with the "breach resets the count" rule anchored at the most
   recent full month, `sanitizeWithdrawals`/`sanitizeFirmConfig`/
-  `sanitizeCovenant`; stores `firm_withdrawals`/`firm_config`/`firm_covenant`),
+  `sanitizeCovenant`; stores `firm_withdrawals`/`firm_config`/`firm_covenant`)
+  and `freedomMath` (`freedom.js`); `campaign.js` (the 20-quarter `CAMPAIGN`
+  roadmap + `sanitizeCampaign`/`campaignProgress`; store `firm_campaign`),
   `kaizen.js` (incl. `dayGreetingLine`),
   `review.js` (weekly focus: `isoWeekKey`, `weakestArea`, `weekly_focus`
   store), `weekReview.js` (`buildWeekReview` — the Sunday "did I win?" recap:
