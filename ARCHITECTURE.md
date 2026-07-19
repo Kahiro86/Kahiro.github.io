@@ -67,8 +67,11 @@ were regrouped and reframed, not merged — each keeps its own depth.
   week score vs last week, habits held/slipped, honest wins, weakest area →
   next focus; surfaced by `WeeklyReview.jsx`'s `WeeklyReviewGate`, which
   auto-opens on Sundays until the coming week has a focus, and by a manual
-  button on the cockpit), module engines (`trading/reviews.js`,
-  `finance/bills.js`, `life/purity.js`).
+  button on the cockpit), module engines (`trading/reviews.js` — daily/weekly/
+  monthly period reviews plus an `incident` tier: `isBreach` flags a closed
+  trade that ran with the checklist broken, and `pendingReviews` owes a
+  named-enemy write-up (overtrading/revenge/emotional/money-focus) per recent
+  unreviewed breach; `finance/bills.js`, `life/purity.js`).
 - **Dates**: `dates.js` — `localDateStr`, `daysAgoStr`, `daysBetween`
   (local-timezone; noon-anchored). All date math goes through here.
 - **UI primitives**: `ui.jsx` (Card, SH, Chip, Meter, Empty, inputs,

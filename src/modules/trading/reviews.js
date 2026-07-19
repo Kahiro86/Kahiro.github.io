@@ -10,18 +10,34 @@ import { getStats, periodPnl, calcPnl } from "./helpers.js";
 export const sanitizeReviews = (raw) =>
   (Array.isArray(raw) ? raw : []).filter((r) =>
     r && typeof r === "object" && r.id &&
-    ["daily", "weekly", "monthly"].includes(r.kind) && typeof r.period === "string");
+    ["daily", "weekly", "monthly", "incident"].includes(r.kind) && typeof r.period === "string");
 
 export const newReview = (patch = {}) => ({
   id: `rv${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`,
-  kind: "daily",       // daily | weekly | monthly
-  period: "",          // daily: YYYY-MM-DD · weekly: week-start YYYY-MM-DD · monthly: YYYY-MM
+  kind: "daily",       // daily | weekly | monthly | incident
+  period: "",          // daily: YYYY-MM-DD · weekly: week-start · monthly: YYYY-MM · incident: trade date
   worked: "",
   fix: "",
   grade: "B",          // self-graded process discipline: A | B | C
+  // Incident-review fields (manual XI.4) — the mandatory write-up after a breach.
+  ref: "",             // the breaching trade's id
+  enemy: "",           // which named enemy: overtrading | revenge | emotional | moneyfocus | other
+  facts: "",           // what happened, facts only
+  variance: "",        // "variance" (valid setup that lost) | "drift" (outside the plan)
+  repair: "",          // the countermeasure that failed, and its repair
+  reentry: "",         // re-entry condition, specific and dated
   createdAt: localDateStr(),
   ...patch,
 });
+
+// The four named enemies from the failure ledger (manual III.2 / XI.4).
+export const ENEMIES = [
+  { id: "overtrading", label: "Overtrading",     desc: "A setup that wasn't there · trading outside the window" },
+  { id: "revenge",     label: "Revenge",         desc: "Re-entered to get it back · sized up after a loss" },
+  { id: "emotional",   label: "Emotional entry", desc: "A trade you can't name · tired, angry, or euphoric" },
+  { id: "moneyfocus",  label: "Money-focus",     desc: "Watching P&L mid-trade · trading the cash, not the setup" },
+  { id: "other",       label: "Other",           desc: "A different break — name it in the facts" },
+];
 
 const addDays = (ds, n) => { const d = new Date(`${ds}T12:00:00`); d.setDate(d.getDate() + n); return localDateStr(d); };
 const prevMonthOf = (today) => {
@@ -55,10 +71,28 @@ export function periodLabel(kind, period) {
 
 // What is owed right now. Nothing can be skipped — a pending review only
 // clears when it is written.
+// A breach: a closed, non-archived trade that ran with the checklist broken
+// (score below total) or skipped entirely — the drift the manual hunts.
+export const isBreach = (t) =>
+  t && t.status === "CLOSED" && !t.archived &&
+  ((+t.checklistTotal > 0 && (+t.checklistScore || 0) < +t.checklistTotal) || t.checklistSkipped === true);
+
 export function pendingReviews(trades, reviews, today = localDateStr()) {
   const rs = sanitizeReviews(reviews);
   const has = (kind, period) => rs.some((r) => r.kind === kind && r.period === period);
+  const hasIncident = (tradeId) => rs.some((r) => r.kind === "incident" && r.ref === tradeId);
   const out = [];
+
+  // Incidents first — a breach demands its write-up before anything else. Only
+  // recent, unreviewed breaches, newest first, capped so it can't flood.
+  const cutoff = (() => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() - 30); return localDateStr(d); })();
+  const breaches = (Array.isArray(trades) ? trades : [])
+    .filter((t) => isBreach(t) && t.id && (t.date || "") >= cutoff && !hasIncident(t.id))
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+    .slice(0, 3);
+  for (const t of breaches) {
+    out.push({ kind: "incident", period: t.date || today, ref: t.id, label: `${t.instrument || "Trade"} · ${t.outcome || "closed"}` });
+  }
 
   if (tradesInPeriod(trades, "daily", today).length && !has("daily", today)) {
     out.push({ kind: "daily", period: today });
