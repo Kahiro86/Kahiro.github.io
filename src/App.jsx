@@ -213,7 +213,7 @@ export default function App() {
 
         {aiOpen && (
           <div style={{ position: "fixed", inset: 0, zIndex: 44 }}>
-            <AIPanel mobile onClose={() => setAiOpen(false)} ctx={aiCtx} habits={habits} />
+            <AIPanel mobile onClose={() => setAiOpen(false)} onOpenSettings={() => { setShowSettings(true); setAiOpen(false); }} ctx={aiCtx} habits={habits} />
           </div>
         )}
         <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || aiOpen || mobileNavOpen} offsetRight={16} />
@@ -242,7 +242,7 @@ export default function App() {
         </div>
       </div>
 
-      {aiOpen && <AIPanel onClose={() => setAiOpen(false)} ctx={aiCtx} habits={habits} />}
+      {aiOpen && <AIPanel onClose={() => setAiOpen(false)} onOpenSettings={() => setShowSettings(true)} ctx={aiCtx} habits={habits} />}
       <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life"} offsetRight={aiOpen ? 364 : 24} />
       <XPCelebration xp={xpInfo} />
         <NotifTicker />

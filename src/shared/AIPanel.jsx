@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Cpu, X, Send } from "lucide-react";
-import { B1, BD, T1, T2, T3, GL, CY, PU, GR } from "./designTokens.js";
-import { callClaude } from "./anthropic.js";
+import { Cpu, X, Send, KeyRound } from "lucide-react";
+import { B1, BD, T1, T2, T3, GL, CY, PU, GR, AM } from "./designTokens.js";
+import { callClaude, getApiKey } from "./anthropic.js";
 import { KAIZEN_COACH_PREAMBLE } from "./kaizen.js";
 
 // Live cross-module snapshot — every number the model sees is real user data.
@@ -29,7 +29,11 @@ HYBRID ATHLETE: Concurrent training interference effect. Strength BEFORE cardio 
 SCHEDULE: Afternoon/evening shift 1PM-12:30AM EAT. Morning window after 9:30AM.
 STYLE: Calm, supportive, direct, data-driven. Reference real ICT concepts and training physiology, but favor the smallest sustainable step. Under 250 words. No filler, no guilt.`;
 
-export function AIPanel({ onClose, ctx, habits = [], mobile }) {
+export function AIPanel({ onClose, onOpenSettings, ctx, habits = [], mobile }) {
+  // Re-read on every render (cheap — one localStorage.getItem) so saving the
+  // key in Settings and returning here reflects immediately, with no event
+  // wiring needed between the two.
+  const hasKey = !!getApiKey();
   // The greeting is derived from live props (not stored), so it's always
   // current and never claims anything the data can't back.
   const t = ctx?.tradingStats || {};
@@ -47,7 +51,7 @@ export function AIPanel({ onClose, ctx, habits = [], mobile }) {
 
   const send = useCallback(async (text) => {
     const msg = (text || input).trim();
-    if (!msg || loading) return;
+    if (!msg || loading || !hasKey) return;
     setInput("");
     setMsgs((m) => [...m, { role: "user", content: msg }]);
     setLoading(true);
@@ -65,7 +69,7 @@ export function AIPanel({ onClose, ctx, habits = [], mobile }) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, msgs, ctx, habits, greeting]);
+  }, [input, loading, hasKey, msgs, ctx, habits, greeting]);
 
   const allMsgs = [{ role: "assistant", content: greeting }, ...msgs];
 
@@ -77,18 +81,35 @@ export function AIPanel({ onClose, ctx, habits = [], mobile }) {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 2.5 }}>KAHIRO</div>
-          <div style={{ fontSize: 10, color: GR, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-            <span style={{ width: 5, height: 5, background: GR, borderRadius: "50%", display: "inline-block", boxShadow: `0 0 6px ${GR}` }} />
-            LIVE DATA · KAIZEN COACH
+          <div style={{ fontSize: 10, color: hasKey ? GR : AM, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+            <span style={{ width: 5, height: 5, background: hasKey ? GR : AM, borderRadius: "50%", display: "inline-block", boxShadow: `0 0 6px ${hasKey ? GR : AM}` }} />
+            {hasKey ? "LIVE DATA · KAIZEN COACH" : "NOT ACTIVATED"}
           </div>
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", color: T3, cursor: "pointer", padding: 4, borderRadius: 6, display: "flex" }}>
           <X size={16} />
         </button>
       </div>
-      <div style={{ padding: "9px 12px", borderBottom: `1px solid ${BD}`, display: "flex", flexWrap: "wrap", gap: 5 }}>
+
+      {!hasKey && (
+        <div style={{ margin: "12px", padding: "13px 14px", background: `${AM}10`, border: `1px solid ${AM}33`, borderRadius: 11, display: "flex", flexDirection: "column", gap: 9 }}>
+          <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+            <KeyRound size={15} color={AM} style={{ flexShrink: 0, marginTop: 1 }} />
+            <div style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>
+              KAHIRO isn't activated yet. Add a personal Anthropic API key (stored only on this device) to enable the coach, AI reviews, and reports.
+            </div>
+          </div>
+          <button onClick={onOpenSettings}
+            style={{ alignSelf: "flex-start", background: `${AM}18`, border: `1px solid ${AM}55`, borderRadius: 9, padding: "7px 13px", color: AM, fontSize: 11.5, fontWeight: 700, cursor: onOpenSettings ? "pointer" : "default", fontFamily: "inherit" }}>
+            Add key in Settings
+          </button>
+        </div>
+      )}
+
+      <div style={{ padding: "9px 12px", borderBottom: `1px solid ${BD}`, display: "flex", flexWrap: "wrap", gap: 5, opacity: hasKey ? 1 : 0.4 }}>
         {QUICK.map((q) => (
-          <button key={q} onClick={() => send(q)} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 20, padding: "4px 10px", fontSize: 10, color: T2, cursor: "pointer", fontFamily: "inherit" }}>
+          <button key={q} onClick={() => send(q)} disabled={!hasKey}
+            style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 20, padding: "4px 10px", fontSize: 10, color: T2, cursor: hasKey ? "pointer" : "default", fontFamily: "inherit" }}>
             {q}
           </button>
         ))}
@@ -120,14 +141,15 @@ export function AIPanel({ onClose, ctx, habits = [], mobile }) {
         <input
           value={input} onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="Query KAHIRO..."
-          style={{ flex: 1, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "9px 12px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit" }}
+          placeholder={hasKey ? "Query KAHIRO..." : "Add an API key to chat"}
+          disabled={!hasKey}
+          style={{ flex: 1, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "9px 12px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", opacity: hasKey ? 1 : 0.5 }}
         />
         <button
-          onClick={() => send()} disabled={!input.trim() || loading}
-          style={{ width: 36, height: 36, borderRadius: 10, border: "none", cursor: input.trim() ? "pointer" : "default", background: input.trim() ? `linear-gradient(135deg,${CY},${PU})` : GL, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          onClick={() => send()} disabled={!input.trim() || loading || !hasKey}
+          style={{ width: 36, height: 36, borderRadius: 10, border: "none", cursor: input.trim() && hasKey ? "pointer" : "default", background: input.trim() && hasKey ? `linear-gradient(135deg,${CY},${PU})` : GL, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
         >
-          <Send size={14} color={input.trim() ? "#000" : T3} />
+          <Send size={14} color={input.trim() && hasKey ? "#000" : T3} />
         </button>
       </div>
     </div>
