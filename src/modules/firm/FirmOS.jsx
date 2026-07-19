@@ -7,6 +7,7 @@
 // here is mocked. Phase 1: single funded account, locked fleet slots.
 import { useState } from "react";
 import { Building2, TrendingUp, Vault, Target, ScrollText, Map, LifeBuoy } from "lucide-react";
+import { AC } from "../../shared/designTokens.js";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { Hydrating } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -18,7 +19,7 @@ import { CampaignTab } from "./CampaignTab.jsx";
 import { ContingencyTab } from "./ContingencyTab.jsx";
 import { CovenantTab } from "./CovenantTab.jsx";
 
-const FI = "#E5484D"; // crimson accent (monochrome theme)
+const FI = AC; // Nocturne cyan accent (monochrome theme)
 
 export function FirmOS() {
   const [tab, setTab] = useState("fleet");

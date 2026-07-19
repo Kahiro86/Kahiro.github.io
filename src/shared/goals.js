@@ -6,20 +6,21 @@
 // once and never removed, so the XP engine can derive rewards
 // idempotently from them (same guarantee as xp_achievements).
 import { localDateStr, daysBetween } from "./dates.js";
+import { AC } from "./designTokens.js";
 
 export const GOAL_AREAS = [
-  { id: "fitness",  label: "Fitness",      icon: "💪", color: "#E5484D" },
-  { id: "health",   label: "Health",       icon: "❤️", color: "#E5484D" },
-  { id: "trading",  label: "Trading",      icon: "📈", color: "#E5484D" },
-  { id: "finance",  label: "Finance",      icon: "💰", color: "#E5484D" },
-  { id: "learning", label: "Learning",     icon: "🎓", color: "#E5484D" },
-  { id: "career",   label: "Career",       icon: "💼", color: "#E5484D" },
-  { id: "faith",    label: "Spiritual",    icon: "⛪", color: "#E5484D" },
-  { id: "habit",    label: "Habit",        icon: "🔁", color: "#E5484D" },
-  { id: "reading",  label: "Reading",      icon: "📚", color: "#E5484D" },
-  { id: "social",   label: "Relationship", icon: "🤝", color: "#E5484D" },
-  { id: "growth",   label: "Personal",     icon: "🌱", color: "#E5484D" },
-  { id: "custom",   label: "Custom",       icon: "🎯", color: "#E5484D" },
+  { id: "fitness",  label: "Fitness",      icon: "💪", color: AC },
+  { id: "health",   label: "Health",       icon: "❤️", color: AC },
+  { id: "trading",  label: "Trading",      icon: "📈", color: AC },
+  { id: "finance",  label: "Finance",      icon: "💰", color: AC },
+  { id: "learning", label: "Learning",     icon: "🎓", color: AC },
+  { id: "career",   label: "Career",       icon: "💼", color: AC },
+  { id: "faith",    label: "Spiritual",    icon: "⛪", color: AC },
+  { id: "habit",    label: "Habit",        icon: "🔁", color: AC },
+  { id: "reading",  label: "Reading",      icon: "📚", color: AC },
+  { id: "social",   label: "Relationship", icon: "🤝", color: AC },
+  { id: "growth",   label: "Personal",     icon: "🌱", color: AC },
+  { id: "custom",   label: "Custom",       icon: "🎯", color: AC },
 ];
 export const areaOf = (id) => GOAL_AREAS.find((a) => a.id === id) || GOAL_AREAS[GOAL_AREAS.length - 1];
 

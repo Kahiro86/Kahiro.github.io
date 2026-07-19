@@ -18,7 +18,7 @@ import {
 } from "../../shared/goals.js";
 import { TITLES } from "../../shared/xpEngine.js";
 
-const JO = "#E5484D"; // crimson accent (monochrome theme)
+const JO = CY; // Nocturne cyan accent (monochrome theme)
 
 const fmtDate = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
 

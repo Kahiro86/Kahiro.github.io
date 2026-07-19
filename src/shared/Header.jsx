@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Flame, Cpu, Menu } from "lucide-react";
-import { BD, T1, T2, T3, GL, CY, PU, GR, AM, AC } from "./designTokens.js";
+import { BD, T1, T2, T3, GL, CY, PU, GR, AM, AC, AC2 } from "./designTokens.js";
 import { getActiveKillzone, getEATTimeStr } from "../modules/trading/timezone.js";
 import { NAV } from "./nav.js";
 import { Meter } from "./ui.jsx";
@@ -71,9 +71,9 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
         <div ref={xpRef} style={{ position: "relative" }}>
           <button onClick={() => setXpOpen((o) => !o)} aria-label="XP breakdown"
             title="Tap for today's XP breakdown"
-            style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 11px", background: xpOpen ? `${AC}1E` : `${AC}11`, borderRadius: 10, border: `1px solid ${xpOpen ? AC + "55" : AC + "22"}`, cursor: "pointer", fontFamily: "inherit" }}>
-            <span style={{ fontSize: 10.5, fontWeight: 800, color: AC, letterSpacing: 0.5 }}>LVL {level}</span>
-            <Meter pct={pctToNext} height={4} fill={`linear-gradient(90deg,${AC}88,${AC})`} style={{ width: 52 }} />
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 11px", background: xpOpen ? `${AC2}1E` : `${AC2}11`, borderRadius: 10, border: `1px solid ${xpOpen ? AC2 + "55" : AC2 + "22"}`, cursor: "pointer", fontFamily: "inherit" }}>
+            <span style={{ fontSize: 10.5, fontWeight: 800, color: AC2, letterSpacing: 0.5 }}>LVL {level}</span>
+            <Meter pct={pctToNext} height={4} fill={`linear-gradient(90deg,${AC2}88,${AC2})`} style={{ width: 52 }} />
             <span style={{ fontSize: 10, color: T3, fontFamily: "monospace" }}>{xp.toLocaleString()} XP</span>
           </button>
           {xpOpen && (
@@ -84,7 +84,7 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
                   <span style={{ fontSize: 11, fontWeight: 700, color: T1 }}>{xpTitle || `Level ${level}`}</span>
                   <span style={{ fontSize: 10, color: T3 }}>{toNext.toLocaleString()} XP to L{level + 1}</span>
                 </div>
-                <Meter pct={pctToNext} height={5} fill={`linear-gradient(90deg,${AC}77,${AC})`} glow={`${AC}44`} style={{ marginBottom: 12 }} />
+                <Meter pct={pctToNext} height={5} fill={`linear-gradient(90deg,${AC2}77,${AC2})`} glow={`${AC2}44`} style={{ marginBottom: 12 }} />
                 <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>Earned today{xpToday > 0 ? ` · +${xpToday.toLocaleString()} XP` : ""}</div>
                 {todayCats.length === 0 ? (
                   <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.5, padding: "2px 0 4px" }}>Nothing yet today. Complete a habit, log a workout or journal a line — every real action pays in.</div>

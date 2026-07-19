@@ -11,7 +11,7 @@ import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysBetween } from "../../shared/dates.js";
 
-const MI = "#E5484D"; // crimson accent (monochrome theme)
+const MI = CY; // Nocturne cyan accent (monochrome theme)
 const REVIEW_AFTER_DAYS = 30;
 
 const daysSince = (ds) => (ds ? daysBetween(ds, localDateStr()) : 0);

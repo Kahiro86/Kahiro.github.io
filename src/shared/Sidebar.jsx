@@ -1,5 +1,5 @@
 import { Cpu, ChevronRight, ChevronLeft, Settings, X } from "lucide-react";
-import { B1, BD, T1, T2, T3, GL, CY, PU } from "./designTokens.js";
+import { B1, BD, T1, T2, T3, GL, CY, PU, AC2 } from "./designTokens.js";
 import { NAV, NAV_SECTIONS } from "./nav.js";
 
 export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSettings, overlay }) {
@@ -12,7 +12,7 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
   return (
     <div style={{ width: isCollapsed ? 64 : 226, height: "100vh", background: "rgba(10,10,10,0.72)", backdropFilter: "blur(15px) saturate(125%)", WebkitBackdropFilter: "blur(15px) saturate(125%)", borderRight: `1px solid ${BD}`, display: "flex", flexDirection: "column", flexShrink: 0, transition: "width 0.28s cubic-bezier(0.4,0,0.2,1)", overflow: "hidden", ...overlayStyle }}>
       <div style={{ padding: "16px 13px", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", gap: 10, height: 60 }}>
-        <div style={{ width: 31, height: 31, borderRadius: 8, background: `linear-gradient(135deg,${CY},${PU})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 0 18px ${CY}44` }}>
+        <div style={{ width: 31, height: 31, borderRadius: 8, background: `linear-gradient(135deg,${CY},${AC2})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 0 18px ${CY}44` }}>
           <Cpu size={15} color="#000" />
         </div>
         {!isCollapsed && (

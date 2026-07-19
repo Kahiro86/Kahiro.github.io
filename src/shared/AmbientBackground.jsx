@@ -8,6 +8,21 @@ const hexToRgb = (h) => {
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// Live Collage: a personal moodboard of seven aspiration images, ken-burns
+// drifting behind the glass UI. Desktop shows the full positional grid;
+// mobile (animate=false) falls back to a single full-bleed crop, same
+// pattern as the athlete-bg mobile branch below.
+const COLLAGE = [
+  { src: "collage/bg-gt3.jpg",       top: "-4%", left: "-2%", w: "30%", h: "62%", pos: "center 20%", blend: "normal", opacity: 0.9,  dur: 44, delay: 0 },
+  { src: "collage/bg-blackhole.jpg", top: "-6%", left: "30%", w: "40%", h: "70%", pos: "center",     blend: "screen", opacity: 0.85, dur: 60, delay: -8 },
+  { src: "collage/bg-911rain.jpg",   top: "-3%", left: "70%", w: "34%", h: "58%", pos: "center 30%", blend: "normal", opacity: 0.9,  dur: 50, delay: -14 },
+  { src: "collage/bg-atlas.jpg",     top: "44%", left: "-3%", w: "26%", h: "60%", pos: "center",     blend: "screen", opacity: 0.8,  dur: 56, delay: -4 },
+  { src: "collage/bg-knight.jpg",    top: "40%", left: "22%", w: "30%", h: "64%", pos: "center 30%", blend: "normal", opacity: 0.82, dur: 48, delay: -20 },
+  { src: "collage/bg-castle.jpg",    top: "46%", left: "50%", w: "26%", h: "58%", pos: "center",     blend: "normal", opacity: 0.8,  dur: 62, delay: -30 },
+  { src: "collage/bg-faith.jpg",     top: "42%", left: "72%", w: "32%", h: "62%", pos: "center 25%", blend: "normal", opacity: 0.85, dur: 52, delay: -10 },
+];
+const EMBER_COLORS = ["#78C8FF", "#F0B429", "#E5643C", "#ffffff"]; // Nocturne cyan + gold + ember + white
+
 // Pre-render a soft glow disc to an offscreen canvas once, so the animation
 // loop only blits (drawImage) instead of allocating a radial gradient every
 // frame for every particle — the single biggest cost of the old version.
@@ -146,7 +161,7 @@ export function AmbientBackground({ module, animate = true }) {
       {/* Athlete OS wears the Spartan: a real image under heavy dark scrims so
           the glass UI keeps full contrast. Served as its own file (not inlined)
           to keep the app bundle lean; browsers cache it after the first view. */}
-      {module === "athlete" && (
+      {module === "athlete" && t.mood !== "collage" && (
         <>
           {/* Desktop (animate=true) anchors the full figure to the right; the
               portrait crop fills the screen on phones. */}
@@ -154,6 +169,46 @@ export function AmbientBackground({ module, animate = true }) {
             ...(animate ? { maskImage: "linear-gradient(90deg, transparent 52%, #000 76%)", WebkitMaskImage: "linear-gradient(90deg, transparent 52%, #000 76%)" } : {}) }} />
           <div style={{ ...layer, background: "linear-gradient(90deg, rgba(5,6,13,0.85) 0%, rgba(5,6,13,0.45) 42%, rgba(5,6,13,0.15) 100%)" }} />
           <div style={{ ...layer, background: "linear-gradient(180deg, rgba(5,6,13,0.3) 0%, transparent 28%, rgba(5,6,13,0.78) 96%)" }} />
+        </>
+      )}
+
+      {/* Live Collage: personal moodboard behind every module's glass UI.
+          Desktop wears the full seven-tile grid; mobile (animate=false)
+          gets a single full-bleed crop — the seven-tile layout is authored
+          for wide canvases and doesn't read on narrow/tall viewports. */}
+      {t.mood === "collage" && (
+        <>
+          {animate ? (
+            COLLAGE.map((c, i) => (
+              <div key={i} style={{
+                position: "absolute", top: c.top, left: c.left, width: c.w, height: c.h,
+                overflow: "hidden", borderRadius: 10,
+                filter: "grayscale(0.4) contrast(1.12) brightness(0.9)",
+                mixBlendMode: c.blend, opacity: c.opacity,
+                boxShadow: "0 20px 60px -20px rgba(0,0,0,0.9)", pointerEvents: "none",
+              }}>
+                <div style={{
+                  position: "absolute", inset: "-8%",
+                  backgroundImage: `url(${c.src})`, backgroundSize: "cover", backgroundPosition: c.pos,
+                  animation: anim(`kenburns ${c.dur}s ease-in-out ${c.delay}s infinite alternate`),
+                }} />
+              </div>
+            ))
+          ) : (
+            <div style={{ ...layer, backgroundImage: `url(${COLLAGE[0].src})`, backgroundSize: "cover", backgroundPosition: "center 22%", filter: "grayscale(0.4) contrast(1.12) brightness(0.9)", opacity: 0.9 }} />
+          )}
+          {doAnim && Array.from({ length: 18 }).map((_, i) => (
+            <div key={`e${i}`} style={{
+              position: "absolute", left: `${(i * 53 + 6) % 98}%`, bottom: -10,
+              width: 2 + (i % 3), height: 2 + (i % 3), borderRadius: "50%",
+              background: EMBER_COLORS[i % EMBER_COLORS.length],
+              boxShadow: `0 0 6px ${EMBER_COLORS[i % EMBER_COLORS.length]}`,
+              opacity: 0, pointerEvents: "none",
+              animation: `emberRise ${9 + (i % 7)}s linear ${(i % 9) * 1.2}s infinite`,
+            }} />
+          ))}
+          <div style={{ ...layer, background: "linear-gradient(180deg, rgba(4,5,9,0.5) 0%, rgba(4,5,9,0.62) 55%, rgba(4,5,9,0.8) 100%)" }} />
+          <div style={{ ...layer, background: "radial-gradient(130% 100% at 50% 20%, transparent 34%, rgba(0,0,0,0.6) 100%)" }} />
         </>
       )}
 

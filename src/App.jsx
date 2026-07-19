@@ -149,6 +149,9 @@ export default function App() {
       @keyframes ambientRays { 0% { opacity: 0.35; } 100% { opacity: 0.62; } }
       @keyframes ambientSpin { to { transform: rotate(360deg); } }
       @keyframes ambientSpinRev { to { transform: rotate(-360deg); } }
+      /* live collage moodboard: slow ken-burns drift + rising embers */
+      @keyframes kenburns { 0% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.14) translate(-2%,-2%); } }
+      @keyframes emberRise { 0% { transform: translateY(0) translateX(0); opacity: 0; } 12% { opacity: 0.9; } 80% { opacity: 0.7; } 100% { transform: translateY(-92vh) translateX(3vw); opacity: 0; } }
       @keyframes purityGlow { 0% { box-shadow: 0 0 0 rgba(140,224,166,0); } 30% { box-shadow: 0 0 34px rgba(140,224,166,0.35); } 100% { box-shadow: 0 0 0 rgba(140,224,166,0); } }
       @keyframes xpPill { 0% { opacity: 0; transform: translateY(8px) scale(0.94); } 12% { opacity: 1; transform: none; } 82% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
       @keyframes levelUp { 0% { opacity: 0; transform: scale(0.55); } 16% { opacity: 1; transform: scale(1.07); } 28% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px) scale(0.98); } }
