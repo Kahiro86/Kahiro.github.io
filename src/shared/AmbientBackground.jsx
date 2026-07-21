@@ -193,8 +193,10 @@ export function AmbientBackground({ module, animate = true }) {
               animation: `emberRise ${9 + (i % 7)}s linear ${(i % 9) * 1.2}s infinite`,
             }} />
           ))}
-          <div style={{ ...layer, background: "linear-gradient(180deg, rgba(4,5,9,0.5) 0%, rgba(4,5,9,0.62) 55%, rgba(4,5,9,0.8) 100%)" }} />
-          <div style={{ ...layer, background: "radial-gradient(130% 100% at 50% 20%, transparent 34%, rgba(0,0,0,0.6) 100%)" }} />
+          {/* Scrim tuned so the artwork stays atmospheric at the edges but
+              never fights body text in the content column. */}
+          <div style={{ ...layer, background: "linear-gradient(180deg, rgba(4,5,9,0.6) 0%, rgba(4,5,9,0.72) 55%, rgba(4,5,9,0.86) 100%)" }} />
+          <div style={{ ...layer, background: "radial-gradient(130% 100% at 50% 20%, transparent 30%, rgba(0,0,0,0.68) 100%)" }} />
         </>
       )}
 

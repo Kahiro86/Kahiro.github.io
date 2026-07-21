@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter, Empty } from "../../shared/ui.jsx";
-import { DatePicker } from "../../shared/DatePicker.jsx";
+import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -36,6 +36,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const [insightHabit, setInsightHabit] = useState(null);
   const [journal, setJournal] = useState("");
   const [journalDs, setJournalDs] = useState(() => today());
+  const [editingEntryId, setEditingEntryId] = useState(null);
   const [rawEntries, setEntries] = useStorageState("journal_entries", []);
   const [rawProjects, setProjects] = useStorageState("life_projects", []);
   const [projectDraft, setProjectDraft] = useState("");
@@ -49,8 +50,13 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
       .map((r) => (Array.isArray(r.habitIds) ? r : { ...r, habitIds: [] })),
     [rawRoutines]
   );
+  // Sorted newest-first by the day the entry is *about* — backdated entries
+  // slot into their true chronological place instead of the top of the list.
   const entries = useMemo(
-    () => (Array.isArray(rawEntries) ? rawEntries : []).filter((e) => e && typeof e === "object" && e.id),
+    () => (Array.isArray(rawEntries) ? rawEntries : [])
+      .filter((e) => e && typeof e === "object" && e.id)
+      .slice()
+      .sort((a, b) => ((b.date || "").slice(0, 10)).localeCompare((a.date || "").slice(0, 10))),
     [rawEntries]
   );
   const projects = useMemo(
@@ -134,13 +140,31 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   };
   const saveEntry = () => {
     if (!journal.trim()) return;
-    setEntries((prev) => [{ id: `j${Date.now()}`, date: journalDs, text: journal }, ...prev]);
+    if (editingEntryId) {
+      setEntries((prev) => (Array.isArray(prev) ? prev : []).map((e) =>
+        e?.id === editingEntryId ? { ...e, date: journalDs, text: journal, editedAt: new Date().toISOString() } : e));
+      toast("Reflection updated ✍️", { tone: "success", duration: 2500 });
+    } else {
+      setEntries((prev) => [{ id: `j${Date.now()}`, date: journalDs, text: journal }, ...prev]);
+      toast("Reflection saved 🌱", { tone: "success", duration: 2500 });
+    }
+    setEditingEntryId(null);
     setJournalDs(today());
     setJournal("");
-    toast("Reflection saved 🌱", { tone: "success", duration: 2500 });
+  };
+  const startEditEntry = (e) => {
+    setEditingEntryId(e.id);
+    setJournal(e.text || "");
+    setJournalDs((e.date || today()).slice(0, 10));
+  };
+  const cancelEditEntry = () => {
+    setEditingEntryId(null);
+    setJournal("");
+    setJournalDs(today());
   };
   const deleteEntry = (id) => {
     const entry = entries.find((e) => e.id === id);
+    if (id === editingEntryId) cancelEditEntry();
     setEntries((prev) => prev.filter((e) => e.id !== id));
     toast("Entry deleted", { action: "Undo", onAction: () => setEntries((prev) => [entry, ...prev]), tone: "danger" });
   };
@@ -600,7 +624,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
         {loaded && tab === "journal" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
             <Card style={{ padding: "20px" }}>
-              <SH title="Daily Reflection" />
+              <SH title={editingEntryId ? "Edit Reflection" : "Daily Reflection"} />
               <DatePicker value={journalDs} onChange={setJournalDs} />
               <div style={{ fontSize: 11.5, color: T3, margin: "10px 0", lineHeight: 1.6 }}>Reflect to learn, not to judge. Tap a prompt to begin.</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 11 }}>
@@ -613,16 +637,27 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               </div>
               <textarea value={journal} onChange={(e) => setJournal(e.target.value)} placeholder="One honest sentence is enough. What improved today?"
                 style={{ width: "100%", minHeight: 110, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px", fontSize: 13, color: T1, lineHeight: 1.7, resize: "none", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
-              <button onClick={saveEntry} style={{ marginTop: 9, width: "100%", padding: "9px", background: `linear-gradient(135deg,${CY}22,${PU}22)`, border: `1px solid ${CY}44`, borderRadius: 10, color: CY, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                Save Entry
-              </button>
+              <div style={{ display: "flex", gap: 8, marginTop: 9 }}>
+                <button onClick={saveEntry} style={{ flex: 1, padding: "9px", background: `linear-gradient(135deg,${CY}22,${PU}22)`, border: `1px solid ${CY}44`, borderRadius: 10, color: CY, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  {editingEntryId ? "Update Entry" : "Save Entry"}
+                </button>
+                {editingEntryId && (
+                  <button onClick={cancelEditEntry} style={{ padding: "9px 16px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, color: T2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                    Cancel
+                  </button>
+                )}
+              </div>
             </Card>
             {entries.map((e) => (
-              <div key={e.id} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${BD}`, display: "flex", gap: 8 }}>
+              <div key={e.id} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${e.id === editingEntryId ? CY + "55" : BD}`, display: "flex", gap: 8 }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>{new Date(e.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
+                  <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>
+                    {relativeDateLabel((e.date || "").slice(0, 10) || today())}
+                    {e.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}
+                  </div>
                   <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{e.text}</div>
                 </div>
+                <button onClick={() => startEditEntry(e)} title="Edit entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Pencil size={11} /></button>
                 <button onClick={() => deleteEntry(e.id)} title="Delete entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Trash2 size={11} /></button>
               </div>
             ))}

@@ -29,14 +29,17 @@ import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
 import { AIPanel } from "./shared/AIPanel.jsx";
 import { SettingsPanel } from "./shared/SettingsPanel.jsx";
+import { getApiKey } from "./shared/anthropic.js";
 
 export default function App() {
   const isMobile = useIsMobile();
   const [module, setModule] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  // AI panel starts open on desktop, closed on phones (it's a full overlay there).
-  const [aiOpen, setAiOpen] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 820 : true));
+  // AI panel starts open on desktop only once the coach is activated (an API
+  // key exists) — a fresh install shouldn't burn a quarter of the screen on a
+  // "not activated" notice. Closed on phones either way (full overlay there).
+  const [aiOpen, setAiOpen] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 820 && !!getApiKey() : false));
   const [showSettings, setShowSettings] = useState(false);
   const [reviewSignal, setReviewSignal] = useState(0); // ticks to open Week in Review
   // Nav that also understands non-module destinations (e.g. the backup nudge
