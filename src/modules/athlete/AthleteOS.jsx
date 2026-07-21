@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler, Utensils } from "lucide-react";
+import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler, Utensils, Pencil } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
@@ -30,11 +30,12 @@ export function AthleteOS() {
   const toast = useToast();
   const startLog = (initial = null) => { setLogInitial(initial); setView("log"); };
   const saveWorkout = (w) => {
-    setWorkouts((prev) => [w, ...prev]);
+    setWorkouts((prev) => (prev.some((x) => x.id === w.id) ? prev.map((x) => (x.id === w.id ? w : x)) : [w, ...prev]));
     setLogInitial(null);
     setView("week");
-    toast("Workout logged 💪", { tone: "success", duration: 2500 });
+    toast(w.editedAt ? "Workout updated" : "Workout logged 💪", { tone: "success", duration: 2500 });
   };
+  const editWorkout = (w) => startLog(w);
   const deleteWorkout = (id) => {
     const w = workouts.find((x) => x.id === id);
     setWorkouts((prev) => prev.filter((x) => x.id !== id));
@@ -315,6 +316,7 @@ export function AthleteOS() {
                             <div style={{ fontSize: 9.5, color: T3 }}>volume</div>
                           </div>
                         )}
+                        <button onClick={() => editWorkout(w)} title="Edit" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 7px", cursor: "pointer", color: T2, display: "flex" }}><Pencil size={12} /></button>
                         <button onClick={() => duplicateWorkout(w)} title="Repeat this workout" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 7px", cursor: "pointer", color: CY, display: "flex" }}><Copy size={12} /></button>
                         <button onClick={() => deleteWorkout(w.id)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
                       </div>

@@ -1,15 +1,16 @@
 import { Check, Flame } from "lucide-react";
 import { BD, T1, T2, T3, GL, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH } from "../../shared/ui.jsx";
-import { daysAgoStr, localDateStr } from "../../shared/dates.js";
+import { localDateStr, shiftDateStr } from "../../shared/dates.js";
 import { isDone, isSkipped, currentStreak, rangeStats } from "../../shared/habitEngine.js";
 
 // The lines you don't cross. One tap each, a 7-day dot trail that makes a
 // missed day impossible to ignore, and weekly consistency at a glance.
-export function NonNegotiables({ habits, onTap }) {
+// `ds` defaults to today but the caller can pass a past date when the user
+// is viewing/backdating a prior day — the 7-day trail shifts with it.
+export function NonNegotiables({ habits, onTap, ds = localDateStr() }) {
   if (!habits.length) return null;
-  const ds = localDateStr();
-  const week = Array.from({ length: 7 }, (_, i) => daysAgoStr(6 - i)); // oldest→today
+  const week = Array.from({ length: 7 }, (_, i) => shiftDateStr(ds, i - 6)); // oldest→ds
   const doneToday = habits.filter((h) => isDone(h, ds)).length;
 
   return (

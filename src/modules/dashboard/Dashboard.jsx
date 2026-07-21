@@ -8,7 +8,7 @@ import {
   Target, AlertTriangle, Flame, Trophy, CalendarClock, DollarSign,
   TrendingUp, HeartPulse, ChevronRight, Check,
 } from "lucide-react";
-import { BD, T1, T2, T3, GL, B2, AC, GR, AM, RE } from "../../shared/designTokens.js";
+import { BD, T1, T2, T3, GL, B2, AC, AC2, GR, AM, RE } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
 import { Ring } from "../../shared/charts.jsx";
 import { useCountUp } from "../../shared/useCountUp.js";
@@ -32,6 +32,7 @@ import {
 } from "../athlete/nutrition.js";
 import { sanitizePurity } from "../life/purity.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
+import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
 
 const kes0 = (n) => Math.round(+n || 0).toLocaleString();
 // isRestDay comes from directive.js (indexed against WEEK_PLAN, MON→SUN) —
@@ -75,13 +76,26 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [decisions] = useStorageState("mind_decisions", []);
   const [firmConfig] = useStorageState("firm_config", null);
   const [firmWithdrawals] = useStorageState("firm_withdrawals", []);
+  const [logins] = useStorageState("xp_logins", {});
+  const { start: consistencyStart } = useConsistencyStart(logins);
+  // `xp`'s memo only recomputes when a watched store changes — with zero
+  // interaction across a passive midnight the Day N counter would otherwise
+  // freeze on yesterday's value, so it gets the same live tick as the clock.
+  const [nowDs, setNowDs] = useState(localDateStr);
 
   useEffect(() => {
-    const t = setInterval(() => { setKz(getActiveKillzone()); setEatTime(getEATTimeStr()); }, 30000);
+    const t = setInterval(() => { setKz(getActiveKillzone()); setEatTime(getEATTimeStr()); setNowDs(localDateStr()); }, 30000);
     return () => clearInterval(t);
   }, []);
 
   const ds = localDateStr();
+  const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, nowDs), [xp.byDay, consistencyStart, nowDs]);
+  const totalAct = totalActivities(xp.stats);
+  const consistencySentence = cs.currentStreak === 0
+    ? "A new day is always available. Show up once — that's the whole game."
+    : cs.currentStreak >= cs.longestStreak && cs.currentStreak >= 7
+    ? `${cs.currentStreak} days and counting — this is your longest run yet.`
+    : "Progress continues. Recovery matters more than perfection.";
   const active = useMemo(() => habitsV2.filter((h) => !h.archived && !h.paused), [habitsV2]);
   const entriesSafe = useMemo(() => (Array.isArray(entries) ? entries : []).filter((e) => e && e.id), [entries]);
   const nutrition = useMemo(() => sanitizeNutrition(nutritionLog), [nutritionLog]);
@@ -126,7 +140,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   // ── ⚠️ PRIORITY ALERTS: the urgent nudges only, max 3 (minus any the
   //    directive already voices, so the coach line never echoes the list) ──
   const alerts = useMemo(() => {
-    const all = buildNudges({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, verses, decisions, purity, nutrition: nutritionLog, nutritionProfile });
+    const all = buildNudges({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, verses, decisions, purity, nutrition: nutritionLog, nutritionProfile, entries: entriesSafe });
     const hide = directive.suppress || [];
     return all.filter((n) => n.tone === "urgent" && !hide.some((p) => n.id.startsWith(p))).slice(0, 3);
   }, [habitsV2, trades, rawReviews, finance.bills, verses, decisions, purity, nutritionLog, nutritionProfile, directive]);
@@ -240,6 +254,38 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
   return (
     <div className="cockpit" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 1080, margin: "0 auto" }}>
+
+      {/* ── 🗓️ YEAR OF CONSISTENCY — the app-wide showing-up counter ── */}
+      <Card style={{ padding: "18px 22px", background: "linear-gradient(110deg,#161616,#0C0C0C)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: AC2, fontWeight: 700 }}>Year of Consistency</span>
+            {cs.cycle > 1 && <span style={{ fontSize: 9.5, color: T3 }}>· Cycle {cs.cycle}</span>}
+          </div>
+          <span style={{ fontSize: 11, color: T3 }}>{cs.daysRemaining} days left this cycle</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
+          <span style={{ fontSize: 13, color: T3 }}>DAY</span>
+          <span style={{ fontSize: 44, fontWeight: 900, color: T1, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1 }}>{cs.dayInCycle}</span>
+          <span style={{ fontSize: 13, color: T3 }}>OF 365</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(108px,1fr))", gap: 12, marginBottom: 14 }}>
+          {[
+            ["Current streak", `${cs.currentStreak}d`, AC],
+            ["Longest streak", `${cs.longestStreak}d`, AC2],
+            ["Consistency rate", `${cs.consistencyRate}%`, GR],
+            ["Total activities", totalAct.toLocaleString(), T1],
+            ["This week", `${cs.weeklyCompletion}%`, T1],
+            ["This month", `${cs.monthlyCompletion}%`, T1],
+          ].map(([l, v, c]) => (
+            <div key={l}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: c, fontFamily: "'JetBrains Mono',monospace" }}>{v}</div>
+              <div style={{ fontSize: 9, color: T3, letterSpacing: 0.5, textTransform: "uppercase", marginTop: 2 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: T2, lineHeight: 1.5 }}>{consistencySentence}</div>
+      </Card>
 
       {/* ── 🎯 THE MISSION — the freedom north star, above everything ── */}
       <Card style={{ padding: "18px 22px", background: "linear-gradient(110deg,#161616,#0C0C0C)", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>

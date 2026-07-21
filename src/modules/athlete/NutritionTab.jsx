@@ -7,6 +7,7 @@ import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveCo
 import { Plus, Trash2, Star, Search, Copy, ChevronUp, Flame } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty } from "../../shared/ui.jsx";
+import { DatePicker } from "../../shared/DatePicker.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { Ring } from "../../shared/charts.jsx";
@@ -34,13 +35,18 @@ export function NutritionTab() {
   const [rawHabits] = useStorageState("habits", []);
   const toast = useToast();
   const today = localDateStr();
+  // The log is backdatable — `logDs` is the day being viewed/logged (defaults
+  // to today, moved via the DatePicker). Healthy-streak tracking still
+  // anchors on the real `today`, since a streak is inherently about what's
+  // true right now, not whichever day the user happens to be viewing.
+  const [logDs, setLogDs] = useState(() => localDateStr());
 
   const log = useMemo(() => sanitizeNutrition(rawLog), [rawLog]);
   const customFoods = useMemo(() => sanitizeFoods(rawFoods), [rawFoods]);
   const profile = useMemo(() => sanitizeProfile(rawProfile), [rawProfile]);
   const targets = useMemo(() => calcTargets(profile), [profile]);
 
-  const entries = dayEntries(log, today);
+  const entries = dayEntries(log, logDs);
   const totals = useMemo(() => dayTotals(entries), [entries]);
   const score = nutritionScore(totals, targets);
   const suggestions = useMemo(() => qualitySuggestions(totals, targets, entries), [totals, targets, entries]);
@@ -53,8 +59,8 @@ export function NutritionTab() {
   const water = useMemo(() => {
     const h = migrateHabits(rawHabits).find((x) => x && !x.archived && isWellness(x) && /hydra|water/i.test(x.name || ""));
     if (!h) return null;
-    return { done: valueOn(h, today), target: h.target || 2, unit: h.unit || "L" };
-  }, [rawHabits, today]);
+    return { done: valueOn(h, logDs), target: h.target || 2, unit: h.unit || "L" };
+  }, [rawHabits, logDs]);
 
   // Recents: unique foods from the last 14 days, most recent first.
   const recents = useMemo(() => {
@@ -78,17 +84,17 @@ export function NutritionTab() {
     return out;
   });
   const addEntry = (entry) => {
-    writeDay(today, (list) => [...list, entry]);
+    writeDay(logDs, (list) => [...list, entry]);
     toast(`${entry.name} logged · ${Math.round(entry.n.kcal || 0)} kcal`, { tone: "success", duration: 2200 });
   };
   const removeEntry = (id) => {
     const e = entries.find((x) => x.id === id);
-    writeDay(today, (list) => list.filter((x) => x.id !== id));
-    if (e) toast(`${e.name} removed`, { action: "Undo", onAction: () => writeDay(today, (l) => [...l, e]), tone: "danger" });
+    writeDay(logDs, (list) => list.filter((x) => x.id !== id));
+    if (e) toast(`${e.name} removed`, { action: "Undo", onAction: () => writeDay(logDs, (l) => [...l, e]), tone: "danger" });
   };
   // Edit grams → nutrients recompute from the source food when known,
   // otherwise scale the stored values proportionally.
-  const setGrams = (id, grams) => writeDay(today, (list) => list.map((e) => {
+  const setGrams = (id, grams) => writeDay(logDs, (list) => list.map((e) => {
     if (e.id !== id) return e;
     const g = Math.max(0, +grams || 0);
     const src = allFoods.find((f) => f.name === e.name);
@@ -105,7 +111,7 @@ export function NutritionTab() {
   const copyYesterday = () => {
     const prev = dayEntries(log, daysAgoStr(1));
     if (!prev.length) { toast("Nothing logged yesterday", { tone: "info" }); return; }
-    writeDay(today, (list) => [...list, ...prev.map((e) => ({ ...e, id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}` }))]);
+    writeDay(logDs, (list) => [...list, ...prev.map((e) => ({ ...e, id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}` }))]);
     toast(`Copied ${prev.length} item${prev.length > 1 ? "s" : ""} from yesterday`, { tone: "success" });
   };
   const toggleFav = (foodId) => setProfile((prev) => {
@@ -224,6 +230,7 @@ export function NutritionTab() {
 
   return (
     <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 900 }}>
+      <DatePicker value={logDs} onChange={setLogDs} />
       {/* ── Daily dashboard ── */}
       <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${GR}08,transparent)` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>

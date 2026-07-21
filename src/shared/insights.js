@@ -1,14 +1,14 @@
 // ── Smart assistance (Kaizen phase 14) — no AI, just honest rules ────
 // Every nudge answers "what should I do now?", links to where to do it,
 // and celebrates real milestones. Quiet by design: only what's true today.
-import { localDateStr, daysBetween } from "./dates.js";
+import { localDateStr, daysAgoStr, daysBetween } from "./dates.js";
 import { isScheduled, isDone, isSkipped, isNonNeg, isWeekly, currentStreak, rangeStats } from "./habitEngine.js";
 import { pendingReviews, sanitizeReviews } from "../modules/trading/reviews.js";
 import { billsDueSoon } from "../modules/finance/bills.js";
 import { sanitizePurity, statusOn } from "../modules/life/purity.js";
 import { sanitizeNutrition, dayTotals, calcTargets, dayEntries } from "../modules/athlete/nutrition.js";
 
-// deps: { habits, trades, reviews, bills, verses, decisions, purity, nutrition, nutritionProfile }
+// deps: { habits, trades, reviews, bills, verses, decisions, purity, nutrition, nutritionProfile, entries }
 export function buildNudges(deps) {
   const ds = localDateStr();
   const habits = (deps.habits || []).filter((h) => h && !h.archived && !h.paused);
@@ -98,9 +98,15 @@ export function buildNudges(deps) {
   if (Object.keys(nlog).length) {
     const todayN = dayEntries(nlog, ds);
     const hour = new Date().getHours();
+    const ydsN = daysAgoStr(1);
     if (!todayN.length && hour >= 12) {
       out.push({ id: "nutrition", icon: "🍽️", tone: "info", nav: "life:athlete",
         text: "Nothing logged in Nutrition yet — 10 seconds logs your last meal." });
+    } else if (!dayEntries(nlog, ydsN).length) {
+      // Yesterday's gap only surfaces once today isn't also empty — one
+      // nutrition nudge at a time, never both stacked.
+      out.push({ id: "yesterday_nutrition", icon: "🍽️", tone: "info", nav: "life:athlete",
+        text: "Yesterday's nutrition log is empty — log it now, backdated to Yesterday." });
     } else if (todayN.length && hour >= 18) {
       const nT = calcTargets(deps.nutritionProfile);
       const t = dayTotals(todayN);
@@ -138,6 +144,23 @@ export function buildNudges(deps) {
       out.push({ id: "focus", icon: "🎯", tone: "info", nav: "life",
         text: `This week's focus: ${ranked[0].cat} (${ranked[0].pct}% last 30d). One small rep a day.` });
     }
+  }
+
+  // 12. Yesterday looks incomplete — now that Habits and Journal both
+  // support backdating, a gap yesterday isn't lost; it's one tap away.
+  // Encouraging framing only ("finish it"), never a guilt count.
+  const yds = daysAgoStr(1);
+  const yScheduled = habits.filter((h) => isScheduled(h, yds));
+  const yUndone = yScheduled.filter((h) => !isDone(h, yds) && !isSkipped(h, yds));
+  if (yScheduled.length && yUndone.length >= Math.ceil(yScheduled.length / 2)) {
+    out.push({ id: "yesterday_habits", icon: "📅", tone: "info", nav: "life",
+      text: `Yesterday looks incomplete — pick Yesterday in the date picker to finish logging it.` });
+  }
+
+  const journalEntries = Array.isArray(deps.entries) ? deps.entries : [];
+  if (journalEntries.length && !journalEntries.some((e) => (e?.date || "").slice(0, 10) === yds)) {
+    out.push({ id: "yesterday_journal", icon: "📓", tone: "info", nav: "life",
+      text: "No journal entry for yesterday — one honest sentence, backdated, still counts." });
   }
 
   // Urgent first, celebrations next, gentle guidance last.

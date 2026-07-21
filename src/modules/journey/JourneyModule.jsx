@@ -5,10 +5,11 @@
 // nothing here can drift or be edited into existence.
 import { useMemo, useState } from "react";
 import { Target, Trophy, Plus, Check, Pencil, Archive, Link2 } from "lucide-react";
-import { BD, T1, T2, T3, GL, B2, GR, RE, AM, CY } from "../../shared/designTokens.js";
+import { BD, T1, T2, T3, GL, B2, GR, RE, AM, CY, AC2 } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty, Hydrating } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
+import { ActivityHeatmap } from "../../shared/charts.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import {
@@ -17,6 +18,7 @@ import {
   nextCheckpoint, goalDaysLeft, goalsSummary,
 } from "../../shared/goals.js";
 import { TITLES } from "../../shared/xpEngine.js";
+import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
 
 const JO = CY; // Nocturne cyan accent (monochrome theme)
 
@@ -188,6 +190,10 @@ function HallOfFame({ xp }) {
   const totalTiers = xp.journeys.reduce((s, j) => s + j.tiers.length, 0);
   const gotTiers = xp.journeys.reduce((s, j) => s + j.done, 0);
   const titleLadder = [...TITLES].reverse(); // Beginner → Legend
+  const [logins] = useStorageState("xp_logins", {});
+  const { start: consistencyStart } = useConsistencyStart(logins);
+  const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart), [xp.byDay, consistencyStart]);
+  const totalAct = totalActivities(xp.stats);
   const stats = [
     ["Habit completions", xp.stats.habitCompletions, GR], ["Best streak", `${xp.stats.bestStreak}d`, "#FFFFFF"],
     ["Perfect days", xp.stats.perfectCount, AM], ["Days journaled", xp.stats.journalDays, CY],
@@ -229,6 +235,24 @@ function HallOfFame({ xp }) {
             );
           })}
         </div>
+      </Card>
+
+      {/* Year of Consistency — the app-wide showing-up counter. "Best streak"
+          above is the single strongest per-habit/pillar run; this is a
+          separate, wider signal (any qualifying action, any module) so the
+          two numbers never look like duplicates of each other. */}
+      <Card style={{ padding: "16px 18px" }}>
+        <SH title="Year of Consistency" sub={`Day ${cs.dayInCycle} of 365${cs.cycle > 1 ? ` · Cycle ${cs.cycle}` : ""} — ${cs.daysRemaining} days left this cycle`} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10, marginBottom: 14 }}>
+          <Chip label="Current streak" value={`${cs.currentStreak}d`} color={CY} />
+          <Chip label="Longest streak" value={`${cs.longestStreak}d`} color={AC2} />
+          <Chip label="Consistency rate" value={`${cs.consistencyRate}%`} color={GR} />
+          <Chip label="Total activities" value={totalAct.toLocaleString()} color="#FFFFFF" />
+          <Chip label="This week" value={`${cs.weeklyCompletion}%`} color={T1} />
+          <Chip label="This month" value={`${cs.monthlyCompletion}%`} color={T1} />
+          <Chip label="This year" value={`${cs.yearlyCompletion}%`} color={T1} />
+        </div>
+        <ActivityHeatmap counts={xp.byDay || {}} weeks={26} color={AC2} />
       </Card>
 
       {/* Lifetime stats */}

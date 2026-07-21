@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trash2, X, Plus, CheckCircle, Save, Zap } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, AM, RE } from "../../shared/designTokens.js";
 import { Fld, Inp, Radio, DirTogGeneric } from "../../shared/ui.jsx";
+import { DatePicker } from "../../shared/DatePicker.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { uidA } from "./helpers.js";
 import { uidE, MUSCLE_GROUPS, EQUIPMENT } from "./library.js";
@@ -10,7 +11,7 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
   const seed = initial || {};
   const [type, setType] = useState(seed.type || "strength");
   const [name, setName] = useState(seed.name || "");
-  const [date, setDate] = useState(localDateStr());
+  const [date, setDate] = useState(seed.date || localDateStr());
   const [exercises, setExercises] = useState(
     seed.exercises && seed.exercises.length
       ? seed.exercises.map((e) => ({ id: uidA(), name: e.name, sets: (e.sets || [{ reps: "", weight: "" }]).map((s) => ({ reps: s.reps ?? "", weight: s.weight ?? "" })) }))
@@ -19,7 +20,7 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
   const [duration, setDuration] = useState(seed.duration || "");
   const [distance, setDistance] = useState(seed.distance || "");
   const [intensity, setIntensity] = useState(seed.intensity || "Moderate");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(seed.notes || "");
   const [newEx, setNewEx] = useState(null); // { forRowId, name, muscle, equipment, defSets, defReps, defWeight }
 
   const libByName = Object.fromEntries(exerciseLib.map((e) => [e.name, e]));
@@ -56,10 +57,11 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
     : 0;
 
   const buildWorkout = () => ({
-    id: uidA(), type,
+    id: seed.id || uidA(), type,
     name: name || { strength: "Strength Session", cardio: "Cardio Session", mobility: "Mobility Session", recovery: "Recovery Session" }[type],
     date, duration: +duration || 0, distance: type === "cardio" ? +distance || 0 : 0,
-    intensity, notes, createdAt: new Date().toISOString(),
+    intensity, notes, createdAt: seed.createdAt || new Date().toISOString(),
+    ...(seed.id ? { editedAt: new Date().toISOString() } : {}),
     exercises: type === "strength" ? exercises.filter((e) => e.name.trim()) : [],
     totalVolume,
   });
@@ -83,7 +85,7 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ padding: "16px 22px", borderBottom: `1px solid ${BD}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: B1, gap: 10, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: T1 }}>Log Workout</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: T1 }}>{seed.id ? "Edit Workout" : "Log Workout"}</div>
         <div style={{ display: "flex", gap: 8 }}>
           {onSaveTemplate && <button onClick={saveTemplate} style={{ display: "flex", alignItems: "center", gap: 5, background: `${PU}18`, border: `1px solid ${PU}44`, borderRadius: 8, padding: "7px 12px", color: PU, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Save size={12} />Save as Template</button>}
           <button onClick={onCancel} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 8, padding: "7px 13px", color: T2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
@@ -106,7 +108,7 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
 
         <Fld label="Type"><DirTogGeneric value={type} onChange={setType} options={[{ v: "strength", l: "STRENGTH" }, { v: "cardio", l: "CARDIO" }, { v: "mobility", l: "MOBILITY" }, { v: "recovery", l: "RECOVERY" }]} /></Fld>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13 }}>
-          <Fld label="Date"><Inp type="date" value={date} onChange={setDate} /></Fld>
+          <Fld label="Date"><DatePicker value={date} onChange={setDate} /></Fld>
           <Fld label="Session Name"><Inp value={name} onChange={setName} placeholder={{ strength: "e.g. Push Day", cardio: "e.g. Morning Run", mobility: "e.g. Hip Mobility Flow", recovery: "e.g. Stretch & Foam Roll" }[type]} /></Fld>
         </div>
 
