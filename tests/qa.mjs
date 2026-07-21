@@ -28,7 +28,7 @@ const MODULES = [
 // array (click each label directly).
 const SUBTABS_MAP = {
   firm: [
-    { group: "Trading", subtabs: ["Analytics", "Risk Calc", "Playbook", "Reports", "Reviews", "Trade Log"] },
+    { group: "Trading", subtabs: ["Analytics", "Accounts", "Library", "Risk", "Journal"] },
     { group: "Wealth", subtabs: ["Budget", "Reports", "Net Worth"] },
     { group: "Doctrine", subtabs: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"] },
   ],
@@ -86,6 +86,25 @@ const SCENARIOS = {
   },
   wantsNotArray: { "architect:wants": JSON.stringify({ nope: 1 }) },
   wantsBadJSON: { "architect:wants": "{not valid json" },
+  corruptTiTrades: {
+    "architect:ti_trades": JSON.stringify([
+      null, "x", 5, { nope: 1 },
+      { id: "t1", accountId: "a1", instrument: "EURUSD", lots: "bad", entry: "x", exit: "y", status: "CLOSED", psychBefore: "nope", review: null, media: [null, { junk: 1 }], sessions: null, confluences: "no", mistakes: [5], reflectionAnswers: [] },
+    ]),
+    "architect:ti_accounts": JSON.stringify([null, 3, { id: "a1", name: "X", type: "??", startBalance: "nope", status: "??" }]),
+    "architect:ti_strategies": JSON.stringify([null, { name: "S", versions: "no" }, { nope: 1 }]),
+    "architect:ti_instruments": JSON.stringify({ notArray: true }),
+    "architect:ti_sessions": "{bad json",
+    "architect:ti_settings": JSON.stringify("not-an-object"),
+  },
+  tiStoresNull: {
+    "architect:ti_trades": "null",
+    "architect:ti_accounts": "null",
+    "architect:ti_instruments": "null",
+    "architect:ti_strategies": "null",
+    "architect:ti_conditions": "null",
+    "architect:ti_confluences": "null",
+  },
   corruptWave3: {
     "architect:faith_scripture": JSON.stringify([null, { id: "v1", ref: "John 3:16" }, "junk"]),
     "architect:faith_church": JSON.stringify([null, 123, "2026-07-06"]),
