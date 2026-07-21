@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter, Empty } from "../../shared/ui.jsx";
+import { DatePicker } from "../../shared/DatePicker.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -34,6 +35,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const [routineDraft, setRoutineDraft] = useState(null);
   const [insightHabit, setInsightHabit] = useState(null);
   const [journal, setJournal] = useState("");
+  const [journalDs, setJournalDs] = useState(() => today());
   const [rawEntries, setEntries] = useStorageState("journal_entries", []);
   const [rawProjects, setProjects] = useStorageState("life_projects", []);
   const [projectDraft, setProjectDraft] = useState("");
@@ -58,6 +60,10 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
 
   const active = habits.filter((h) => !h.archived);
   const ds = today();
+  // The Today tab is backdatable — `viewDs` is the day being viewed/logged
+  // (defaults to today, moved via the DatePicker), distinct from `ds` (always
+  // the real today), which the Routines/Insights tabs still use as-is.
+  const [viewDs, setViewDs] = useState(() => today());
 
   // Pillar groupings — surfaced in dedicated sections, not the category list.
   const wellnessHabits = active.filter(isWellness);
@@ -65,11 +71,11 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const weeklyHabits = active.filter(isWeekly);
 
   // Today's schedule (all daily habits feed the ring; pillars render separately)
-  const scheduledToday = active.filter((h) => isScheduled(h, ds));
+  const scheduledToday = active.filter((h) => isScheduled(h, viewDs));
   const catHabitsToday = scheduledToday.filter((h) => !isWellness(h) && !isNonNeg(h));
   const categories = [...new Set(catHabitsToday.map((h) => h.category))];
-  const doneToday = scheduledToday.filter((h) => isDone(h, ds));
-  const skippedToday = scheduledToday.filter((h) => isSkipped(h, ds) && !isDone(h, ds));
+  const doneToday = scheduledToday.filter((h) => isDone(h, viewDs));
+  const skippedToday = scheduledToday.filter((h) => isSkipped(h, viewDs) && !isDone(h, viewDs));
   const pctToday = scheduledToday.length ? Math.round((doneToday.length / scheduledToday.length) * 100) : 0;
   // Global progression from App — the level here always matches the header.
   const xp = xpInfo ? xpInfo.total : xpOf(habits);
@@ -80,19 +86,19 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
 
   // ── Actions ────────────────────────────────────────────────────────
   const tap = (h) => {
-    const wasPerfect = scheduledToday.length && scheduledToday.every((x) => isDone(x, ds));
-    setHabits((prev) => tapHabit(prev, h.id));
-    if (!isDone(h, ds)) {
-      const willBeDone = valueOn(h, ds) + 1 >= (h.target || 1);
-      const remaining = scheduledToday.filter((x) => x.id !== h.id && !isDone(x, ds) && !isSkipped(x, ds)).length;
+    const wasPerfect = scheduledToday.length && scheduledToday.every((x) => isDone(x, viewDs));
+    setHabits((prev) => tapHabit(prev, h.id, viewDs));
+    if (!isDone(h, viewDs)) {
+      const willBeDone = valueOn(h, viewDs) + 1 >= (h.target || 1);
+      const remaining = scheduledToday.filter((x) => x.id !== h.id && !isDone(x, viewDs) && !isSkipped(x, viewDs)).length;
       if (willBeDone && remaining === 0 && !wasPerfect && scheduledToday.length > 1) {
         toast("⭐ Perfect day — every habit complete. This is how it compounds.", { tone: "success", duration: 6000 });
       }
     }
   };
-  const skip = (h) => setHabits((prev) => toggleSkip(prev, h.id));
-  const setValue = (id, v) => setHabits((prev) => setHabitValue(prev, id, v));
-  const tapId = (id) => setHabits((prev) => tapHabit(prev, id));
+  const skip = (h) => setHabits((prev) => toggleSkip(prev, h.id, viewDs));
+  const setValue = (id, v) => setHabits((prev) => setHabitValue(prev, id, v, viewDs));
+  const tapId = (id) => setHabits((prev) => tapHabit(prev, id, viewDs));
   const addStarterPack = (kind) => {
     const has = habits.some((h) => (kind === "nonneg" ? isNonNeg(h) : isWellness(h)) && !h.archived);
     if (has) { toast(`${kind === "nonneg" ? "Non-Negotiables" : "Wellness"} already set up`, { tone: "info" }); return; }
@@ -100,7 +106,8 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
     toast(`${kind === "nonneg" ? "Non-Negotiables" : "Wellness trackers"} added 🌿`, { tone: "success" });
   };
   const saveHabit = (h) => {
-    setHabits((prev) => (prev.some((x) => x.id === h.id) ? prev.map((x) => (x.id === h.id ? { ...x, ...h } : x)) : [...prev, h]));
+    const isEdit = habits.some((x) => x.id === h.id);
+    setHabits((prev) => (isEdit ? prev.map((x) => (x.id === h.id ? { ...x, ...h, editedAt: new Date().toISOString() } : x)) : [...prev, h]));
     setEditing(null);
   };
   const patchHabit = (id, patch) => setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, ...patch } : h)));
@@ -127,7 +134,8 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   };
   const saveEntry = () => {
     if (!journal.trim()) return;
-    setEntries((prev) => [{ id: `j${Date.now()}`, date: new Date().toISOString(), text: journal }, ...prev]);
+    setEntries((prev) => [{ id: `j${Date.now()}`, date: journalDs, text: journal }, ...prev]);
+    setJournalDs(today());
     setJournal("");
     toast("Reflection saved 🌱", { tone: "success", duration: 2500 });
   };
@@ -152,7 +160,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
 
   // ── Shared habit row (Today + quick contexts) ──────────────────────
   const HabitRow = ({ h }) => {
-    const v = valueOn(h, ds), done = isDone(h, ds), skipped = isSkipped(h, ds) && !done;
+    const v = valueOn(h, viewDs), done = isDone(h, viewDs), skipped = isSkipped(h, viewDs) && !done;
     const target = h.target || 1, multi = target > 1;
     const streak = currentStreak(h);
     return (
@@ -210,6 +218,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
         {/* ══ TODAY ══ */}
         {loaded && tab === "today" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+            <DatePicker value={viewDs} onChange={setViewDs} />
             <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${GR}08,transparent)` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
                 <Ring pct={pctToday} glow color={pctToday === 100 ? GR : CY}>
@@ -257,8 +266,8 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               </Collapse>
             )}
 
-            {nonNegHabits.length > 0 && <NonNegotiables habits={nonNegHabits} onTap={tapId} />}
-            {wellnessHabits.length > 0 && <WellnessPanel habits={wellnessHabits} onSetValue={setValue} />}
+            {nonNegHabits.length > 0 && <NonNegotiables habits={nonNegHabits} onTap={tapId} ds={viewDs} />}
+            {wellnessHabits.length > 0 && <WellnessPanel habits={wellnessHabits} onSetValue={setValue} ds={viewDs} />}
 
             {weeklyHabits.length > 0 && (
               <Collapse id="life_weekly" title="Weekly" sub="resets Sunday"
@@ -267,7 +276,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
                   {weeklyHabits.map((h) => {
                     const wp = weekProgress(h);
-                    const doneToday = isDone(h, ds);
+                    const doneToday = isDone(h, viewDs);
                     const wstreak = weeklyStreak(h);
                     return (
                       <Card key={h.id} style={{ padding: "13px 15px" }}>
@@ -302,7 +311,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               {categories.map((cat) => {
                 const catHabits = catHabitsToday.filter((h) => h.category === cat);
                 if (!catHabits.length) return null;
-                const catDone = catHabits.filter((h) => isDone(h, ds)).length;
+                const catDone = catHabits.filter((h) => isDone(h, viewDs)).length;
                 return (
                   <div key={cat}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -591,8 +600,9 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
         {loaded && tab === "journal" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
             <Card style={{ padding: "20px" }}>
-              <SH title="Daily Reflection" sub={new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} />
-              <div style={{ fontSize: 11.5, color: T3, marginBottom: 10, lineHeight: 1.6 }}>Reflect to learn, not to judge. Tap a prompt to begin.</div>
+              <SH title="Daily Reflection" />
+              <DatePicker value={journalDs} onChange={setJournalDs} />
+              <div style={{ fontSize: 11.5, color: T3, margin: "10px 0", lineHeight: 1.6 }}>Reflect to learn, not to judge. Tap a prompt to begin.</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 11 }}>
                 {REFLECTION_PROMPTS.map((p) => (
                   <button key={p} onClick={() => setJournal((j) => (j ? `${j}\n\n${p}\n` : `${p}\n`))}

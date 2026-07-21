@@ -70,6 +70,12 @@ const SCENARIOS = {
   partialFinance: {
     "architect:finance_state": JSON.stringify({ currency: "KES", mmfs: null, budgets: [null], goals: null, income: [null], debts: null }),
   },
+  corruptConsistencyStart: {
+    "architect:year_of_consistency_start": "not-a-date",
+  },
+  consistencyStartWrongType: {
+    "architect:year_of_consistency_start": JSON.stringify({ nope: 1 }),
+  },
   corruptWave3: {
     "architect:faith_scripture": JSON.stringify([null, { id: "v1", ref: "John 3:16" }, "junk"]),
     "architect:faith_church": JSON.stringify([null, 123, "2026-07-06"]),

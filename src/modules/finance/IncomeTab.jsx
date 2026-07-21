@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Plus, Trash2, Edit3, Check, Repeat, ChevronDown, ChevronRight } from "lucide-react";
 import { BD, GL, T1, T2, T3, CY, PU, GR, RE, AM, OR } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Fld, Inp, Sel, Radio } from "../../shared/ui.jsx";
+import { DatePicker } from "../../shared/DatePicker.jsx";
 import { DonutChart, ChartLegend } from "../../shared/charts.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useToast } from "../../shared/toast.jsx";
@@ -117,7 +118,7 @@ export function IncomeTab({ income, setIncome, fmtKES, gross, setGross, g, paye,
         <SH title={editingId ? "Edit Income Entry" : "Log Income"} sub="Record any income — salary, trading, freelance, gifts, anything" />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 13 }}>
           <Fld label="Amount" required><Inp type="number" value={form.amount} onChange={(v) => set("amount", v)} placeholder="0" mono /></Fld>
-          <Fld label="Date Received" required><Inp type="date" value={form.date} onChange={(v) => set("date", v)} /></Fld>
+          <Fld label="Date Received" required><DatePicker value={form.date} onChange={(v) => set("date", v)} /></Fld>
           <Fld label="Source" required><Sel value={form.source} onChange={(v) => set("source", v)} options={INCOME_SOURCES} /></Fld>
           <Fld label="Category"><Sel value={form.category} onChange={(v) => set("category", v)} options={INCOME_CATEGORIES} /></Fld>
         </div>

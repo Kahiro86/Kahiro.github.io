@@ -18,3 +18,13 @@ export const daysAgoStr = (n) => {
 // noon so DST shifts can never round a day boundary the wrong way.
 export const daysBetween = (a, b) =>
   Math.round((new Date(`${b}T12:00:00`) - new Date(`${a}T12:00:00`)) / 86400000);
+
+// Shift a YYYY-MM-DD string by n days (n may be negative) — unlike
+// `daysAgoStr`, this is anchored on the given date string, not real "now",
+// so it works correctly when viewing/backdating a day other than today.
+export const shiftDateStr = (ds, n) => {
+  const [y, m, d] = ds.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + n);
+  return localDateStr(dt);
+};

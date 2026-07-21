@@ -12,10 +12,9 @@ const round2 = (n) => Math.round(n * 100) / 100;
 // Unified Daily Wellness — Sleep, Hydration, Prayer/Study — logged with a
 // simple stepper and shown together with a combined trend. Advanced trends
 // stay hidden until asked for (minimalist by default).
-export function WellnessPanel({ habits, onSetValue }) {
+export function WellnessPanel({ habits, onSetValue, ds = localDateStr() }) {
   const [range, setRange] = useState(7);
   const [open, setOpen] = useState(false);
-  const ds = localDateStr();
   if (!habits.length) return null;
 
   const metToday = habits.filter((h) => (h.log?.[ds]?.v || 0) >= goalOf(h)).length;

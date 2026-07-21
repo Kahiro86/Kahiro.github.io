@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, ChevronLeft, ChevronRight, CheckCircle, ClipboardCheck } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, CY, PU, GR, RE, AM, OR, GL } from "../../shared/designTokens.js";
 import { Fld, Inp, Sel, DirTog, Radio, Tags, SL } from "../../shared/ui.jsx";
+import { DatePicker } from "../../shared/DatePicker.jsx";
 import {
   INSTRUMENTS, SESSIONS_FULL, MACRO_CONFIG, SILVER_BULLET_CONFIG, MM_MODELS,
   ICT_MODELS, LIQ, PO3, HTF_TF, INT_TF, ENTRY_TF, OUTCOMES, GRADES, ENTRY_Q, EXIT_Q, PSYCH,
@@ -82,7 +83,7 @@ export function EntryForm({ onSubmit, onCancel, editTrade, accountBalance, check
         {step === 0 && (
           <div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13 }}>
-              <Fld label="Date" required><Inp type="date" value={form.date} onChange={(v) => set("date", v)} /></Fld>
+              <Fld label="Date" required><DatePicker value={form.date} onChange={(v) => set("date", v)} /></Fld>
               <Fld label="Time (NY EST/EDT)" required><Inp type="time" value={form.time} onChange={(v) => set("time", v)} /></Fld>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 13 }}>
