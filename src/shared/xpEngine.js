@@ -13,6 +13,7 @@
 import { localDateStr, daysAgoStr, daysBetween } from "./dates.js";
 import { migrateHabits, isScheduled, isDone, isSkipped, perfectDays } from "./habitEngine.js";
 import { sanitizeGoals, CHECKPOINTS } from "./goals.js";
+import { sanitizeWants, savedOf, bestContribStreak } from "./wants.js";
 import { sanitizePurity } from "../modules/life/purity.js";
 import { sanitizeReviews } from "../modules/trading/reviews.js";
 import { sanitizeNutrition, dayTotals, nutritionScore, calcTargets } from "../modules/athlete/nutrition.js";
@@ -32,6 +33,7 @@ const V = {
   mealDay: 10, proteinHit: 10, healthyDay: 15,
   reminderDone: 5,
   goalCheckpoint: 25, goalDone: 150,
+  wantSaveDay: 8, wantDone: 120, wantGift: 60,
 };
 
 // Consistency pays more the longer it runs — applied to habit AND purity runs.
@@ -88,6 +90,10 @@ export const JOURNEYS = [
     tiers: [[1, 50], [12, 200], [26, 350], [52, 600], [104, 1200]] },
   { key: "goals",    name: "Goal Getter",    icon: "🎯", stat: "goalsDone", unit: "goals completed",
     tiers: [[1, 100], [3, 200], [5, 300], [10, 500], [25, 1000], [50, 2000]] },
+  { key: "wants",    name: "Dream Vault",    icon: "🗝️", stat: "wantsCompleted", unit: "wants fulfilled",
+    tiers: [[1, 100], [3, 200], [5, 350], [10, 600], [25, 1200], [50, 2500]] },
+  { key: "saver",    name: "Disciplined Saver", icon: "💎", stat: "wantSaved", unit: "KSh saved toward wants",
+    tiers: [[10000, 50], [50000, 200], [100000, 400], [250000, 700], [500000, 1200], [1000000, 2500]] },
 ];
 
 // Flat view of every tier — same {id, icon, name, desc, xp, test} interface
@@ -142,6 +148,7 @@ export function computeXp(deps = {}) {
     habitCompletions: 0, perfectCount: 0, journalDays: 0, workoutCount: 0,
     tradeCount: 0, reviewCount: 0, cleanDays: 0, churchCount: 0,
     booksFinished: 0, bestStreak: 0, mealDays: 0, healthyBest: 0, goalsDone: 0,
+    wantsCompleted: 0, wantSaved: 0, giftsCompleted: 0, wantStreakBest: 0,
   };
 
   // Life — habits: every completed habit-day, perfect days, streak ladder.
@@ -335,6 +342,27 @@ export function computeXp(deps = {}) {
       for (const p of CHECKPOINTS) if (g.ms[p]) push(g.ms[p], V.goalCheckpoint, c);
       if (g.completedAt) { push(g.completedAt, V.goalDone, c); stats.goalsDone++; }
     }
+  }
+
+  // Want List — the dream vault. XP rewards the saving habit, not spending:
+  // a flat award on each distinct day a contribution was made (deduped by
+  // date, so logging five in one day pays once and nothing is farmable), a
+  // completion bonus on the purchase date, and an extra bump for gifts. All
+  // dates are immutable, so this stays idempotent like everything else.
+  {
+    const wants = sanitizeWants(deps.wants);
+    const saveDays = new Set();
+    for (const w of wants) {
+      for (const c of w.contributions) saveDays.add(c.date);
+      stats.wantSaved += savedOf(w);
+      if (w.purchasedAt) {
+        push(w.purchasedAt, V.wantDone, "finance");
+        stats.wantsCompleted++;
+        if (w.forWhom === "gift") { push(w.purchasedAt, V.wantGift, "finance"); stats.giftsCompleted++; }
+      }
+    }
+    for (const d of saveDays) push(d, V.wantSaveDay, "finance", true);
+    stats.wantStreakBest = bestContribStreak(saveDays);
   }
 
   // Achievements — bonus XP lands on the auto-stamped unlock date.

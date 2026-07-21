@@ -28,16 +28,17 @@ export function useXp() {
   const [logins, setLogins, l4] = useStorageState("xp_logins", {});
   const [notifLog] = useStorageState("notif_log", []);
   const [goals] = useStorageState("goals", []);
+  const [wants] = useStorageState("wants", []);
 
   const xp = useMemo(
     () => computeXp({
       habits, purity, trades, reviews, workouts, measurements, finance,
       entries, missions, church, verses, faithNotes, library, mindNotes,
-      decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals,
+      decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants,
     }),
     [habits, purity, trades, reviews, workouts, measurements, finance,
      entries, missions, church, verses, faithNotes, library, mindNotes,
-     decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals]
+     decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants]
   );
 
   return { ...xp, loaded: l1 && l2 && l3 && l4, setUnlocked, setLogins };

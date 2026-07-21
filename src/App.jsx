@@ -178,6 +178,10 @@ export default function App() {
       @keyframes emberPulse { 0%,100% { box-shadow: 0 0 0 rgba(240,180,41,0.0), inset 0 0 0 rgba(240,180,41,0); } 50% { box-shadow: 0 0 46px rgba(240,180,41,0.22), inset 0 0 40px rgba(240,180,41,0.06); } }
       /* Week in Review modal entrance */
       @keyframes reviewRise { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+      /* Want List — milestone confetti burst + progress-bar sheen */
+      @keyframes confettiPop { 0% { opacity: 0; transform: translate(0,0) scale(0.4) rotate(0deg); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--cx,0), var(--cy,80px)) scale(1) rotate(var(--cr,180deg)); } }
+      @keyframes wantGlow { 0% { box-shadow: 0 0 0 rgba(63,185,80,0); } 30% { box-shadow: 0 0 40px rgba(63,185,80,0.4); } 100% { box-shadow: 0 0 0 rgba(63,185,80,0); } }
+      @keyframes barShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
       }

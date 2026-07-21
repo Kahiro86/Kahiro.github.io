@@ -41,7 +41,7 @@ const SUBTABS_MAP = {
     { group: "Mind", subtabs: ["Notes", "Decisions", "Library"] },
   ],
   analytics: ["Trends", "Progression", "Reports"],
-  journey: ["Hall of Fame", "Goals"],
+  journey: ["Hall of Fame", "Want List", "Goals"],
 };
 
 // Data scenarios: each seeds localStorage BEFORE the app boots.
@@ -76,6 +76,16 @@ const SCENARIOS = {
   consistencyStartWrongType: {
     "architect:year_of_consistency_start": JSON.stringify({ nope: 1 }),
   },
+  corruptWants: {
+    "architect:wants": JSON.stringify([
+      null, "x", 5, { junk: true },
+      { id: "w1", name: "Camera", target: "not-a-number", contributions: null },
+      { id: "w2", name: "Watch", target: 50000, contributions: [null, { amount: "bad" }, { amount: -100 }, { amount: 5000, date: "nope" }], forWhom: "gift", priority: "??" },
+      { id: "w3", name: "Trip", target: 200000, purchasedAt: "not-a-date", finalCost: "x" },
+    ]),
+  },
+  wantsNotArray: { "architect:wants": JSON.stringify({ nope: 1 }) },
+  wantsBadJSON: { "architect:wants": "{not valid json" },
   corruptWave3: {
     "architect:faith_scripture": JSON.stringify([null, { id: "v1", ref: "John 3:16" }, "junk"]),
     "architect:faith_church": JSON.stringify([null, 123, "2026-07-06"]),
