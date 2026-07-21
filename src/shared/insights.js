@@ -7,8 +7,9 @@ import { pendingReviews, sanitizeReviews } from "../modules/trading/reviews.js";
 import { billsDueSoon } from "../modules/finance/bills.js";
 import { sanitizePurity, statusOn } from "../modules/life/purity.js";
 import { sanitizeNutrition, dayTotals, calcTargets, dayEntries } from "../modules/athlete/nutrition.js";
+import { sanitizeWants, isActive, pctOf, remainingOf, savedOf, timelineOf, fmtKsh } from "./wants.js";
 
-// deps: { habits, trades, reviews, bills, verses, decisions, purity, nutrition, nutritionProfile, entries }
+// deps: { habits, trades, reviews, bills, verses, decisions, purity, nutrition, nutritionProfile, entries, wants }
 export function buildNudges(deps) {
   const ds = localDateStr();
   const habits = (deps.habits || []).filter((h) => h && !h.archived && !h.paused);
@@ -161,6 +162,24 @@ export function buildNudges(deps) {
   if (journalEntries.length && !journalEntries.some((e) => (e?.date || "").slice(0, 10) === yds)) {
     out.push({ id: "yesterday_journal", icon: "📓", tone: "info", nav: "life",
       text: "No journal entry for yesterday — one honest sentence, backdated, still counts." });
+  }
+
+  // 13. Want List: celebrate the goal that's almost there, and gently revive
+  // one that's gone quiet — encouraging framing, never a spending prompt.
+  const activeWants = sanitizeWants(deps.wants).filter(isActive);
+  const almost = activeWants.filter((w) => pctOf(w) >= 90 && remainingOf(w) > 0).sort((a, b) => pctOf(b) - pctOf(a))[0];
+  if (almost) {
+    out.push({ id: "want_almost", icon: "🗝️", tone: "info", nav: "journey",
+      text: `Only ${fmtKsh(remainingOf(almost))} left on ${almost.name} — you're at ${Math.round(pctOf(almost))}%.` });
+  }
+  const stalled = activeWants
+    .filter((w) => savedOf(w) > 0 && pctOf(w) < 100)
+    .map((w) => ({ w, gap: (() => { const l = timelineOf(w).last; return l ? daysBetween(l, ds) : 0; })() }))
+    .filter((x) => x.gap >= 14)
+    .sort((a, b) => b.gap - a.gap)[0];
+  if (stalled && (!almost || stalled.w.id !== almost.id)) {
+    out.push({ id: "want_stalled", icon: "🌱", tone: "info", nav: "journey",
+      text: `You haven't added to ${stalled.w.name} in ${Math.floor(stalled.gap / 7)} weeks — even a little keeps it alive.` });
   }
 
   // Urgent first, celebrations next, gentle guidance last.

@@ -24,7 +24,7 @@ import {
 } from "./notify.js";
 
 const input = { width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
-const NUDGE_CAT = { nonneg: "habits", reviews: "trading", bills: "finance", verses: "faith", decisions: "mind", purity: "life", nutrition: "nutrition", protein: "nutrition", focus: "life", backup: "system", yesterday_habits: "habits", yesterday_nutrition: "nutrition", yesterday_journal: "life" };
+const NUDGE_CAT = { nonneg: "habits", reviews: "trading", bills: "finance", verses: "faith", decisions: "mind", purity: "life", nutrition: "nutrition", protein: "nutrition", focus: "life", backup: "system", yesterday_habits: "habits", yesterday_nutrition: "nutrition", yesterday_journal: "life", want_almost: "finance", want_stalled: "finance" };
 const nudgeCat = (id) => NUDGE_CAT[id] || (id.startsWith("risk_") || id.startsWith("mile_") ? "streaks" : id.startsWith("miss_") ? "habits" : "life");
 const timeAgo = (ts) => {
   const m = Math.round((Date.now() - ts) / 60000);
@@ -80,18 +80,19 @@ export function NotificationCenter({ onNavigate }) {
   const [nutritionProfile] = useStorageState("nutrition_profile", null);
   const [workouts] = useStorageState("athlete_workouts", []);
   const [journal] = useStorageState("journal_entries", []);
+  const [wants] = useStorageState("wants", []);
   const habits = useMemo(() => migrateHabits(rawHabits).filter((h) => !h.archived && !h.paused), [rawHabits]);
   const nudges = useMemo(() => buildNudges({
     habits, trades: (Array.isArray(trades) ? trades : []).filter((t) => t && t.id), reviews,
     bills: finance?.bills, verses: Array.isArray(verses) ? verses : [],
     decisions: (Array.isArray(decisions) ? decisions : []).filter((d) => d && d.id),
-    purity, nutrition, nutritionProfile,
+    purity, nutrition, nutritionProfile, wants,
     entries: (Array.isArray(journal) ? journal : []).filter((e) => e && e.id),
     // Backup reminder needs to know whether the cloud is the safety net and
     // when the last local export was — without these it never fires.
     syncOn: !!getSyncConfig(),
     lastExport: (() => { try { return +localStorage.getItem("kahiro_last_export") || 0; } catch { return 0; } })(),
-  }).filter((n) => catEnabled(prefs, nudgeCat(n.id))), [habits, trades, reviews, finance, verses, decisions, purity, nutrition, nutritionProfile, journal, prefs]);
+  }).filter((n) => catEnabled(prefs, nudgeCat(n.id))), [habits, trades, reviews, finance, verses, decisions, purity, nutrition, nutritionProfile, journal, wants, prefs]);
 
   const { active, overdue } = useMemo(() => bucketLog(log), [log, open]);
   const unread = log.filter((e) => e.state === "unread").length;

@@ -4,7 +4,7 @@
 // everything in the Hall of Fame derives from the XP engine's stats, so
 // nothing here can drift or be edited into existence.
 import { useMemo, useState } from "react";
-import { Target, Trophy, Plus, Check, Pencil, Archive, Link2 } from "lucide-react";
+import { Target, Trophy, Plus, Check, Pencil, Archive, Link2, Gem } from "lucide-react";
 import { BD, T1, T2, T3, GL, B2, GR, RE, AM, CY, AC2 } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty, Hydrating } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
@@ -19,6 +19,7 @@ import {
 } from "../../shared/goals.js";
 import { TITLES } from "../../shared/xpEngine.js";
 import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
+import { WantListModule } from "../wants/WantListModule.jsx";
 
 const JO = CY; // Nocturne cyan accent (monochrome theme)
 
@@ -339,10 +340,11 @@ export function JourneyModule({ xpInfo }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <ModuleTabs tint="rgba(10,10,10,0.6)" activeBg={`${JO}26`} activeColor="#FFFFFF"
-        tabs={[{ id: "goals", l: "Goals", i: Target }, { id: "fame", l: "Hall of Fame", i: Trophy }]}
+        tabs={[{ id: "goals", l: "Goals", i: Target }, { id: "wants", l: "Want List", i: Gem }, { id: "fame", l: "Hall of Fame", i: Trophy }]}
         active={tab} onSelect={setTab} />
 
       <div style={{ flex: 1, overflowY: "auto" }}>
+        {tab === "wants" && <WantListModule />}
         {tab === "fame" && <HallOfFame xp={xpInfo} />}
 
         {tab === "goals" && (
