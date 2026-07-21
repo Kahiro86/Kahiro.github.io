@@ -14,6 +14,7 @@ import { localDateStr, daysAgoStr, daysBetween } from "./dates.js";
 import { migrateHabits, isScheduled, isDone, isSkipped, perfectDays } from "./habitEngine.js";
 import { sanitizeGoals, CHECKPOINTS } from "./goals.js";
 import { sanitizeWants, savedOf, bestContribStreak } from "./wants.js";
+import { tiTradeStats } from "../modules/trading/intel/tradingIntel.js";
 import { sanitizePurity } from "../modules/life/purity.js";
 import { sanitizeReviews } from "../modules/trading/reviews.js";
 import { sanitizeNutrition, dayTotals, nutritionScore, calcTargets } from "../modules/athlete/nutrition.js";
@@ -232,6 +233,21 @@ export function computeXp(deps = {}) {
     if (!d) continue;
     stats.reviewCount++;
     push(d, r.kind === "monthly" ? V.reviewMonthly : r.kind === "weekly" ? V.reviewWeekly : V.reviewDaily, "trading");
+  }
+
+  // Trading Intelligence — the new methodology-agnostic journal (ti_trades).
+  // Counted ON TOP of the legacy ict_trades above (the two stores are disjoint,
+  // so no double-count) — historical XP is preserved while new trades keep
+  // earning. XP per closed trade (capped/day) plus a per-day structured-review
+  // bonus. All derived from immutable stored records → idempotent.
+  {
+    const s = tiTradeStats(deps.tiTrades);
+    stats.tradeCount += s.tradeCount;
+    stats.reviewCount += s.reviewCount;
+    for (const [d, { count, reviews }] of Object.entries(s.byDate)) {
+      push(d, Math.min(count, CAPS.trades) * V.tradeLogged, "trading");
+      if (reviews > 0) push(d, V.tradeNotes, "trading");
+    }
   }
 
   // Fitness — sessions (capped/day), personal records, measurements.

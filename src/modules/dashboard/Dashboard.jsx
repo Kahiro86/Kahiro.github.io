@@ -17,6 +17,7 @@ const GOLD = "#F0B429"; // reserved for the perfect-day hero only
 import { useStorageState } from "../../shared/useStorageState.js";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { getStats, tradingMetrics } from "../trading/helpers.js";
+import { sanitizeTrades as sanitizeTiTrades, sanitizeAccounts as sanitizeTiAccounts, netPnl as tiNetPnl } from "../trading/intel/tradingIntel.js";
 import { financeSummary } from "../finance/summary.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
@@ -63,6 +64,9 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [kz, setKz] = useState(getActiveKillzone);
   const [, setEatTime] = useState(getEATTimeStr);
   const [trades] = useStorageState("ict_trades", []);
+  const [tiTrades] = useStorageState("ti_trades", []);
+  const [tiAccounts] = useStorageState("ti_accounts", []);
+  const [tiSettings] = useStorageState("ti_settings", {});
   const [rawBal] = useStorageState("ict_balance", 15000);
   const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
   const [workouts] = useStorageState("athlete_workouts", []);
@@ -196,7 +200,16 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const tMetrics = useMemo(() => tradingMetrics(trades, bal, finance.tradingWithdrawals || 0, finance.profitSplit || 80), [trades, bal, finance.tradingWithdrawals, finance.profitSplit]);
   const tradesToday = useMemo(() => trades.filter((t) => (t.date || "").slice(0, 10) === ds && !t.archived), [trades, ds]);
   const tStats = useMemo(() => getStats(trades), [trades]);
-  const isTradingDay = kz.active || tradesToday.length > 0;
+  // New Trading Intelligence journal — today's activity on the active account,
+  // blended into the snapshot so the Command Centre reflects the live system.
+  const tiToday = useMemo(() => {
+    const activeId = tiSettings?.activeAccountId || sanitizeTiAccounts(tiAccounts).find((a) => !a.archived)?.id || "";
+    const todays = sanitizeTiTrades(tiTrades).filter((t) => !t.archived && t.date === ds && t.status === "CLOSED" && (!activeId || t.accountId === activeId));
+    return { count: todays.length, pnl: todays.reduce((s, t) => s + tiNetPnl(t), 0) };
+  }, [tiTrades, tiAccounts, tiSettings, ds]);
+  const tradeCountToday = tradesToday.length + tiToday.count;
+  const dailyPnlAll = tMetrics.dailyPnl + tiToday.pnl;
+  const isTradingDay = kz.active || tradeCountToday > 0;
   const checklistOk = tradesToday.length > 0 && tradesToday.every((t) => +t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal);
 
   // ── ❤️ SYSTEM HEALTH: four simple indicators, no percentages ──
@@ -466,13 +479,13 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
           <StatCard onClick={() => onNavigate("firm:trading")} style={{ borderColor: kz.active ? `${AC}44` : BD }}>
             <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Live" : ""}</SectionLabel>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 26, ...big, color: tMetrics.dailyPnl > 0 ? GR : tMetrics.dailyPnl < 0 ? RE : T1 }}>
-                {tMetrics.dailyPnl >= 0 ? "+" : "−"}${Math.abs(cuPnl).toLocaleString()}
+              <span style={{ fontSize: 26, ...big, color: dailyPnlAll > 0 ? GR : dailyPnlAll < 0 ? RE : T1 }}>
+                {dailyPnlAll >= 0 ? "+" : "−"}${Math.abs(cuPnl + tiToday.pnl).toLocaleString()}
               </span>
               <span style={{ fontSize: 11, color: T3 }}>today</span>
             </div>
             <div style={{ display: "flex", gap: 16, marginTop: 9, fontSize: 11.5, color: T2 }}>
-              <span>{tradesToday.length} trade{tradesToday.length === 1 ? "" : "s"}</span>
+              <span>{tradeCountToday} trade{tradeCountToday === 1 ? "" : "s"}</span>
               {tradesToday.length > 0 && (
                 <span style={{ color: checklistOk ? GR : AM, display: "flex", alignItems: "center", gap: 4 }}>
                   {checklistOk ? <><Check size={11} /> Checklist</> : "Checklist gaps"}

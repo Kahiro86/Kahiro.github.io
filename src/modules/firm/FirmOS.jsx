@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import { TrendingUp, DollarSign, Building2 } from "lucide-react";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
-import { TradingModule } from "../trading/TradingModule.jsx";
+import { TradingIntelModule } from "../trading/intel/TradingIntelModule.jsx";
 import { FinanceOS } from "../finance/FinanceOS.jsx";
 import { FirmDoctrine } from "./FirmDoctrine.jsx";
 
@@ -33,7 +33,7 @@ export function FirmOS({ navHint } = {}) {
         tabs={GROUPS} active={group} onSelect={setGroup} />
 
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        {group === "trading" && <TradingModule />}
+        {group === "trading" && <TradingIntelModule />}
         {group === "wealth" && <FinanceOS />}
         {group === "doctrine" && <FirmDoctrine />}
       </div>
