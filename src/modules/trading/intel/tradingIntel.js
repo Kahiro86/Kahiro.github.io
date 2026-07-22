@@ -390,3 +390,127 @@ export function tiTradeStats(rawTrades) {
   }
   return { tradeCount, reviewCount, byDate };
 }
+
+// ── Lesson Library (Wave 2) ──────────────────────────────────────────
+// Lessons turn trades into reusable knowledge. A lesson stores what was
+// learned plus the context it applies to (strategy / pair / condition), a
+// reinforcement count, and the trades it was drawn from — so the journal can
+// surface the right lesson again the next time that context comes up.
+export function sanitizeLessons(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const l of raw) {
+    if (!l || typeof l !== "object" || typeof l.title !== "string" || !l.title.trim()) continue;
+    out.push({
+      id: l.id ? String(l.id) : uid("le"),
+      title: l.title.trim().slice(0, 120),
+      description: str(l.description, 2000),
+      strategy: str(l.strategy, 80),
+      pair: str(l.pair, 20),
+      condition: str(l.condition, 40),
+      dateLearned: dOf(l.dateLearned) || localDateStr(),
+      reinforcementCount: Math.max(0, Math.round(num(l.reinforcementCount, 0))),
+      linkedTrades: arrStr(l.linkedTrades, 40),
+      createdAt: typeof l.createdAt === "string" ? l.createdAt : new Date().toISOString(),
+      archived: bool(l.archived),
+    });
+  }
+  return out;
+}
+
+export const newLesson = (patch = {}) => sanitizeLessons([{ id: uid("le"), title: "", dateLearned: localDateStr(), reinforcementCount: 0, linkedTrades: [], ...patch }])[0];
+
+// Lessons relevant to a trade context — matched on strategy, pair or any
+// condition, ranked by how strongly reinforced they are. Used in the form.
+export function recommendLessons(rawLessons, { strategy = "", instrument = "", conditions = [] } = {}, limit = 3) {
+  const conds = Array.isArray(conditions) ? conditions : [];
+  return sanitizeLessons(rawLessons)
+    .filter((l) => !l.archived)
+    .map((l) => {
+      let score = 0;
+      if (l.strategy && l.strategy === strategy) score += 3;
+      if (l.pair && l.pair === instrument) score += 2;
+      if (l.condition && conds.includes(l.condition)) score += 2;
+      return { l, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || b.l.reinforcementCount - a.l.reinforcementCount)
+    .slice(0, limit)
+    .map((x) => x.l);
+}
+
+// ── Comparative analytics (Wave 2) ───────────────────────────────────
+// Filter closed trades to one value of a dimension, so the UI can run
+// overallStats on two subsets and lay them side by side.
+export function filterByDim(trades, dim, key) {
+  const cl = sanitizeTrades(trades).filter((t) => t.status === "CLOSED" && t.exit !== "" && t.exit != null && !t.archived);
+  const match = {
+    strategy: (t) => (t.strategy || "—") === key,
+    pair: (t) => (t.instrument || "—") === key,
+    session: (t) => t.sessions.includes(key),
+    account: (t) => t.accountId === key,
+    month: (t) => t.date.slice(0, 7) === key,
+  }[dim] || (() => false);
+  return cl.filter(match);
+}
+
+// The distinct keys present for a dimension (for the comparator's pickers).
+export function dimKeys(trades, dim, accounts = []) {
+  const cl = sanitizeTrades(trades).filter((t) => t.status === "CLOSED" && t.exit !== "" && t.exit != null && !t.archived);
+  const set = new Set();
+  for (const t of cl) {
+    if (dim === "strategy") set.add(t.strategy || "—");
+    else if (dim === "pair") set.add(t.instrument || "—");
+    else if (dim === "session") t.sessions.forEach((s) => set.add(s));
+    else if (dim === "account") set.add(t.accountId);
+    else if (dim === "month") set.add(t.date.slice(0, 7));
+  }
+  const keys = [...set].filter(Boolean);
+  if (dim === "account") return keys.map((id) => ({ key: id, label: accounts.find((a) => a.id === id)?.name || id }));
+  return keys.sort().map((k) => ({ key: k, label: k }));
+}
+
+// ── Evolution — trader growth month over month (Wave 2) ──────────────
+// Discipline reads from the structured-review ratings (Discipline / Rule
+// Adherence / Emotional Control) so the chart tracks the trader, not just
+// the P&L. Returns chronological months that actually have closed trades.
+export function evolutionSeries(trades, accountId = "") {
+  const cl = sanitizeTrades(trades).filter((t) => t.status === "CLOSED" && t.exit !== "" && t.exit != null && !t.archived && (!accountId || t.accountId === accountId));
+  const byMonth = new Map();
+  for (const t of cl) { const m = t.date.slice(0, 7); if (!byMonth.has(m)) byMonth.set(m, []); byMonth.get(m).push(t); }
+  const DISC = ["Discipline", "Rule Adherence", "Emotional Control"];
+  return [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([month, list]) => {
+    const o = overallStats(list, "");
+    const dd = equityCurve(list, 0, "").maxDD;
+    const discVals = list.map((t) => { const vals = DISC.filter((k) => Number.isFinite(+t.review?.[k])).map((k) => t.review[k]); return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null; }).filter((v) => v != null);
+    return {
+      month, sample: list.length, wr: o.wr, avgRR: o.avgRR, pf: o.profitFactor,
+      expectancy: o.expectancy, net: o.net, maxDD: dd,
+      discipline: discVals.length ? +(discVals.reduce((a, b) => a + b, 0) / discVals.length).toFixed(1) : null,
+    };
+  }).slice(-12);
+}
+
+// ── Mistake Intelligence (Wave 2) ────────────────────────────────────
+// Frequency, cost, and whether each mistake is happening less over time
+// (second half of the record vs the first). Ranked costliest-first.
+export function mistakeIntelligence(trades, accountId = "") {
+  const cl = sanitizeTrades(trades).filter((t) => t.status === "CLOSED" && t.exit !== "" && t.exit != null && !t.archived && (!accountId || t.accountId === accountId))
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const half = Math.floor(cl.length / 2);
+  const older = cl.slice(0, half), recent = cl.slice(half);
+  const rate = (list, m) => (list.length ? list.filter((t) => t.mistakes.includes(m)).length / list.length : 0);
+  const names = [...new Set(cl.flatMap((t) => t.mistakes))].filter(Boolean);
+  const rows = names.map((m) => {
+    const tagged = cl.filter((t) => t.mistakes.includes(m));
+    const impact = tagged.reduce((s, t) => s + netPnl(t), 0);
+    const olderRate = rate(older, m), recentRate = rate(recent, m);
+    return {
+      name: m, count: tagged.length, impact: Math.round(impact),
+      avgImpact: Math.round(impact / tagged.length),
+      olderRate: Math.round(olderRate * 100), recentRate: Math.round(recentRate * 100),
+      improving: cl.length >= 6 ? recentRate < olderRate : null,
+    };
+  });
+  return rows.sort((a, b) => a.impact - b.impact);
+}

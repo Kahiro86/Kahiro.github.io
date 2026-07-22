@@ -9,7 +9,7 @@ import { Card, Chip, Empty } from "../../../shared/ui.jsx";
 import { AK } from "./fields.jsx";
 import {
   overallStats, equityCurve, byStrategy, byPair, bySession, byCondition, byConfluence, byMistake,
-  psychCorrelation, fmtMoney,
+  psychCorrelation, fmtMoney, filterByDim, dimKeys, evolutionSeries, mistakeIntelligence,
 } from "./tradingIntel.js";
 
 const pf = (v) => (v === Infinity ? "∞" : v || "—");
@@ -69,8 +69,116 @@ const DIMS = [
   { id: "condition", l: "Condition" }, { id: "confluence", l: "Confluence" }, { id: "mistake", l: "Mistake" },
 ];
 
+const pillOf = (on) => ({ padding: "6px 12px", borderRadius: 8, border: `1px solid ${on ? AK + "55" : BD}`, background: on ? `${AK}1a` : GL, color: on ? "#FFFFFF" : T2, fontSize: 11.5, fontWeight: on ? 700 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" });
+
+// ── Compare — any two of a dimension, side by side ───────────────────
+const CMP_DIMS = [{ id: "strategy", l: "Strategy" }, { id: "pair", l: "Pair" }, { id: "session", l: "Session" }, { id: "account", l: "Account" }, { id: "month", l: "Month" }];
+function CompareView({ trades, accounts }) {
+  const [dim, setDim] = useState("strategy");
+  const keys = useMemo(() => dimKeys(trades, dim, accounts), [trades, dim, accounts]);
+  const [a, setA] = useState("");
+  const [b, setB] = useState("");
+  const ka = keys.find((k) => k.key === a) ? a : keys[0]?.key || "";
+  const kb = keys.find((k) => k.key === b) ? b : keys[1]?.key || keys[0]?.key || "";
+  const sa = useMemo(() => overallStats(filterByDim(trades, dim, ka), ""), [trades, dim, ka]);
+  const sb = useMemo(() => overallStats(filterByDim(trades, dim, kb), ""), [trades, dim, kb]);
+  const labelOf = (k) => keys.find((x) => x.key === k)?.label || k;
+  const sel = { background: "#161616", border: `1px solid ${BD}`, borderRadius: 8, padding: "7px 10px", fontSize: 11.5, color: T1, outline: "none", fontFamily: "inherit", cursor: "pointer" };
+  const rows = [["Win rate", (s) => `${s.wr}%`, (s) => s.wr], ["Avg RR", (s) => (s.avgRR ? `${s.avgRR}R` : "—"), (s) => s.avgRR], ["Expectancy", (s) => fmtMoney(s.expectancy), (s) => s.expectancy], ["Profit factor", (s) => pf(s.profitFactor), (s) => (s.profitFactor === Infinity ? 999 : s.profitFactor)], ["Net PnL", (s) => fmtMoney(s.net), (s) => s.net], ["Trades", (s) => String(s.count), () => 0]];
+  return (
+    <Card style={{ padding: "15px 17px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 13 }}>
+        <span style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>Compare by</span>
+        {CMP_DIMS.map((d) => <button key={d.id} onClick={() => { setDim(d.id); setA(""); setB(""); }} style={pillOf(dim === d.id)}>{d.l}</button>)}
+      </div>
+      {keys.length < 2 ? <div style={{ fontSize: 11.5, color: T3 }}>Need at least two {dim}s with closed trades to compare.</div> : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+            <select value={ka} onChange={(e) => setA(e.target.value)} style={sel}>{keys.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}</select>
+            <select value={kb} onChange={(e) => setB(e.target.value)} style={sel}>{keys.map((k) => <option key={k.key} value={k.key}>{k.label}</option>)}</select>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 8, alignItems: "center" }}>
+            <span />
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: CY, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{labelOf(ka)}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: AM, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{labelOf(kb)}</span>
+            {rows.map(([label, fmt, val]) => {
+              const va = val(sa), vb = val(sb);
+              const aw = va > vb, bw = vb > va;
+              return (
+                <div key={label} style={{ display: "contents" }}>
+                  <span style={{ fontSize: 11, color: T3, padding: "6px 0" }}>{label}</span>
+                  <span style={{ fontSize: 12.5, fontFamily: "monospace", fontWeight: aw ? 800 : 500, color: aw ? GR : T2, textAlign: "right" }}>{fmt(sa)}</span>
+                  <span style={{ fontSize: 12.5, fontFamily: "monospace", fontWeight: bw ? 800 : 500, color: bw ? GR : T2, textAlign: "right" }}>{fmt(sb)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// ── Evolution — trader growth month over month ───────────────────────
+function EvolutionView({ trades, accId }) {
+  const series = useMemo(() => evolutionSeries(trades, accId), [trades, accId]);
+  if (series.length < 2) return <Card style={{ padding: "15px 17px" }}><div style={{ fontSize: 11.5, color: T3 }}>Log closed trades across at least two months to see your evolution.</div></Card>;
+  const maxNet = Math.max(1, ...series.map((m) => Math.abs(m.net)));
+  return (
+    <Card style={{ padding: "15px 17px" }}>
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: T1, marginBottom: 3 }}>Evolution — month over month</div>
+      <div style={{ fontSize: 10.5, color: T3, marginBottom: 12 }}>Discipline reads from your structured-review ratings, so this tracks the trader, not just the P&L.</div>
+      <div style={{ display: "grid", gridTemplateColumns: "0.9fr 0.7fr 0.7fr 0.7fr 0.8fr 1fr", gap: 8, fontSize: 8.5, color: T3, letterSpacing: 0.6, textTransform: "uppercase", padding: "0 2px 5px" }}>
+        <span>Month</span><span style={{ textAlign: "right" }}>WR</span><span style={{ textAlign: "right" }}>RR</span><span style={{ textAlign: "right" }}>PF</span><span style={{ textAlign: "right" }}>Disc</span><span style={{ textAlign: "right" }}>Net</span>
+      </div>
+      {series.map((m) => (
+        <div key={m.month} style={{ display: "grid", gridTemplateColumns: "0.9fr 0.7fr 0.7fr 0.7fr 0.8fr 1fr", gap: 8, alignItems: "center", padding: "6px 8px", background: GL, borderRadius: 8, marginBottom: 5, position: "relative", overflow: "hidden" }}>
+          <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${(Math.abs(m.net) / maxNet) * 100}%`, background: m.net >= 0 ? `${GR}12` : `${RE}12`, zIndex: 0 }} />
+          <span style={{ fontSize: 11, color: T1, fontWeight: 600, zIndex: 1 }}>{m.month}</span>
+          <span style={{ fontSize: 11, textAlign: "right", color: m.wr >= 50 ? GR : T2, fontFamily: "monospace", zIndex: 1 }}>{m.wr}%</span>
+          <span style={{ fontSize: 11, textAlign: "right", color: T2, fontFamily: "monospace", zIndex: 1 }}>{m.avgRR || "—"}</span>
+          <span style={{ fontSize: 11, textAlign: "right", color: T2, fontFamily: "monospace", zIndex: 1 }}>{pf(m.pf)}</span>
+          <span style={{ fontSize: 11, textAlign: "right", color: m.discipline >= 7 ? GR : m.discipline ? AM : T3, fontFamily: "monospace", zIndex: 1 }}>{m.discipline ?? "—"}</span>
+          <span style={{ fontSize: 11, textAlign: "right", color: m.net >= 0 ? GR : RE, fontFamily: "monospace", fontWeight: 700, zIndex: 1 }}>{m.net >= 0 ? "+" : ""}{fmtMoney(m.net)}</span>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+// ── Mistake Intelligence — frequency, cost, and whether it's improving ─
+function MistakesView({ trades, accId }) {
+  const rows = useMemo(() => mistakeIntelligence(trades, accId), [trades, accId]);
+  if (!rows.length) return <Card style={{ padding: "15px 17px" }}><div style={{ fontSize: 11.5, color: T3 }}>No mistakes tagged yet — tag them on trades and this becomes your improvement map.</div></Card>;
+  return (
+    <Card style={{ padding: "15px 17px" }}>
+      <div style={{ fontSize: 12.5, fontWeight: 700, color: T1, marginBottom: 3 }}>Mistake Intelligence</div>
+      <div style={{ fontSize: 10.5, color: T3, marginBottom: 12 }}>Costliest first. "Trend" compares how often it happened recently vs earlier in your record.</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {rows.map((m) => (
+          <div key={m.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", background: GL, borderRadius: 9 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T1 }}>{m.name}</div>
+              <div style={{ fontSize: 10, color: T3, marginTop: 1 }}>{m.count}× · avg {fmtMoney(m.avgImpact)} · {m.olderRate}% → {m.recentRate}% of trades</div>
+            </div>
+            {m.improving != null && (
+              <span style={{ fontSize: 9.5, fontWeight: 700, padding: "2px 8px", borderRadius: 7, background: m.improving ? `${GR}18` : `${RE}18`, border: `1px solid ${m.improving ? GR + "44" : RE + "44"}`, color: m.improving ? GR : RE }}>
+                {m.improving ? "improving" : "watch"}
+              </span>
+            )}
+            <span style={{ fontSize: 13, fontWeight: 800, fontFamily: "monospace", color: m.impact >= 0 ? GR : RE, minWidth: 76, textAlign: "right" }}>{m.impact >= 0 ? "+" : ""}{fmtMoney(m.impact)}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+const MODES = [{ id: "overview", l: "Overview" }, { id: "compare", l: "Compare" }, { id: "evolution", l: "Evolution" }, { id: "mistakes", l: "Mistakes" }];
+
 export function IntelAnalytics({ trades, accounts, activeId }) {
   const [scope, setScope] = useState("active");
+  const [mode, setMode] = useState("overview");
   const [dim, setDim] = useState("strategy");
   const accId = scope === "active" ? activeId : "";
   const acct = accounts.find((a) => a.id === activeId);
@@ -99,8 +207,18 @@ export function IntelAnalytics({ trades, accounts, activeId }) {
         </div>
       </div>
 
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {MODES.map((m) => <button key={m.id} onClick={() => setMode(m.id)} style={pill(mode === m.id)}>{m.l}</button>)}
+      </div>
+
       {o.count === 0 ? (
         <Empty icon="📊" title="No closed trades yet" sub="Log and close trades and this becomes a research dashboard — win rate, expectancy, and which strategies, pairs, sessions and confluences actually carry your edge." />
+      ) : mode === "compare" ? (
+        <CompareView trades={trades} accounts={accounts} />
+      ) : mode === "evolution" ? (
+        <EvolutionView trades={trades} accId={accId} />
+      ) : mode === "mistakes" ? (
+        <MistakesView trades={trades} accId={accId} />
       ) : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 9 }}>

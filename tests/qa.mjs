@@ -96,6 +96,7 @@ const SCENARIOS = {
     "architect:ti_instruments": JSON.stringify({ notArray: true }),
     "architect:ti_sessions": "{bad json",
     "architect:ti_settings": JSON.stringify("not-an-object"),
+    "architect:ti_lessons": JSON.stringify([null, "x", { nope: 1 }, { title: "L", reinforcementCount: "bad", linkedTrades: "no", dateLearned: "nope" }]),
   },
   tiStoresNull: {
     "architect:ti_trades": "null",
@@ -104,6 +105,7 @@ const SCENARIOS = {
     "architect:ti_strategies": "null",
     "architect:ti_conditions": "null",
     "architect:ti_confluences": "null",
+    "architect:ti_lessons": "null",
   },
   corruptWave3: {
     "architect:faith_scripture": JSON.stringify([null, { id: "v1", ref: "John 3:16" }, "junk"]),
