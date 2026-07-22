@@ -3,7 +3,7 @@
 // the editable libraries once, tracks the active account, and routes between
 // the log, the entry form, the detail view, analytics, accounts and library.
 import { useEffect, useMemo, useState } from "react";
-import { FileText, BarChart2, Wallet, Library as LibIcon, Calculator, Star } from "lucide-react";
+import { FileText, BarChart2, Wallet, Library as LibIcon, Calculator, Star, ClipboardCheck } from "lucide-react";
 import { BD, T1, T2, T3, GL, GR, RE, AM, CY } from "../../../shared/designTokens.js";
 import { useStorageState } from "../../../shared/useStorageState.js";
 import { useToast } from "../../../shared/toast.jsx";
@@ -13,8 +13,10 @@ import { AK, Lbl, Seg, NumInp, AutoCalc } from "./fields.jsx";
 import {
   uid, sanitizeTrades, sanitizeAccounts, sanitizeInstruments, sanitizeSessions,
   sanitizeConditions, sanitizeConfluences, sanitizeStrategies, sanitizeMistakes,
-  sanitizeEmotions, sanitizeReflectionQs, sanitizeLessons, accountMetrics, fmtMoney,
+  sanitizeEmotions, sanitizeReflectionQs, sanitizeLessons, accountMetrics, fmtMoney, tiToLegacyTrades,
 } from "./tradingIntel.js";
+import { ReviewsTab } from "../ReviewsTab.jsx";
+import { pendingReviews, sanitizeReviews } from "../reviews.js";
 import { AccountsTab } from "./AccountsTab.jsx";
 import { LibraryTab } from "./LibraryTab.jsx";
 import { TradeForm } from "./TradeForm.jsx";
@@ -73,6 +75,7 @@ export function TradingIntelModule() {
   const [rawTrades, setTrades, tLoaded] = useStorageState("ti_trades", []);
   const [rawAccounts, setAccounts, aLoaded] = useStorageState("ti_accounts", []);
   const [rawLessons, setLessons] = useStorageState("ti_lessons", []);
+  const [rawReviews, setReviews] = useStorageState("ict_reviews", []);
   const [settings, setSettings] = useStorageState("ti_settings", {});
 
   const [instruments, setInstruments] = useSeededLib("ti_instruments", sanitizeInstruments);
@@ -94,6 +97,16 @@ export function TradingIntelModule() {
   }, [settings, accounts]);
   const activeAcct = accounts.find((a) => a.id === activeId) || null;
   const activeMetrics = activeAcct ? accountMetrics(activeAcct, trades) : null;
+
+  // The review cadence + the Firm's gate run off real-money trading (Live /
+  // Evaluation / Funded), projected into the legacy trade shape reviews.js
+  // consumes. Reviews are written to ict_reviews — the store the gate, XP and
+  // insights already read.
+  const reviewTrades = useMemo(() => {
+    const realIds = new Set(accounts.filter((a) => !a.archived && ["Live", "Evaluation", "Funded"].includes(a.type)).map((a) => a.id));
+    return tiToLegacyTrades(rawTrades, realIds);
+  }, [rawTrades, accounts]);
+  const pendingCount = useMemo(() => pendingReviews(reviewTrades, sanitizeReviews(rawReviews)).length, [reviewTrades, rawReviews]);
 
   const libs = { instruments, sessions, conditions, confluences, strategies, mistakes, emotions, lessons };
   const set = { instruments: setInstruments, sessions: setSessions, conditions: setConditions, confluences: setConfluences, strategies: setStrategies, mistakes: setMistakes, emotions: setEmotions, lessons: setLessons };
@@ -130,6 +143,7 @@ export function TradingIntelModule() {
         tabs={[
           { id: "journal", l: "Journal", i: FileText },
           { id: "analytics", l: "Analytics", i: BarChart2 },
+          { id: "reviews", l: pendingCount ? `Reviews (${pendingCount})` : "Reviews", i: ClipboardCheck },
           { id: "accounts", l: "Accounts", i: Wallet },
           { id: "library", l: "Library", i: LibIcon },
           { id: "risk", l: "Risk", i: Calculator },
@@ -159,6 +173,7 @@ export function TradingIntelModule() {
             {tab === "journal" && view === "form" && <TradeForm initial={editing} libs={libs} accounts={accounts} activeId={activeId} reflectionQs={reflectionQs} lessons={lessons} onReinforceLesson={reinforceLesson} onSave={saveTrade} onCancel={() => { setView("list"); setEditing(null); }} />}
             {tab === "journal" && view === "detail" && detail && <TradeDetail trade={trades.find((x) => x.id === detail.id) || detail} onBack={() => { setView("list"); setDetail(null); }} onEdit={startEdit} />}
             {tab === "analytics" && <IntelAnalytics trades={trades} accounts={accounts} activeId={activeId} />}
+            {tab === "reviews" && <ReviewsTab trades={reviewTrades} reviews={rawReviews} setReviews={setReviews} />}
             {tab === "accounts" && <AccountsTab accounts={accounts} setAccounts={setAccounts} trades={trades} activeId={activeId} onActivate={setActive} toast={toast} />}
             {tab === "library" && <LibraryTab libs={libs} set={set} />}
             {tab === "risk" && <RiskTab instruments={instruments.filter((i) => !i.archived)} account={activeAcct} />}
