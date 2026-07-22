@@ -28,6 +28,7 @@ export function SettingsPanel({ onClose }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [dataMsg, setDataMsg] = useState(null); // { text, tone }
   const [armErase, setArmErase] = useState(false);
+  const [armLegacy, setArmLegacy] = useState(false);
   const fileRef = useRef(null);
 
   // ── Account & Cloud Sync state ─────────────────────────────────────
@@ -244,6 +245,17 @@ export function SettingsPanel({ onClose }) {
     window.location.reload();
   };
 
+  // Clear the legacy ICT trade journal (ict_trades / ict_reviews) — the old
+  // pre-rebuild data that still feeds the Firm's Doctrine (Fleet) view. Set to
+  // empty (rather than removed) so a synced device propagates the clear.
+  const clearLegacyTrades = async () => {
+    await storage.set("ict_trades", JSON.stringify([]));
+    await storage.set("ict_reviews", JSON.stringify([]));
+    setArmLegacy(false);
+    setDataMsg({ text: "Legacy trade journal cleared. Reloading…", tone: GR });
+    setTimeout(() => window.location.reload(), 600);
+  };
+
   const btn = (extra = {}) => ({ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", flex: 1, ...extra });
 
   return (
@@ -442,6 +454,25 @@ export function SettingsPanel({ onClose }) {
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importData(f); e.target.value = ""; }} />
         </div>
         {dataMsg && <div style={{ fontSize: 12, color: dataMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{dataMsg.text}</div>}
+
+        {/* Legacy trade data left over from before the Trading Intelligence
+            rebuild. The new journal (The Firm → Trading) starts fresh; these old
+            trades only still surface in the Firm's Doctrine → Fleet view. */}
+        {!armLegacy ? (
+          <button onClick={() => setArmLegacy(true)} style={btn({ width: "100%", flex: "none", borderColor: `${AM}33`, color: AM })}>
+            Clear legacy trade journal…
+          </button>
+        ) : (
+          <div style={{ padding: "12px", background: `${AM}0D`, border: `1px solid ${AM}33`, borderRadius: 10 }}>
+            <div style={{ fontSize: 12, color: T2, lineHeight: 1.55, marginBottom: 10 }}>
+              Removes old trades from the pre-rebuild journal (the ones still showing in the Firm's Doctrine → Fleet view). Your new Trading journal, accounts and everything else are untouched.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={clearLegacyTrades} style={btn({ background: `${AM}22`, borderColor: `${AM}66`, color: AM, fontWeight: 700 })}>Clear legacy trades</button>
+              <button onClick={() => setArmLegacy(false)} style={btn({})}>Cancel</button>
+            </div>
+          </div>
+        )}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
