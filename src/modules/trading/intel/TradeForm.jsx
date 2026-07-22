@@ -3,7 +3,7 @@
 // the user's own libraries. Fast to log, everything editable, nothing
 // methodology-specific. Auto-derives trade info, session, risk, RR, result.
 import { useMemo, useRef, useState } from "react";
-import { X, Image as ImageIcon, Link2, Wand2 } from "lucide-react";
+import { X, Image as ImageIcon, Link2, Wand2, Lightbulb, Check } from "lucide-react";
 import { BD, B2, T1, T2, T3, GL, GR, RE, AM } from "../../../shared/designTokens.js";
 import { MoneyInp } from "../../../shared/ui.jsx";
 import { DatePicker } from "../../../shared/DatePicker.jsx";
@@ -11,7 +11,7 @@ import { localDateStr } from "../../../shared/dates.js";
 import { AK, Lbl, Section, Seg, ChipMulti, Rating, TextArea, NumInp, AutoCalc } from "./fields.jsx";
 import { PSYCH_BEFORE, REVIEW_FIELDS, DEFAULT_TIMEFRAMES, MEDIA_CATEGORIES } from "./defaults.js";
 import {
-  uid, sanitizeTrades, tradeInfo, detectSessions,
+  uid, sanitizeTrades, tradeInfo, detectSessions, recommendLessons,
   riskAmount, stopDistance, projectedRR, netPnl, grossPnl, tradeResult, actualRR, fmtMoney, RESULT_COLORS,
 } from "./tradingIntel.js";
 
@@ -49,11 +49,13 @@ function seed(initial, accounts, activeId) {
   };
 }
 
-export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, onSave, onCancel }) {
+export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, lessons = [], onReinforceLesson, onSave, onCancel }) {
   const [f, setF] = useState(() => seed(initial, accounts, activeId));
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const fileRef = useRef(null);
   const [mediaCat, setMediaCat] = useState(MEDIA_CATEGORIES[0]);
+  const [reinforced, setReinforced] = useState([]);
+  const recs = useMemo(() => recommendLessons(lessons, { strategy: f.strategy, instrument: f.instrument, conditions: f.conditions }), [lessons, f.strategy, f.instrument, f.conditions]);
 
   const instOpts = (libs.instruments || []).filter((i) => !i.archived);
   const strat = (libs.strategies || []).find((s) => s.id === f.strategyId);
@@ -112,6 +114,30 @@ export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, onS
             <Wand2 size={13} color={AK} style={{ flexShrink: 0, marginTop: 1 }} /><div><b style={{ color: T1 }}>{strat.name} v{v.version}</b> — {v.rules}</div>
           </div>
         ) : null; })()}
+
+        {/* relevant lessons from past trades in this context */}
+        {recs.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: "11px 13px", background: "rgba(240,180,41,0.07)", border: `1px solid ${AM}33`, borderRadius: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 700, color: AM, letterSpacing: 0.5, textTransform: "uppercase" }}><Lightbulb size={12} /> Lessons for this setup</div>
+            {recs.map((l) => {
+              const done = reinforced.includes(l.id);
+              return (
+                <div key={l.id} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T1 }}>{l.title}{l.reinforcementCount > 0 && <span style={{ color: T3, fontWeight: 400 }}> · reinforced {l.reinforcementCount}×</span>}</div>
+                    {l.description && <div style={{ fontSize: 11, color: T2, lineHeight: 1.45, marginTop: 2 }}>{l.description}</div>}
+                  </div>
+                  {onReinforceLesson && (
+                    <button onClick={() => { if (!done) { onReinforceLesson(l.id, f.id); setReinforced((p) => [...p, l.id]); } }} disabled={done}
+                      style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", background: done ? `${GR}18` : GL, border: `1px solid ${done ? GR + "44" : BD}`, borderRadius: 8, color: done ? GR : T2, fontSize: 10.5, fontWeight: 600, cursor: done ? "default" : "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                      {done ? <><Check size={11} /> Applied</> : "Reinforce"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <Section title="Trade Info" sub="Date, time and account — the rest is auto">
           <div><Lbl>Account</Lbl>

@@ -8,7 +8,7 @@ import { Plus, Pencil, Archive, ArchiveRestore, Trash2, Copy, Check, GitBranch }
 import { BD, B2, T1, T2, T3, GL, GR } from "../../../shared/designTokens.js";
 import { Card } from "../../../shared/ui.jsx";
 import { AK, Lbl, TextArea } from "./fields.jsx";
-import { uid } from "./tradingIntel.js";
+import { uid, newLesson } from "./tradingIntel.js";
 
 const inp = { width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 8, padding: "7px 10px", fontSize: 12, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
 const smallBtn = (c = T3) => ({ background: "none", border: "none", color: c, cursor: "pointer", padding: 3, display: "inline-flex" });
@@ -170,8 +170,67 @@ function StrategyEditor({ items, setItems }) {
   );
 }
 
+// Lesson Library — reusable knowledge drawn from trades, tagged with the
+// context it applies to so it can resurface in the entry form.
+function LessonEditor({ lessons, setLessons, libs }) {
+  const [draft, setDraft] = useState(null); // new-lesson draft or null
+  const stratNames = (libs.strategies || []).filter((s) => !s.archived).map((s) => s.name);
+  const pairNames = (libs.instruments || []).filter((i) => !i.archived).map((i) => i.symbol);
+  const condNames = (libs.conditions || []).filter((c) => !c.archived).map((c) => c.name);
+  const blank = { title: "", description: "", strategy: "", pair: "", condition: "", dateLearned: new Date().toISOString().slice(0, 10) };
+  const add = () => { if (!draft.title.trim()) return; setLessons((p) => [newLesson(draft), ...(Array.isArray(p) ? p : [])]); setDraft(null); };
+  const patch = (id, k, v) => setLessons((p) => p.map((l) => (l.id === id ? { ...l, [k]: v } : l)));
+  const del = (id) => setLessons((p) => p.filter((l) => l.id !== id));
+  const toggle = (id) => setLessons((p) => p.map((l) => (l.id === id ? { ...l, archived: !l.archived } : l)));
+  const sel = { background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "7px 9px", fontSize: 11.5, color: T2, outline: "none", fontFamily: "inherit", cursor: "pointer" };
+  const Dropdown = ({ value, onChange, options, ph }) => (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={sel}><option value="">{ph}</option>{options.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+      <div style={{ fontSize: 10.5, color: T3, lineHeight: 1.5 }}>Lessons resurface automatically in the entry form when their strategy, pair or condition matches the trade you're logging.</div>
+      {draft ? (
+        <div style={{ border: `1px solid ${AK}44`, borderRadius: 10, padding: 13, display: "flex", flexDirection: "column", gap: 9 }}>
+          <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Lesson title (e.g. Wait for NY confirmation)" style={inp} autoFocus />
+          <TextArea value={draft.description} onChange={(v) => setDraft({ ...draft, description: v })} placeholder="What did you learn, and why does it matter?" rows={2} />
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+            <Dropdown value={draft.strategy} onChange={(v) => setDraft({ ...draft, strategy: v })} options={stratNames} ph="Any strategy" />
+            <Dropdown value={draft.pair} onChange={(v) => setDraft({ ...draft, pair: v })} options={pairNames} ph="Any pair" />
+            <Dropdown value={draft.condition} onChange={(v) => setDraft({ ...draft, condition: v })} options={condNames} ph="Any condition" />
+            <input type="date" value={draft.dateLearned} onChange={(e) => setDraft({ ...draft, dateLearned: e.target.value })} style={{ ...sel, colorScheme: "dark" }} />
+          </div>
+          <div style={{ display: "flex", gap: 7 }}>
+            <button onClick={add} style={{ padding: "8px 14px", background: `${AK}1A`, border: `1px solid ${AK}55`, borderRadius: 8, color: "#FFFFFF", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save lesson</button>
+            <button onClick={() => setDraft(null)} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 8, color: T3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setDraft(blank)} style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${AK}1A`, border: `1px solid ${AK}55`, borderRadius: 9, color: "#FFFFFF", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} /> New lesson</button>
+      )}
+      {lessons.map((l) => (
+        <div key={l.id} style={{ border: `1px solid ${BD}`, borderRadius: 10, background: GL, padding: "11px 13px", opacity: l.archived ? 0.55 : 1 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <input value={l.title} onChange={(e) => patch(l.id, "title", e.target.value)} style={{ width: "100%", background: "transparent", border: "none", fontSize: 12.5, fontWeight: 700, color: T1, outline: "none", fontFamily: "inherit" }} />
+              {l.description && <div style={{ fontSize: 11, color: T2, lineHeight: 1.45, marginTop: 3 }}>{l.description}</div>}
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
+                {[l.strategy, l.pair, l.condition].filter(Boolean).map((c, i) => <span key={i} style={{ fontSize: 9.5, color: T3, padding: "2px 8px", background: "rgba(255,255,255,0.04)", borderRadius: 7, border: `1px solid ${BD}` }}>{c}</span>)}
+                <span style={{ fontSize: 9.5, color: AK, padding: "2px 8px", borderRadius: 7 }}>reinforced {l.reinforcementCount}×</span>
+                {l.linkedTrades.length > 0 && <span style={{ fontSize: 9.5, color: T3, padding: "2px 8px", borderRadius: 7 }}>{l.linkedTrades.length} linked trade{l.linkedTrades.length === 1 ? "" : "s"}</span>}
+              </div>
+            </div>
+            <button onClick={() => toggle(l.id)} style={smallBtn()}>{l.archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}</button>
+            <button onClick={() => del(l.id)} style={smallBtn()}><Trash2 size={12} /></button>
+          </div>
+        </div>
+      ))}
+      {lessons.length === 0 && !draft && <span style={{ fontSize: 11.5, color: T3 }}>No lessons yet — capture what a trade taught you and it becomes reusable knowledge.</span>}
+    </div>
+  );
+}
+
 const SUB = [
-  { id: "strategies", l: "Strategies" }, { id: "instruments", l: "Instruments" },
+  { id: "strategies", l: "Strategies" }, { id: "lessons", l: "Lessons" }, { id: "instruments", l: "Instruments" },
   { id: "sessions", l: "Sessions" }, { id: "conditions", l: "Market Conditions" },
   { id: "confluences", l: "Confluences" }, { id: "mistakes", l: "Mistakes" }, { id: "emotions", l: "Emotions" },
 ];
@@ -191,6 +250,7 @@ export function LibraryTab({ libs, set }) {
       </div>
       <Card style={{ padding: "16px 18px" }}>
         {sub === "strategies" && <StrategyEditor items={libs.strategies} setItems={set.strategies} />}
+        {sub === "lessons" && <LessonEditor lessons={libs.lessons} setLessons={set.lessons} libs={libs} />}
         {sub === "instruments" && <InstrumentEditor items={libs.instruments} setItems={set.instruments} />}
         {sub === "sessions" && <SessionEditor items={libs.sessions} setItems={set.sessions} />}
         {sub === "conditions" && <NamedListEditor items={libs.conditions} setItems={set.conditions} noun="condition" />}
