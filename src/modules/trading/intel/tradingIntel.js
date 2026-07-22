@@ -531,6 +531,7 @@ export function tiToLegacyTrades(rawTrades, accountIds = null) {
       return {
         id: t.id,
         date: t.date,
+        instrument: t.instrument,
         status: closed ? "CLOSED" : "OPEN",
         archived: false,
         outcome: closed ? (RES[tradeResult(t)] || "BE") : "",
@@ -539,6 +540,7 @@ export function tiToLegacyTrades(rawTrades, accountIds = null) {
         riskAmount: riskAmount(t),
         checklistTotal: t.checklist.length,
         checklistScore: t.checklist.filter((c) => c.done).length,
+        checklistSkipped: false,
       };
     });
 }
