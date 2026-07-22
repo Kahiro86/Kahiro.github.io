@@ -5,12 +5,13 @@
 // #2), and the Covenant (the Ten Laws, signed to yourself). Every number is
 // real where the data exists and honestly empty where it doesn't — nothing
 // here is mocked. Phase 1: single funded account, locked fleet slots.
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Building2, TrendingUp, Vault, Target, ScrollText, Map, LifeBuoy } from "lucide-react";
 import { AC } from "../../shared/designTokens.js";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { Hydrating } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
+import { sanitizeAccounts, tiToLegacyTrades } from "../trading/intel/tradingIntel.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { FleetTab } from "./FleetTab.jsx";
 import { VaultTab } from "./VaultTab.jsx";
@@ -23,7 +24,12 @@ const FI = AC; // Nocturne cyan accent (monochrome theme)
 
 export function FirmDoctrine() {
   const [tab, setTab] = useState("fleet");
-  const [trades, , tradesLoaded] = useStorageState("ict_trades", []);
+  // The Doctrine (Fleet / Gate / Campaign) now runs off the rebuilt Trading
+  // journal (ti_trades), scoped to real-money accounts (Live / Evaluation /
+  // Funded) so demo and backtest trades never count toward the funded-account
+  // progression. The legacy ict_trades store is no longer read here.
+  const [rawTiTrades, , tiLoaded] = useStorageState("ti_trades", []);
+  const [rawTiAccounts, , accLoaded] = useStorageState("ti_accounts", []);
   const [rawBal] = useStorageState("ict_balance", 15000);
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [reviews] = useStorageState("ict_reviews", []);
@@ -32,7 +38,13 @@ export function FirmDoctrine() {
   const [covenant, setCovenant, covLoaded] = useStorageState("firm_covenant", null);
   const [campaign, setCampaign, campLoaded] = useStorageState("firm_campaign", null);
 
-  const loaded = tradesLoaded && wdLoaded && cfgLoaded && covLoaded && campLoaded;
+  const REAL = new Set(["Live", "Evaluation", "Funded"]);
+  const trades = useMemo(() => {
+    const realIds = new Set(sanitizeAccounts(rawTiAccounts).filter((a) => !a.archived && REAL.has(a.type)).map((a) => a.id));
+    return tiToLegacyTrades(rawTiTrades, realIds);
+  }, [rawTiTrades, rawTiAccounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loaded = tiLoaded && accLoaded && wdLoaded && cfgLoaded && covLoaded && campLoaded;
   if (!loaded) return <Hydrating label="Opening the firm…" />;
 
   const shared = { trades, rawBal, finance, reviews, withdrawals, setWithdrawals, config, setConfig };

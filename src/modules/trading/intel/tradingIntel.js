@@ -514,3 +514,31 @@ export function mistakeIntelligence(trades, accountId = "") {
   });
   return rows.sort((a, b) => a.impact - b.impact);
 }
+
+// ── Doctrine adapter ─────────────────────────────────────────────────
+// Project new-journal trades into the legacy trade shape the Firm's Doctrine
+// engines (firm.js scalingGate, helpers.js tradingMetrics/getStats/periodSummary)
+// consume, so the prop-firm progression runs off real logged trades instead of
+// the retired ict_trades store. `accountIds` (a Set) scopes to the real-money
+// accounts — demo/backtest trades never inflate the funded-account doctrine.
+// Checklist adherence is derived from each trade's own checklist array.
+export function tiToLegacyTrades(rawTrades, accountIds = null) {
+  const RES = { Win: "WIN", Loss: "LOSS", BE: "BE" };
+  return sanitizeTrades(rawTrades)
+    .filter((t) => !t.archived && (accountIds == null || accountIds.has(t.accountId)))
+    .map((t) => {
+      const closed = t.status === "CLOSED" && t.exit !== "" && t.exit != null;
+      return {
+        id: t.id,
+        date: t.date,
+        status: closed ? "CLOSED" : "OPEN",
+        archived: false,
+        outcome: closed ? (RES[tradeResult(t)] || "BE") : "",
+        pnl: closed ? netPnl(t) : 0,
+        actualRR: closed ? actualRR(t) : null,
+        riskAmount: riskAmount(t),
+        checklistTotal: t.checklist.length,
+        checklistScore: t.checklist.filter((c) => c.done).length,
+      };
+    });
+}
