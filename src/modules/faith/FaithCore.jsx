@@ -5,10 +5,11 @@
 // (category "Spiritual"), so Life OS, the Command Center and this module
 // all see the same records.
 import { useMemo, useState } from "react";
-import { BookOpen, Plus, Check, Trash2, Church as ChurchIcon, Sparkles, ScrollText } from "lucide-react";
+import { BookOpen, Plus, Check, Trash2, Pencil, Church as ChurchIcon, Sparkles, ScrollText } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, GR, RE, AM, PU, CY } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
+import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysAgoStr, daysBetween } from "../../shared/dates.js";
@@ -56,6 +57,8 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
   const [verseDraft, setVerseDraft] = useState(null); // { ref, text }
   const [noteDraft, setNoteDraft] = useState("");
   const [noteRef, setNoteRef] = useState("");
+  const [noteDs, setNoteDs] = useState(localDateStr());
+  const [editingNoteId, setEditingNoteId] = useState(null);
   const toast = useToast();
   const ds = localDateStr();
 
@@ -65,7 +68,8 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
   );
   const versesSafe = useMemo(() => (Array.isArray(verses) ? verses : []).filter((v) => v && v.id), [verses]);
   const churchSafe = useMemo(() => (Array.isArray(church) ? church : []).filter((d) => typeof d === "string"), [church]);
-  const notesSafe = useMemo(() => (Array.isArray(notes) ? notes : []).filter((n) => n && n.id), [notes]);
+  const notesSafe = useMemo(() => (Array.isArray(notes) ? notes : []).filter((n) => n && n.id)
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))), [notes]);
 
   const due = versesSafe.filter(isDue);
   const stats90 = spiritual.map((h) => rangeStats(h, 90));
@@ -111,15 +115,24 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
 
   const saveNote = () => {
     if (!noteDraft.trim()) return;
-    setNotes((prev) => [
-      { id: `fn${Date.now().toString(36)}`, date: ds, ref: noteRef.trim(), text: noteDraft.trim() },
-      ...(Array.isArray(prev) ? prev : []),
-    ]);
-    setNoteDraft(""); setNoteRef("");
-    toast("Devotional note saved 🌱", { tone: "success" });
+    if (editingNoteId) {
+      setNotes((prev) => (Array.isArray(prev) ? prev : []).map((n) =>
+        n?.id === editingNoteId ? { ...n, date: noteDs, ref: noteRef.trim(), text: noteDraft.trim(), editedAt: new Date().toISOString() } : n));
+      toast("Devotional note updated ✍️", { tone: "success" });
+    } else {
+      setNotes((prev) => [
+        { id: `fn${Date.now().toString(36)}`, date: noteDs, ref: noteRef.trim(), text: noteDraft.trim(), editedAt: null },
+        ...(Array.isArray(prev) ? prev : []),
+      ]);
+      toast("Devotional note saved 🌱", { tone: "success" });
+    }
+    setNoteDraft(""); setNoteRef(""); setNoteDs(localDateStr()); setEditingNoteId(null);
   };
+  const startEditNote = (n) => { setEditingNoteId(n.id); setNoteDraft(n.text || ""); setNoteRef(n.ref || ""); setNoteDs((n.date || "").slice(0, 10) || localDateStr()); };
+  const cancelEditNote = () => { setEditingNoteId(null); setNoteDraft(""); setNoteRef(""); setNoteDs(localDateStr()); };
   const deleteNote = (n) => {
     setNotes((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x?.id !== n.id));
+    if (editingNoteId === n.id) cancelEditNote();
     toast("Note removed", { action: "Undo", onAction: () => setNotes((p) => [n, ...(Array.isArray(p) ? p : [])]), tone: "danger" });
   };
 
@@ -276,23 +289,30 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
         {loaded && tab === "notes" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
             <Card style={{ padding: "16px 18px" }}>
-              <SH title="Devotional Note" sub={new Date().toLocaleDateString("en-US", { month: "long", day: "numeric" })} />
+              <SH title={editingNoteId ? "Edit Devotional Note" : "Devotional Note"} sub={relativeDateLabel(noteDs)} />
+              <div style={{ marginBottom: 9 }}><DatePicker value={noteDs} onChange={setNoteDs} /></div>
               <input value={noteRef} onChange={(e) => setNoteRef(e.target.value)} placeholder="Passage (optional) — e.g. Psalm 23" style={{ ...input, width: "100%", marginBottom: 8 }} />
               <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="What is God teaching you today?"
                 style={{ ...input, width: "100%", minHeight: 90, resize: "none", lineHeight: 1.7, marginBottom: 9 }} />
-              <button onClick={saveNote} disabled={!noteDraft.trim()}
-                style={{ width: "100%", padding: "9px", background: noteDraft.trim() ? `${FA}14` : GL, border: `1px solid ${noteDraft.trim() ? FA + "44" : BD}`, borderRadius: 10, color: noteDraft.trim() ? FA : T3, fontSize: 12, fontWeight: 700, cursor: noteDraft.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
-                Save note
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={saveNote} disabled={!noteDraft.trim()}
+                  style={{ flex: 1, padding: "9px", background: noteDraft.trim() ? `${FA}14` : GL, border: `1px solid ${noteDraft.trim() ? FA + "44" : BD}`, borderRadius: 10, color: noteDraft.trim() ? FA : T3, fontSize: 12, fontWeight: 700, cursor: noteDraft.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
+                  {editingNoteId ? "Update note" : "Save note"}
+                </button>
+                {editingNoteId && (
+                  <button onClick={cancelEditNote} style={{ padding: "9px 16px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, color: T2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                )}
+              </div>
             </Card>
             {notesSafe.map((n) => (
-              <div key={n.id} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${BD}`, display: "flex", gap: 9 }}>
+              <div key={n.id} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${n.id === editingNoteId ? FA + "55" : BD}`, display: "flex", gap: 9 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>
-                    {new Date(`${n.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}{n.ref ? ` · ${n.ref}` : ""}
+                    {relativeDateLabel((n.date || "").slice(0, 10) || ds)}{n.ref ? ` · ${n.ref}` : ""}{n.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}
                   </div>
                   <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{n.text}</div>
                 </div>
+                <button onClick={() => startEditNote(n)} aria-label="Edit note" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Pencil size={11} /></button>
                 <button onClick={() => deleteNote(n)} aria-label="Delete note" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Trash2 size={11} /></button>
               </div>
             ))}

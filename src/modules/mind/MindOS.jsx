@@ -3,10 +3,11 @@
 // notes, and a decision journal that resurfaces each decision after 30
 // days so you learn from outcomes, not intentions.
 import { useMemo, useState } from "react";
-import { BookOpen, Plus, Check, Trash2, StickyNote, Scale, GraduationCap } from "lucide-react";
+import { BookOpen, Plus, Check, Trash2, Pencil, StickyNote, Scale, GraduationCap } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, GR, RE, AM, CY } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
+import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysBetween } from "../../shared/dates.js";
@@ -23,14 +24,18 @@ export function MindOS({ loaded = true }) {
   const [decisions, setDecisions] = useStorageState("mind_decisions", []);
   const [itemDraft, setItemDraft] = useState(null);   // { title, author, kind, pagesTotal }
   const [noteDraft, setNoteDraft] = useState("");
-  const [decDraft, setDecDraft] = useState(null);     // { decision, expected }
+  const [noteDs, setNoteDs] = useState(localDateStr());
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [decDraft, setDecDraft] = useState(null);     // { decision, expected, date }
+  const [editingDecId, setEditingDecId] = useState(null);
   const [reviewing, setReviewing] = useState(null);   // decision id being reviewed
   const [reviewText, setReviewText] = useState("");
   const toast = useToast();
   const ds = localDateStr();
 
   const itemsSafe = useMemo(() => (Array.isArray(items) ? items : []).filter((x) => x && x.id), [items]);
-  const notesSafe = useMemo(() => (Array.isArray(notes) ? notes : []).filter((x) => x && x.id), [notes]);
+  const notesSafe = useMemo(() => (Array.isArray(notes) ? notes : []).filter((x) => x && x.id)
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))), [notes]);
   const decisionsSafe = useMemo(() => (Array.isArray(decisions) ? decisions : []).filter((x) => x && x.id), [decisions]);
 
   const reading = itemsSafe.filter((x) => x.status === "reading");
@@ -66,25 +71,44 @@ export function MindOS({ loaded = true }) {
   // ── Notes actions ───────────────────────────────────────────────────
   const saveNote = () => {
     if (!noteDraft.trim()) return;
-    setNotes((prev) => [{ id: `mn${Date.now().toString(36)}`, date: ds, text: noteDraft.trim() }, ...(Array.isArray(prev) ? prev : [])]);
-    setNoteDraft("");
-    toast("Note captured 💡", { tone: "success", duration: 2200 });
+    if (editingNoteId) {
+      setNotes((prev) => (Array.isArray(prev) ? prev : []).map((n) =>
+        n?.id === editingNoteId ? { ...n, date: noteDs, text: noteDraft.trim(), editedAt: new Date().toISOString() } : n));
+      toast("Note updated ✍️", { tone: "success", duration: 2200 });
+    } else {
+      setNotes((prev) => [{ id: `mn${Date.now().toString(36)}`, date: noteDs, text: noteDraft.trim(), editedAt: null }, ...(Array.isArray(prev) ? prev : [])]);
+      toast("Note captured 💡", { tone: "success", duration: 2200 });
+    }
+    setNoteDraft(""); setNoteDs(localDateStr()); setEditingNoteId(null);
   };
+  const startEditNote = (n) => { setEditingNoteId(n.id); setNoteDraft(n.text || ""); setNoteDs((n.date || "").slice(0, 10) || localDateStr()); };
+  const cancelEditNote = () => { setEditingNoteId(null); setNoteDraft(""); setNoteDs(localDateStr()); };
   const deleteNote = (n) => {
     setNotes((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x?.id !== n.id));
+    if (editingNoteId === n.id) cancelEditNote();
     toast("Note removed", { action: "Undo", onAction: () => setNotes((p) => [n, ...(Array.isArray(p) ? p : [])]), tone: "danger" });
   };
 
   // ── Decision journal actions ────────────────────────────────────────
   const saveDecision = () => {
     if (!decDraft?.decision?.trim()) return;
-    setDecisions((prev) => [
-      { id: `d${Date.now().toString(36)}`, date: ds, decision: decDraft.decision.trim(), expected: (decDraft.expected || "").trim(), reviewedAt: null, outcome: null, lesson: "" },
-      ...(Array.isArray(prev) ? prev : []),
-    ]);
-    setDecDraft(null);
-    toast(`Logged — it resurfaces for review in ${REVIEW_AFTER_DAYS} days ⚖️`, { tone: "success", duration: 4000 });
+    const decDs = decDraft.date || ds;
+    if (editingDecId) {
+      setDecisions((prev) => (Array.isArray(prev) ? prev : []).map((d) =>
+        d?.id === editingDecId ? { ...d, date: decDs, decision: decDraft.decision.trim(), expected: (decDraft.expected || "").trim(), editedAt: new Date().toISOString() } : d));
+      toast("Decision updated ✍️", { tone: "success" });
+    } else {
+      const daysAgo = daysSince(decDs);
+      const remaining = Math.max(0, REVIEW_AFTER_DAYS - daysAgo);
+      setDecisions((prev) => [
+        { id: `d${Date.now().toString(36)}`, date: decDs, decision: decDraft.decision.trim(), expected: (decDraft.expected || "").trim(), reviewedAt: null, outcome: null, lesson: "", editedAt: null },
+        ...(Array.isArray(prev) ? prev : []),
+      ]);
+      toast(remaining > 0 ? `Logged — it resurfaces for review in ${remaining} days ⚖️` : "Logged — it's already ready to review ⚖️", { tone: "success", duration: 4000 });
+    }
+    setDecDraft(null); setEditingDecId(null);
   };
+  const startEditDec = (d) => { setEditingDecId(d.id); setDecDraft({ decision: d.decision || "", expected: d.expected || "", date: (d.date || "").slice(0, 10) || localDateStr() }); };
   const recordOutcome = (id, outcome) => {
     setDecisions((prev) => (Array.isArray(prev) ? prev : []).map((d) =>
       d?.id === id ? { ...d, reviewedAt: ds, outcome, lesson: reviewText.trim() } : d
@@ -218,20 +242,27 @@ export function MindOS({ loaded = true }) {
         {loaded && tab === "notes" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
             <Card style={{ padding: "16px 18px" }}>
-              <SH title="Capture" sub="Ideas, insights, things worth keeping" />
+              <SH title={editingNoteId ? "Edit note" : "Capture"} sub={editingNoteId ? relativeDateLabel(noteDs) : "Ideas, insights, things worth keeping"} />
+              <div style={{ marginBottom: 9 }}><DatePicker value={noteDs} onChange={setNoteDs} /></div>
               <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Write it down before it evaporates…"
                 style={{ ...input, width: "100%", minHeight: 80, resize: "none", lineHeight: 1.7, marginBottom: 9 }} />
-              <button onClick={saveNote} disabled={!noteDraft.trim()}
-                style={{ width: "100%", padding: "9px", background: noteDraft.trim() ? `${MI}22` : GL, border: `1px solid ${noteDraft.trim() ? MI + "55" : BD}`, borderRadius: 10, color: noteDraft.trim() ? "#A8B0D6" : T3, fontSize: 12, fontWeight: 700, cursor: noteDraft.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
-                Save note
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={saveNote} disabled={!noteDraft.trim()}
+                  style={{ flex: 1, padding: "9px", background: noteDraft.trim() ? `${MI}22` : GL, border: `1px solid ${noteDraft.trim() ? MI + "55" : BD}`, borderRadius: 10, color: noteDraft.trim() ? "#A8B0D6" : T3, fontSize: 12, fontWeight: 700, cursor: noteDraft.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
+                  {editingNoteId ? "Update note" : "Save note"}
+                </button>
+                {editingNoteId && (
+                  <button onClick={cancelEditNote} style={{ padding: "9px 16px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, color: T2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                )}
+              </div>
             </Card>
             {notesSafe.map((n) => (
-              <div key={n.id} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${BD}`, display: "flex", gap: 9 }}>
+              <div key={n.id} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${n.id === editingNoteId ? MI + "55" : BD}`, display: "flex", gap: 9 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>{new Date(`${n.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
+                  <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>{relativeDateLabel((n.date || "").slice(0, 10) || ds)}{n.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}</div>
                   <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{n.text}</div>
                 </div>
+                <button onClick={() => startEditNote(n)} aria-label="Edit note" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Pencil size={11} /></button>
                 <button onClick={() => deleteNote(n)} aria-label="Delete note" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Trash2 size={11} /></button>
               </div>
             ))}
@@ -247,7 +278,7 @@ export function MindOS({ loaded = true }) {
                 <div style={{ fontSize: 12, color: T3, marginTop: 2 }}>Write the expectation now; the outcome review unlocks after {REVIEW_AFTER_DAYS} days.</div>
               </div>
               {!decDraft && (
-                <button onClick={() => setDecDraft({ decision: "", expected: "" })}
+                <button onClick={() => { setEditingDecId(null); setDecDraft({ decision: "", expected: "", date: localDateStr() }); }}
                   style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 15px", background: `${MI}22`, border: `1px solid ${MI}55`, borderRadius: 10, color: "#A8B0D6", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   <Plus size={13} />Log decision
                 </button>
@@ -256,14 +287,15 @@ export function MindOS({ loaded = true }) {
 
             {decDraft && (
               <Card style={{ padding: "16px", borderColor: `${MI}55` }}>
+                <div style={{ marginBottom: 9 }}><DatePicker value={decDraft.date || ds} onChange={(v) => setDecDraft((d) => ({ ...d, date: v }))} /></div>
                 <textarea autoFocus value={decDraft.decision} onChange={(e) => setDecDraft((d) => ({ ...d, decision: e.target.value }))}
                   placeholder="What did you decide? (and the key reason)" style={{ ...input, width: "100%", minHeight: 56, resize: "none", lineHeight: 1.6, marginBottom: 8 }} />
                 <textarea value={decDraft.expected} onChange={(e) => setDecDraft((d) => ({ ...d, expected: e.target.value }))}
                   placeholder="What do you expect to happen?" style={{ ...input, width: "100%", minHeight: 46, resize: "none", lineHeight: 1.6, marginBottom: 10 }} />
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button onClick={() => setDecDraft(null)} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                  <button onClick={() => { setDecDraft(null); setEditingDecId(null); }} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
                   <button onClick={saveDecision} disabled={!decDraft.decision.trim()}
-                    style={{ padding: "8px 16px", background: decDraft.decision.trim() ? `${MI}22` : GL, border: `1px solid ${decDraft.decision.trim() ? MI + "66" : BD}`, borderRadius: 9, color: decDraft.decision.trim() ? "#A8B0D6" : T3, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Log it</button>
+                    style={{ padding: "8px 16px", background: decDraft.decision.trim() ? `${MI}22` : GL, border: `1px solid ${decDraft.decision.trim() ? MI + "66" : BD}`, borderRadius: 9, color: decDraft.decision.trim() ? "#A8B0D6" : T3, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{editingDecId ? "Update" : "Log it"}</button>
                 </div>
               </Card>
             )}
@@ -283,10 +315,16 @@ export function MindOS({ loaded = true }) {
               const due = !d.reviewedAt && daysSince(d.date) >= REVIEW_AFTER_DAYS;
               const outcome = OUTCOMES.find((o) => o.id === d.outcome);
               return (
-                <Card key={d.id} style={{ padding: "14px 16px", borderColor: due ? `${AM}44` : undefined }}>
-                  <div style={{ fontSize: 10, color: T3, marginBottom: 5 }}>
-                    {new Date(`${d.date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    {d.reviewedAt ? " · reviewed" : due ? " · REVIEW DUE" : ` · review in ${Math.max(0, REVIEW_AFTER_DAYS - daysSince(d.date))}d`}
+                <Card key={d.id} style={{ padding: "14px 16px", borderColor: due ? `${AM}44` : d.id === editingDecId ? `${MI}55` : undefined }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 10, color: T3, marginBottom: 5 }}>
+                      {new Date(`${d.date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {d.reviewedAt ? " · reviewed" : due ? " · REVIEW DUE" : ` · review in ${Math.max(0, REVIEW_AFTER_DAYS - daysSince(d.date))}d`}
+                      {d.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}
+                    </div>
+                    {!d.reviewedAt && reviewing !== d.id && (
+                      <button onClick={() => startEditDec(d)} aria-label="Edit decision" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", padding: 2, marginTop: -2 }}><Pencil size={11} /></button>
+                    )}
                   </div>
                   <div style={{ fontSize: 13, color: T1, fontWeight: 600, lineHeight: 1.55 }}>{d.decision}</div>
                   {d.expected && <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.6, marginTop: 5 }}>Expected: {d.expected}</div>}
