@@ -9,6 +9,7 @@ import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designT
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
+import { sanitizeAccounts, tiToLegacyTrades } from "../trading/intel/tradingIntel.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { periodReport, weeklySeries, pearson, rVerdict, checklistVsPnl } from "../../shared/analytics.js";
 import { useXp } from "../../shared/useXp.js";
@@ -49,7 +50,16 @@ function Metric({ label, value, cur, prev, color = AN, goodWhenUp = true, fmt = 
 export function AnalyticsOS({ habits, onNavigate }) {
   const [tab, setTab] = useState("reports");
   const [days, setDays] = useState(30);
-  const [trades] = useStorageState("ict_trades", []);
+  // Trading numbers come from the rebuilt journal (ti_trades), scoped to
+  // real-money accounts (Live / Evaluation / Funded) and projected into the
+  // legacy trade shape analytics.js consumes — consistent with the Firm's
+  // Doctrine and the Command Centre. Reviews already live in ict_reviews.
+  const [rawTiTrades] = useStorageState("ti_trades", []);
+  const [rawTiAccounts] = useStorageState("ti_accounts", []);
+  const trades = useMemo(() => {
+    const realIds = new Set(sanitizeAccounts(rawTiAccounts).filter((a) => !a.archived && ["Live", "Evaluation", "Funded"].includes(a.type)).map((a) => a.id));
+    return tiToLegacyTrades(rawTiTrades, realIds);
+  }, [rawTiTrades, rawTiAccounts]);
   const [reviews] = useStorageState("ict_reviews", []);
   const [workouts] = useStorageState("athlete_workouts", []);
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
