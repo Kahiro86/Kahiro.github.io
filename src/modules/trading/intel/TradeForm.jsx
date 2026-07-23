@@ -3,7 +3,7 @@
 // the user's own libraries. Fast to log, everything editable, nothing
 // methodology-specific. Auto-derives trade info, session, risk, RR, result.
 import { useMemo, useRef, useState } from "react";
-import { X, Image as ImageIcon, Link2, Wand2, Lightbulb, Check, Bell } from "lucide-react";
+import { X, Image as ImageIcon, Link2, Wand2, Lightbulb, Check, Bell, Bookmark } from "lucide-react";
 import { BD, B2, T1, T2, T3, GL, GR, RE, AM } from "../../../shared/designTokens.js";
 import { MoneyInp } from "../../../shared/ui.jsx";
 import { DatePicker } from "../../../shared/DatePicker.jsx";
@@ -49,7 +49,7 @@ function seed(initial, accounts, activeId) {
   };
 }
 
-export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, lessons = [], reminders = [], onReinforceLesson, onSave, onCancel }) {
+export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, reviewFields = REVIEW_FIELDS, psychFields = PSYCH_BEFORE, lessons = [], reminders = [], presets = [], onSavePreset, onReinforceLesson, onSave, onCancel }) {
   const [f, setF] = useState(() => seed(initial, accounts, activeId));
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const fileRef = useRef(null);
@@ -84,6 +84,18 @@ export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, les
     }));
   };
   const autoSession = () => setF((p) => ({ ...p, sessions: detectSessions(libs.sessions, p.time), sessionAuto: true }));
+  const applyPreset = (p) => setF((prev) => ({ ...prev, ...p.patch }));
+  const saveAsPreset = () => {
+    const name = (window.prompt("Name this preset") || "").trim();
+    if (!name) return;
+    onSavePreset(name, {
+      instrument: f.instrument, pipSize: f.pipSize, valuePerPipPerLot: f.valuePerPipPerLot,
+      direction: f.direction, sessions: f.sessions, conditions: f.conditions, confluences: f.confluences,
+      strategyId: f.strategyId, strategy: f.strategy, strategyVersion: f.strategyVersion,
+      marketModel: f.marketModel, htf: f.htf, mtf: f.mtf, ltf: f.ltf, entryTf: f.entryTf, riskPct: +f.riskPct || undefined,
+    });
+  };
+  const activePresets = presets.filter((p) => !p.archived);
 
   const addMediaUrl = () => { const url = prompt("Paste a TradingView or image URL"); if (url && url.trim()) setF((p) => ({ ...p, media: [...p.media, { id: uid("m"), category: mediaCat, kind: "url", value: url.trim(), label: "" }] })); };
   const addMediaFile = (file) => downscale(file, (data) => { if (data) setF((p) => ({ ...p, media: [...p.media, { id: uid("m"), category: mediaCat, kind: "image", value: data, label: "" }] })); });
@@ -108,6 +120,24 @@ export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, les
             <button onClick={save} disabled={!canSave} style={{ padding: "8px 18px", background: canSave ? `${AK}1E` : GL, border: `1px solid ${canSave ? AK + "55" : BD}`, borderRadius: 9, color: canSave ? "#FFFFFF" : T3, fontSize: 12, fontWeight: 700, cursor: canSave ? "pointer" : "default", fontFamily: "inherit" }}>Save trade</button>
           </div>
         </div>
+
+        {/* smart autofill — start from a saved preset, or save the current setup */}
+        {(activePresets.length > 0 || onSavePreset) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "9px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 10 }}>
+            {activePresets.length > 0 && <span style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>Start from</span>}
+            {activePresets.map((p) => (
+              <button key={p.id} onClick={() => applyPreset(p)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 11px", borderRadius: 16, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5, fontWeight: 600, background: `${AK}18`, border: `1px solid ${AK}44`, color: "#FFFFFF" }}>
+                <Wand2 size={11} /> {p.name}
+              </button>
+            ))}
+            <div style={{ flex: 1 }} />
+            {onSavePreset && (
+              <button onClick={saveAsPreset} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 11, background: "none", border: `1px dashed ${BD}`, color: T2 }}>
+                <Bookmark size={11} /> Save as preset
+              </button>
+            )}
+          </div>
+        )}
 
         {/* personal reminders — surface automatically when the trade matches */}
         {reminderHits.length > 0 && (
@@ -233,7 +263,7 @@ export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, les
         <Section title="Psychology" sub="Before, during and after — the edge that isn't on the chart" defaultOpen={false}>
           <div><Lbl>Before the trade (1–10)</Lbl>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 9 }}>
-              {PSYCH_BEFORE.map((d) => (
+              {psychFields.map((d) => (
                 <div key={d} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 11, color: T2, width: 76 }}>{d}</span>
                   <div style={{ flex: 1 }}><Rating value={f.psychBefore[d] || 0} onChange={(v) => set("psychBefore", { ...f.psychBefore, [d]: v })} /></div>
@@ -284,7 +314,7 @@ export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, les
 
         <Section title="Structured Review" sub="Rate the execution — 1 to 10" defaultOpen={false}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 9 }}>
-            {REVIEW_FIELDS.map((d) => (
+            {reviewFields.map((d) => (
               <div key={d} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 11, color: T2, width: 96 }}>{d}</span>
                 <div style={{ flex: 1 }}><Rating value={f.review[d] || 0} onChange={(v) => set("review", { ...f.review, [d]: v })} /></div>

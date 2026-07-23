@@ -13,13 +13,18 @@ const Chips = ({ items, color = T2 }) => (
 const Field = ({ label, children }) => (children ? <div><div style={{ fontSize: 9, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 3 }}>{label}</div><div style={{ fontSize: 12, color: T1, lineHeight: 1.5 }}>{children}</div></div> : null);
 const Block = ({ title, children }) => <Card style={{ padding: "15px 17px" }}><div style={{ fontSize: 12.5, fontWeight: 700, color: T1, marginBottom: 12 }}>{title}</div><div style={{ display: "flex", flexDirection: "column", gap: 11 }}>{children}</div></Card>;
 
-export function TradeDetail({ trade: t, onBack, onEdit }) {
+export function TradeDetail({ trade: t, reviewFields = REVIEW_FIELDS, psychFields = PSYCH_BEFORE, onBack, onEdit }) {
   const info = tradeInfo(t.date);
   const r = tradeResult(t);
   const open = t.status !== "CLOSED" || t.exit === "" || t.exit == null;
   const net = netPnl(t);
   const hold = holdMinutes(t);
-  const ratings = (obj, fields) => fields.filter((k) => Number.isFinite(+obj?.[k]));
+  // Configured dimensions first, then any extra keys the trade was rated on
+  // under a since-changed config — a trade always shows what it actually holds.
+  const ratings = (obj, fields) => {
+    const extra = obj && typeof obj === "object" ? Object.keys(obj).filter((k) => !fields.includes(k)) : [];
+    return [...fields, ...extra].filter((k) => Number.isFinite(+obj?.[k]));
+  };
   const stat = (l, v, c = T1) => <div style={{ textAlign: "center", padding: "8px 4px", background: GL, borderRadius: 9 }}><div style={{ fontSize: 8.5, color: T3, letterSpacing: 0.6, textTransform: "uppercase" }}>{l}</div><div style={{ fontSize: 14, fontWeight: 800, color: c, fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>{v}</div></div>;
 
   return (
@@ -76,11 +81,11 @@ export function TradeDetail({ trade: t, onBack, onEdit }) {
         </Block>
       </div>
 
-      {(ratings(t.psychBefore, PSYCH_BEFORE).length > 0 || t.emotions.length > 0 || t.reflectionText) && (
+      {(ratings(t.psychBefore, psychFields).length > 0 || t.emotions.length > 0 || t.reflectionText) && (
         <Block title="Psychology">
-          {ratings(t.psychBefore, PSYCH_BEFORE).length > 0 && (
+          {ratings(t.psychBefore, psychFields).length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {ratings(t.psychBefore, PSYCH_BEFORE).map((k) => <span key={k} style={{ fontSize: 11, color: T2, padding: "3px 10px", background: GL, borderRadius: 8 }}>{k} <b style={{ color: AK, fontFamily: "monospace" }}>{t.psychBefore[k]}</b></span>)}
+              {ratings(t.psychBefore, psychFields).map((k) => <span key={k} style={{ fontSize: 11, color: T2, padding: "3px 10px", background: GL, borderRadius: 8 }}>{k} <b style={{ color: AK, fontFamily: "monospace" }}>{t.psychBefore[k]}</b></span>)}
             </div>
           )}
           {t.emotions.length > 0 && <div><div style={{ fontSize: 9, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Emotions</div><Chips items={t.emotions} /></div>}
@@ -89,11 +94,11 @@ export function TradeDetail({ trade: t, onBack, onEdit }) {
         </Block>
       )}
 
-      {ratings(t.review, REVIEW_FIELDS).length > 0 || t.wentWell || t.lessons || t.improvements || t.journalText ? (
+      {ratings(t.review, reviewFields).length > 0 || t.wentWell || t.lessons || t.improvements || t.journalText ? (
         <Block title="Structured Review">
-          {ratings(t.review, REVIEW_FIELDS).length > 0 && (
+          {ratings(t.review, reviewFields).length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 7 }}>
-              {ratings(t.review, REVIEW_FIELDS).map((k) => <div key={k} style={{ textAlign: "center", padding: "6px 4px", background: GL, borderRadius: 8 }}><div style={{ fontSize: 8, color: T3, textTransform: "uppercase" }}>{k}</div><div style={{ fontSize: 13, fontWeight: 800, color: t.review[k] >= 8 ? GR : t.review[k] >= 5 ? AK : AM, fontFamily: "monospace" }}>{t.review[k]}</div></div>)}
+              {ratings(t.review, reviewFields).map((k) => <div key={k} style={{ textAlign: "center", padding: "6px 4px", background: GL, borderRadius: 8 }}><div style={{ fontSize: 8, color: T3, textTransform: "uppercase" }}>{k}</div><div style={{ fontSize: 13, fontWeight: 800, color: t.review[k] >= 8 ? GR : t.review[k] >= 5 ? AK : AM, fontFamily: "monospace" }}>{t.review[k]}</div></div>)}
             </div>
           )}
           <Field label="What went well">{t.wentWell}</Field>

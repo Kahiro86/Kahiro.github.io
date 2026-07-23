@@ -13,7 +13,7 @@ import { AK, Lbl, Seg, NumInp, AutoCalc } from "./fields.jsx";
 import {
   uid, sanitizeTrades, sanitizeAccounts, sanitizeInstruments, sanitizeSessions,
   sanitizeConditions, sanitizeConfluences, sanitizeStrategies, sanitizeMistakes,
-  sanitizeEmotions, sanitizeReflectionQs, sanitizeLessons, sanitizeReminders, accountMetrics, fmtMoney, tiToLegacyTrades,
+  sanitizeEmotions, sanitizeReflectionQs, sanitizeReviewFields, sanitizePsychFields, sanitizeLessons, sanitizeReminders, sanitizePresets, newPreset, accountMetrics, fmtMoney, tiToLegacyTrades,
 } from "./tradingIntel.js";
 import { ReviewsTab } from "../ReviewsTab.jsx";
 import { pendingReviews, sanitizeReviews } from "../reviews.js";
@@ -76,6 +76,7 @@ export function TradingIntelModule() {
   const [rawAccounts, setAccounts, aLoaded] = useStorageState("ti_accounts", []);
   const [rawLessons, setLessons] = useStorageState("ti_lessons", []);
   const [rawReminders, setReminders] = useStorageState("ti_reminders", []);
+  const [rawPresets, setPresets] = useStorageState("ti_presets", []);
   const [rawReviews, setReviews] = useStorageState("ict_reviews", []);
   const [settings, setSettings] = useStorageState("ti_settings", {});
 
@@ -91,7 +92,10 @@ export function TradingIntelModule() {
   const accounts = useMemo(() => sanitizeAccounts(rawAccounts), [rawAccounts]);
   const lessons = useMemo(() => sanitizeLessons(rawLessons), [rawLessons]);
   const reminders = useMemo(() => sanitizeReminders(rawReminders), [rawReminders]);
+  const presets = useMemo(() => sanitizePresets(rawPresets), [rawPresets]);
   const reflectionQs = useMemo(() => sanitizeReflectionQs(settings?.reflectionQs), [settings]);
+  const reviewFields = useMemo(() => sanitizeReviewFields(settings?.reviewFields), [settings]);
+  const psychFields = useMemo(() => sanitizePsychFields(settings?.psychFields), [settings]);
   const activeId = useMemo(() => {
     const wanted = settings?.activeAccountId;
     if (wanted && accounts.some((a) => a.id === wanted && !a.archived)) return wanted;
@@ -110,10 +114,51 @@ export function TradingIntelModule() {
   }, [rawTrades, accounts]);
   const pendingCount = useMemo(() => pendingReviews(reviewTrades, sanitizeReviews(rawReviews)).length, [reviewTrades, rawReviews]);
 
-  const libs = { instruments, sessions, conditions, confluences, strategies, mistakes, emotions, lessons, reminders };
-  const set = { instruments: setInstruments, sessions: setSessions, conditions: setConditions, confluences: setConfluences, strategies: setStrategies, mistakes: setMistakes, emotions: setEmotions, lessons: setLessons, reminders: setReminders };
+  const libs = { instruments, sessions, conditions, confluences, strategies, mistakes, emotions, lessons, reminders, presets };
+  const set = { instruments: setInstruments, sessions: setSessions, conditions: setConditions, confluences: setConfluences, strategies: setStrategies, mistakes: setMistakes, emotions: setEmotions, lessons: setLessons, reminders: setReminders, presets: setPresets };
+  const savePreset = (name, patch) => setPresets((prev) => [newPreset(name, patch), ...sanitizePresets(prev)]);
+
+  // Editable form-field lists (review dimensions, psychology dimensions,
+  // reflection questions) live in ti_settings so nothing is hardcoded — the
+  // trade form and detail read whatever the trader configured, and the Library
+  // "Forms" editor writes them back. Ratings themselves are stored
+  // field-agnostically, so old trades keep what they were rated on.
+  const forms = { reviewFields, psychFields, reflectionQs };
+  const setForms = {
+    reviewFields: (next) => setSettings((p) => ({ ...(p || {}), reviewFields: sanitizeReviewFields(typeof next === "function" ? next(reviewFields) : next) })),
+    psychFields: (next) => setSettings((p) => ({ ...(p || {}), psychFields: sanitizePsychFields(typeof next === "function" ? next(psychFields) : next) })),
+    reflectionQs: (next) => setSettings((p) => ({ ...(p || {}), reflectionQs: sanitizeReflectionQs(typeof next === "function" ? next(reflectionQs) : next) })),
+  };
 
   const setActive = (id) => setSettings((p) => ({ ...(p || {}), activeAccountId: id }));
+
+  // Library portability: export every editable library as one JSON file, or
+  // import one (merge-append — imported items get fresh ids so nothing
+  // existing is overwritten). Trades and accounts are data, not templates,
+  // and are deliberately excluded — Settings → backup covers those.
+  const LIB_SANITIZE = { instruments: sanitizeInstruments, sessions: sanitizeSessions, conditions: sanitizeConditions, confluences: sanitizeConfluences, strategies: sanitizeStrategies, mistakes: sanitizeMistakes, emotions: sanitizeEmotions, lessons: sanitizeLessons, reminders: sanitizeReminders };
+  const exportLibrary = () => {
+    const data = { kind: "kahiro-trading-library", version: 1, exportedAt: new Date().toISOString() };
+    for (const k of Object.keys(LIB_SANITIZE)) data[k] = libs[k];
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `trading-library-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+    URL.revokeObjectURL(url);
+    toast("Library exported", { tone: "success" });
+  };
+  const importLibrary = (parsed) => {
+    if (!parsed || typeof parsed !== "object" || parsed.kind !== "kahiro-trading-library") { toast("Not a trading-library file", { tone: "danger" }); return; }
+    let added = 0;
+    for (const k of Object.keys(LIB_SANITIZE)) {
+      if (!Array.isArray(parsed[k])) continue;
+      const fresh = LIB_SANITIZE[k](parsed[k].map((x) => (x && typeof x === "object" && !Array.isArray(x) ? { ...x, id: undefined } : x)));
+      if (!fresh.length) continue;
+      set[k]((prev) => [...LIB_SANITIZE[k](prev), ...fresh]);
+      added += fresh.length;
+    }
+    toast(added ? `Imported ${added} library item${added === 1 ? "" : "s"}` : "Nothing to import", { tone: added ? "success" : "danger" });
+  };
   // Reinforce a lesson from the entry form: bump its count and link the trade.
   const reinforceLesson = (lessonId, tradeId) => setLessons((prev) => sanitizeLessons(prev).map((l) =>
     l.id === lessonId ? { ...l, reinforcementCount: l.reinforcementCount + 1, linkedTrades: l.linkedTrades.includes(tradeId) ? l.linkedTrades : [...l.linkedTrades, tradeId] } : l));
@@ -172,12 +217,12 @@ export function TradingIntelModule() {
         {!loaded ? <Hydrating label="Loading your trading intelligence…" /> : (
           <>
             {tab === "journal" && view === "list" && <TradeLog trades={trades} accounts={accounts} activeId={activeId} onNew={startNew} onView={openDetail} onEdit={startEdit} onDuplicate={dupTrade} onDelete={delTrade} />}
-            {tab === "journal" && view === "form" && <TradeForm initial={editing} libs={libs} accounts={accounts} activeId={activeId} reflectionQs={reflectionQs} lessons={lessons} reminders={reminders} onReinforceLesson={reinforceLesson} onSave={saveTrade} onCancel={() => { setView("list"); setEditing(null); }} />}
-            {tab === "journal" && view === "detail" && detail && <TradeDetail trade={trades.find((x) => x.id === detail.id) || detail} onBack={() => { setView("list"); setDetail(null); }} onEdit={startEdit} />}
+            {tab === "journal" && view === "form" && <TradeForm initial={editing} libs={libs} accounts={accounts} activeId={activeId} reflectionQs={reflectionQs} reviewFields={reviewFields} psychFields={psychFields} lessons={lessons} reminders={reminders} presets={presets} onSavePreset={savePreset} onReinforceLesson={reinforceLesson} onSave={saveTrade} onCancel={() => { setView("list"); setEditing(null); }} />}
+            {tab === "journal" && view === "detail" && detail && <TradeDetail trade={trades.find((x) => x.id === detail.id) || detail} reviewFields={reviewFields} psychFields={psychFields} onBack={() => { setView("list"); setDetail(null); }} onEdit={startEdit} />}
             {tab === "analytics" && <IntelAnalytics trades={trades} accounts={accounts} activeId={activeId} />}
             {tab === "reviews" && <ReviewsTab trades={reviewTrades} reviews={rawReviews} setReviews={setReviews} />}
             {tab === "accounts" && <AccountsTab accounts={accounts} setAccounts={setAccounts} trades={trades} activeId={activeId} onActivate={setActive} toast={toast} />}
-            {tab === "library" && <LibraryTab libs={libs} set={set} accounts={accounts} />}
+            {tab === "library" && <LibraryTab libs={libs} set={set} forms={forms} setForms={setForms} accounts={accounts} onExport={exportLibrary} onImport={importLibrary} />}
             {tab === "risk" && <RiskTab instruments={instruments.filter((i) => !i.archived)} account={activeAcct} />}
           </>
         )}

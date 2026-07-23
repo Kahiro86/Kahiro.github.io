@@ -134,11 +134,23 @@ const sanitizeMedia = (raw) =>
     label: str(m.label, 80),
   }));
 
-const sanitizeRatings = (raw, fields) => {
+// Ratings are stored field-agnostically (any numeric 0–10 key, bounded/capped)
+// so custom review and psychology dimensions survive even if the configured
+// field list later changes — a trade always keeps what it was rated on.
+const sanitizeRatings = (raw) => {
   const o = {};
-  if (raw && typeof raw === "object") for (const f of fields) if (Number.isFinite(+raw[f])) o[f] = Math.max(0, Math.min(10, +raw[f]));
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    for (const [k, v] of Object.entries(raw)) {
+      if (typeof k === "string" && k.trim() && Number.isFinite(+v)) o[k.slice(0, 40)] = Math.max(0, Math.min(10, +v));
+      if (Object.keys(o).length >= 40) break;
+    }
+  }
   return o;
 };
+
+// Editable form-field lists (stored in ti_settings; fall back to defaults).
+export const sanitizeReviewFields = (raw) => { const a = arrStr(raw, 40); return a.length ? a : [...REVIEW_FIELDS]; };
+export const sanitizePsychFields = (raw) => { const a = arrStr(raw, 40); return a.length ? a : [...PSYCH_BEFORE]; };
 
 export function sanitizeTrades(raw) {
   if (!Array.isArray(raw)) return [];
@@ -168,12 +180,12 @@ export function sanitizeTrades(raw) {
       entry: num(t.entry), stop: num(t.stop), target: num(t.target), exit: t.exit === "" || t.exit == null ? "" : num(t.exit),
       commission: num(t.commission, 0), swap: num(t.swap, 0),
       status: t.status === "CLOSED" ? "CLOSED" : "OPEN",
-      psychBefore: sanitizeRatings(t.psychBefore, PSYCH_BEFORE),
+      psychBefore: sanitizeRatings(t.psychBefore),
       emotions: arrStr(t.emotions),
       reflectionMood: str(t.reflectionMood, 40), reflectionEnergy: str(t.reflectionEnergy, 40), reflectionText: str(t.reflectionText, 2000),
       checklist: Array.isArray(t.checklist) ? t.checklist.filter((c) => c && typeof c === "object" && typeof c.text === "string").map((c) => ({ text: c.text.slice(0, 200), done: bool(c.done) })) : [],
       media: sanitizeMedia(t.media),
-      review: sanitizeRatings(t.review, REVIEW_FIELDS),
+      review: sanitizeRatings(t.review),
       wentWell: str(t.wentWell, 1500), mistakesMade: str(t.mistakesMade, 1500), unexpected: str(t.unexpected, 1500),
       lessons: str(t.lessons, 1500), improvements: str(t.improvements, 1500), journalText: str(t.journalText, 4000),
       biggestMistake: str(t.biggestMistake, 500), rootCause: str(t.rootCause, 500), actionableFix: str(t.actionableFix, 500),
@@ -582,3 +594,43 @@ export function applicableReminders(rawReminders, { strategy = "", instrument = 
     }
   });
 }
+
+// ── Smart Autofill — trade presets (start a trade from a template) ───
+// A preset snapshots the reusable part of a setup (instrument, direction,
+// session, strategy, confluences, risk…) — not the per-trade prices — so a
+// new trade can be pre-populated with one tap while every field stays
+// editable. Saved from the entry form; managed in the Library.
+export function sanitizePresets(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const p of raw) {
+    if (!p || typeof p !== "object" || typeof p.name !== "string" || !p.name.trim()) continue;
+    const pt = p.patch && typeof p.patch === "object" && !Array.isArray(p.patch) ? p.patch : {};
+    const patch = {};
+    if (str(pt.instrument, 20)) patch.instrument = str(pt.instrument, 20);
+    if (posNum(pt.pipSize)) patch.pipSize = posNum(pt.pipSize);
+    if (posNum(pt.valuePerPipPerLot)) patch.valuePerPipPerLot = posNum(pt.valuePerPipPerLot);
+    if (pt.direction === "Buy" || pt.direction === "Sell") patch.direction = pt.direction;
+    if (arrStr(pt.sessions).length) patch.sessions = arrStr(pt.sessions);
+    if (arrStr(pt.conditions).length) patch.conditions = arrStr(pt.conditions);
+    if (arrStr(pt.confluences).length) patch.confluences = arrStr(pt.confluences);
+    if (str(pt.strategyId, 40)) patch.strategyId = str(pt.strategyId, 40);
+    if (str(pt.strategy, 80)) patch.strategy = str(pt.strategy, 80);
+    if (Number.isFinite(+pt.strategyVersion)) patch.strategyVersion = +pt.strategyVersion;
+    if (str(pt.marketModel, 500)) patch.marketModel = str(pt.marketModel, 500);
+    if (str(pt.htf, 200)) patch.htf = str(pt.htf, 200);
+    if (str(pt.mtf, 200)) patch.mtf = str(pt.mtf, 200);
+    if (str(pt.ltf, 200)) patch.ltf = str(pt.ltf, 200);
+    if (str(pt.entryTf, 20)) patch.entryTf = str(pt.entryTf, 20);
+    if (Number.isFinite(+pt.riskPct)) patch.riskPct = +pt.riskPct;
+    out.push({
+      id: p.id ? String(p.id) : uid("pr"),
+      name: p.name.trim().slice(0, 60),
+      patch,
+      createdAt: typeof p.createdAt === "string" ? p.createdAt : new Date().toISOString(),
+      archived: bool(p.archived),
+    });
+  }
+  return out;
+}
+export const newPreset = (name, patch) => sanitizePresets([{ id: uid("pr"), name, patch, createdAt: new Date().toISOString() }])[0];
