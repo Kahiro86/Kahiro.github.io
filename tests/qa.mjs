@@ -97,6 +97,7 @@ const SCENARIOS = {
     "architect:ti_sessions": "{bad json",
     "architect:ti_settings": JSON.stringify("not-an-object"),
     "architect:ti_lessons": JSON.stringify([null, "x", { nope: 1 }, { title: "L", reinforcementCount: "bad", linkedTrades: "no", dateLearned: "nope" }]),
+    "architect:ti_reminders": JSON.stringify([null, 5, "x", { nope: 1 }, { text: "R", scope: "??", target: 9 }]),
   },
   tiStoresNull: {
     "architect:ti_trades": "null",

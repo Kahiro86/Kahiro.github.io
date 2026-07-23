@@ -3,7 +3,7 @@
 // the user's own libraries. Fast to log, everything editable, nothing
 // methodology-specific. Auto-derives trade info, session, risk, RR, result.
 import { useMemo, useRef, useState } from "react";
-import { X, Image as ImageIcon, Link2, Wand2, Lightbulb, Check } from "lucide-react";
+import { X, Image as ImageIcon, Link2, Wand2, Lightbulb, Check, Bell } from "lucide-react";
 import { BD, B2, T1, T2, T3, GL, GR, RE, AM } from "../../../shared/designTokens.js";
 import { MoneyInp } from "../../../shared/ui.jsx";
 import { DatePicker } from "../../../shared/DatePicker.jsx";
@@ -11,7 +11,7 @@ import { localDateStr } from "../../../shared/dates.js";
 import { AK, Lbl, Section, Seg, ChipMulti, Rating, TextArea, NumInp, AutoCalc } from "./fields.jsx";
 import { PSYCH_BEFORE, REVIEW_FIELDS, DEFAULT_TIMEFRAMES, MEDIA_CATEGORIES } from "./defaults.js";
 import {
-  uid, sanitizeTrades, tradeInfo, detectSessions, recommendLessons,
+  uid, sanitizeTrades, tradeInfo, detectSessions, recommendLessons, applicableReminders,
   riskAmount, stopDistance, projectedRR, netPnl, grossPnl, tradeResult, actualRR, fmtMoney, RESULT_COLORS,
 } from "./tradingIntel.js";
 
@@ -49,13 +49,14 @@ function seed(initial, accounts, activeId) {
   };
 }
 
-export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, lessons = [], onReinforceLesson, onSave, onCancel }) {
+export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, lessons = [], reminders = [], onReinforceLesson, onSave, onCancel }) {
   const [f, setF] = useState(() => seed(initial, accounts, activeId));
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const fileRef = useRef(null);
   const [mediaCat, setMediaCat] = useState(MEDIA_CATEGORIES[0]);
   const [reinforced, setReinforced] = useState([]);
   const recs = useMemo(() => recommendLessons(lessons, { strategy: f.strategy, instrument: f.instrument, conditions: f.conditions }), [lessons, f.strategy, f.instrument, f.conditions]);
+  const reminderHits = useMemo(() => applicableReminders(reminders, { strategy: f.strategy, instrument: f.instrument, sessions: f.sessions, accountId: f.accountId }), [reminders, f.strategy, f.instrument, f.sessions, f.accountId]);
 
   const instOpts = (libs.instruments || []).filter((i) => !i.archived);
   const strat = (libs.strategies || []).find((s) => s.id === f.strategyId);
@@ -107,6 +108,18 @@ export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, les
             <button onClick={save} disabled={!canSave} style={{ padding: "8px 18px", background: canSave ? `${AK}1E` : GL, border: `1px solid ${canSave ? AK + "55" : BD}`, borderRadius: 9, color: canSave ? "#FFFFFF" : T3, fontSize: 12, fontWeight: 700, cursor: canSave ? "pointer" : "default", fontFamily: "inherit" }}>Save trade</button>
           </div>
         </div>
+
+        {/* personal reminders — surface automatically when the trade matches */}
+        {reminderHits.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "11px 13px", background: `${AK}0E`, border: `1px solid ${AK}33`, borderRadius: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, fontWeight: 700, color: AK, letterSpacing: 0.5, textTransform: "uppercase" }}><Bell size={12} /> Reminders</div>
+            {reminderHits.map((r) => (
+              <div key={r.id} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: T1, lineHeight: 1.45 }}>
+                <span style={{ color: AK, marginTop: 1 }}>›</span> {r.text}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* strategy reminder */}
         {strat && (() => { const v = strat.versions.find((x) => x.version === f.strategyVersion); return v?.rules ? (

@@ -8,9 +8,13 @@ import { Plus, Pencil, Archive, ArchiveRestore, Trash2, Copy, Check, GitBranch }
 import { BD, B2, T1, T2, T3, GL, GR } from "../../../shared/designTokens.js";
 import { Card } from "../../../shared/ui.jsx";
 import { AK, Lbl, TextArea } from "./fields.jsx";
-import { uid, newLesson } from "./tradingIntel.js";
+import { uid, newLesson, newReminder } from "./tradingIntel.js";
+import { REMINDER_SCOPES } from "./defaults.js";
+
+const SCOPE_LABEL = { global: "Global", strategy: "Strategy", pair: "Pair", session: "Session", account: "Account" };
 
 const inp = { width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 8, padding: "7px 10px", fontSize: 12, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
+const sel = { background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "7px 10px", fontSize: 11.5, color: T1, outline: "none", fontFamily: "inherit", cursor: "pointer" };
 const smallBtn = (c = T3) => ({ background: "none", border: "none", color: c, cursor: "pointer", padding: 3, display: "inline-flex" });
 
 // Generic named-list editor (conditions / confluences / mistakes / emotions).
@@ -229,13 +233,74 @@ function LessonEditor({ lessons, setLessons, libs }) {
   );
 }
 
+// Personal Reminders — scoped nudges that appear in the entry form when the
+// trade being logged matches. Target depends on the scope (a strategy, pair,
+// session, or account); global reminders always show.
+function ReminderEditor({ reminders, setReminders, libs, accounts }) {
+  const [draft, setDraft] = useState(null);
+  const optionsFor = (scope) =>
+    scope === "strategy" ? (libs.strategies || []).filter((s) => !s.archived).map((s) => ({ v: s.name, l: s.name }))
+    : scope === "pair" ? (libs.instruments || []).filter((i) => !i.archived).map((i) => ({ v: i.symbol, l: i.symbol }))
+    : scope === "session" ? (libs.sessions || []).filter((s) => !s.archived).map((s) => ({ v: s.name, l: s.name }))
+    : scope === "account" ? (accounts || []).filter((a) => !a.archived).map((a) => ({ v: a.id, l: a.name }))
+    : [];
+  const blank = { text: "", scope: "global", target: "" };
+  const add = () => { if (!draft.text.trim()) return; setReminders((p) => [newReminder(draft), ...(Array.isArray(p) ? p : [])]); setDraft(null); };
+  const patch = (id, k, v) => setReminders((p) => p.map((r) => (r.id === id ? { ...r, [k]: v, ...(k === "scope" ? { target: "" } : {}) } : r)));
+  const del = (id) => setReminders((p) => p.filter((r) => r.id !== id));
+  const toggle = (id) => setReminders((p) => p.map((r) => (r.id === id ? { ...r, archived: !r.archived } : r)));
+  const targetLabel = (r) => (r.scope === "account" ? (accounts.find((a) => a.id === r.target)?.name || r.target) : r.target);
+  const ScopePick = ({ scope, target, onScope, onTarget }) => (
+    <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+      <select value={scope} onChange={(e) => onScope(e.target.value)} style={sel}>
+        {REMINDER_SCOPES.map((s) => <option key={s} value={s}>{SCOPE_LABEL[s]}</option>)}
+      </select>
+      {scope !== "global" && (
+        <select value={target} onChange={(e) => onTarget(e.target.value)} style={sel}>
+          <option value="">Choose {scope}…</option>
+          {optionsFor(scope).map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+        </select>
+      )}
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ fontSize: 10.5, color: T3, lineHeight: 1.5 }}>Reminders appear automatically at the top of the entry form when the trade matches — e.g. a pair reminder before XAUUSD, or a strategy reminder before Press 'N' Play. Global reminders always show.</div>
+      {draft ? (
+        <div style={{ border: `1px solid ${AK}44`, borderRadius: 10, padding: 13, display: "flex", flexDirection: "column", gap: 9 }}>
+          <input value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} placeholder="e.g. Wait for New York confirmation" style={inp} autoFocus />
+          <ScopePick scope={draft.scope} target={draft.target} onScope={(v) => setDraft({ ...draft, scope: v, target: "" })} onTarget={(v) => setDraft({ ...draft, target: v })} />
+          <div style={{ display: "flex", gap: 7 }}>
+            <button onClick={add} style={{ padding: "8px 14px", background: `${AK}1A`, border: `1px solid ${AK}55`, borderRadius: 8, color: "#FFFFFF", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save reminder</button>
+            <button onClick={() => setDraft(null)} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 8, color: T3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setDraft(blank)} style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${AK}1A`, border: `1px solid ${AK}55`, borderRadius: 9, color: "#FFFFFF", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} /> New reminder</button>
+      )}
+      {reminders.map((r) => (
+        <div key={r.id} style={{ border: `1px solid ${BD}`, borderRadius: 10, background: GL, padding: "10px 13px", display: "flex", alignItems: "center", gap: 9, opacity: r.archived ? 0.55 : 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <input value={r.text} onChange={(e) => patch(r.id, "text", e.target.value)} style={{ width: "100%", background: "transparent", border: "none", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit" }} />
+            <div style={{ marginTop: 6 }}><ScopePick scope={r.scope} target={r.target} onScope={(v) => patch(r.id, "scope", v)} onTarget={(v) => patch(r.id, "target", v)} /></div>
+          </div>
+          <span style={{ fontSize: 9.5, color: AK, whiteSpace: "nowrap" }}>{SCOPE_LABEL[r.scope]}{r.target ? ` · ${targetLabel(r)}` : ""}</span>
+          <button onClick={() => toggle(r.id)} style={smallBtn()}>{r.archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}</button>
+          <button onClick={() => del(r.id)} style={smallBtn()}><Trash2 size={12} /></button>
+        </div>
+      ))}
+      {reminders.length === 0 && !draft && <span style={{ fontSize: 11.5, color: T3 }}>No reminders yet — add one and it'll surface itself when it's relevant.</span>}
+    </div>
+  );
+}
+
 const SUB = [
-  { id: "strategies", l: "Strategies" }, { id: "lessons", l: "Lessons" }, { id: "instruments", l: "Instruments" },
-  { id: "sessions", l: "Sessions" }, { id: "conditions", l: "Market Conditions" },
+  { id: "strategies", l: "Strategies" }, { id: "lessons", l: "Lessons" }, { id: "reminders", l: "Reminders" },
+  { id: "instruments", l: "Instruments" }, { id: "sessions", l: "Sessions" }, { id: "conditions", l: "Market Conditions" },
   { id: "confluences", l: "Confluences" }, { id: "mistakes", l: "Mistakes" }, { id: "emotions", l: "Emotions" },
 ];
 
-export function LibraryTab({ libs, set }) {
+export function LibraryTab({ libs, set, accounts = [] }) {
   const [sub, setSub] = useState("strategies");
   return (
     <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 15, maxWidth: 900 }}>
@@ -251,6 +316,7 @@ export function LibraryTab({ libs, set }) {
       <Card style={{ padding: "16px 18px" }}>
         {sub === "strategies" && <StrategyEditor items={libs.strategies} setItems={set.strategies} />}
         {sub === "lessons" && <LessonEditor lessons={libs.lessons} setLessons={set.lessons} libs={libs} />}
+        {sub === "reminders" && <ReminderEditor reminders={libs.reminders} setReminders={set.reminders} libs={libs} accounts={accounts} />}
         {sub === "instruments" && <InstrumentEditor items={libs.instruments} setItems={set.instruments} />}
         {sub === "sessions" && <SessionEditor items={libs.sessions} setItems={set.sessions} />}
         {sub === "conditions" && <NamedListEditor items={libs.conditions} setItems={set.conditions} noun="condition" />}
