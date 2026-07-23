@@ -9,7 +9,7 @@ import { localDateStr, daysBetween } from "../../../shared/dates.js";
 import {
   ACCOUNT_TYPES, ACCOUNT_STATUSES, DEFAULT_INSTRUMENTS, DEFAULT_SESSIONS,
   DEFAULT_CONDITIONS, DEFAULT_CONFLUENCES, DEFAULT_STRATEGIES, DEFAULT_MISTAKES,
-  DEFAULT_EMOTIONS, DEFAULT_REFLECTION_QUESTIONS, REVIEW_FIELDS, PSYCH_BEFORE,
+  DEFAULT_EMOTIONS, DEFAULT_REFLECTION_QUESTIONS, REVIEW_FIELDS, PSYCH_BEFORE, REMINDER_SCOPES,
 } from "./defaults.js";
 
 export const uid = (p = "x") => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -543,4 +543,42 @@ export function tiToLegacyTrades(rawTrades, accountIds = null) {
         checklistSkipped: false,
       };
     });
+}
+
+// ── Personal Reminders (scoped, auto-displayed in the entry form) ────
+// A reminder shows automatically when the trade being logged matches its
+// scope: global always; strategy / pair / session / account when the trade's
+// strategy, instrument, one of its sessions, or account matches the target.
+export function sanitizeReminders(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object" || typeof r.text !== "string" || !r.text.trim()) continue;
+    const scope = REMINDER_SCOPES.includes(r.scope) ? r.scope : "global";
+    out.push({
+      id: r.id ? String(r.id) : uid("rm"),
+      text: r.text.trim().slice(0, 300),
+      scope,
+      target: scope === "global" ? "" : str(r.target, 80),
+      archived: bool(r.archived),
+    });
+  }
+  return out;
+}
+
+export const newReminder = (patch = {}) => sanitizeReminders([{ id: uid("rm"), text: "", scope: "global", ...patch }])[0];
+
+export function applicableReminders(rawReminders, { strategy = "", instrument = "", sessions = [], accountId = "" } = {}) {
+  const sess = Array.isArray(sessions) ? sessions : [];
+  return sanitizeReminders(rawReminders).filter((r) => {
+    if (r.archived) return false;
+    switch (r.scope) {
+      case "global": return true;
+      case "strategy": return r.target && r.target === strategy;
+      case "pair": return r.target && r.target === instrument;
+      case "session": return r.target && sess.includes(r.target);
+      case "account": return r.target && r.target === accountId;
+      default: return false;
+    }
+  });
 }

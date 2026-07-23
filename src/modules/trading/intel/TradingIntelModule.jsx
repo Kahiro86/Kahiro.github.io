@@ -13,7 +13,7 @@ import { AK, Lbl, Seg, NumInp, AutoCalc } from "./fields.jsx";
 import {
   uid, sanitizeTrades, sanitizeAccounts, sanitizeInstruments, sanitizeSessions,
   sanitizeConditions, sanitizeConfluences, sanitizeStrategies, sanitizeMistakes,
-  sanitizeEmotions, sanitizeReflectionQs, sanitizeLessons, accountMetrics, fmtMoney, tiToLegacyTrades,
+  sanitizeEmotions, sanitizeReflectionQs, sanitizeLessons, sanitizeReminders, accountMetrics, fmtMoney, tiToLegacyTrades,
 } from "./tradingIntel.js";
 import { ReviewsTab } from "../ReviewsTab.jsx";
 import { pendingReviews, sanitizeReviews } from "../reviews.js";
@@ -75,6 +75,7 @@ export function TradingIntelModule() {
   const [rawTrades, setTrades, tLoaded] = useStorageState("ti_trades", []);
   const [rawAccounts, setAccounts, aLoaded] = useStorageState("ti_accounts", []);
   const [rawLessons, setLessons] = useStorageState("ti_lessons", []);
+  const [rawReminders, setReminders] = useStorageState("ti_reminders", []);
   const [rawReviews, setReviews] = useStorageState("ict_reviews", []);
   const [settings, setSettings] = useStorageState("ti_settings", {});
 
@@ -89,6 +90,7 @@ export function TradingIntelModule() {
   const trades = useMemo(() => sanitizeTrades(rawTrades), [rawTrades]);
   const accounts = useMemo(() => sanitizeAccounts(rawAccounts), [rawAccounts]);
   const lessons = useMemo(() => sanitizeLessons(rawLessons), [rawLessons]);
+  const reminders = useMemo(() => sanitizeReminders(rawReminders), [rawReminders]);
   const reflectionQs = useMemo(() => sanitizeReflectionQs(settings?.reflectionQs), [settings]);
   const activeId = useMemo(() => {
     const wanted = settings?.activeAccountId;
@@ -108,8 +110,8 @@ export function TradingIntelModule() {
   }, [rawTrades, accounts]);
   const pendingCount = useMemo(() => pendingReviews(reviewTrades, sanitizeReviews(rawReviews)).length, [reviewTrades, rawReviews]);
 
-  const libs = { instruments, sessions, conditions, confluences, strategies, mistakes, emotions, lessons };
-  const set = { instruments: setInstruments, sessions: setSessions, conditions: setConditions, confluences: setConfluences, strategies: setStrategies, mistakes: setMistakes, emotions: setEmotions, lessons: setLessons };
+  const libs = { instruments, sessions, conditions, confluences, strategies, mistakes, emotions, lessons, reminders };
+  const set = { instruments: setInstruments, sessions: setSessions, conditions: setConditions, confluences: setConfluences, strategies: setStrategies, mistakes: setMistakes, emotions: setEmotions, lessons: setLessons, reminders: setReminders };
 
   const setActive = (id) => setSettings((p) => ({ ...(p || {}), activeAccountId: id }));
   // Reinforce a lesson from the entry form: bump its count and link the trade.
@@ -170,12 +172,12 @@ export function TradingIntelModule() {
         {!loaded ? <Hydrating label="Loading your trading intelligence…" /> : (
           <>
             {tab === "journal" && view === "list" && <TradeLog trades={trades} accounts={accounts} activeId={activeId} onNew={startNew} onView={openDetail} onEdit={startEdit} onDuplicate={dupTrade} onDelete={delTrade} />}
-            {tab === "journal" && view === "form" && <TradeForm initial={editing} libs={libs} accounts={accounts} activeId={activeId} reflectionQs={reflectionQs} lessons={lessons} onReinforceLesson={reinforceLesson} onSave={saveTrade} onCancel={() => { setView("list"); setEditing(null); }} />}
+            {tab === "journal" && view === "form" && <TradeForm initial={editing} libs={libs} accounts={accounts} activeId={activeId} reflectionQs={reflectionQs} lessons={lessons} reminders={reminders} onReinforceLesson={reinforceLesson} onSave={saveTrade} onCancel={() => { setView("list"); setEditing(null); }} />}
             {tab === "journal" && view === "detail" && detail && <TradeDetail trade={trades.find((x) => x.id === detail.id) || detail} onBack={() => { setView("list"); setDetail(null); }} onEdit={startEdit} />}
             {tab === "analytics" && <IntelAnalytics trades={trades} accounts={accounts} activeId={activeId} />}
             {tab === "reviews" && <ReviewsTab trades={reviewTrades} reviews={rawReviews} setReviews={setReviews} />}
             {tab === "accounts" && <AccountsTab accounts={accounts} setAccounts={setAccounts} trades={trades} activeId={activeId} onActivate={setActive} toast={toast} />}
-            {tab === "library" && <LibraryTab libs={libs} set={set} />}
+            {tab === "library" && <LibraryTab libs={libs} set={set} accounts={accounts} />}
             {tab === "risk" && <RiskTab instruments={instruments.filter((i) => !i.archived)} account={activeAcct} />}
           </>
         )}
