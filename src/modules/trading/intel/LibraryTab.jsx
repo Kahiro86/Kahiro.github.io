@@ -3,8 +3,8 @@
 // conditions, entry confluences, strategies (with versions), mistakes and
 // emotions. Create / rename / duplicate / archive / delete. Editing a library
 // never rewrites historical trades — trades store their own snapshotted values.
-import { useState } from "react";
-import { Plus, Pencil, Archive, ArchiveRestore, Trash2, Copy, Check, GitBranch } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Pencil, Archive, ArchiveRestore, Trash2, Copy, Check, GitBranch, Download, Upload } from "lucide-react";
 import { BD, B2, T1, T2, T3, GL, GR } from "../../../shared/designTokens.js";
 import { Card } from "../../../shared/ui.jsx";
 import { AK, Lbl, TextArea } from "./fields.jsx";
@@ -294,19 +294,126 @@ function ReminderEditor({ reminders, setReminders, libs, accounts }) {
   );
 }
 
+// Trade presets — created from the entry form ("Save as preset"); managed
+// here (rename / archive / delete). Each stores the reusable part of a setup.
+function PresetEditor({ presets, setPresets }) {
+  const rename = (id, name) => setPresets((p) => p.map((x) => (x.id === id ? { ...x, name } : x)));
+  const toggle = (id) => setPresets((p) => p.map((x) => (x.id === id ? { ...x, archived: !x.archived } : x)));
+  const del = (id) => setPresets((p) => p.filter((x) => x.id !== id));
+  const summary = (pt) => [pt.instrument, pt.direction, pt.strategy, pt.sessions?.length ? `${pt.sessions.length} session${pt.sessions.length === 1 ? "" : "s"}` : "", pt.confluences?.length ? `${pt.confluences.length} confluence${pt.confluences.length === 1 ? "" : "s"}` : "", pt.riskPct ? `${pt.riskPct}% risk` : ""].filter(Boolean).join(" · ");
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+      <div style={{ fontSize: 10.5, color: T3, lineHeight: 1.5 }}>Presets are created in the entry form — fill a setup, then tap "Save as preset". Applying one pre-populates the form while every field stays editable.</div>
+      {presets.map((p) => (
+        <div key={p.id} style={{ border: `1px solid ${BD}`, borderRadius: 10, background: GL, padding: "11px 13px", display: "flex", alignItems: "center", gap: 9, opacity: p.archived ? 0.55 : 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <input value={p.name} onChange={(e) => rename(p.id, e.target.value)} style={{ width: "100%", background: "transparent", border: "none", fontSize: 12.5, fontWeight: 700, color: T1, outline: "none", fontFamily: "inherit" }} />
+            <div style={{ fontSize: 10, color: T3, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{summary(p.patch) || "Empty preset"}</div>
+          </div>
+          <button onClick={() => toggle(p.id)} style={smallBtn()}>{p.archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}</button>
+          <button onClick={() => del(p.id)} style={smallBtn()}><Trash2 size={12} /></button>
+        </div>
+      ))}
+      {presets.length === 0 && <span style={{ fontSize: 11.5, color: T3 }}>No presets yet — save one from the entry form to reuse a setup with one tap.</span>}
+    </div>
+  );
+}
+
+// Simple ordered string-list editor (a form's field labels or questions).
+// Add / rename / reorder / remove — order is the order they appear in the form.
+function StringListEditor({ items, setItems, noun, ph }) {
+  const [draft, setDraft] = useState("");
+  const [editIdx, setEditIdx] = useState(null);
+  const [editVal, setEditVal] = useState("");
+  const arr = Array.isArray(items) ? items : [];
+  const add = () => { const v = draft.trim(); if (v && !arr.includes(v)) { setItems([...arr, v]); setDraft(""); } };
+  const save = (i) => { const v = editVal.trim(); if (v) setItems(arr.map((x, j) => (j === i ? v : x))); setEditIdx(null); };
+  const del = (i) => setItems(arr.filter((_, j) => j !== i));
+  const move = (i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; const n = [...arr]; [n[i], n[j]] = [n[j], n[i]]; setItems(n); };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {arr.map((it, i) => (
+        <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <button onClick={() => move(i, -1)} disabled={i === 0} style={{ ...smallBtn(i === 0 ? BD : T3), padding: 0, lineHeight: 1, fontSize: 10 }}>▲</button>
+            <button onClick={() => move(i, 1)} disabled={i === arr.length - 1} style={{ ...smallBtn(i === arr.length - 1 ? BD : T3), padding: 0, lineHeight: 1, fontSize: 10 }}>▼</button>
+          </div>
+          {editIdx === i ? (
+            <>
+              <input autoFocus value={editVal} onChange={(e) => setEditVal(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") save(i); if (e.key === "Escape") setEditIdx(null); }} style={{ ...inp, flex: 1 }} />
+              <button onClick={() => save(i)} style={smallBtn(GR)}><Check size={13} /></button>
+            </>
+          ) : (
+            <>
+              <span style={{ flex: 1, fontSize: 12, color: T1 }}>{it}</span>
+              <button onClick={() => { setEditIdx(i); setEditVal(it); }} style={smallBtn()}><Pencil size={12} /></button>
+              <button onClick={() => del(i)} style={smallBtn()}><Trash2 size={12} /></button>
+            </>
+          )}
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 7, paddingTop: 8, borderTop: `1px solid ${BD}` }}>
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder={ph || `Add a ${noun}…`} style={inp} />
+        <button onClick={add} style={{ padding: "7px 13px", background: `${AK}1A`, border: `1px solid ${AK}55`, borderRadius: 8, color: "#FFFFFF", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}><Plus size={13} /> Add</button>
+      </div>
+      {arr.length === 0 && <span style={{ fontSize: 11.5, color: T3 }}>Empty — saving with no {noun}s falls back to the defaults.</span>}
+    </div>
+  );
+}
+
+// Forms — the editable dimensions of the trade form itself. Psychology and
+// review ratings are stored per-key, so changing a list never rewrites what a
+// past trade was rated on; it only changes what future trades are prompted for.
+function FormsEditor({ forms, setForms }) {
+  const [sub, setSub] = useState("psychFields");
+  const cfg = {
+    psychFields: { l: "Psychology dimensions", noun: "dimension", ph: "e.g. Confidence", desc: "Rated 1–10 before each trade — your pre-trade mental state." },
+    reviewFields: { l: "Review dimensions", noun: "dimension", ph: "e.g. Execution", desc: "Rated 1–10 in the structured review — how well the trade was run." },
+    reflectionQs: { l: "Reflection questions", noun: "question", ph: "e.g. What would you do differently?", desc: "Free-text prompts answered when reflecting on a closed trade." },
+  };
+  const c = cfg[sub];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {Object.keys(cfg).map((k) => (
+          <button key={k} onClick={() => setSub(k)} style={{ padding: "5px 11px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: sub === k ? 700 : 500, background: sub === k ? `${AK}22` : GL, border: `1px solid ${sub === k ? AK + "66" : BD}`, color: sub === k ? "#FFFFFF" : T2 }}>{cfg[k].l}</button>
+        ))}
+      </div>
+      <div style={{ fontSize: 10.5, color: T3, lineHeight: 1.5 }}>{c.desc}</div>
+      <StringListEditor items={forms[sub]} setItems={setForms[sub]} noun={c.noun} ph={c.ph} />
+    </div>
+  );
+}
+
 const SUB = [
-  { id: "strategies", l: "Strategies" }, { id: "lessons", l: "Lessons" }, { id: "reminders", l: "Reminders" },
+  { id: "strategies", l: "Strategies" }, { id: "presets", l: "Presets" }, { id: "lessons", l: "Lessons" }, { id: "reminders", l: "Reminders" },
   { id: "instruments", l: "Instruments" }, { id: "sessions", l: "Sessions" }, { id: "conditions", l: "Market Conditions" },
-  { id: "confluences", l: "Confluences" }, { id: "mistakes", l: "Mistakes" }, { id: "emotions", l: "Emotions" },
+  { id: "confluences", l: "Confluences" }, { id: "mistakes", l: "Mistakes" }, { id: "emotions", l: "Emotions" }, { id: "forms", l: "Forms" },
 ];
 
-export function LibraryTab({ libs, set, accounts = [] }) {
+export function LibraryTab({ libs, set, forms, setForms, accounts = [], onExport, onImport }) {
   const [sub, setSub] = useState("strategies");
+  const fileRef = useRef(null);
+  const readImport = (file) => {
+    const r = new FileReader();
+    r.onload = () => { try { onImport?.(JSON.parse(r.result)); } catch { onImport?.(null); } };
+    r.readAsText(file);
+  };
+  const ioBtn = { display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" };
   return (
     <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 15, maxWidth: 900 }}>
-      <div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: T1 }}>Library</div>
-        <div style={{ fontSize: 12, color: T3, marginTop: 2 }}>Your building blocks. Editing anything here never changes past trades.</div>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: T1 }}>Library</div>
+          <div style={{ fontSize: 12, color: T3, marginTop: 2 }}>Your building blocks. Editing anything here never changes past trades.</div>
+        </div>
+        {(onExport || onImport) && (
+          <div style={{ display: "flex", gap: 8 }}>
+            {onExport && <button onClick={onExport} style={ioBtn}><Download size={13} /> Export</button>}
+            {onImport && <button onClick={() => fileRef.current?.click()} style={ioBtn}><Upload size={13} /> Import</button>}
+            <input ref={fileRef} type="file" accept="application/json,.json" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) readImport(f); e.target.value = ""; }} />
+          </div>
+        )}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {SUB.map((s) => (
@@ -317,12 +424,14 @@ export function LibraryTab({ libs, set, accounts = [] }) {
         {sub === "strategies" && <StrategyEditor items={libs.strategies} setItems={set.strategies} />}
         {sub === "lessons" && <LessonEditor lessons={libs.lessons} setLessons={set.lessons} libs={libs} />}
         {sub === "reminders" && <ReminderEditor reminders={libs.reminders} setReminders={set.reminders} libs={libs} accounts={accounts} />}
+        {sub === "presets" && <PresetEditor presets={libs.presets} setPresets={set.presets} />}
         {sub === "instruments" && <InstrumentEditor items={libs.instruments} setItems={set.instruments} />}
         {sub === "sessions" && <SessionEditor items={libs.sessions} setItems={set.sessions} />}
         {sub === "conditions" && <NamedListEditor items={libs.conditions} setItems={set.conditions} noun="condition" />}
         {sub === "confluences" && <NamedListEditor items={libs.confluences} setItems={set.confluences} noun="confluence" />}
         {sub === "mistakes" && <NamedListEditor items={libs.mistakes} setItems={set.mistakes} noun="mistake" />}
         {sub === "emotions" && <NamedListEditor items={libs.emotions} setItems={set.emotions} noun="emotion" />}
+        {sub === "forms" && forms && setForms && <FormsEditor forms={forms} setForms={setForms} />}
       </Card>
     </div>
   );
