@@ -12,6 +12,7 @@ import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
+import { MotivePush } from "../../shared/MotivePush.jsx";
 import { WEEK_PLAN } from "./constants.js";
 import { getDayName } from "./helpers.js";
 import { DEFAULT_EXERCISES, uidT, lastValuesByExercise, overloadTrend } from "./library.js";
@@ -206,6 +207,9 @@ export function AthleteOS() {
               <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Athlete OS</div>
               <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Consistency over intensity — small sessions compound.</div>
             </div>
+
+            <MotivePush context={todayLogged ? ["workout", "streak"] : ["workout", "day-start"]}
+              state={{ streak, missedYesterday: streak === 0 && workouts.length > 0 }} accent={PU} />
 
             {streak === 0 && workouts.length > 0 && !todayLogged && (
               <div style={{ padding: "12px 18px", background: `${GR}0D`, border: `1px solid ${GR}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>

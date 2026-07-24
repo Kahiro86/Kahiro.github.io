@@ -7,6 +7,7 @@ import {
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter, Empty } from "../../shared/ui.jsx";
 import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
+import { MotivePush } from "../../shared/MotivePush.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -267,6 +268,9 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
                 </div>
               </div>
             </Card>
+
+            <MotivePush context={pctToday === 100 && scheduledToday.length > 0 ? ["streak", "logging"] : ["day-start", "logging"]}
+              state={{ streak: Math.max(0, ...active.map(currentStreak)), missedYesterday: active.length > 0 && active.every((h) => !isDone(h, daysAgoStr(1)) && isScheduled(h, daysAgoStr(1))) }} accent={CY} />
 
             {routines.length > 0 && (
               <Collapse id="life_routines" title="Routines" count={routines.length}>

@@ -7,6 +7,7 @@ import { ShieldCheck, ChevronLeft, ChevronRight, Undo2, Flame, Trophy } from "lu
 import { B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
+import { MotivePush } from "../../shared/MotivePush.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -86,6 +87,7 @@ export function PurityTab() {
 
   return (
     <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 860 }}>
+      <MotivePush context={["purity"]} state={{ streak: stats.current, legendary: stats.current >= 90 }} accent={GR} />
       {/* ── Daily check-in ── */}
       {!todayStatus && (
         <Card style={{ padding: "24px", textAlign: "center" }}>

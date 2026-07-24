@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { ClipboardCheck, Trash2, AlertTriangle } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, CY, GR, RE, AM, PU } from "../../shared/designTokens.js";
 import { Card, Chip } from "../../shared/ui.jsx";
+import { MotivePush } from "../../shared/MotivePush.jsx";
 import { useToast } from "../../shared/toast.jsx";
 import { sanitizeReviews, newReview, pendingReviews, periodSummary, periodLabel, ENEMIES } from "./reviews.js";
 
@@ -68,6 +69,8 @@ export function ReviewsTab({ trades, reviews, setReviews }) {
           An incident write-up after any breach · daily after a close · weekly Sundays · monthly on the last day. A pending review stays pending until it's written.
         </div>
       </div>
+
+      <MotivePush context={periods.some((p) => p.kind === "monthly") ? ["review-month", "review-week"] : ["review-week"]} accent={PU} compact />
 
       {pending.length === 0 && (
         <Card style={{ padding: "26px", textAlign: "center", borderColor: `${GR}33` }}>

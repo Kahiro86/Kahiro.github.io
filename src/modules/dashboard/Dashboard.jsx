@@ -27,6 +27,7 @@ import {
 import { buildNudges } from "../../shared/insights.js";
 import { buildDirective, isRestDay } from "../../shared/directive.js";
 import { freedomMath } from "../../shared/freedom.js";
+import { MotivePush } from "../../shared/MotivePush.jsx";
 import { scalingGate } from "../../shared/firm.js";
 import {
   sanitizeNutrition, dayEntries, dayTotals, calcTargets, healthyStreaks,
@@ -299,6 +300,9 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         </div>
         <div style={{ fontSize: 12, color: T2, lineHeight: 1.5 }}>{consistencySentence}</div>
       </Card>
+
+      <MotivePush context={["day-start", "legendary"].filter((c) => c !== "legendary" || cs.currentStreak >= 100)}
+        state={{ streak: cs.currentStreak, missedYesterday: cs.currentStreak === 0, legendary: cs.longestStreak >= 100 && cs.currentStreak === cs.longestStreak }} accent={AC} />
 
       {/* ── 🎯 THE MISSION — the freedom north star, above everything ── */}
       <Card style={{ padding: "18px 22px", background: "linear-gradient(110deg,#161616,#0C0C0C)", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>

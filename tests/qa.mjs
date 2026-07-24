@@ -73,6 +73,11 @@ const SCENARIOS = {
   corruptConsistencyStart: {
     "architect:year_of_consistency_start": "not-a-date",
   },
+  corruptMotive: {
+    "architect:motive_favs": JSON.stringify([null, 5, "nope", { junk: 1 }]),
+    "architect:motive_recent": JSON.stringify("not-an-array"),
+    "architect:motive_history": JSON.stringify([null, "x", { id: 9 }, { id: "mpzzz", at: "bad" }]),
+  },
   consistencyStartWrongType: {
     "architect:year_of_consistency_start": JSON.stringify({ nope: 1 }),
   },
