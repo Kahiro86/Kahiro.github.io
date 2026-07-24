@@ -5,14 +5,14 @@
 // (category "Spiritual"), so Life OS, the Command Center and this module
 // all see the same records.
 import { useMemo, useState } from "react";
-import { BookOpen, Plus, Check, Trash2, Pencil, Church as ChurchIcon, Sparkles, ScrollText } from "lucide-react";
+import { BookOpen, Plus, Check, Trash2, Pencil, Eye, Church as ChurchIcon, Sparkles, ScrollText } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, GR, RE, AM, PU, CY } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
-import { localDateStr, daysAgoStr, daysBetween } from "../../shared/dates.js";
+import { localDateStr, daysAgoStr, daysBetween, shiftDateStr } from "../../shared/dates.js";
 import { isScheduled, isDone, tapHabit, rangeStats, currentStreak, totalCompletions, newHabit } from "../../shared/habitEngine.js";
 
 const FA = CY; // Nocturne cyan accent (monochrome theme)
@@ -81,6 +81,17 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
   // This Sunday (or today if Sunday) — the attendance unit.
   const lastSunday = (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return localDateStr(d); })();
   const attendedThisWeek = churchSafe.includes(lastSunday);
+
+  // Attendance depth: a consecutive-Sundays streak (tolerant of this week not
+  // logged yet, the same way habit streaks treat today) and a 12-week rate.
+  const churchStats = useMemo(() => {
+    const set = new Set(churchSafe);
+    const attended12 = Array.from({ length: 12 }, (_, i) => set.has(shiftDateStr(lastSunday, -7 * i))).filter(Boolean).length;
+    let streak = 0, i = set.has(lastSunday) ? 0 : 1;
+    while (set.has(shiftDateStr(lastSunday, -7 * i))) { streak++; i++; }
+    return { rate12: Math.round((attended12 / 12) * 100), attended12, streak };
+  }, [churchSafe, lastSunday]);
+  const [revealed, setRevealed] = useState({}); // scripture recall: verse id → text shown
   const toggleChurch = () => {
     setChurch((prev) => {
       const list = (Array.isArray(prev) ? prev : []).filter((d) => typeof d === "string");
@@ -173,7 +184,11 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
               </div>
               <div style={{ flex: 1, minWidth: 180 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: T1 }}>Church this week</div>
-                <div style={{ fontSize: 11.5, color: T3, marginTop: 2 }}>Sunday {lastSunday.slice(5)} · faithfulness over the long haul</div>
+                <div style={{ fontSize: 11.5, color: T3, marginTop: 2 }}>
+                  Sunday {lastSunday.slice(5)}
+                  {churchStats.streak > 0 && <> · 🔥 {churchStats.streak}-Sunday streak</>}
+                  {" · "}{churchStats.rate12}% of last 12
+                </div>
               </div>
               <button onClick={toggleChurch}
                 style={{ padding: "9px 16px", background: attendedThisWeek ? `${GR}18` : `${FA}14`, border: `1px solid ${attendedThisWeek ? GR + "55" : FA + "44"}`, borderRadius: 10, color: attendedThisWeek ? GR : FA, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
@@ -265,7 +280,14 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: T1 }}>{v.ref}</div>
-                      {v.text && <div style={{ fontSize: 12, color: T2, lineHeight: 1.65, marginTop: 5, fontStyle: "italic" }}>"{v.text}"</div>}
+                      {v.text && (dueNow && !revealed[v.id] ? (
+                        <button onClick={() => setRevealed((r) => ({ ...r, [v.id]: true }))}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 7, padding: "6px 12px", background: GL, border: `1px dashed ${BD2 || BD}`, borderRadius: 9, color: T2, fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}>
+                          <Eye size={12} /> Recite from memory, then reveal
+                        </button>
+                      ) : (
+                        <div style={{ fontSize: 12, color: T2, lineHeight: 1.65, marginTop: 5, fontStyle: "italic" }}>"{v.text}"</div>
+                      ))}
                       <div style={{ fontSize: 10.5, color: dueNow ? AM : T3, marginTop: 6, fontWeight: dueNow ? 700 : 400 }}>
                         {dueNow ? "Review due — recite it from memory, then mark reviewed" : `Next review in ${nextIn}d`} · {v.reviews || 0} review{(v.reviews || 0) === 1 ? "" : "s"}
                       </div>
