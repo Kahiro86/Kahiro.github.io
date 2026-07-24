@@ -514,6 +514,23 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
           const mo = active.reduce((a, h) => { const s = rangeStats(h, 30); return { sched: a.sched + s.scheduled, done: a.done + s.done }; }, { sched: 0, done: 0 });
           const perfectThisMonth = perfect.filter((d) => d >= daysAgoStr(30)).length;
 
+          // Weekday rhythm — completion rate by day of week over 12 weeks, so
+          // the pattern behind the streak is visible (strong Mondays, faded
+          // weekends). Best/worst days are flagged.
+          const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          const wdBuckets = Array.from({ length: 7 }, () => ({ sched: 0, done: 0 }));
+          for (let dOff = 0; dOff < 84; dOff++) {
+            const dd = daysAgoStr(dOff);
+            const wdi = new Date(`${dd}T12:00:00`).getDay();
+            for (const h of active) {
+              if (isScheduled(h, dd)) { wdBuckets[wdi].sched++; if (isDone(h, dd)) wdBuckets[wdi].done++; }
+            }
+          }
+          const weekday = wdBuckets.map((b, i) => ({ day: WD[i], pct: b.sched ? Math.round((b.done / b.sched) * 100) : 0, sched: b.sched }));
+          const wdActive = weekday.filter((w) => w.sched > 0);
+          const wdBest = wdActive.length ? wdActive.reduce((a, b) => (b.pct > a.pct ? b : a)) : null;
+          const wdWorst = wdActive.length ? wdActive.reduce((a, b) => (b.pct < a.pct ? b : a)) : null;
+
           return (
             <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 11 }}>
@@ -601,6 +618,29 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
                       <Meter pct={c.pct} color={c.pct >= 70 ? GR : c.pct >= 40 ? CY : RE} />
                     </div>
                   ))}
+                </Card>
+              )}
+
+              {wdActive.length > 1 && (
+                <Card style={{ padding: "18px" }}>
+                  <SH title="Weekday Pattern" sub="Completion rate by day — last 12 weeks" />
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 7, alignItems: "end", height: 120, marginTop: 6 }}>
+                    {weekday.map((w) => {
+                      const c = w.sched === 0 ? BD : w.pct >= 70 ? GR : w.pct >= 40 ? CY : RE;
+                      return (
+                        <div key={w.day} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 5, height: "100%" }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: w.sched === 0 ? T3 : c, fontFamily: "monospace" }}>{w.sched === 0 ? "—" : `${w.pct}%`}</span>
+                          <div style={{ width: "100%", height: `${Math.max(3, w.pct * 0.82)}%`, minHeight: 3, background: c, borderRadius: 4, opacity: w.sched === 0 ? 0.3 : 1 }} />
+                          <span style={{ fontSize: 10, color: T3 }}>{w.day}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {wdBest && wdWorst && wdBest.day !== wdWorst.day && (
+                    <div style={{ fontSize: 11, color: T3, marginTop: 12, lineHeight: 1.5 }}>
+                      Strongest on <b style={{ color: GR }}>{wdBest.day}</b> ({wdBest.pct}%) · softest on <b style={{ color: wdWorst.pct >= 50 ? AM : RE }}>{wdWorst.day}</b> ({wdWorst.pct}%). Protect the weak day with the smallest version.
+                    </div>
+                  )}
                 </Card>
               )}
 
