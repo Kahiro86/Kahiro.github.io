@@ -11,6 +11,7 @@ import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
+import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { WEEK_PLAN } from "./constants.js";
 import { getDayName } from "./helpers.js";
 import { DEFAULT_EXERCISES, uidT, lastValuesByExercise, overloadTrend } from "./library.js";
@@ -46,12 +47,23 @@ export function AthleteOS() {
   const saveMeasure = () => {
     const vals = ["weight", "waist", "chest", "arms", "thighs"].reduce((o, k) => ({ ...o, [k]: +mDraft?.[k] || 0 }), {});
     if (!Object.values(vals).some((v) => v > 0)) return;
-    setMeasures((prev) => [{ id: uidT(), date: localDateStr(), ...vals, notes: (mDraft.notes || "").trim() }, ...(Array.isArray(prev) ? prev : [])]);
+    const mDate = mDraft.date || localDateStr();
+    const notes = (mDraft.notes || "").trim();
+    if (mDraft.id) {
+      setMeasures((prev) => (Array.isArray(prev) ? prev : []).map((x) =>
+        x?.id === mDraft.id ? { ...x, date: mDate, ...vals, notes, editedAt: new Date().toISOString() } : x));
+      toast("Measurements updated ✍️", { tone: "success", duration: 2500 });
+    } else {
+      setMeasures((prev) => [{ id: uidT(), date: mDate, ...vals, notes, editedAt: null }, ...(Array.isArray(prev) ? prev : [])]);
+      toast("Measurements logged 📏", { tone: "success", duration: 2500 });
+    }
     setMDraft(null);
-    toast("Measurements logged 📏", { tone: "success", duration: 2500 });
   };
+  const startEditMeasure = (m) => setMDraft({ id: m.id, date: (m.date || "").slice(0, 10) || localDateStr(),
+    weight: m.weight || "", waist: m.waist || "", chest: m.chest || "", arms: m.arms || "", thighs: m.thighs || "", notes: m.notes || "" });
   const deleteMeasure = (m) => {
     setMeasures((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x?.id !== m.id));
+    if (mDraft?.id === m.id) setMDraft(null);
     toast("Entry deleted", { action: "Undo", onAction: () => setMeasures((p) => [m, ...(Array.isArray(p) ? p : [])]), tone: "danger" });
   };
   const saveTemplate = (tpl) => {
@@ -465,7 +477,7 @@ export function AthleteOS() {
                 <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Measurements over months — the scale is one signal, not the verdict.</div>
               </div>
               {!mDraft && (
-                <button onClick={() => setMDraft({ weight: "", waist: "", chest: "", arms: "", thighs: "", notes: "" })}
+                <button onClick={() => setMDraft({ date: localDateStr(), weight: "", waist: "", chest: "", arms: "", thighs: "", notes: "" })}
                   style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 15px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                   <Plus size={13} />Log measurements
                 </button>
@@ -474,6 +486,7 @@ export function AthleteOS() {
 
             {mDraft && (
               <Card style={{ padding: "16px", borderColor: `${PU}44` }}>
+                <div style={{ marginBottom: 12 }}><DatePicker value={mDraft.date || localDateStr()} onChange={(v) => setMDraft((d) => ({ ...d, date: v }))} /></div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 10, marginBottom: 10 }}>
                   {[["weight", "Weight (kg)"], ["waist", "Waist (cm)"], ["chest", "Chest (cm)"], ["arms", "Arms (cm)"], ["thighs", "Thighs (cm)"]].map(([k, l]) => (
                     <label key={k}>
@@ -487,7 +500,7 @@ export function AthleteOS() {
                   style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "9px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", marginBottom: 10, boxSizing: "border-box" }} />
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button onClick={() => setMDraft(null)} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-                  <button onClick={saveMeasure} style={{ padding: "8px 18px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 9, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save entry</button>
+                  <button onClick={saveMeasure} style={{ padding: "8px 18px", background: `linear-gradient(135deg,${PU},${CY})`, border: "none", borderRadius: 9, color: "#000", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{mDraft.id ? "Update entry" : "Save entry"}</button>
                 </div>
               </Card>
             )}
@@ -536,14 +549,15 @@ export function AthleteOS() {
             {measures.length > 0 && (
               <Card style={{ padding: "16px 18px" }}>
                 <SH title="History" sub={`${measures.length} entr${measures.length === 1 ? "y" : "ies"}`} />
-                {measures.map((m) => (
-                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, marginBottom: 7, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 11, color: T3, fontFamily: "monospace", width: 78 }}>{m.date}</span>
+                {[...measures].sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))).map((m) => (
+                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", background: GL, border: `1px solid ${m.id === mDraft?.id ? PU + "55" : BD}`, borderRadius: 10, marginBottom: 7, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, color: T3, width: 128 }}>{relativeDateLabel((m.date || "").slice(0, 10) || localDateStr())}{m.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}</span>
                     <span style={{ flex: 1, fontSize: 12, color: T2 }}>
                       {[["weight", "kg"], ["waist", "cm W"], ["chest", "cm C"], ["arms", "cm A"], ["thighs", "cm T"]]
                         .filter(([k]) => +m[k] > 0).map(([k, u]) => `${m[k]}${u.split(" ")[0]}${u.includes(" ") ? " " + u.split(" ")[1] : ""}`).join(" · ")}
                       {m.notes ? ` — ${m.notes}` : ""}
                     </span>
+                    <button onClick={() => startEditMeasure(m)} aria-label="Edit entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", padding: 2 }}><Pencil size={11} /></button>
                     <button onClick={() => deleteMeasure(m)} aria-label="Delete entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", padding: 2 }}><Trash2 size={11} /></button>
                   </div>
                 ))}
