@@ -128,6 +128,32 @@ export function AthleteOS() {
     };
   }).reverse();
 
+  // Training rhythm — which weekdays you actually train and the strength /
+  // cardio / mobility balance, over the last 12 weeks. Answers "when do I
+  // train, and is the mix balanced" — neither of which the per-metric charts
+  // above show.
+  const rhythm = (() => {
+    const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const cutoff = new Date(now); cutoff.setDate(now.getDate() - 84);
+    const recent = workouts.filter((w) => w && w.date && new Date(w.date) >= cutoff);
+    const byDay = Array.from({ length: 7 }, () => 0);
+    const byType = { strength: 0, cardio: 0, mobility: 0, recovery: 0 };
+    for (const w of recent) {
+      const wd = new Date(`${w.date}T12:00:00`).getDay();
+      if (wd >= 0 && wd <= 6) byDay[wd]++;
+      if (w.type in byType) byType[w.type]++;
+    }
+    const maxDay = Math.max(1, ...byDay);
+    const weekday = byDay.map((n, i) => ({ day: WD[i], n, pct: Math.round((n / maxDay) * 100) }));
+    const total = recent.length;
+    const types = [
+      { k: "strength", l: "Strength", c: PU }, { k: "cardio", l: "Cardio", c: CY },
+      { k: "mobility", l: "Mobility", c: GR }, { k: "recovery", l: "Recovery", c: AM },
+    ].map((t) => ({ ...t, n: byType[t.k], pct: total ? Math.round((byType[t.k] / total) * 100) : 0 })).filter((t) => t.n > 0);
+    const busiest = weekday.filter((d) => d.n > 0).sort((a, b) => b.n - a.n)[0] || null;
+    return { weekday, types, total, perWeek: +(total / 12).toFixed(1), busiest };
+  })();
+
   const exercisePRs = {};
   workouts.filter((w) => w && w.type === "strength").forEach((w) => {
     (Array.isArray(w.exercises) ? w.exercises : []).forEach((ex) => {
@@ -351,6 +377,36 @@ export function AthleteOS() {
               <Card style={{ padding: "40px", textAlign: "center", color: T3, fontSize: 13 }}>Log a few workouts to see your progress here.</Card>
             ) : (
               <>
+                {rhythm.total > 0 && (
+                  <Card style={{ padding: "20px" }}>
+                    <SH title="Training Rhythm" sub={`${rhythm.perWeek}/week over 12 weeks · when you train and the mix`} />
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 7, alignItems: "end", height: 96, marginTop: 4 }}>
+                      {rhythm.weekday.map((d) => (
+                        <div key={d.day} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 5, height: "100%" }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: d.n === 0 ? T3 : PU, fontFamily: "monospace" }}>{d.n || "—"}</span>
+                          <div style={{ width: "100%", height: `${Math.max(3, d.pct * 0.7)}%`, minHeight: 3, background: d.n === 0 ? BD : `linear-gradient(180deg,${PU},${CY})`, borderRadius: 4, opacity: d.n === 0 ? 0.4 : 1 }} />
+                          <span style={{ fontSize: 10, color: d.day === todayDay ? CY : T3, fontWeight: d.day === todayDay ? 700 : 400 }}>{d.day}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {rhythm.types.length > 0 && (
+                      <>
+                        <div style={{ display: "flex", height: 8, borderRadius: 5, overflow: "hidden", marginTop: 16, background: GL }}>
+                          {rhythm.types.map((t) => <div key={t.k} style={{ width: `${t.pct}%`, background: t.c }} title={`${t.l} ${t.pct}%`} />)}
+                        </div>
+                        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 9 }}>
+                          {rhythm.types.map((t) => (
+                            <span key={t.k} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T2 }}>
+                              <span style={{ width: 9, height: 9, borderRadius: 2, background: t.c }} />{t.l} <b style={{ color: T1 }}>{t.pct}%</b>
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {rhythm.busiest && <div style={{ fontSize: 11, color: T3, marginTop: 12, lineHeight: 1.5 }}>Most sessions land on <b style={{ color: PU }}>{rhythm.busiest.day}</b>. {rhythm.types.length === 1 ? "One training type so far — a little variety builds a more resilient body." : "Watch the balance: recovery and mobility protect the hard days."}</div>}
+                  </Card>
+                )}
+
                 <Card style={{ padding: "20px" }}>
                   <SH title="Strength Volume" sub="Total kg lifted per week" />
                   <ResponsiveContainer width="100%" height={180}>
