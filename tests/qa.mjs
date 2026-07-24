@@ -29,7 +29,7 @@ const MODULES = [
 const SUBTABS_MAP = {
   firm: [
     { group: "Trading", subtabs: ["Analytics", "Reviews", "Accounts", "Library", "Risk", "Journal"] },
-    { group: "Wealth", subtabs: ["Budget", "Reports", "Doctrine", "Net Worth"] },
+    { group: "Wealth", subtabs: ["Budget", "Reports", "Doctrine", "Analyst", "Net Worth"] },
     { group: "Doctrine", subtabs: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"] },
   ],
   life: [

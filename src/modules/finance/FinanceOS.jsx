@@ -201,7 +201,8 @@ export function FinanceOS() {
             gross={gross} setGross={setGross} g={g} paye={paye} nssf={nssf} shif={shif} ahl={ahl} totalDed={totalDed} netPay={netPay} />
         )}
         {finTab === "analyst" && (
-          <AnalystTab health={health} fmtKES={fmtKES} bySource={incomeStats.bySource} budgets={budgets} monthlyPassive={monthlyPassive} />
+          <AnalystTab health={health} fmtKES={fmtKES} bySource={incomeStats.bySource} budgets={budgets} monthlyPassive={monthlyPassive}
+            trajStats={trajStats} doctrine={doctrine} freedom={freedom} />
         )}
         {finTab === "reports" && (
           <FinanceReports income={income} incomeStats={incomeStats} health={health} fmtKES={fmtKES}
