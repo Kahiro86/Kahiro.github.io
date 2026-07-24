@@ -1,4 +1,4 @@
-import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, TrendingDown, Target, Activity, FileText } from "lucide-react";
+import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, TrendingDown, Target, Activity, FileText, Compass } from "lucide-react";
 import { useMemo, useState } from "react";
 import { B1, BD, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -21,9 +21,12 @@ import { PortfolioTab } from "./PortfolioTab.jsx";
 import { GoalsTab } from "./GoalsTab.jsx";
 import { AnalystTab } from "./AnalystTab.jsx";
 import { FinanceReports } from "./FinanceReports.jsx";
+import { DoctrineTab } from "./DoctrineTab.jsx";
+import { sanitizeDoctrine } from "./doctrine.js";
 
 const FIN_TABS = [
   { id: "overview",  l: "Net Worth",   i: Layers        },
+  { id: "doctrine",  l: "Doctrine",    i: Compass       },
   { id: "income",    l: "Income",      i: DollarSign    },
   { id: "analyst",   l: "Analyst",     i: Activity      },
   { id: "reports",   l: "Reports",     i: FileText      },
@@ -88,6 +91,9 @@ export function FinanceOS() {
   const [trades] = useStorageState("ict_trades", []);
   const [rawBal] = useStorageState("ict_balance", 15000);
   const [firmConfig] = useStorageState("firm_config", null);
+  const [rawDoctrine, setRawDoctrine] = useStorageState("finance_doctrine", {});
+  const doctrine = useMemo(() => sanitizeDoctrine(rawDoctrine), [rawDoctrine]);
+  const setDoctrine = (next) => setRawDoctrine(sanitizeDoctrine(typeof next === "function" ? next(sanitizeDoctrine(rawDoctrine)) : next));
   const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
   const tradingStats = getStats(trades);
   const tradingBalanceUSD = bal + tradingStats.totalPnl;
@@ -186,6 +192,9 @@ export function FinanceOS() {
             tMetrics={tMetrics} xRate={xRate} tradingWithdrawals={tradingWithdrawals} setTradingWithdrawals={setTradingWithdrawals}
             profitSplit={profitSplit} setProfitSplit={setProfitSplit}
             freedom={freedom} trajectory={trajectory} trajStats={trajStats} onCaptureSnapshot={captureSnapshot} />
+        )}
+        {finTab === "doctrine" && (
+          <DoctrineTab doctrine={doctrine} setDoctrine={setDoctrine} freedom={freedom} fmtKES={fmtKES} />
         )}
         {finTab === "income" && (
           <IncomeTab income={income} setIncome={setIncome} fmtKES={fmtKES}
