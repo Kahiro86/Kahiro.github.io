@@ -42,6 +42,19 @@ export function MindOS({ loaded = true }) {
   const finished = itemsSafe.filter((x) => x.status === "done");
   const dueReviews = decisionsSafe.filter((d) => !d.reviewedAt && daysSince(d.date) >= REVIEW_AFTER_DAYS);
 
+  // Reading momentum — derived honestly from what's stored (start/finish dates
+  // and page counts); no fabricated daily history.
+  const momentum = useMemo(() => {
+    const done = itemsSafe.filter((x) => x.status === "done");
+    const spans = done.filter((x) => x.startedAt && x.finishedAt).map((x) => Math.max(0, daysBetween(x.startedAt, x.finishedAt)));
+    const avgDays = spans.length ? Math.round(spans.reduce((s, n) => s + n, 0) / spans.length) : 0;
+    const pagesDone = done.reduce((s, x) => s + (x.pagesTotal > 0 ? +x.pagesTotal || 0 : +x.pagesRead || 0), 0)
+      + reading.reduce((s, x) => s + (+x.pagesRead || 0), 0);
+    const yr = String(new Date().getFullYear());
+    const thisYear = done.filter((x) => String(x.finishedAt || "").slice(0, 4) === yr).length;
+    return { avgDays, pagesDone, thisYear, hasData: done.length > 0 };
+  }, [itemsSafe]); // eslint-disable-line
+
   // ── Library actions ─────────────────────────────────────────────────
   const saveItem = () => {
     if (!itemDraft?.title?.trim()) return;
@@ -152,6 +165,22 @@ export function MindOS({ loaded = true }) {
               <Chip label="Notes"       value={notesSafe.length} color={CY} />
               <Chip label="Decisions"   value={decisionsSafe.length} color={AM} />
             </div>
+
+            {momentum.hasData && (
+              <Card style={{ padding: "13px 16px", display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ fontSize: 10, color: T3, letterSpacing: 0.8, textTransform: "uppercase", fontWeight: 700 }}>Momentum</div>
+                {[
+                  { l: "Pages / lessons read", v: momentum.pagesDone.toLocaleString(), c: MI },
+                  { l: "Finished this year", v: momentum.thisYear, c: GR },
+                  ...(momentum.avgDays > 0 ? [{ l: "Avg days to finish", v: momentum.avgDays, c: CY }] : []),
+                ].map((s) => (
+                  <div key={s.l}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: s.c, fontFamily: "'JetBrains Mono',monospace" }}>{s.v}</div>
+                    <div style={{ fontSize: 9.5, color: T3, marginTop: 1 }}>{s.l}</div>
+                  </div>
+                ))}
+              </Card>
+            )}
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
