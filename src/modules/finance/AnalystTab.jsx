@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Cpu, Activity } from "lucide-react";
+import { Cpu, Activity, Compass, Check, AlertCircle, ArrowRight } from "lucide-react";
 import { BD, GL, T1, T2, T3, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { callClaude } from "../../shared/anthropic.js";
 import { KAIZEN_COACH_PREAMBLE } from "../../shared/kaizen.js";
 import { SUBSCORE_META } from "./financeHealth.js";
+import { financeNarrative } from "./coach.js";
 
 const scoreColor = (n) => (n >= 80 ? GR : n >= 65 ? CY : n >= 50 ? AM : RE);
 
-export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive }) {
+export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive, trajStats, doctrine, freedom }) {
+  const coach = financeNarrative(health, trajStats, doctrine, freedom, fmtKES);
   const [analysis, setAnalysis] = useState("");
   const [loading, setLoading] = useState(false);
   const col = scoreColor(health.overall);
@@ -49,6 +51,47 @@ Sub-scores: ${SUBSCORE_META.map((m) => `${m.label} ${Math.round(health.sub[m.key
         <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Financial Analyst</div>
         <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Continuous analysis of your whole financial picture · Kaizen recommendations</div>
       </div>
+
+      {/* ── YOUR COACH — always-on, reads your trajectory + principles ── */}
+      <Card style={{ padding: "20px 22px", borderColor: `${col}33`, background: `linear-gradient(120deg,${col}0C,transparent)` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
+          <Compass size={15} color={col} />
+          <div style={{ fontSize: 14, fontWeight: 800, color: T1 }}>Your Coach</div>
+          <span style={{ fontSize: 15, fontWeight: 800, color: col }}>· {coach.verdict}</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 16 }}>
+          {coach.wins.length > 0 && (
+            <div>
+              <div style={{ fontSize: 9.5, color: GR, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginBottom: 7 }}>What's working</div>
+              {coach.wins.map((w, i) => (
+                <div key={i} style={{ display: "flex", gap: 7, marginBottom: 6, fontSize: 12, color: T2, lineHeight: 1.5 }}><Check size={13} color={GR} style={{ flexShrink: 0, marginTop: 2 }} />{w}</div>
+              ))}
+            </div>
+          )}
+          {coach.watch.length > 0 && (
+            <div>
+              <div style={{ fontSize: 9.5, color: AM, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginBottom: 7 }}>What to watch</div>
+              {coach.watch.slice(0, 3).map((w, i) => (
+                <div key={i} style={{ display: "flex", gap: 7, marginBottom: 6, fontSize: 12, color: T2, lineHeight: 1.5 }}><AlertCircle size={13} color={AM} style={{ flexShrink: 0, marginTop: 2 }} />{w}</div>
+              ))}
+            </div>
+          )}
+        </div>
+        {coach.creed.length > 0 && (
+          <div style={{ marginTop: 14, paddingTop: 13, borderTop: `1px solid ${BD}` }}>
+            <div style={{ fontSize: 9.5, color: PU, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginBottom: 7 }}>Your principles, measured</div>
+            {coach.creed.map((c, i) => (
+              <div key={i} style={{ display: "flex", gap: 7, marginBottom: 5, fontSize: 12, color: c.ok ? T1 : T2, lineHeight: 1.5 }}>
+                <span style={{ color: c.ok ? GR : AM, flexShrink: 0 }}>{c.ok ? "✓" : "○"}</span>{c.text}
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ marginTop: 14, padding: "11px 14px", background: `${col}12`, border: `1px solid ${col}33`, borderRadius: 10, display: "flex", gap: 9, alignItems: "center" }}>
+          <ArrowRight size={14} color={col} style={{ flexShrink: 0 }} />
+          <div><span style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase", marginRight: 7 }}>This week</span><span style={{ fontSize: 12.5, color: T1, fontWeight: 600 }}>{coach.step}</span></div>
+        </div>
+      </Card>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
         <Card style={{ padding: "22px", borderColor: `${col}44`, display: "flex", alignItems: "center", gap: 20 }}>
