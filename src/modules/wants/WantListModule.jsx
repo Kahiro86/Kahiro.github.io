@@ -12,6 +12,7 @@ import { BD, T1, T2, T3, GL, B2, GR, AM, CY, AC2 } from "../../shared/designToke
 import { Card, SH, Chip, Empty, MoneyInp, Inp } from "../../shared/ui.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { DatePicker } from "../../shared/DatePicker.jsx";
+import { MotivePush } from "../../shared/MotivePush.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import {
@@ -566,6 +567,8 @@ export function WantListModule() {
           <Plus size={14} /> New want
         </button>
       </div>
+
+      {wants.length > 0 && <MotivePush context={wants.some((w) => w.purchasedAt) ? ["want-saving", "want-bought"] : ["want-saving"]} accent={AK} compact />}
 
       {/* Analytics */}
       {wants.length > 0 && (

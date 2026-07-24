@@ -8,6 +8,7 @@ import { Plus, Trash2, Star, Search, Copy, ChevronUp, Flame } from "lucide-react
 import { B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty } from "../../shared/ui.jsx";
 import { DatePicker } from "../../shared/DatePicker.jsx";
+import { MotivePush } from "../../shared/MotivePush.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { Ring } from "../../shared/charts.jsx";
@@ -231,6 +232,7 @@ export function NutritionTab() {
   return (
     <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 900 }}>
       <DatePicker value={logDs} onChange={setLogDs} />
+      <MotivePush context={["meal", "protein", "water"]} accent={GR} compact />
       {/* ── Daily dashboard ── */}
       <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${GR}08,transparent)` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>

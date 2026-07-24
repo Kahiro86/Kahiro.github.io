@@ -5,6 +5,7 @@ import { BD, T1, T2, T3, GL, GR, RE, AM } from "../../../shared/designTokens.js"
 import { Card, Empty } from "../../../shared/ui.jsx";
 import { AK } from "./fields.jsx";
 import { netPnl, tradeResult, actualRR, fmtMoney, RESULT_COLORS } from "./tradingIntel.js";
+import { MotivePush } from "../../../shared/MotivePush.jsx";
 
 const fmtDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
@@ -65,11 +66,20 @@ export function TradeLog({ trades, accounts, activeId, onNew, onView, onEdit, on
     return l.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
   }, [trades, scope, activeId, res, q]);
 
+  // Blend the pre-trade discipline pool with a line matched to the most recent
+  // closed result, so the mentor's tone follows how trading is actually going.
+  const lastResultCtx = useMemo(() => {
+    const lastClosed = [...trades].filter((t) => t.status === "CLOSED" && t.exit !== "" && t.exit != null)
+      .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))[0];
+    return lastClosed ? (netPnl(lastClosed) >= 0 ? "trade-win" : "trade-loss") : null;
+  }, [trades]);
+
   const pill = (on) => ({ padding: "6px 12px", borderRadius: 8, border: `1px solid ${on ? AK + "55" : BD}`, background: on ? `${AK}1a` : GL, color: on ? "#FFFFFF" : T2, fontSize: 11.5, fontWeight: on ? 700 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" });
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "16px 22px 12px", display: "flex", flexDirection: "column", gap: 11, flexShrink: 0 }}>
+        <MotivePush context={lastResultCtx ? ["trade-before", lastResultCtx] : ["trade-before", "no-trade"]} accent={AK} compact />
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "7px 12px", flex: 1, minWidth: 200 }}>
             <Search size={14} color={T3} />
