@@ -78,6 +78,10 @@ const SCENARIOS = {
     "architect:motive_recent": JSON.stringify("not-an-array"),
     "architect:motive_history": JSON.stringify([null, "x", { id: 9 }, { id: "mpzzz", at: "bad" }]),
   },
+  corruptSnapshots: {
+    "architect:finance_snapshots": JSON.stringify([null, 5, "x", { junk: 1 }, { ym: "bad" }, { ym: "2026-06", netWorth: "nope", invested: null, savingsRate: "x", yearsOut: "z" }]),
+  },
+  snapshotsNotArray: { "architect:finance_snapshots": JSON.stringify({ nope: 1 }) },
   consistencyStartWrongType: {
     "architect:year_of_consistency_start": JSON.stringify({ nope: 1 }),
   },
