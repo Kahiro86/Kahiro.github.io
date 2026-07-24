@@ -29,7 +29,7 @@ const MODULES = [
 const SUBTABS_MAP = {
   firm: [
     { group: "Trading", subtabs: ["Analytics", "Reviews", "Accounts", "Library", "Risk", "Journal"] },
-    { group: "Wealth", subtabs: ["Budget", "Reports", "Net Worth"] },
+    { group: "Wealth", subtabs: ["Budget", "Reports", "Doctrine", "Net Worth"] },
     { group: "Doctrine", subtabs: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"] },
   ],
   life: [
@@ -82,6 +82,10 @@ const SCENARIOS = {
     "architect:finance_snapshots": JSON.stringify([null, 5, "x", { junk: 1 }, { ym: "bad" }, { ym: "2026-06", netWorth: "nope", invested: null, savingsRate: "x", yearsOut: "z" }]),
   },
   snapshotsNotArray: { "architect:finance_snapshots": JSON.stringify({ nope: 1 }) },
+  corruptDoctrine: {
+    "architect:finance_doctrine": JSON.stringify({ why: 5, principles: [null, "x", { nope: 1 }, { text: "" }, { text: "Real principle", archived: "yes" }], values: [null, 3, "Freedom", "Freedom", "  "], updatedAt: 9 }),
+  },
+  doctrineNotObject: { "architect:finance_doctrine": JSON.stringify([1, 2, 3]) },
   consistencyStartWrongType: {
     "architect:year_of_consistency_start": JSON.stringify({ nope: 1 }),
   },
