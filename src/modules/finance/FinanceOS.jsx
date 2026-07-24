@@ -9,6 +9,8 @@ import { DebtTab } from "./DebtTab.jsx";
 import { calcPAYE, calcNSSF } from "./paye.js";
 import { incomeAnalytics } from "./income.js";
 import { financeHealth } from "./financeHealth.js";
+import { useFinanceSnapshots, trajectorySeries, trajectoryStats } from "./snapshots.js";
+import { freedomMath } from "../../shared/freedom.js";
 import { getStats, tradingMetrics } from "../trading/helpers.js";
 import { OverviewTab } from "./OverviewTab.jsx";
 import { IncomeTab } from "./IncomeTab.jsx";
@@ -85,6 +87,7 @@ export function FinanceOS() {
   // Trading account is read-only here — the firewall never gives Finance OS a setter into Trading OS's own storage.
   const [trades] = useStorageState("ict_trades", []);
   const [rawBal] = useStorageState("ict_balance", 15000);
+  const [firmConfig] = useStorageState("firm_config", null);
   const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
   const tradingStats = getStats(trades);
   const tradingBalanceUSD = bal + tradingStats.totalPnl;
@@ -143,6 +146,13 @@ export function FinanceOS() {
   const incomeStats = incomeAnalytics(income);
   const health = financeHealth({ incomeStats, totalBudgeted, totalSpent, efBal, savBal, totalInvested, personalDebt, tradingStats });
 
+  // Wealth trajectory — light monthly snapshots, captured idempotently so the
+  // module can show where the money is heading, not just where it stands.
+  const { snapshots, captureNow: captureSnapshot } = useFinanceSnapshots(state, firmConfig);
+  const freedom = useMemo(() => freedomMath(state, firmConfig), [state, firmConfig]);
+  const trajectory = useMemo(() => trajectorySeries(snapshots), [snapshots]);
+  const trajStats = useMemo(() => trajectoryStats(snapshots), [snapshots]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <ModuleTabs tabs={FIN_TABS} active={finTab} onSelect={setFinTab} gap={10} pad="6px 11px" fontSize={11.5}
@@ -174,7 +184,8 @@ export function FinanceOS() {
             monthlyPassive={monthlyPassive} efBal={efBal} savBal={savBal} opBal={opBal}
             personalDebt={personalDebt} setPersonalDebt={setPersonalDebt} debtTotal={debtTotal} debtCount={debts.length} onManageDebt={() => setFinTab("debt")}
             tMetrics={tMetrics} xRate={xRate} tradingWithdrawals={tradingWithdrawals} setTradingWithdrawals={setTradingWithdrawals}
-            profitSplit={profitSplit} setProfitSplit={setProfitSplit} />
+            profitSplit={profitSplit} setProfitSplit={setProfitSplit}
+            freedom={freedom} trajectory={trajectory} trajStats={trajStats} onCaptureSnapshot={captureSnapshot} />
         )}
         {finTab === "income" && (
           <IncomeTab income={income} setIncome={setIncome} fmtKES={fmtKES}
