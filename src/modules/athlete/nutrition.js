@@ -270,6 +270,7 @@ export const FOOD_DB = [
   // Nuts & Kenyan drinks
   F("Peanuts", 1, { kcal: 567, p: 25.8, c: 16.1, f: 49.2, fib: 8.5, sug: 4, sat: 6.3, na: 18, k: 705, ca: 92, mg: 168, fe: 4.6, zn: 3.3, ph: 376, vb: 30, ve: 8.3, h2o: 6.5 }, { l: "1 handful", g: 28 }),
   F("Dawa (honey, lemon & ginger drink)", 2, { kcal: 28, p: 0.1, c: 7.6, f: 0, sug: 7.3, na: 2, k: 15, ca: 2, mg: 1, ph: 2, vb: 1, vc: 3, h2o: 92 }, { l: "1 mug", g: 250 }),
+  F("Smocha (smokie in chapati)", 4, { kcal: 272, p: 8.4, c: 28.6, f: 13.6, fib: 2.4, sug: 2.5, sat: 4.4, chol: 18, na: 510, k: 155, ca: 21, mg: 25, fe: 1.8, zn: 1.2, ph: 120, vb: 10, vc: 2, h2o: 38 }, { l: "1 smocha", g: 180 }),
 ];
 
 // Backfill realistic servings onto common existing foods (data-only; keeps
