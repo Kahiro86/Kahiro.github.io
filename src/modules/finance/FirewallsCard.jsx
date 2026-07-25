@@ -6,9 +6,9 @@
 // stays in Trading; here you only name firewalls and file accounts into them.
 import { useState } from "react";
 import { Lock, Plus, Pencil, Check, Trash2, ShieldOff, ArrowRightLeft } from "lucide-react";
-import { B2, BD, T1, T2, T3, GL, CY, GR, AM } from "../../shared/designTokens.js";
+import { B2, BD, T1, T2, T3, GL, CY, GR, AM, RE } from "../../shared/designTokens.js";
 import { Card } from "../../shared/ui.jsx";
-import { newFirewall } from "./firewalls.js";
+import { newFirewall, FIREWALL_COLORS } from "./firewalls.js";
 
 const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
 const sel = { background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "5px 9px", fontSize: 11, color: T2, outline: "none", fontFamily: "inherit", cursor: "pointer" };
@@ -21,9 +21,11 @@ export function FirewallsCard({ fw, firewalls = [], setFirewalls, accounts = [],
   const groups = fw?.groups || [];
   const unfiled = fw?.unfiled || [];
 
-  const addFirewall = () => setFirewalls((prev) => [...(Array.isArray(prev) ? prev : []), newFirewall(`Firewall ${firewalls.length + 1}`)]);
+  const addFirewall = () => setFirewalls((prev) => [...(Array.isArray(prev) ? prev : []), newFirewall(`Firewall ${firewalls.length + 1}`, firewalls.length)]);
   const rename = (id) => { const v = editVal.trim(); if (v) setFirewalls((p) => p.map((f) => (f.id === id ? { ...f, name: v } : f))); setEditId(null); };
   const delFirewall = (id) => setFirewalls((p) => p.filter((f) => f.id !== id));
+  const cycleColor = (id, cur) => setFirewalls((p) => p.map((f) => (f.id === id ? { ...f, color: FIREWALL_COLORS[(FIREWALL_COLORS.indexOf(cur) + 1) % FIREWALL_COLORS.length] } : f)));
+  const toggleCountsNW = (id) => setFirewalls((p) => p.map((f) => (f.id === id ? { ...f, countsNW: !f.countsNW } : f)));
   const fileInto = (accountId, fwId) => setFirewalls((p) => (Array.isArray(p) ? p : []).map((f) => ({
     ...f, accountIds: f.id === fwId ? [...new Set([...(f.accountIds || []), accountId])] : (f.accountIds || []).filter((x) => x !== accountId),
   })));
@@ -61,9 +63,10 @@ export function FirewallsCard({ fw, firewalls = [], setFirewalls, accounts = [],
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {groups.map((g) => (
-            <div key={g.id} style={{ border: `1px solid ${BD}`, borderRadius: 12, padding: "13px 15px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-                <Lock size={12} color={CY} />
+            <div key={g.id} style={{ border: `1px solid ${g.color}44`, borderRadius: 12, padding: "13px 15px", background: `linear-gradient(180deg,${g.color}0A,transparent)` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                <button onClick={() => cycleColor(g.id, g.color)} title="Change colour" aria-label="Change colour"
+                  style={{ width: 13, height: 13, borderRadius: "50%", background: g.color, border: `2px solid ${g.color}`, cursor: "pointer", flexShrink: 0, padding: 0 }} />
                 {editId === g.id ? (
                   <>
                     <input autoFocus value={editVal} onChange={(e) => setEditVal(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") rename(g.id); if (e.key === "Escape") setEditId(null); }}
@@ -73,11 +76,19 @@ export function FirewallsCard({ fw, firewalls = [], setFirewalls, accounts = [],
                 ) : (
                   <>
                     <span style={{ fontSize: 13.5, fontWeight: 800, color: T1, flex: 1, minWidth: 100 }}>{g.name}</span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: GR, fontFamily: "monospace" }}>{usd(g.total)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: g.countsNW ? GR : T1, fontFamily: "monospace" }}>{usd(g.total)}</span>
                     <button onClick={() => { setEditId(g.id); setEditVal(g.name); }} style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", padding: 2 }}><Pencil size={12} /></button>
                     <button onClick={() => delFirewall(g.id)} style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", padding: 2 }}><Trash2 size={12} /></button>
                   </>
                 )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 11, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 10, color: T3 }}>{g.count} account{g.count === 1 ? "" : "s"}</span>
+                <span style={{ fontSize: 10, color: g.netPnl >= 0 ? GR : RE, fontFamily: "monospace" }}>{g.netPnl >= 0 ? "+" : ""}{usd(g.netPnl)} P&L</span>
+                <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", marginLeft: "auto" }}>
+                  <input type="checkbox" checked={!!g.countsNW} onChange={() => toggleCountsNW(g.id)} style={{ accentColor: GR, width: 13, height: 13 }} />
+                  <span style={{ fontSize: 10, color: g.countsNW ? GR : T3 }}>Count toward Net Worth</span>
+                </label>
               </div>
               {g.accounts.length ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>{g.accounts.map((a) => <AccountRow key={a.id} a={a} fwId={g.id} />)}</div>

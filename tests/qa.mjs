@@ -87,7 +87,7 @@ const SCENARIOS = {
   },
   doctrineNotObject: { "architect:finance_doctrine": JSON.stringify([1, 2, 3]) },
   corruptFirewalls: {
-    "architect:finance_state": JSON.stringify({ currency: "KES", xRate: 130, firewalls: [null, 5, "x", { nope: 1 }, { name: "" }, { name: "Prop Firm", accountIds: [null, 5, "a1", "a1"] }], tradingUnfiledCountsNW: "yes" }),
+    "architect:finance_state": JSON.stringify({ currency: "KES", xRate: 130, firewalls: [null, 5, "x", { nope: 1 }, { name: "" }, { name: "Prop Firm", color: "notacolor", countsNW: "yes", accountIds: [null, 5, "a1", "a1"] }, { name: "Crypto", color: "#3FB950", countsNW: true, accountIds: ["a2"] }], tradingUnfiledCountsNW: "yes" }),
     "architect:ti_accounts": JSON.stringify([null, { id: "a1", name: "FTMO 100k", type: "Funded", startBalance: 100000 }, { id: "a2", name: "Personal", type: "Live", startBalance: "bad" }]),
     "architect:ti_trades": JSON.stringify([{ id: "t1", accountId: "a1", status: "CLOSED", exit: 1.2, entry: 1.1 }]),
   },

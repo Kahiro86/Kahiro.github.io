@@ -123,9 +123,11 @@ export function FinanceOS() {
   const totalLiquid = (+opBal || 0) + (+savBal || 0) + (+efBal || 0);
   // Debt: sum of interactive debt balances, falling back to the legacy figure.
   const debtTotal = totalDebtRemaining(debts, personalDebt);
-  // FIREWALL: firewalled trading groups are NEVER part of personal net worth.
-  // Unfiled accounts optionally count (converted from their USD balance).
-  const tradingNWKES = state.tradingUnfiledCountsNW ? Math.round(fw.unfiledTotal * (+xRate || 130)) : 0;
+  // FIREWALL: firewalled trading groups are walled off by default. Any group
+  // (or the unfiled bucket) the user opts to count is converted from its USD
+  // balance and added to personal net worth.
+  const tradingCountedUSD = (fw.countedGroupTotal || 0) + (state.tradingUnfiledCountsNW ? fw.unfiledTotal : 0);
+  const tradingNWKES = Math.round(tradingCountedUSD * (+xRate || 130));
   const netWorthKES = totalLiquid + totalInvested - debtTotal + tradingNWKES;
 
   // ── PASSIVE INCOME ────────────────────────────────────────────────
@@ -174,6 +176,12 @@ export function FinanceOS() {
           <span style={{ fontSize: 10, color: T3, letterSpacing: 1 }}>NET WORTH</span>
           <span style={{ fontSize: 14, fontWeight: 800, color: netWorthKES >= 0 ? GR : RE, fontFamily: "monospace" }}>{fmtKES(netWorthKES)}</span>
         </div>
+        {fw.grandTotal > 0 && (
+          <div style={{ padding: "5px 13px", background: `${CY}11`, border: `1px solid ${CY}22`, borderRadius: 9, display: "flex", alignItems: "center", gap: 8 }} title="Combined balance across your trading accounts (firewalled unless opted in)">
+            <span style={{ fontSize: 10, color: T3, letterSpacing: 1 }}>FIREWALLS</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: CY, fontFamily: "monospace" }}>${Math.round(fw.grandTotal).toLocaleString()}</span>
+          </div>
+        )}
         <div style={{ display: "flex", background: GL, border: `1px solid ${BD}`, borderRadius: 9, overflow: "hidden" }}>
           {["KES", "USD"].map((c) => (
             <button key={c} onClick={() => setCurrency(c)}
