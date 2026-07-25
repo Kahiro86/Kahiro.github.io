@@ -14,7 +14,7 @@ import { sanitizeDoctrine, newPrinciple, SUGGESTED_PRINCIPLES, SUGGESTED_VALUES 
 const inp = { width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 12px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box", lineHeight: 1.6 };
 const smallBtn = (c = T3) => ({ background: "none", border: "none", color: c, cursor: "pointer", padding: 3, display: "inline-flex" });
 
-export function DoctrineTab({ doctrine, setDoctrine, freedom, fmtKES }) {
+export function DoctrineTab({ doctrine, setDoctrine, freedom, fmtKES, embedded = false }) {
   const d = sanitizeDoctrine(doctrine);
   const [why, setWhy] = useState(d.why);
   const [draft, setDraft] = useState("");
@@ -37,8 +37,8 @@ export function DoctrineTab({ doctrine, setDoctrine, freedom, fmtKES }) {
   const unusedSuggestions = SUGGESTED_PRINCIPLES.filter((s) => !d.principles.some((p) => p.text === s));
 
   return (
-    <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 18, maxWidth: 860 }}>
-      <MotivePush context={["wealth", "savings", "general"]} accent={AM} />
+    <div style={{ padding: embedded ? 0 : "24px 28px", display: "flex", flexDirection: "column", gap: 18, maxWidth: embedded ? "none" : 860 }}>
+      {!embedded && <MotivePush context={["wealth", "savings", "general"]} accent={AM} />}
 
       {/* ── THE MISSION — money exists to buy freedom ── */}
       {freedom && (

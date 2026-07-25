@@ -1,4 +1,4 @@
-import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, TrendingDown, Target, Activity, FileText, Compass } from "lucide-react";
+import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, TrendingDown, Target, Activity, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { B1, BD, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -22,12 +22,10 @@ import { PortfolioTab } from "./PortfolioTab.jsx";
 import { GoalsTab } from "./GoalsTab.jsx";
 import { AnalystTab } from "./AnalystTab.jsx";
 import { FinanceReports } from "./FinanceReports.jsx";
-import { DoctrineTab } from "./DoctrineTab.jsx";
 import { sanitizeDoctrine } from "./doctrine.js";
 
 const FIN_TABS = [
   { id: "overview",  l: "Net Worth",   i: Layers        },
-  { id: "doctrine",  l: "Doctrine",    i: Compass       },
   { id: "income",    l: "Income",      i: DollarSign    },
   { id: "analyst",   l: "Analyst",     i: Activity      },
   { id: "reports",   l: "Reports",     i: FileText      },
@@ -207,16 +205,13 @@ export function FinanceOS() {
             unfiledCountsNW={state.tradingUnfiledCountsNW} setUnfiledCountsNW={setUnfiledCountsNW}
             freedom={freedom} trajectory={trajectory} trajStats={trajStats} onCaptureSnapshot={captureSnapshot} />
         )}
-        {finTab === "doctrine" && (
-          <DoctrineTab doctrine={doctrine} setDoctrine={setDoctrine} freedom={freedom} fmtKES={fmtKES} />
-        )}
         {finTab === "income" && (
           <IncomeTab income={income} setIncome={setIncome} fmtKES={fmtKES}
             gross={gross} setGross={setGross} g={g} paye={paye} nssf={nssf} shif={shif} ahl={ahl} totalDed={totalDed} netPay={netPay} />
         )}
         {finTab === "analyst" && (
           <AnalystTab health={health} fmtKES={fmtKES} bySource={incomeStats.bySource} budgets={budgets} monthlyPassive={monthlyPassive}
-            trajStats={trajStats} doctrine={doctrine} freedom={freedom} />
+            trajStats={trajStats} doctrine={doctrine} setDoctrine={setDoctrine} freedom={freedom} />
         )}
         {finTab === "reports" && (
           <FinanceReports income={income} incomeStats={incomeStats} health={health} fmtKES={fmtKES}
