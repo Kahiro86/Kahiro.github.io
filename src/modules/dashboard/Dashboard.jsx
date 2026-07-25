@@ -444,13 +444,14 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       {streaks.length > 0 && (
         <div>
           <SectionLabel icon={<Flame size={12} color={AC} />}>Current Streaks</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(streaks.length, 4)},1fr)`, gap: 10 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {streaks.map((s) => (
-              <StatCard key={s.label} onClick={() => onNavigate("life")} style={{ padding: "13px 14px" }}>
-                <div style={{ fontSize: 17 }}>{s.icon}</div>
-                <div style={{ fontSize: 22, ...big, marginTop: 6 }}>{s.days}<span style={{ fontSize: 11, color: T3, fontWeight: 500 }}> days</span></div>
-                <div style={{ fontSize: 11, color: T2, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.label}</div>
-              </StatCard>
+              <div key={s.label} onClick={() => onNavigate("life")} title={s.label}
+                style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, cursor: "pointer" }}>
+                <span style={{ fontSize: 14, lineHeight: 1 }}>{s.icon}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: AC, fontFamily: "'JetBrains Mono',monospace" }}>{s.days}<span style={{ fontSize: 10, color: T3, fontWeight: 500 }}>d</span></span>
+                <span style={{ fontSize: 11.5, color: T2, whiteSpace: "nowrap", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{s.label}</span>
+              </div>
             ))}
           </div>
         </div>
