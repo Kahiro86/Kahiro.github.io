@@ -16,8 +16,7 @@ import { useCountUp } from "../../shared/useCountUp.js";
 const GOLD = "#F0B429"; // reserved for the perfect-day hero only
 import { useStorageState } from "../../shared/useStorageState.js";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
-import { getStats, tradingMetrics } from "../trading/helpers.js";
-import { sanitizeTrades as sanitizeTiTrades, sanitizeAccounts as sanitizeTiAccounts, netPnl as tiNetPnl } from "../trading/intel/tradingIntel.js";
+import { sanitizeTrades as sanitizeTiTrades, sanitizeAccounts as sanitizeTiAccounts, netPnl as tiNetPnl, accountMetrics as tiAccountMetrics } from "../trading/intel/tradingIntel.js";
 import { financeSummary } from "../finance/summary.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
@@ -64,12 +63,10 @@ const DTONE = { urgent: AC, info: AM, good: GR }; // directive rail colour by to
 export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabits, loaded = true, xp }) {
   const [kz, setKz] = useState(getActiveKillzone);
   const [, setEatTime] = useState(getEATTimeStr);
-  const [trades] = useStorageState("ict_trades", []);
+  const [trades] = useStorageState("ict_trades", []); // legacy — checklist indicator only
   const [tiTrades] = useStorageState("ti_trades", []);
   const [tiAccounts] = useStorageState("ti_accounts", []);
   const [tiSettings] = useStorageState("ti_settings", {});
-  const [rawBal] = useStorageState("ict_balance", 15000);
-  const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
   const [workouts] = useStorageState("athlete_workouts", []);
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [entries] = useStorageState("journal_entries", []);
@@ -198,9 +195,14 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   );
 
   // ── 📊 TRADING: only on an active session or a day with trades ──
-  const tMetrics = useMemo(() => tradingMetrics(trades, bal, finance.tradingWithdrawals || 0, finance.profitSplit || 80), [trades, bal, finance.tradingWithdrawals, finance.profitSplit]);
+  // Fleet equity = the live total across the user's own trading accounts
+  // (ti_accounts), each = start balance + net P&L. Replaces the old fixed
+  // $15k account so the Command Centre reflects the real, firewalled fleet.
+  const fleetEquity = useMemo(
+    () => sanitizeTiAccounts(tiAccounts).filter((a) => !a.archived).reduce((s, a) => s + tiAccountMetrics(a, tiTrades).currentBalance, 0),
+    [tiAccounts, tiTrades]
+  );
   const tradesToday = useMemo(() => trades.filter((t) => (t.date || "").slice(0, 10) === ds && !t.archived), [trades, ds]);
-  const tStats = useMemo(() => getStats(trades), [trades]);
   // New Trading Intelligence journal — today's activity on the active account,
   // blended into the snapshot so the Command Centre reflects the live system.
   const tiToday = useMemo(() => {
@@ -209,7 +211,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     return { count: todays.length, pnl: todays.reduce((s, t) => s + tiNetPnl(t), 0) };
   }, [tiTrades, tiAccounts, tiSettings, ds]);
   const tradeCountToday = tradesToday.length + tiToday.count;
-  const dailyPnlAll = tMetrics.dailyPnl + tiToday.pnl;
+  const dailyPnlAll = tiToday.pnl;
   const isTradingDay = kz.active || tradeCountToday > 0;
   const checklistOk = tradesToday.length > 0 && tradesToday.every((t) => +t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal);
 
@@ -251,7 +253,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const cuScore = useCountUp(lifeScore);
   const cuXp = useCountUp(xp?.total ?? 0);
   const cuNet = useCountUp(fin.personalNetWorth);
-  const cuPnl = useCountUp(Math.round(tMetrics.dailyPnl));
+  const cuPnl = useCountUp(Math.round(dailyPnlAll));
   const cuFreedom = useCountUp(freedom.freedomPct);
 
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
@@ -354,7 +356,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
             <span style={{ fontSize: 12, color: T2 }}>clean months · the gate</span>
           </div>
           <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
-            Fleet ${Math.round(tMetrics.equity).toLocaleString()} · vault KES {kesShort(freedom.capital)}
+            Fleet ${Math.round(fleetEquity).toLocaleString()} · vault KES {kesShort(freedom.capital)}
           </div>
         </StatCard>
       </div>

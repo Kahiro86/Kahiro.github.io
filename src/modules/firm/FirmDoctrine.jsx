@@ -30,7 +30,6 @@ export function FirmDoctrine() {
   // progression. The legacy ict_trades store is no longer read here.
   const [rawTiTrades, , tiLoaded] = useStorageState("ti_trades", []);
   const [rawTiAccounts, , accLoaded] = useStorageState("ti_accounts", []);
-  const [rawBal] = useStorageState("ict_balance", 15000);
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [reviews] = useStorageState("ict_reviews", []);
   const [withdrawals, setWithdrawals, wdLoaded] = useStorageState("firm_withdrawals", []);
@@ -39,10 +38,14 @@ export function FirmDoctrine() {
   const [campaign, setCampaign, campLoaded] = useStorageState("firm_campaign", null);
 
   const REAL = new Set(["Live", "Evaluation", "Funded"]);
+  const realAccounts = useMemo(() => sanitizeAccounts(rawTiAccounts).filter((a) => !a.archived && REAL.has(a.type)), [rawTiAccounts]); // eslint-disable-line react-hooks/exhaustive-deps
   const trades = useMemo(() => {
-    const realIds = new Set(sanitizeAccounts(rawTiAccounts).filter((a) => !a.archived && REAL.has(a.type)).map((a) => a.id));
+    const realIds = new Set(realAccounts.map((a) => a.id));
     return tiToLegacyTrades(rawTiTrades, realIds);
-  }, [rawTiTrades, rawTiAccounts]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rawTiTrades, realAccounts]);
+  // The fleet's funded size is the real accounts' combined starting balance —
+  // the old fixed $15k ict_balance is gone.
+  const rawBal = useMemo(() => realAccounts.reduce((s, a) => s + (+a.startBalance || 0), 0), [realAccounts]);
 
   const loaded = tiLoaded && accLoaded && wdLoaded && cfgLoaded && covLoaded && campLoaded;
   if (!loaded) return <Hydrating label="Opening the firm…" />;

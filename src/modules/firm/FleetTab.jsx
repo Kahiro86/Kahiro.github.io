@@ -21,7 +21,7 @@ const Label = ({ children }) => (
 );
 
 export function FleetTab({ trades, rawBal, finance, reviews, withdrawals, config }) {
-  const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
+  const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 0;
   const cfg = useMemo(() => sanitizeFirmConfig(config), [config]);
   const wdTotal = withdrawalsTotal(withdrawals) + (+finance?.tradingWithdrawals || 0);
   const tm = useMemo(() => tradingMetrics(trades, bal, wdTotal, finance?.profitSplit || 80), [trades, bal, wdTotal, finance]);
@@ -33,8 +33,9 @@ export function FleetTab({ trades, rawBal, finance, reviews, withdrawals, config
   const overCap = exposure > cap;
 
   // Drawdown buffers consumed (of the prop-firm limits): daily 5%, max 10%.
-  const dailyUsed = tm.dailyPnl < 0 ? clamp((Math.abs(tm.dailyPnl) / (bal * 0.05)) * 100) : 0;
-  const maxUsed = tm.equity < bal ? clamp(((bal - tm.equity) / (bal * 0.10)) * 100) : 0;
+  // Guarded against a zero funded size (no real accounts yet).
+  const dailyUsed = bal > 0 && tm.dailyPnl < 0 ? clamp((Math.abs(tm.dailyPnl) / (bal * 0.05)) * 100) : 0;
+  const maxUsed = bal > 0 && tm.equity < bal ? clamp(((bal - tm.equity) / (bal * 0.10)) * 100) : 0;
 
   return (
     <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 980 }}>
@@ -55,7 +56,9 @@ export function FleetTab({ trades, rawBal, finance, reviews, withdrawals, config
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: T1 }}>Account #1</div>
-            <div style={{ fontSize: 11, color: T3, fontFamily: "monospace", marginTop: 2 }}>Funded · ${bal.toLocaleString()}</div>
+            <div style={{ fontSize: 11, color: T3, fontFamily: bal > 0 ? "monospace" : "inherit", marginTop: 2 }}>
+              {bal > 0 ? `Funded · $${bal.toLocaleString()}` : "No funded account yet — add a Live/Funded account in Trading → Accounts"}
+            </div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ ...big, fontSize: 20, color: tm.equity >= bal ? GR : RE }}>${Math.round(tm.equity).toLocaleString()}</div>
