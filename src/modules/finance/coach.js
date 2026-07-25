@@ -5,10 +5,11 @@
 // what's working, what to watch, where the numbers meet (or drift from) the
 // stated principles, and one small next step. Mirrors directive.js's tone.
 import { activePrinciples } from "./doctrine.js";
+import { budgetDrift } from "./budgetValues.js";
 
 const has = (text, ...words) => { const t = (text || "").toLowerCase(); return words.some((w) => t.includes(w)); };
 
-export function financeNarrative(health, trajStats, doctrine, freedom, fmtKES = (n) => `${Math.round(+n || 0)}`) {
+export function financeNarrative(health, trajStats, doctrine, freedom, fmtKES = (n) => `${Math.round(+n || 0)}`, budgets = []) {
   const wins = [], watch = [], creed = [];
   const h = health || {};
   const t = trajStats || {};
@@ -34,6 +35,13 @@ export function financeNarrative(health, trajStats, doctrine, freedom, fmtKES = 
   if ((h.personalDebt || 0) > 0) watch.push(`Debt of ${fmtKES(h.personalDebt)} still costs you — every payment buys freedom back.`);
   if (trending === "down") watch.push(`Net worth dipped last month. One month isn't a trend — watch the next one.`);
   if ((h.netCashFlow || 0) < 0) watch.push(`Spending outran income this month. Trim one category and it flips positive.`);
+
+  // ── Where spending drifts from the value it's meant to serve ──
+  const drift = budgetDrift(budgets);
+  if (drift.length) {
+    const d = drift[0];
+    watch.push(`${d.cat} ran ${fmtKES(d.over)} over — is that still serving ${d.value}? Realign it with what ${d.value} really needs.`);
+  }
 
   // ── Where the numbers meet the principles ──
   for (const p of activePrinciples(doctrine).slice(0, 8)) {

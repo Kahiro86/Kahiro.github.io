@@ -228,7 +228,7 @@ export function FinanceOS() {
           <AccountsTab g={g} netPay={netPay} fmtKES={fmtKES} opBal={opBal} setOpBal={setOpBal} savBal={savBal} setSavBal={setSavBal} />
         )}
         {finTab === "budget" && (
-          <BudgetTab netPay={netPay} budgets={budgets} setBudgets={setBudgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent} bills={state.bills} setBills={setBills} income={income} />
+          <BudgetTab netPay={netPay} budgets={budgets} setBudgets={setBudgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent} bills={state.bills} setBills={setBills} income={income} doctrineValues={doctrine.values} />
         )}
         {finTab === "debt" && (
           <DebtTab debts={debts} setDebts={setDebts} fmtKES={fmtKES} legacyDebt={+personalDebt || 0} />

@@ -10,7 +10,7 @@ import { financeNarrative } from "./coach.js";
 const scoreColor = (n) => (n >= 80 ? GR : n >= 65 ? CY : n >= 50 ? AM : RE);
 
 export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive, trajStats, doctrine, freedom }) {
-  const coach = financeNarrative(health, trajStats, doctrine, freedom, fmtKES);
+  const coach = financeNarrative(health, trajStats, doctrine, freedom, fmtKES, budgets);
   const [analysis, setAnalysis] = useState("");
   const [loading, setLoading] = useState(false);
   const col = scoreColor(health.overall);
