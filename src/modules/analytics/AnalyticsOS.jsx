@@ -176,7 +176,6 @@ export function AnalyticsOS({ habits, onNavigate }) {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
                 <Metric label="Income logged" value={cur.income ? kes(cur.income) : "—"} cur={cur.income || null} prev={prev.income || null} color={GR} fmt={(v) => kes(v)} />
                 <Metric label="Spiritual consistency" value={cur.spiritualPct == null ? "—" : `${cur.spiritualPct}%`} cur={cur.spiritualPct} prev={prev.spiritualPct} color={AM} fmt={(v) => `${v}pt`} />
-                <Metric label="Sundays at church" value={cur.church || "—"} cur={cur.church || null} prev={prev.church || null} color={AM} />
                 <Metric label="Books/courses done" value={cur.booksDone || "—"} cur={cur.booksDone || null} prev={prev.booksDone || null} color={AN} />
                 <Metric label="Decisions logged" value={cur.decisionsLogged || "—"} cur={cur.decisionsLogged || null} prev={prev.decisionsLogged || null} color={AN} />
               </div>
