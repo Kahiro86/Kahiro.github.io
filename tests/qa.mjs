@@ -33,8 +33,8 @@ const SUBTABS_MAP = {
     { group: "HQ", subtabs: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"] },
   ],
   life: [
-    { group: "Life", subtabs: ["Habits", "Routines", "Insights", "Journal", "Projects", "Purity", "Today"] },
-    { group: "Athlete", subtabs: ["History", "Progress", "Body", "Nutrition", "This Week"] },
+    { group: "Life", subtabs: ["Habits", "Insights", "Journal", "Projects", "Purity", "Today"] },
+    { group: "Athlete", subtabs: ["History", "Progress", "Nutrition", "This Week"] },
   ],
   faith: [
     { group: "Faith", subtabs: ["Scripture & Notes", "The Walk"] },
