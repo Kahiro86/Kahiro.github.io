@@ -2,11 +2,10 @@
 // Mental development: a reading/course library with real progress, quick
 // notes, and a decision journal that resurfaces each decision after 30
 // days so you learn from outcomes, not intentions.
-import { useMemo, useState } from "react";
-import { BookOpen, Plus, Check, Trash2, Pencil, StickyNote, Scale, GraduationCap } from "lucide-react";
+import { useMemo, useState, useRef } from "react";
+import { BookOpen, Plus, Check, Trash2, Pencil, GraduationCap } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, GR, RE, AM, CY } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter } from "../../shared/ui.jsx";
-import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -18,7 +17,7 @@ const REVIEW_AFTER_DAYS = 30;
 const daysSince = (ds) => (ds ? daysBetween(ds, localDateStr()) : 0);
 
 export function MindOS({ loaded = true }) {
-  const [tab, setTab] = useState("library");
+  const decisionsRef = useRef(null);
   const [items, setItems] = useStorageState("mind_library", []);
   const [notes, setNotes] = useStorageState("mind_notes", []);
   const [decisions, setDecisions] = useStorageState("mind_decisions", []);
@@ -130,11 +129,6 @@ export function MindOS({ loaded = true }) {
     toast("Outcome recorded — that's how judgment compounds.", { tone: "success" });
   };
 
-  const TABS = [
-    { id: "library",   l: "Library",   i: BookOpen },
-    { id: "notes",     l: "Notes",     i: StickyNote },
-    { id: "decisions", l: "Decisions", i: Scale },
-  ];
   const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 12px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
   const OUTCOMES = [
     { id: "better",   l: "Better than expected", c: GR },
@@ -144,20 +138,20 @@ export function MindOS({ loaded = true }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tint="rgba(7,8,13,0.5)" activeBg={`${MI}22`} activeColor="#FFFFFF" tabs={TABS} active={tab} onSelect={setTab}>
-        <div style={{ flex: 1 }} />
-        {dueReviews.length > 0 && (
-          <button onClick={() => setTab("decisions")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 9, color: AM, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            ⚖️ {dueReviews.length} decision{dueReviews.length > 1 ? "s" : ""} ready to review
-          </button>
-        )}
-      </ModuleTabs>
-
       <div style={{ flex: 1, overflowY: "auto" }}>
         {!loaded && <Hydrating label="Opening Mind OS…" />}
 
+        {loaded && dueReviews.length > 0 && (
+          <div style={{ padding: "16px 24px 0" }}>
+            <button onClick={() => decisionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${AM}14`, border: `1px solid ${AM}44`, borderRadius: 9, color: AM, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              ⚖️ {dueReviews.length} decision{dueReviews.length > 1 ? "s" : ""} ready to review
+            </button>
+          </div>
+        )}
+
         {/* ══ LIBRARY ══ */}
-        {loaded && tab === "library" && (
+        {loaded && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 820 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 11 }}>
               <Chip label="In progress" value={reading.length} color={MI} />
@@ -268,8 +262,9 @@ export function MindOS({ loaded = true }) {
         )}
 
         {/* ══ NOTES ══ */}
-        {loaded && tab === "notes" && (
-          <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
+        {loaded && (
+          <div style={{ padding: "8px 24px 22px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: T1, borderTop: `1px solid ${BD}`, paddingTop: 18 }}>Notes</div>
             <Card style={{ padding: "16px 18px" }}>
               <SH title={editingNoteId ? "Edit note" : "Capture"} sub={editingNoteId ? relativeDateLabel(noteDs) : "Ideas, insights, things worth keeping"} />
               <div style={{ marginBottom: 9 }}><DatePicker value={noteDs} onChange={setNoteDs} /></div>
@@ -299,8 +294,8 @@ export function MindOS({ loaded = true }) {
         )}
 
         {/* ══ DECISION JOURNAL ══ */}
-        {loaded && tab === "decisions" && (
-          <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
+        {loaded && (
+          <div ref={decisionsRef} style={{ padding: "8px 24px 22px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760, borderTop: `1px solid ${BD}`, marginTop: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: T1 }}>Decision Journal</div>
