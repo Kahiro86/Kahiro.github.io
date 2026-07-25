@@ -37,6 +37,11 @@ export const DEFAULT_FINANCE_STATE = {
   // Trading account lives inside Finance but is firewalled from personal wealth.
   tradingWithdrawals: 0,
   profitSplit: 80,
+  // Named firewalls: { id, name, accountIds } grouping the user's own trading
+  // accounts (ti_accounts). Each firewall is walled off from personal net
+  // worth; unfiled accounts optionally count toward it.
+  firewalls: [],
+  tradingUnfiledCountsNW: false,
   // Interactive debts. remaining = original − Σ payments. Falls back to the
   // legacy single `personalDebt` number when this list is empty.
   debts: [],

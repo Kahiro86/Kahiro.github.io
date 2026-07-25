@@ -86,6 +86,11 @@ const SCENARIOS = {
     "architect:finance_doctrine": JSON.stringify({ why: 5, principles: [null, "x", { nope: 1 }, { text: "" }, { text: "Real principle", archived: "yes" }], values: [null, 3, "Freedom", "Freedom", "  "], updatedAt: 9 }),
   },
   doctrineNotObject: { "architect:finance_doctrine": JSON.stringify([1, 2, 3]) },
+  corruptFirewalls: {
+    "architect:finance_state": JSON.stringify({ currency: "KES", xRate: 130, firewalls: [null, 5, "x", { nope: 1 }, { name: "" }, { name: "Prop Firm", accountIds: [null, 5, "a1", "a1"] }], tradingUnfiledCountsNW: "yes" }),
+    "architect:ti_accounts": JSON.stringify([null, { id: "a1", name: "FTMO 100k", type: "Funded", startBalance: 100000 }, { id: "a2", name: "Personal", type: "Live", startBalance: "bad" }]),
+    "architect:ti_trades": JSON.stringify([{ id: "t1", accountId: "a1", status: "CLOSED", exit: 1.2, entry: 1.1 }]),
+  },
   consistencyStartWrongType: {
     "architect:year_of_consistency_start": JSON.stringify({ nope: 1 }),
   },

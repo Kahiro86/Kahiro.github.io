@@ -11,7 +11,8 @@ import { incomeAnalytics } from "./income.js";
 import { financeHealth } from "./financeHealth.js";
 import { useFinanceSnapshots, trajectorySeries, trajectoryStats } from "./snapshots.js";
 import { freedomMath } from "../../shared/freedom.js";
-import { getStats, tradingMetrics } from "../trading/helpers.js";
+import { sanitizeAccounts } from "../trading/intel/tradingIntel.js";
+import { sanitizeFirewalls, computeFirewalls } from "./firewalls.js";
 import { OverviewTab } from "./OverviewTab.jsx";
 import { IncomeTab } from "./IncomeTab.jsx";
 import { AccountsTab } from "./AccountsTab.jsx";
@@ -43,7 +44,7 @@ const FIN_TABS = [
 // and setter can trust the shape.
 function normalizeFinance(raw) {
   const s = { ...DEFAULT_FINANCE_STATE, ...(raw && typeof raw === "object" ? raw : {}) };
-  for (const k of ["income", "mmfs", "tbills", "nseStocks", "budgets", "goals", "debts", "bills"]) {
+  for (const k of ["income", "mmfs", "tbills", "nseStocks", "budgets", "goals", "debts", "bills", "firewalls"]) {
     s[k] = Array.isArray(s[k]) ? s[k].filter((x) => x != null) : DEFAULT_FINANCE_STATE[k];
   }
   return s;
@@ -87,16 +88,22 @@ export function FinanceOS() {
   const setTradingWithdrawals = (v) => patch({ tradingWithdrawals: v });
   const setProfitSplit = (v) => patch({ profitSplit: v });
 
-  // Trading account is read-only here — the firewall never gives Finance OS a setter into Trading OS's own storage.
-  const [trades] = useStorageState("ict_trades", []);
-  const [rawBal] = useStorageState("ict_balance", 15000);
+  // Trading accounts are the real ones the user creates in Trading → Accounts
+  // (ti_accounts). Read-only here — the firewall never writes into Trading's
+  // own storage. Finance only owns which firewall each account is sorted into.
+  const [trades] = useStorageState("ict_trades", []); // legacy — Reports tab only
+  const [rawTiTrades] = useStorageState("ti_trades", []);
+  const [rawTiAccounts] = useStorageState("ti_accounts", []);
   const [firmConfig] = useStorageState("firm_config", null);
   const [rawDoctrine, setRawDoctrine] = useStorageState("finance_doctrine", {});
   const doctrine = useMemo(() => sanitizeDoctrine(rawDoctrine), [rawDoctrine]);
   const setDoctrine = (next) => setRawDoctrine(sanitizeDoctrine(typeof next === "function" ? next(sanitizeDoctrine(rawDoctrine)) : next));
-  const bal = Number.isFinite(+rawBal) && +rawBal > 0 ? +rawBal : 15000;
-  const tradingStats = getStats(trades);
-  const tradingBalanceUSD = bal + tradingStats.totalPnl;
+  const tiAccounts = useMemo(() => sanitizeAccounts(rawTiAccounts).filter((a) => !a.archived), [rawTiAccounts]);
+  const fw = useMemo(() => computeFirewalls(state.firewalls, tiAccounts, rawTiTrades), [state.firewalls, tiAccounts, rawTiTrades]);
+  const allFwAccounts = [...fw.groups.flatMap((g) => g.accounts), ...fw.unfiled];
+  const tradingStats = { totalPnl: allFwAccounts.reduce((s, a) => s + (a.netPnl || 0), 0), wr: 0 };
+  const setFirewalls = (updater) => setState((s) => ({ ...s, firewalls: sanitizeFirewalls(typeof updater === "function" ? updater(sanitizeFirewalls(s.firewalls)) : updater) }));
+  const setUnfiledCountsNW = (v) => patch({ tradingUnfiledCountsNW: !!v });
 
   // ── PAYE KENYA 2024/2025 ──────────────────────────────────────────
   const g = +gross || 0;
@@ -114,13 +121,12 @@ export function FinanceOS() {
   const totalReit = (+reitUnits || 0) * (+reitNAV || 0);
   const totalInvested = totalMMF + totalTbill + totalNSE + (+saccoBal || 0) + totalReit;
   const totalLiquid = (+opBal || 0) + (+savBal || 0) + (+efBal || 0);
-  const tradingKES = tradingBalanceUSD * (+xRate || 130);
   // Debt: sum of interactive debt balances, falling back to the legacy figure.
   const debtTotal = totalDebtRemaining(debts, personalDebt);
-  // FIREWALL: the funded trading account is NOT part of personal net worth.
-  const netWorthKES = totalLiquid + totalInvested - debtTotal;
-  // Trading account tracked independently, in its own USD environment.
-  const tMetrics = tradingMetrics(trades, bal, tradingWithdrawals, profitSplit);
+  // FIREWALL: firewalled trading groups are NEVER part of personal net worth.
+  // Unfiled accounts optionally count (converted from their USD balance).
+  const tradingNWKES = state.tradingUnfiledCountsNW ? Math.round(fw.unfiledTotal * (+xRate || 130)) : 0;
+  const netWorthKES = totalLiquid + totalInvested - debtTotal + tradingNWKES;
 
   // ── PASSIVE INCOME ────────────────────────────────────────────────
   const monthlyPassive = Math.round(
@@ -189,8 +195,8 @@ export function FinanceOS() {
           <OverviewTab fmtKES={fmtKES} netWorthKES={netWorthKES} totalLiquid={totalLiquid} totalInvested={totalInvested}
             monthlyPassive={monthlyPassive} efBal={efBal} savBal={savBal} opBal={opBal}
             personalDebt={personalDebt} setPersonalDebt={setPersonalDebt} debtTotal={debtTotal} debtCount={debts.length} onManageDebt={() => setFinTab("debt")}
-            tMetrics={tMetrics} xRate={xRate} tradingWithdrawals={tradingWithdrawals} setTradingWithdrawals={setTradingWithdrawals}
-            profitSplit={profitSplit} setProfitSplit={setProfitSplit}
+            xRate={xRate} fw={fw} firewalls={state.firewalls} setFirewalls={setFirewalls} accounts={tiAccounts}
+            unfiledCountsNW={state.tradingUnfiledCountsNW} setUnfiledCountsNW={setUnfiledCountsNW}
             freedom={freedom} trajectory={trajectory} trajStats={trajStats} onCaptureSnapshot={captureSnapshot} />
         )}
         {finTab === "doctrine" && (

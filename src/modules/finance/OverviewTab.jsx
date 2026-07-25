@@ -1,18 +1,18 @@
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Lock, ArrowUpRight, ArrowDownRight, Compass, Camera, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowUpRight, Compass, Camera, TrendingUp, TrendingDown } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Meter } from "../../shared/ui.jsx";
 import { DonutChart, Ring } from "../../shared/charts.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { MotivePush } from "../../shared/MotivePush.jsx";
+import { FirewallsCard } from "./FirewallsCard.jsx";
 
-const usd = (n) => `$${Math.round(+n || 0).toLocaleString()}`;
 const kShort = (n) => { const v = Math.round(+n || 0); return v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${Math.round(v / 1e3)}k` : `${v}`; };
 
 export function OverviewTab({
   fmtKES, netWorthKES, totalLiquid, totalInvested, monthlyPassive,
   efBal, savBal, opBal, personalDebt, setPersonalDebt, debtTotal = 0, debtCount = 0, onManageDebt,
-  tMetrics, tradingWithdrawals, setTradingWithdrawals, profitSplit, setProfitSplit,
+  xRate, fw, firewalls = [], setFirewalls, accounts = [], unfiledCountsNW, setUnfiledCountsNW,
   freedom, trajectory = [], trajStats, onCaptureSnapshot,
 }) {
   return (
@@ -132,69 +132,9 @@ export function OverviewTab({
         )}
       </Card>
 
-      {/* ── TRADING ACCOUNT — firewalled from personal wealth ── */}
-      <Card style={{ padding: "22px", borderColor: CY + "33", background: `linear-gradient(180deg,${CY}08,transparent)` }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, flexWrap: "wrap", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <Lock size={13} color={CY} />
-            <div style={{ fontSize: 15, fontWeight: 800, color: T1 }}>Trading Account</div>
-            <span style={{ fontSize: 9.5, letterSpacing: 0.5, padding: "2px 8px", borderRadius: 8, background: `${CY}18`, color: CY, border: `1px solid ${CY}33` }}>FIREWALLED · USD</span>
-          </div>
-          <div style={{ fontSize: 10.5, color: T3 }}>Not included in Net Worth or Assets</div>
-        </div>
-        <div style={{ fontSize: 10, color: T3, marginTop: -2, marginBottom: 6 }}>Combined withdrawal total shown in The Firm → Fleet</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 11, marginTop: 14 }}>
-          {[
-            { l: "Funded Size",    v: usd(tMetrics.fundedSize), c: T1 },
-            { l: "Current Equity", v: usd(tMetrics.equity),     c: tMetrics.equity >= tMetrics.fundedSize ? GR : RE },
-            { l: "Total Profit",   v: `${tMetrics.totalProfit >= 0 ? "+" : ""}${usd(tMetrics.totalProfit)}`, c: tMetrics.totalProfit >= 0 ? GR : RE },
-            { l: "Win Rate",       v: `${tMetrics.winRate}%`,   c: tMetrics.winRate >= 50 ? GR : AM },
-            { l: "Profit Factor",  v: tMetrics.pf || "—",       c: PU },
-          ].map((x) => (
-            <div key={x.l} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "12px 13px" }}>
-              <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, marginBottom: 5, textTransform: "uppercase" }}>{x.l}</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: x.c, fontFamily: "monospace" }}>{x.v}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 11, marginTop: 11 }}>
-          {[
-            { l: "Daily P&L",   v: tMetrics.dailyPnl },
-            { l: "Weekly P&L",  v: tMetrics.weeklyPnl },
-            { l: "Monthly P&L", v: tMetrics.monthlyPnl },
-          ].map((x) => (
-            <div key={x.l} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{x.l}</div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: x.v > 0 ? GR : x.v < 0 ? RE : T2, fontFamily: "monospace" }}>{x.v >= 0 ? "+" : ""}{usd(x.v)}</div>
-              </div>
-              {x.v > 0 ? <ArrowUpRight size={15} color={GR} /> : x.v < 0 ? <ArrowDownRight size={15} color={RE} /> : null}
-            </div>
-          ))}
-          <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px" }}>
-            <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>Open Risk</div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: tMetrics.openRiskPct > 2 ? RE : tMetrics.openRiskPct > 0 ? AM : T2, fontFamily: "monospace" }}>{usd(tMetrics.openRisk)} · {tMetrics.openRiskPct}%</div>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 11, marginTop: 11 }}>
-          <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px" }}>
-            <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Withdrawals ($)</div>
-            <input type="text" inputMode="numeric" value={tradingWithdrawals ? (+tradingWithdrawals).toLocaleString("en-US") : ""} onChange={(e) => setTradingWithdrawals(+e.target.value.replace(/[^0-9]/g, "") || 0)} placeholder="0"
-              style={{ width: "100%", background: "transparent", border: `1px solid ${BD}`, borderRadius: 6, padding: "5px 8px", fontSize: 14, color: T1, outline: "none", fontFamily: "monospace", fontWeight: 700 }} />
-          </div>
-          <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px" }}>
-            <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Profit Split (%)</div>
-            <input type="number" value={profitSplit} onChange={(e) => setProfitSplit(+e.target.value || 0)}
-              style={{ width: "100%", background: "transparent", border: `1px solid ${BD}`, borderRadius: 6, padding: "5px 8px", fontSize: 14, color: AM, outline: "none", fontFamily: "monospace", fontWeight: 700 }} />
-          </div>
-          <div style={{ background: `${GR}0C`, border: `1px solid ${GR}22`, borderRadius: 10, padding: "11px 13px" }}>
-            <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Your Share</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: GR, fontFamily: "monospace" }}>{usd(tMetrics.yourShare)}</div>
-          </div>
-        </div>
-      </Card>
+      {/* ── TRADING FIREWALLS — your own accounts, walled off from net worth ── */}
+      <FirewallsCard fw={fw} firewalls={firewalls} setFirewalls={setFirewalls} accounts={accounts}
+        unfiledCountsNW={unfiledCountsNW} setUnfiledCountsNW={setUnfiledCountsNW} xRate={xRate} fmtKES={fmtKES} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 20 }}>
         <Card style={{ padding: "22px" }}>
