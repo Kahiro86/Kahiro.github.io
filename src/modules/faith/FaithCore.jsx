@@ -5,14 +5,15 @@
 // (category "Spiritual"), so Life OS, the Command Center and this module
 // all see the same records.
 import { useMemo, useState } from "react";
-import { BookOpen, Plus, Check, Trash2, Pencil, Eye, Church as ChurchIcon, Sparkles, ScrollText } from "lucide-react";
+import { BookOpen, Plus, Check, Trash2, Pencil, Eye, Sparkles, ScrollText } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, GR, RE, AM, PU, CY } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
+import { SubTabs } from "../../shared/SubTabs.jsx";
 import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
-import { localDateStr, daysAgoStr, daysBetween, shiftDateStr } from "../../shared/dates.js";
+import { localDateStr, daysAgoStr, daysBetween } from "../../shared/dates.js";
 import { isScheduled, isDone, tapHabit, rangeStats, currentStreak, totalCompletions, newHabit } from "../../shared/habitEngine.js";
 
 const FA = CY; // Nocturne cyan accent (monochrome theme)
@@ -51,8 +52,8 @@ function MonthGrid({ habit }) {
 
 export function FaithCore({ habits, setHabits, loaded = true }) {
   const [tab, setTab] = useState("walk");
+  const [faithSub, setFaithSub] = useState("verses"); // verses | notes (merged Scripture & Notes tab)
   const [verses, setVerses] = useStorageState("faith_scripture", []);
-  const [church, setChurch] = useStorageState("faith_church", []);
   const [notes, setNotes] = useStorageState("faith_notes", []);
   const [verseDraft, setVerseDraft] = useState(null); // { ref, text }
   const [noteDraft, setNoteDraft] = useState("");
@@ -67,7 +68,6 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
     [habits]
   );
   const versesSafe = useMemo(() => (Array.isArray(verses) ? verses : []).filter((v) => v && v.id), [verses]);
-  const churchSafe = useMemo(() => (Array.isArray(church) ? church : []).filter((d) => typeof d === "string"), [church]);
   const notesSafe = useMemo(() => (Array.isArray(notes) ? notes : []).filter((n) => n && n.id)
     .sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))), [notes]);
 
@@ -77,28 +77,7 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
     ? Math.round((stats90.reduce((s, x) => s + x.done, 0) / Math.max(1, stats90.reduce((s, x) => s + x.scheduled, 0))) * 100)
     : 0;
   const totalSessions = spiritual.reduce((s, h) => s + totalCompletions(h), 0);
-
-  // This Sunday (or today if Sunday) — the attendance unit.
-  const lastSunday = (() => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return localDateStr(d); })();
-  const attendedThisWeek = churchSafe.includes(lastSunday);
-
-  // Attendance depth: a consecutive-Sundays streak (tolerant of this week not
-  // logged yet, the same way habit streaks treat today) and a 12-week rate.
-  const churchStats = useMemo(() => {
-    const set = new Set(churchSafe);
-    const attended12 = Array.from({ length: 12 }, (_, i) => set.has(shiftDateStr(lastSunday, -7 * i))).filter(Boolean).length;
-    let streak = 0, i = set.has(lastSunday) ? 0 : 1;
-    while (set.has(shiftDateStr(lastSunday, -7 * i))) { streak++; i++; }
-    return { rate12: Math.round((attended12 / 12) * 100), attended12, streak };
-  }, [churchSafe, lastSunday]);
   const [revealed, setRevealed] = useState({}); // scripture recall: verse id → text shown
-  const toggleChurch = () => {
-    setChurch((prev) => {
-      const list = (Array.isArray(prev) ? prev : []).filter((d) => typeof d === "string");
-      return list.includes(lastSunday) ? list.filter((d) => d !== lastSunday) : [...list, lastSunday].sort();
-    });
-    if (!attendedThisWeek) toast("Church attendance logged ⛪", { tone: "success" });
-  };
 
   const addSpiritualHabit = () => {
     setHabits((prev) => [...prev, newHabit({ name: "Prayer", icon: "🙏", color: FA, category: "Spiritual", pillar: "nonneg" })]);
@@ -148,9 +127,8 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
   };
 
   const TABS = [
-    { id: "walk",      l: "The Walk",  i: Sparkles },
-    { id: "scripture", l: "Scripture", i: ScrollText },
-    { id: "notes",     l: "Devotional", i: BookOpen },
+    { id: "walk",      l: "The Walk",         i: Sparkles },
+    { id: "scripture", l: "Scripture & Notes", i: ScrollText },
   ];
   const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 12px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
 
@@ -168,6 +146,14 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
       <div style={{ flex: 1, overflowY: "auto" }}>
         {!loaded && <Hydrating label="Opening Faith OS…" />}
 
+        {loaded && tab === "scripture" && (
+          <SubTabs accent={FA} active={faithSub} onSelect={setFaithSub}
+            tabs={[
+              { id: "verses", l: "Scripture", i: ScrollText },
+              { id: "notes",  l: "Devotional", i: BookOpen },
+            ]} />
+        )}
+
         {/* ══ THE WALK ══ */}
         {loaded && tab === "walk" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -175,26 +161,7 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
               <Chip label="90-day consistency" value={`${pct90}%`} color={FA} />
               <Chip label="Total sessions"     value={totalSessions.toLocaleString()} color={GR} />
               <Chip label="Verses memorising"  value={versesSafe.length} color={PU} />
-              <Chip label="Sundays attended"   value={churchSafe.length} color={CY} />
             </div>
-
-            <Card style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-              <div style={{ width: 38, height: 38, borderRadius: 11, background: `${FA}18`, border: `1px solid ${FA}44`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <ChurchIcon size={17} color={FA} />
-              </div>
-              <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: T1 }}>Church this week</div>
-                <div style={{ fontSize: 11.5, color: T3, marginTop: 2 }}>
-                  Sunday {lastSunday.slice(5)}
-                  {churchStats.streak > 0 && <> · 🔥 {churchStats.streak}-Sunday streak</>}
-                  {" · "}{churchStats.rate12}% of last 12
-                </div>
-              </div>
-              <button onClick={toggleChurch}
-                style={{ padding: "9px 16px", background: attendedThisWeek ? `${GR}18` : `${FA}14`, border: `1px solid ${attendedThisWeek ? GR + "55" : FA + "44"}`, borderRadius: 10, color: attendedThisWeek ? GR : FA, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                {attendedThisWeek ? <><Check size={13} />Attended</> : "Log attendance"}
-              </button>
-            </Card>
 
             {spiritual.length === 0 ? (
               <Card style={{ padding: "34px", textAlign: "center" }}>
@@ -236,7 +203,7 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
         )}
 
         {/* ══ SCRIPTURE MEMORY ══ */}
-        {loaded && tab === "scripture" && (
+        {loaded && tab === "scripture" && faithSub === "verses" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
@@ -308,7 +275,7 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
         )}
 
         {/* ══ DEVOTIONAL NOTES ══ */}
-        {loaded && tab === "notes" && (
+        {loaded && tab === "scripture" && faithSub === "notes" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
             <Card style={{ padding: "16px 18px" }}>
               <SH title={editingNoteId ? "Edit Devotional Note" : "Devotional Note"} sub={relativeDateLabel(noteDs)} />
