@@ -74,7 +74,7 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
   const due = versesSafe.filter(isDue);
   const stats90 = spiritual.map((h) => rangeStats(h, 90));
   const pct90 = stats90.length
-    ? Math.round((stats90.reduce((s, x) => s + x.done, 0) / Math.max(1, stats90.reduce((s, x) => s + x.scheduled, 0))) * 100)
+    ? Math.floor((stats90.reduce((s, x) => s + x.done, 0) / Math.max(1, stats90.reduce((s, x) => s + x.scheduled, 0))) * 100)
     : 0;
   const totalSessions = spiritual.reduce((s, h) => s + totalCompletions(h), 0);
   const [revealed, setRevealed] = useState({}); // scripture recall: verse id → text shown

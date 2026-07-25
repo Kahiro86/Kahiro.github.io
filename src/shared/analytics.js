@@ -24,7 +24,7 @@ function habitPct(habits, start, end) {
       if (isDone(h, ds)) done++;
     }
   }
-  return sched ? Math.round((done / sched) * 100) : null;
+  return sched ? Math.floor((done / sched) * 100) : null;
 }
 
 function collect(deps, offsetDays, days) {

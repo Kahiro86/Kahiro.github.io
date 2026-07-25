@@ -57,7 +57,9 @@ export function consistencyStats(byDay = {}, start, today = localDateStr()) {
   const cycle = Math.floor((daySinceStart - 1) / 365) + 1;
   const dayInCycle = ((daySinceStart - 1) % 365) + 1;
   const daysRemaining = 365 - dayInCycle;
-  const cycleCompletionPct = Math.round((dayInCycle / 365) * 100);
+  // Strict: every consistency percentage floors (truncates), never rounds up,
+  // so a meter can never read higher than what was actually earned.
+  const cycleCompletionPct = Math.floor((dayInCycle / 365) * 100);
 
   // Current streak: consecutive consistency-days walking back from today.
   // Today not yet logged never breaks it — the day isn't over yet.
@@ -80,7 +82,7 @@ export function consistencyStats(byDay = {}, start, today = localDateStr()) {
 
   let daysShownUp = 0;
   for (const [d, xp] of Object.entries(byDay)) if (xp > 0 && d >= start && d <= today) daysShownUp++;
-  const consistencyRate = Math.round((daysShownUp / totalDays) * 100);
+  const consistencyRate = Math.floor((daysShownUp / totalDays) * 100);
 
   // % of consistency-days within a trailing window (capped at `start`).
   const rangePct = (days) => {
@@ -91,7 +93,7 @@ export function consistencyStats(byDay = {}, start, today = localDateStr()) {
       span++;
       if (isDay(d)) have++;
     }
-    return span ? Math.round((have / span) * 100) : 0;
+    return span ? Math.floor((have / span) * 100) : 0;
   };
 
   return {

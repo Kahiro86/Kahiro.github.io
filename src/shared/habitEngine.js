@@ -164,7 +164,7 @@ export function rangeStats(h, daysBack) {
     if (isDone(h, ds)) done++;
     else if (isSkipped(h, ds)) skipped++;
   }
-  return { scheduled, done, skipped, pct: scheduled ? Math.round((done / scheduled) * 100) : 0 };
+  return { scheduled, done, skipped, pct: scheduled ? Math.floor((done / scheduled) * 100) : 0 };
 }
 
 export const totalCompletions = (h) =>
@@ -185,7 +185,7 @@ export function weekProgress(h, ws = weekStartStr()) {
     if (day > today) break;
     if ((h.log?.[day]?.v || 0) >= (h.target || 1)) done++;
   }
-  return { done, target, pct: Math.min(100, Math.round((done / target) * 100)), met: done >= target };
+  return { done, target, pct: Math.min(100, Math.floor((done / target) * 100)), met: done >= target };
 }
 
 // Consecutive prior weeks that met their target (this week still in progress
@@ -275,5 +275,5 @@ export const routineProgress = (habits, routine, ds = localDateStr()) => {
   const members = (Array.isArray(habits) ? habits : []).filter((h) => ids.includes(h.id) && !h.archived);
   if (!members.length) return { done: 0, total: 0, pct: 0 };
   const done = members.filter((h) => isDone(h, ds)).length;
-  return { done, total: members.length, pct: Math.round((done / members.length) * 100) };
+  return { done, total: members.length, pct: Math.floor((done / members.length) * 100) };
 };
