@@ -38,7 +38,7 @@ const SUBTABS_MAP = {
   ],
   faith: [
     { group: "Faith", subtabs: ["Scripture & Notes", "The Walk"] },
-    { group: "Mind", subtabs: ["Notes", "Decisions", "Library"] },
+    { group: "Mind", subtabs: ["Library", "Notes", "Decision Journal"] },
   ],
   analytics: ["Trends", "Progression", "Reports"],
   journey: ["Hall of Fame", "Want List", "Goals"],
