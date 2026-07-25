@@ -64,7 +64,33 @@ export const CAT_LABEL = {
 // derived and idempotent — exactly like the old flat achievements.
 export const RANKS = ["First Step", "Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master", "Grandmaster", "Immortal"];
 
-export const JOURNEYS = [
+// Rank name for tier index `i`. Past the named ranks the journey keeps going —
+// "Immortal II", "Immortal III", … — so tiers never run out of names.
+const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
+export function rankName(i) {
+  if (i < RANKS.length) return RANKS[i];
+  const over = i - RANKS.length + 2; // first extended tier = II
+  return `${RANKS[RANKS.length - 1]} ${ROMAN[over] || `×${over}`}`;
+}
+
+// Round to one significant-ish figure so generated thresholds read cleanly.
+const niceRound = (n) => { const mag = Math.pow(10, Math.floor(Math.log10(Math.max(1, n)))); return Math.round(n / mag) * mag; };
+// Extend a journey's hand-crafted tiers with generated ones so no journey ever
+// "runs out": each new milestone ≈1.7× the last with XP climbing ~1.35×, out
+// to a deep cap — effectively endless at any realistic pace. Pure + idempotent.
+const PROC_TIERS = 12;
+function extendTiers(base) {
+  const out = base.map((t) => [...t]);
+  let [t, xp] = base[base.length - 1];
+  for (let i = 0; i < PROC_TIERS; i++) {
+    t = niceRound(t * 1.7); if (t <= out[out.length - 1][0]) t = out[out.length - 1][0] + 1;
+    xp = Math.max(50, Math.round((xp * 1.35) / 50) * 50);
+    out.push([t, xp]);
+  }
+  return out;
+}
+
+const BASE_JOURNEYS = [
   { key: "habits",   name: "Habit Mastery",  icon: "🔁", stat: "habitCompletions", unit: "completions",
     tiers: [[1, 50], [25, 100], [100, 250], [250, 400], [500, 600], [1000, 1000], [2500, 1500], [5000, 2500]] },
   { key: "streak",   name: "The Streak",     icon: "🔥", stat: "bestStreak", unit: "days in a row",
@@ -95,14 +121,38 @@ export const JOURNEYS = [
     tiers: [[1, 100], [3, 200], [5, 350], [10, 600], [25, 1200], [50, 2500]] },
   { key: "saver",    name: "Disciplined Saver", icon: "💎", stat: "wantSaved", unit: "KSh saved toward wants",
     tiers: [[10000, 50], [50000, 200], [100000, 400], [250000, 700], [500000, 1200], [1000000, 2500]] },
+  // ── Curated batch (Wave 10) — new journeys over already-tracked stats ──
+  { key: "consistency", name: "Year of Consistency", icon: "📆", stat: "consistencyDays", unit: "days shown up",
+    tiers: [[7, 100], [30, 300], [90, 600], [180, 1000], [365, 2000], [730, 3500]] },
+  { key: "generous", name: "Generous Heart",   icon: "🎁", stat: "giftsCompleted", unit: "gifts given",
+    tiers: [[1, 100], [3, 250], [5, 400], [10, 700], [25, 1500]] },
+  { key: "savestreak", name: "Saving Streak",  icon: "🏦", stat: "wantStreakBest", unit: "days saving in a row",
+    tiers: [[3, 50], [7, 150], [14, 300], [30, 600], [60, 1000], [90, 1500]] },
+  { key: "judgment", name: "Clear Judgment",   icon: "⚖️", stat: "decisionsReviewed", unit: "decisions reviewed",
+    tiers: [[1, 50], [5, 200], [15, 400], [30, 700], [60, 1200]] },
+  { key: "word",     name: "Word Keeper",      icon: "📖", stat: "versesAdded", unit: "verses memorising",
+    tiers: [[1, 50], [5, 150], [15, 350], [30, 600], [60, 1000], [100, 1800]] },
+  { key: "notes",    name: "Note Taker",       icon: "🗒️", stat: "mindNotesCount", unit: "notes captured",
+    tiers: [[10, 50], [50, 150], [150, 350], [400, 700], [1000, 1500]] },
+  { key: "earner",   name: "Earner's Log",     icon: "💵", stat: "incomeLogs", unit: "income entries",
+    tiers: [[1, 50], [10, 150], [50, 350], [150, 700], [365, 1500]] },
+  { key: "measured", name: "Body Tracker",     icon: "📏", stat: "measureDays", unit: "measurement days",
+    tiers: [[1, 50], [10, 150], [30, 350], [90, 700], [180, 1200]] },
+  { key: "photos",   name: "Progress Captured", icon: "📸", stat: "photoCount", unit: "progress photos",
+    tiers: [[1, 50], [5, 150], [15, 350], [30, 600], [60, 1200]] },
 ];
+
+// Every journey's tiers extended with endless procedural milestones so the
+// Hall of Fame never caps out — reach the last hand-crafted rank and the
+// ladder keeps climbing (Immortal II, III, …).
+export const JOURNEYS = BASE_JOURNEYS.map((j) => ({ ...j, tiers: extendTiers(j.tiers) }));
 
 // Flat view of every tier — same {id, icon, name, desc, xp, test} interface
 // the celebration layer and notification history already consume.
 export const ACHIEVEMENTS = JOURNEYS.flatMap((j) =>
   j.tiers.map(([threshold, xp], i) => ({
     id: `${j.key}_${threshold}`, icon: j.icon,
-    name: `${j.name} · ${RANKS[i]}`,
+    name: `${j.name} · ${rankName(i)}`,
     desc: `${threshold.toLocaleString()} ${j.unit}`,
     xp, journey: j.key, tier: i, threshold,
     test: (s) => (s[j.stat] || 0) >= threshold,
@@ -150,6 +200,9 @@ export function computeXp(deps = {}) {
     tradeCount: 0, reviewCount: 0, cleanDays: 0, churchCount: 0,
     booksFinished: 0, bestStreak: 0, mealDays: 0, healthyBest: 0, goalsDone: 0,
     wantsCompleted: 0, wantSaved: 0, giftsCompleted: 0, wantStreakBest: 0,
+    // Wave 10 — stats powering the new curated journeys.
+    consistencyDays: 0, decisionsReviewed: 0, versesAdded: 0, mindNotesCount: 0,
+    incomeLogs: 0, measureDays: 0, photoCount: 0,
   };
 
   // Life — habits: every completed habit-day, perfect days, streak ladder.
@@ -272,7 +325,10 @@ export function computeXp(deps = {}) {
     }
   }
   const mDays = new Set(arr(deps.measurements).map((m) => dOf(m.date)).filter(Boolean));
+  stats.measureDays = mDays.size;
   for (const d of mDays) push(d, V.measurement, "fitness");
+  // Progress photos — counted for the journey (unlock bonus does the rewarding).
+  stats.photoCount = arr(deps.photos).filter((p) => p && p.id && typeof p.dataUrl === "string").length;
 
   // Fitness — nutrition: logging pays, hitting protein pays, a healthy day
   // (score ≥ 70) pays more, and healthy-day runs climb the streak ladder.
@@ -313,7 +369,9 @@ export function computeXp(deps = {}) {
   const perDayInc = {};
   for (const e of arr(deps.finance?.income)) {
     const d = dOf(e.date);
-    if (d && (perDayInc[d] = (perDayInc[d] || 0) + 1) <= CAPS.income) push(d, V.incomeLog, "finance");
+    if (!d) continue;
+    stats.incomeLogs++;
+    if ((perDayInc[d] = (perDayInc[d] || 0) + 1) <= CAPS.income) push(d, V.incomeLog, "finance");
   }
   for (const b of arr(deps.finance?.bills)) {
     // only the latest paid month is stored per bill — award that one, mid-month
@@ -326,7 +384,7 @@ export function computeXp(deps = {}) {
   for (const d of arr(deps.church).map(dOf).filter(Boolean)) { push(d, V.church, "faith"); stats.churchCount++; }
   for (const v of arr(deps.verses)) {
     const added = dOf(v.addedAt);
-    if (added) push(added, V.verseAdded, "faith");
+    if (added) { push(added, V.verseAdded, "faith"); stats.versesAdded++; }
     // review counts carry no per-review dates — attribute them to the last review day
     const n = Math.min(+v.reviews || 0, 200);
     if (n > 0) push(dOf(v.lastReviewed) || added, n * V.verseReview, "faith");
@@ -337,11 +395,13 @@ export function computeXp(deps = {}) {
   const perDayNote = {};
   for (const n of arr(deps.mindNotes)) {
     const d = dOf(n.date);
-    if (d && (perDayNote[d] = (perDayNote[d] || 0) + 1) <= CAPS.mindNotes) push(d, V.mindNote, "mind");
+    if (!d) continue;
+    stats.mindNotesCount++;
+    if ((perDayNote[d] = (perDayNote[d] || 0) + 1) <= CAPS.mindNotes) push(d, V.mindNote, "mind");
   }
   for (const dec of arr(deps.decisions)) {
     push(dOf(dec.date), V.decisionLogged, "mind");
-    push(dOf(dec.reviewedAt), V.decisionReviewed, "mind");
+    if (dOf(dec.reviewedAt)) { push(dOf(dec.reviewedAt), V.decisionReviewed, "mind"); stats.decisionsReviewed++; }
   }
   for (const b of arr(deps.library)) {
     const d = dOf(b.finishedAt);
@@ -395,6 +455,10 @@ export function computeXp(deps = {}) {
     if (e.d === today) todayByCat[e.c] = (todayByCat[e.c] || 0) + e.xp;
     if (e.s) streakXp += e.xp;
   }
+  // A "consistency day" = any day that earned XP anywhere (the same definition
+  // the Year of Consistency engine uses). Set after aggregation so the journey
+  // can read it.
+  stats.consistencyDays = Object.values(byDay).filter((x) => x > 0).length;
 
   const level = levelOfXp(total);
   const prevLevelXp = xpForLevel(level);
@@ -426,7 +490,7 @@ export function computeXp(deps = {}) {
     const value = stats[j.stat] || 0;
     const tiers = j.tiers.map(([threshold, xp], i) => {
       const id = `${j.key}_${threshold}`;
-      return { id, threshold, xp, rank: RANKS[i], got: !!unlocked[id] || value >= threshold, date: unlocked[id] || null };
+      return { id, threshold, xp, rank: rankName(i), got: !!unlocked[id] || value >= threshold, date: unlocked[id] || null };
     });
     const done = tiers.filter((t) => t.got).length;
     const next = tiers.find((t) => !t.got) || null;
