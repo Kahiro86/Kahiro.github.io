@@ -91,6 +91,10 @@ const SCENARIOS = {
     "architect:ti_accounts": JSON.stringify([null, { id: "a1", name: "FTMO 100k", type: "Funded", startBalance: 100000 }, { id: "a2", name: "Personal", type: "Live", startBalance: "bad" }]),
     "architect:ti_trades": JSON.stringify([{ id: "t1", accountId: "a1", status: "CLOSED", exit: 1.2, entry: 1.1 }]),
   },
+  corruptBudgetValues: {
+    "architect:finance_state": JSON.stringify({ currency: "KES", budgets: [null, { id: "x1", cat: "Housing", budget: 100, spent: 500, value: 42 }, { id: "x2", cat: "Leisure", budget: 50, spent: 200, value: "Freedom" }, { id: "x3", cat: "Food", budget: 300, spent: 100, value: { nope: 1 } }] }),
+    "architect:finance_doctrine": JSON.stringify({ values: ["Freedom", "Security"] }),
+  },
   consistencyStartWrongType: {
     "architect:year_of_consistency_start": JSON.stringify({ nope: 1 }),
   },

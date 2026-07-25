@@ -6,11 +6,26 @@ import { useIsMobile } from "../../shared/useIsMobile.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { newBill, sanitizeBills, daysUntilDue, isPaidThisCycle, billsDueSoon, monthlyBillsTotal } from "./bills.js";
+import { spendByValue } from "./budgetValues.js";
 
-export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpent, bills, setBills, income }) {
+export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpent, bills, setBills, income, doctrineValues = [] }) {
   const isMobile = useIsMobile();
   const toast = useToast();
   const setB = (i, key, v) => setBudgets((prev) => prev.map((x, j) => (j === i ? { ...x, [key]: +v || 0 } : x)));
+  const setBudgetVal = (i, value) => setBudgets((prev) => prev.map((x, j) => (j === i ? { ...x, value } : x)));
+
+  // ── Spend rolled up by the money-value each category serves ───────
+  const roll = useMemo(() => spendByValue(budgets), [budgets]);
+  const valSel = { background: B2, border: `1px solid ${BD}`, borderRadius: 7, padding: "3px 8px", fontSize: 10.5, color: T2, outline: "none", fontFamily: "inherit", cursor: "pointer", maxWidth: 170 };
+  const ValueTag = ({ i, b }) => (
+    doctrineValues.length ? (
+      <select value={b.value || ""} onChange={(e) => setBudgetVal(i, e.target.value)} style={valSel} aria-label={`Value served by ${b.cat}`}>
+        <option value="">— serves no value —</option>
+        {doctrineValues.map((v) => <option key={v} value={v}>Serves: {v}</option>)}
+        {b.value && !doctrineValues.includes(b.value) && <option value={b.value}>Serves: {b.value}</option>}
+      </select>
+    ) : null
+  );
 
   // ── Bills ────────────────────────────────────────────────────────
   const list = useMemo(() => sanitizeBills(bills), [bills]);
@@ -141,6 +156,7 @@ export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpe
                     {over ? `⚠ over by ${(+b.spent - +b.budget).toLocaleString()}` : `${pct}% used`}
                   </span>
                 </div>
+                {doctrineValues.length > 0 && <div style={{ marginBottom: 9 }}><ValueTag i={i} b={b} /></div>}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 9 }}>
                   <label>
                     <span style={{ fontSize: 9, color: T3, letterSpacing: 0.5, textTransform: "uppercase" }}>Budget</span>
@@ -158,9 +174,12 @@ export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpe
 
           return (
             <div key={b.id} style={{ display: "grid", gridTemplateColumns: "160px 1fr 1fr 100px", gap: 10, alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${BD}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 13, color: T1 }}>{b.cat}</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: T1 }}>{b.cat}</span>
+                </div>
+                <ValueTag i={i} b={b} />
               </div>
               <MoneyInp value={b.budget || ""} onChange={(v) => setB(i, "budget", v)} />
               <MoneyInp value={b.spent || ""} onChange={(v) => setB(i, "spent", v)} />
@@ -174,6 +193,51 @@ export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpe
           );
         })}
       </Card>
+
+      {/* ── Spend by Value — the doctrine, measured against the money ── */}
+      {doctrineValues.length === 0 ? (
+        <Card style={{ padding: isMobile ? "14px" : "16px 22px" }}>
+          <div style={{ fontSize: 12, color: T3, lineHeight: 1.6 }}>
+            Name your money <b style={{ color: T2 }}>values</b> in the <b style={{ color: CY }}>Doctrine</b> tab, then tag each category with the value it serves — and see spending measured against what you say matters.
+          </div>
+        </Card>
+      ) : (
+        <Card style={{ padding: isMobile ? "16px 14px" : "20px 22px" }}>
+          <SH title="Spend by Value" sub="Where the money goes against what you say matters" />
+          {roll.groups.length === 0 ? (
+            <div style={{ padding: "14px 6px", fontSize: 12, color: T3, textAlign: "center" }}>
+              No categories tagged yet. Use the <b style={{ color: T2 }}>Serves:</b> dropdown on any category above to link it to a value.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              {roll.groups.map((g) => {
+                const pct = g.budget > 0 ? Math.min(Math.round((g.spent / g.budget) * 100), 100) : 0;
+                const over = g.spent > g.budget && g.budget > 0;
+                return (
+                  <div key={g.value}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 5, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: T1 }}>{g.value}</span>
+                      <span style={{ fontSize: 11.5, fontFamily: "monospace", color: over ? RE : T2 }}>
+                        KES {Math.round(g.spent).toLocaleString()}{g.budget > 0 ? ` / ${Math.round(g.budget).toLocaleString()}` : ""}
+                      </span>
+                    </div>
+                    <Meter pct={pct} height={6} fill={over ? RE : `linear-gradient(90deg,${GR}77,${GR})`} />
+                    <div style={{ fontSize: 10, color: over ? RE : T3, marginTop: 4 }}>
+                      {g.cats.join(" · ")}{over ? ` — ⚠ over by ${Math.round(g.spent - g.budget).toLocaleString()}` : ""}
+                    </div>
+                  </div>
+                );
+              })}
+              {roll.untagged.spent > 0 && (
+                <div style={{ paddingTop: 9, borderTop: `1px solid ${BD}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ fontSize: 11.5, color: T3 }}>Untagged{roll.untagged.cats.length ? ` (${roll.untagged.cats.length})` : ""}</span>
+                  <span style={{ fontSize: 11.5, fontFamily: "monospace", color: T3 }}>KES {Math.round(roll.untagged.spent).toLocaleString()} spent</span>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
