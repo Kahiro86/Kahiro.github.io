@@ -267,6 +267,9 @@ export const FOOD_DB = [
   // Fermented
   F("Kimchi", 2, { kcal: 15, p: 1.1, c: 2.4, f: 0.5, fib: 1.6, sug: 1, na: 498, k: 160, ca: 33, mg: 12, fe: 0.5, zn: 0.3, ph: 24, va: 20, vb: 6, vc: 10, vk: 24, h2o: 92 }, { l: "½ cup", g: 75 }),
   F("Sauerkraut", 2, { kcal: 19, p: 0.9, c: 4.3, f: 0.1, fib: 2.9, sug: 1.8, na: 661, k: 170, ca: 30, mg: 13, fe: 1.5, zn: 0.3, ph: 20, vb: 5, vc: 14.7, vk: 13, h2o: 92 }, { l: "½ cup", g: 75 }),
+  // Nuts & Kenyan drinks
+  F("Peanuts", 1, { kcal: 567, p: 25.8, c: 16.1, f: 49.2, fib: 8.5, sug: 4, sat: 6.3, na: 18, k: 705, ca: 92, mg: 168, fe: 4.6, zn: 3.3, ph: 376, vb: 30, ve: 8.3, h2o: 6.5 }, { l: "1 handful", g: 28 }),
+  F("Dawa (honey, lemon & ginger drink)", 2, { kcal: 28, p: 0.1, c: 7.6, f: 0, sug: 7.3, na: 2, k: 15, ca: 2, mg: 1, ph: 2, vb: 1, vc: 3, h2o: 92 }, { l: "1 mug", g: 250 }),
 ];
 
 // Backfill realistic servings onto common existing foods (data-only; keeps
