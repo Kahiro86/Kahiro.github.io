@@ -64,7 +64,6 @@ export function AnalyticsOS({ habits, onNavigate }) {
   const [workouts] = useStorageState("athlete_workouts", []);
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [entries] = useStorageState("journal_entries", []);
-  const [church] = useStorageState("faith_church", []);
   const [nutrition] = useStorageState("nutrition_log", {});
   const [library] = useStorageState("mind_library", []);
   const [decisions] = useStorageState("mind_decisions", []);
@@ -77,11 +76,10 @@ export function AnalyticsOS({ habits, onNavigate }) {
     workouts: (Array.isArray(workouts) ? workouts : []).filter((w) => w && w.id),
     entries: (Array.isArray(entries) ? entries : []).filter((e) => e && e.id),
     income: Array.isArray(finance?.income) ? finance.income.filter((e) => e) : [],
-    church: Array.isArray(church) ? church : [],
     library: (Array.isArray(library) ? library : []).filter((b) => b && b.id),
     decisions: (Array.isArray(decisions) ? decisions : []).filter((d) => d && d.id),
     nutrition,
-  }), [habits, trades, reviews, workouts, entries, finance, church, library, decisions, nutrition]);
+  }), [habits, trades, reviews, workouts, entries, finance, library, decisions, nutrition]);
 
   const report = useMemo(() => periodReport(deps, days), [deps, days]);
   const weeks = useMemo(() => weeklySeries(deps, 10), [deps]);

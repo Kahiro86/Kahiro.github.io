@@ -36,7 +36,6 @@ function collect(deps, offsetDays, days) {
   const wo = (deps.workouts || []).filter((w) => w && inWindow(w.date, start, end));
   const j = (deps.entries || []).filter((e) => e && inWindow((e.date || "").slice(0, 10), start, end));
   const inc = (deps.income || []).filter((e) => e && inWindow((e.date || "").slice(0, 10), start, end));
-  const church = (deps.church || []).filter((d) => typeof d === "string" && inWindow(d, start, end));
   const finished = (deps.library || []).filter((b) => b && inWindow(b.finishedAt, start, end));
   const decisions = (deps.decisions || []).filter((d) => d && inWindow(d.date, start, end));
   const nlog = sanitizeNutrition(deps.nutrition);
@@ -56,7 +55,6 @@ function collect(deps, offsetDays, days) {
     cardioMin: wo.filter((w) => w.type === "cardio").reduce((s, w) => s + (+w.duration || 0), 0),
     income: inc.reduce((s, e) => s + (+e.amount || 0), 0),
     spiritualPct: habitPct(spiritual, start, end),
-    church: church.length,
     booksDone: finished.length,
     decisionsLogged: decisions.length,
     nutriDays: nDays.length,
