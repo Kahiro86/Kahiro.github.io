@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler, Utensils, Pencil } from "lucide-react";
+import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler, Utensils, Pencil, Camera } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
@@ -14,6 +14,7 @@ import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { MotivePush } from "../../shared/MotivePush.jsx";
+import { compressImage } from "../../shared/imageCompress.js";
 import { WEEK_PLAN } from "./constants.js";
 import { getDayName } from "./helpers.js";
 import { DEFAULT_EXERCISES, uidT, lastValuesByExercise, overloadTrend } from "./library.js";
@@ -30,8 +31,29 @@ export function AthleteOS() {
   const [rawMeasures, setMeasures] = useStorageState("athlete_measurements", []);
   const measures = (Array.isArray(rawMeasures) ? rawMeasures : []).filter((m) => m && m.id);
   const [mDraft, setMDraft] = useState(null); // { weight, waist, chest, arms, thighs, notes }
+  const [rawPhotos, setPhotos] = useStorageState("athlete_photos", []);
+  const photos = (Array.isArray(rawPhotos) ? rawPhotos : [])
+    .filter((p) => p && p.id && typeof p.dataUrl === "string")
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [viewPhoto, setViewPhoto] = useState(null);
 
   const toast = useToast();
+  const addPhoto = async (file) => {
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      const dataUrl = await compressImage(file, { maxDim: 1080, quality: 0.7 });
+      setPhotos((prev) => [{ id: `ph${Date.now().toString(36)}`, date: localDateStr(), dataUrl, note: "" }, ...(Array.isArray(prev) ? prev : [])]);
+      toast("Progress photo added 📸", { tone: "success" });
+    } catch (e) {
+      toast(e?.message || "Could not add that photo", { tone: "danger" });
+    } finally { setPhotoBusy(false); }
+  };
+  const deletePhoto = (p) => {
+    setPhotos((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x?.id !== p.id));
+    toast("Photo removed", { action: "Undo", onAction: () => setPhotos((prev) => [p, ...(Array.isArray(prev) ? prev : [])]), tone: "danger" });
+  };
   const startLog = (initial = null) => { setLogInitial(initial); setView("log"); };
   const saveWorkout = (w) => {
     setWorkouts((prev) => (prev.some((x) => x.id === w.id) ? prev.map((x) => (x.id === w.id ? w : x)) : [w, ...prev]));
@@ -265,7 +287,7 @@ export function AthleteOS() {
 
             <Card style={{ padding: "20px" }}>
               <SH title="Weekly Plan" sub="Simple split — adjust as needed" />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 9 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 5 }}>
                 {WEEK_PLAN.map((d) => {
                   const isToday = d.day === todayDay;
                   const dayLogged = workouts.some((w) => {
@@ -274,11 +296,11 @@ export function AthleteOS() {
                     return wd === d.day && sameWeek;
                   });
                   return (
-                    <div key={d.day} style={{ background: isToday ? `${d.color}14` : GL, border: `1px solid ${isToday ? d.color + "55" : BD}`, borderRadius: 11, padding: "12px 9px", textAlign: "center", opacity: d.type === "Rest" ? 0.55 : 1 }}>
-                      <div style={{ fontSize: 9, color: isToday ? d.color : T3, letterSpacing: 2, marginBottom: 8, fontWeight: isToday ? 700 : 400 }}>{d.day}</div>
-                      <div style={{ fontSize: 20, marginBottom: 8 }}>{d.icon}</div>
-                      <div style={{ fontSize: 10.5, color: d.color, fontWeight: 600, lineHeight: 1.4 }}>{d.type}</div>
-                      {dayLogged && <div style={{ marginTop: 8 }}><CheckCircle size={12} color={GR} /></div>}
+                    <div key={d.day} style={{ position: "relative", background: isToday ? `${d.color}14` : GL, border: `1px solid ${isToday ? d.color + "55" : BD}`, borderRadius: 8, padding: "7px 3px", textAlign: "center", opacity: d.type === "Rest" ? 0.5 : 1 }}>
+                      <div style={{ fontSize: 8, color: isToday ? d.color : T3, letterSpacing: 1, marginBottom: 3, fontWeight: isToday ? 700 : 400 }}>{d.day}</div>
+                      <div style={{ fontSize: 14, marginBottom: 3, lineHeight: 1 }}>{d.icon}</div>
+                      <div style={{ fontSize: 8.5, color: d.color, fontWeight: 600, lineHeight: 1.2 }}>{d.type}</div>
+                      {dayLogged && <CheckCircle size={9} color={GR} style={{ position: "absolute", top: 3, right: 3 }} />}
                     </div>
                   );
                 })}
@@ -377,6 +399,36 @@ export function AthleteOS() {
               <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Progress</div>
               <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Last 8 weeks</div>
             </div>
+
+            {/* ── Progress Photos — on-device, compressed ── */}
+            <Card style={{ padding: "20px" }}>
+              <SH title="Progress Photos" sub="How you look over time — stored on your device, compressed" action={
+                <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 13px", background: `${PU}18`, border: `1px solid ${PU}44`, borderRadius: 9, color: PU, fontSize: 12, fontWeight: 700, cursor: photoBusy ? "default" : "pointer", fontFamily: "inherit", opacity: photoBusy ? 0.6 : 1 }}>
+                  <Camera size={13} />{photoBusy ? "Adding…" : "Add photo"}
+                  <input type="file" accept="image/*" disabled={photoBusy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; addPhoto(f); }} style={{ display: "none" }} />
+                </label>
+              } />
+              {photos.length === 0 ? (
+                <div style={{ padding: "16px 4px", fontSize: 12, color: T3, textAlign: "center" }}>No photos yet. Snap a front/side shot every few weeks — the changes you can't see day to day show up here.</div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(96px,1fr))", gap: 8 }}>
+                  {photos.map((p) => (
+                    <div key={p.id} style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: `1px solid ${BD}`, aspectRatio: "3 / 4", background: GL }}>
+                      <img src={p.dataUrl} alt={`Progress ${p.date}`} onClick={() => setViewPhoto(p)} style={{ width: "100%", height: "100%", objectFit: "cover", cursor: "pointer", display: "block" }} />
+                      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "3px 6px", background: "linear-gradient(transparent, rgba(0,0,0,0.72))", fontSize: 9.5, color: "#fff", pointerEvents: "none" }}>{relativeDateLabel(p.date)}</div>
+                      <button onClick={() => deletePhoto(p)} aria-label="Delete photo" style={{ position: "absolute", top: 4, right: 4, background: "rgba(0,0,0,0.55)", border: "none", borderRadius: 6, padding: 3, cursor: "pointer", color: "#fff", display: "flex" }}><Trash2 size={11} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            {viewPhoto && (
+              <div onClick={() => setViewPhoto(null)} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.9)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20, cursor: "zoom-out" }}>
+                <img src={viewPhoto.dataUrl} alt={`Progress ${viewPhoto.date}`} style={{ maxWidth: "100%", maxHeight: "88%", borderRadius: 10, objectFit: "contain" }} />
+                <div style={{ marginTop: 12, fontSize: 12, color: "#ccc" }}>{relativeDateLabel(viewPhoto.date)}</div>
+              </div>
+            )}
 
             {workouts.length === 0 ? (
               <Card style={{ padding: "40px", textAlign: "center", color: T3, fontSize: 13 }}>Log a few workouts to see your progress here.</Card>
