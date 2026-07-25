@@ -14,8 +14,10 @@ const P = (text, cat, ...ctx) => ({ id: hash(text), text, cat, ctx: ctx.length ?
 // Tone categories (for labelling / future filtering).
 export const CATEGORIES = ["discipline", "consistency", "patience", "courage", "focus", "recovery", "growth", "faith", "leadership", "wealth", "fitness", "trading", "purpose", "gratitude", "resilience"];
 
-// The library. Grouped by context for readability; a line can serve several.
-export const PUSHES = [
+// The hand-written library. Grouped by context for readability; a line can
+// serve several. Combined with the procedurally-generated set below into the
+// exported PUSHES, so the rotation is effectively endless.
+const CURATED = [
   // ── General / anytime ──────────────────────────────────────────────
   P("Small victories build legendary lives.", "growth", "general", "day-start"),
   P("You don't have to be extreme, just consistent.", "consistency", "general"),
@@ -151,7 +153,103 @@ export const PUSHES = [
   P("Remember this feeling. You built it with your own consistency.", "purpose", "legendary"),
   P("The discipline became identity. That's the whole game.", "discipline", "legendary"),
   P("Few make it this far. Fewer keep going. Be the fewer.", "courage", "legendary"),
+
+  // ── Wave 11 batch — more of the same voice, every context ───────────
+  P("The person you're becoming is watching how you act today.", "purpose", "general"),
+  P("Comfort is a slow thief. Choose the hard, good thing.", "courage", "general"),
+  P("You can't complain your way to a life you love — build it.", "growth", "general"),
+  P("Standards, not moods, run a great life.", "discipline", "general", "leadership"),
+  P("Boring consistency is a superpower disguised as nothing.", "consistency", "general"),
+  P("Motivation gets you started; systems keep you going.", "focus", "general"),
+  P("Do the next right thing and leave the outcome.", "faith", "general"),
+  P("You are being built, not just kept busy.", "purpose", "general"),
+  P("Enough is a decision, not an amount.", "gratitude", "general"),
+  P("Feet on the floor, mind on the mission.", "focus", "day-start"),
+  P("Your best hour is the one you protect first.", "focus", "day-start"),
+  P("Decide the day now, before it decides you.", "leadership", "day-start"),
+  P("Logged is real. Real is progress.", "consistency", "logging"),
+  P("Proof beats promises — you just added some.", "growth", "logging"),
+  P("This is the paper trail of a serious person.", "discipline", "logging"),
+  P("A gap is not a collapse. Step back in.", "recovery", "missed"),
+  P("Yesterday's miss gets no vote on today.", "resilience", "missed"),
+  P("Down is not out. Log the next one.", "resilience", "missed"),
+  P("The chain is long now — don't be the one to break it.", "consistency", "streak"),
+  P("Anyone can start. You kept going.", "discipline", "streak"),
+  P("You met the resistance and didn't blink.", "fitness", "workout"),
+  P("Sweat is just weakness leaving on schedule.", "fitness", "workout"),
+  P("The body keeps the receipts. You just earned one.", "discipline", "workout"),
+  P("The setup either speaks or it doesn't. Wait for the voice.", "patience", "trade-before"),
+  P("Risk defined, ego parked. Execute.", "trading", "trade-before"),
+  P("Green by the rules today; green by the rules for life.", "discipline", "trade-win"),
+  P("The loss already happened. Protect the next decision.", "trading", "trade-loss"),
+  P("Flat and patient beats busy and wrong.", "patience", "no-trade"),
+  P("Spend on the life you want, not the one you're escaping.", "wealth", "budget"),
+  P("Every automated transfer is a promise you don't have to remember.", "wealth", "savings"),
+  P("Debt shrinks the same way it grew — one decision at a time.", "resilience", "debt"),
+  P("Patience is the interest that pays you.", "patience", "invest"),
+  P("Eat like you respect the goal.", "fitness", "meal"),
+  P("Protein is a promise to tomorrow's strength.", "fitness", "protein"),
+  P("Hydrate first; the cravings quiet down.", "recovery", "water"),
+  P("The night shift builds tomorrow's champion.", "recovery", "sleep-before"),
+  P("Close the day on purpose.", "discipline", "sleep-before"),
+  P("Great days are downloaded overnight.", "recovery", "sleep-hit"),
+  P("The urge is loud but temporary; you are the constant.", "resilience", "purity"),
+  P("Win the ten hard seconds; the rest gets easier.", "discipline", "purity"),
+  P("Clean again today — that's a man keeping his word.", "growth", "purity"),
+  P("A goal is a decision you keep re-making.", "consistency", "goal-progress"),
+  P("The summit is a stack of small steps you refused to skip.", "resilience", "goal-progress"),
+  P("Done is a doorway, not a finish line.", "growth", "goal-done"),
+  P("The wait is part of the reward.", "patience", "want-saving"),
+  P("You bought it with discipline before you paid with money.", "gratitude", "want-bought"),
+  P("Honest review, honest growth.", "growth", "review-week"),
+  P("Name the lesson or repeat the class.", "focus", "review-month"),
+  P("A reviewed year is a year you actually keep.", "purpose", "review-year"),
+  P("Ordinary days, an extraordinary refusal to quit — that's you now.", "resilience", "legendary"),
+  P("You didn't find discipline. You forged it, rep by rep.", "discipline", "legendary"),
 ];
+
+// ── Endless generation ───────────────────────────────────────────────
+// Coherent motive lines composed from agreeing fragment banks, enumerated
+// once at load so every generated line has a stable id (favourites/history
+// resolve like any curated line). Two families keep grammar clean: a
+// singular-subject "truth" for the general surface, and a day-start pairing.
+const GEN_TRUTH_LEADS = [
+  ["Discipline", "discipline"], ["Consistency", "consistency"], ["Patience", "patience"],
+  ["Focus", "focus"], ["Courage", "courage"], ["Momentum", "consistency"],
+  ["Showing up", "consistency"], ["Doing the hard thing", "discipline"],
+  ["Quiet, steady effort", "consistency"], ["The daily rep", "discipline"],
+  ["Small, honest progress", "growth"], ["Staying the course", "resilience"],
+];
+const GEN_TRUTH_TAILS = [
+  "compounds.", "wins the long game.", "beats motivation every time.",
+  "builds the man you're becoming.", "is the whole game.", "outlasts every excuse.",
+  "leaves evidence.", "is how identity is built.", "turns ordinary days into destiny.",
+  "pays you back in freedom.", "is a promise kept to yourself.", "quietly changes everything.",
+];
+const GEN_DAY_A = [
+  ["Win the first hour", "focus"], ["Take the first step", "courage"], ["Claim the morning", "discipline"],
+  ["Start before you feel ready", "courage"], ["Do the hardest thing first", "discipline"], ["Set the tone now", "leadership"],
+];
+const GEN_DAY_B = [
+  "and the day follows.", "— momentum handles the rest.", "and watch the day bend your way.",
+  "before the world decides for you.", "and everything after feels lighter.",
+];
+function buildGenerated() {
+  const out = [];
+  for (const [lead, cat] of GEN_TRUTH_LEADS) for (const tail of GEN_TRUTH_TAILS) out.push(P(`${lead} ${tail}`, cat, "general"));
+  for (const [lead, cat] of GEN_DAY_A) for (const b of GEN_DAY_B) out.push(P(`${lead} ${b}`, cat, "day-start"));
+  return out;
+}
+
+// Combined library: hand-written first (favoured by ordering), then the
+// generated set. Deduped by id so a generated line can never collide with a
+// curated one.
+export const PUSHES = (() => {
+  const seen = new Set();
+  const all = [];
+  for (const p of [...CURATED, ...buildGenerated()]) if (!seen.has(p.id)) { seen.add(p.id); all.push(p); }
+  return all;
+})();
 
 // Fast lookup by id.
 const BY_ID = Object.fromEntries(PUSHES.map((p) => [p.id, p]));
