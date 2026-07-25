@@ -6,6 +6,7 @@ import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Z
 import { B1, B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
+import { SubTabs } from "../../shared/SubTabs.jsx";
 import { NutritionTab } from "./NutritionTab.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -20,6 +21,7 @@ import { LogWorkoutForm } from "./LogWorkoutForm.jsx";
 
 export function AthleteOS() {
   const [view, setView] = useState("week");
+  const [nutSub, setNutSub] = useState("nutrition"); // nutrition | body (merged tab)
   const [workouts, setWorkouts] = useStorageState("athlete_workouts", []);
   const [exerciseLib, setExerciseLib] = useStorageState("athlete_exercises", DEFAULT_EXERCISES);
   const [templates, setTemplates] = useStorageState("athlete_templates", []);
@@ -177,7 +179,6 @@ export function AthleteOS() {
     { id: "week",      l: "This Week", i: Layers },
     { id: "history",   l: "History",   i: FileText },
     { id: "progress",  l: "Progress",  i: TrendingUp },
-    { id: "body",      l: "Body",      i: Ruler },
     { id: "nutrition", l: "Nutrition", i: Utensils },
   ];
 
@@ -529,7 +530,15 @@ export function AthleteOS() {
           </div>
         )}
 
-        {view === "body" && (
+        {view === "nutrition" && (
+          <SubTabs accent={PU} active={nutSub} onSelect={setNutSub}
+            tabs={[
+              { id: "nutrition", l: "Nutrition", i: Utensils },
+              { id: "body",      l: "Body",      i: Ruler },
+            ]} />
+        )}
+
+        {view === "nutrition" && nutSub === "body" && (
           <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 820 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
@@ -627,7 +636,7 @@ export function AthleteOS() {
         )}
 
         {/* ══ NUTRITION ══ */}
-        {view === "nutrition" && <NutritionTab />}
+        {view === "nutrition" && nutSub === "nutrition" && <NutritionTab />}
       </div>
     </div>
   );

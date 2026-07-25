@@ -15,6 +15,7 @@ import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { ActivityHeatmap, Ring } from "../../shared/charts.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
+import { SubTabs } from "../../shared/SubTabs.jsx";
 import { REFLECTION_PROMPTS } from "../../shared/kaizen.js";
 import {
   newHabit, newRoutine, isScheduled, isDone, isSkipped, valueOn, tapHabit, toggleSkip, setHabitValue,
@@ -31,6 +32,7 @@ const today = () => localDateStr();
 
 export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInfo }) {
   const [tab, setTab] = useState("today");
+  const [habitsSub, setHabitsSub] = useState("habits"); // habits | routines (merged tab)
   const [editing, setEditing] = useState(null);         // habit being edited or newHabit()
   const [rawRoutines, setRoutines] = useStorageState("routines", []);
   const [routineDraft, setRoutineDraft] = useState(null);
@@ -220,7 +222,6 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const TABS = [
     { id: "today",    l: "Today",    i: Sun },
     { id: "habits",   l: "Habits",   i: ListChecks },
-    { id: "routines", l: "Routines", i: Layers },
     { id: "insights", l: "Insights", i: TrendingUp },
     { id: "journal",  l: "Journal",  i: BookOpen },
     { id: "projects", l: "Projects", i: FolderKanban },
@@ -358,8 +359,16 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
           </div>
         )}
 
-        {/* ══ HABITS (manage) ══ */}
         {loaded && tab === "habits" && (
+          <SubTabs accent={CY} active={habitsSub} onSelect={setHabitsSub}
+            tabs={[
+              { id: "habits",   l: "Habits",   i: ListChecks },
+              { id: "routines", l: "Routines", i: Layers },
+            ]} />
+        )}
+
+        {/* ══ HABITS (manage) ══ */}
+        {loaded && tab === "habits" && habitsSub === "habits" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
@@ -418,7 +427,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
         )}
 
         {/* ══ ROUTINES ══ */}
-        {loaded && tab === "routines" && (
+        {loaded && tab === "habits" && habitsSub === "routines" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
