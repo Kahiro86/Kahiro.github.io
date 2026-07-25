@@ -9,6 +9,7 @@ import { useStorageState } from "../../../shared/useStorageState.js";
 import { useToast } from "../../../shared/toast.jsx";
 import { Hydrating, Card } from "../../../shared/ui.jsx";
 import { ModuleTabs } from "../../../shared/ModuleTabs.jsx";
+import { SubTabs } from "../../../shared/SubTabs.jsx";
 import { AK, Lbl, Seg, NumInp, AutoCalc } from "./fields.jsx";
 import {
   uid, sanitizeTrades, sanitizeAccounts, sanitizeInstruments, sanitizeSessions,
@@ -67,6 +68,7 @@ function RiskTab({ instruments, account }) {
 
 export function TradingIntelModule() {
   const [tab, setTab] = useState("journal");
+  const [insightSub, setInsightSub] = useState("analytics"); // analytics | reviews (merged tab)
   const [view, setView] = useState("list"); // list | form | detail
   const [editing, setEditing] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -189,8 +191,7 @@ export function TradingIntelModule() {
       <ModuleTabs gap={14} activeBg={`${AK}22`} activeColor={CY} topBorder={`${CY}44`} active={tab} onSelect={onTab}
         tabs={[
           { id: "journal", l: "Journal", i: FileText },
-          { id: "analytics", l: "Analytics", i: BarChart2 },
-          { id: "reviews", l: pendingCount ? `Reviews (${pendingCount})` : "Reviews", i: ClipboardCheck },
+          { id: "analytics", l: pendingCount ? `Analytics (${pendingCount})` : "Analytics", i: BarChart2 },
           { id: "accounts", l: "Accounts", i: Wallet },
           { id: "library", l: "Library", i: LibIcon },
           { id: "risk", l: "Risk", i: Calculator },
@@ -219,8 +220,17 @@ export function TradingIntelModule() {
             {tab === "journal" && view === "list" && <TradeLog trades={trades} accounts={accounts} activeId={activeId} onNew={startNew} onView={openDetail} onEdit={startEdit} onDuplicate={dupTrade} onDelete={delTrade} />}
             {tab === "journal" && view === "form" && <TradeForm initial={editing} libs={libs} accounts={accounts} activeId={activeId} reflectionQs={reflectionQs} reviewFields={reviewFields} psychFields={psychFields} lessons={lessons} reminders={reminders} presets={presets} onSavePreset={savePreset} onReinforceLesson={reinforceLesson} onSave={saveTrade} onCancel={() => { setView("list"); setEditing(null); }} />}
             {tab === "journal" && view === "detail" && detail && <TradeDetail trade={trades.find((x) => x.id === detail.id) || detail} reviewFields={reviewFields} psychFields={psychFields} onBack={() => { setView("list"); setDetail(null); }} onEdit={startEdit} />}
-            {tab === "analytics" && <IntelAnalytics trades={trades} accounts={accounts} activeId={activeId} />}
-            {tab === "reviews" && <ReviewsTab trades={reviewTrades} reviews={rawReviews} setReviews={setReviews} />}
+            {tab === "analytics" && (
+              <>
+                <SubTabs accent={CY} active={insightSub} onSelect={setInsightSub}
+                  tabs={[
+                    { id: "analytics", l: "Analytics", i: BarChart2 },
+                    { id: "reviews", l: pendingCount ? `Reviews (${pendingCount})` : "Reviews", i: ClipboardCheck },
+                  ]} />
+                {insightSub === "analytics" && <IntelAnalytics trades={trades} accounts={accounts} activeId={activeId} />}
+                {insightSub === "reviews" && <ReviewsTab trades={reviewTrades} reviews={rawReviews} setReviews={setReviews} />}
+              </>
+            )}
             {tab === "accounts" && <AccountsTab accounts={accounts} setAccounts={setAccounts} trades={trades} activeId={activeId} onActivate={setActive} toast={toast} />}
             {tab === "library" && <LibraryTab libs={libs} set={set} forms={forms} setForms={setForms} accounts={accounts} onExport={exportLibrary} onImport={importLibrary} />}
             {tab === "risk" && <RiskTab instruments={instruments.filter((i) => !i.archived)} account={activeAcct} />}

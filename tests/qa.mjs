@@ -28,7 +28,7 @@ const MODULES = [
 // array (click each label directly).
 const SUBTABS_MAP = {
   firm: [
-    { group: "Trading", subtabs: ["Analytics", "Reviews", "Accounts", "Library", "Risk", "Journal"] },
+    { group: "Trading", subtabs: ["Analytics", "Accounts", "Library", "Risk", "Journal"] },
     { group: "Wealth", subtabs: ["Income", "Analyst", "Money", "Portfolio", "Net Worth"] },
     { group: "HQ", subtabs: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"] },
   ],
