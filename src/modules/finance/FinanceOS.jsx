@@ -1,8 +1,9 @@
-import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, TrendingDown, Target, Activity, FileText } from "lucide-react";
+import { Layers, DollarSign, Shield, BarChart2, AlertTriangle, TrendingUp, TrendingDown, Activity, FileText, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { B1, BD, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
+import { SubTabs } from "../../shared/SubTabs.jsx";
 import { DEFAULT_FINANCE_STATE } from "./constants.js";
 import { totalDebtRemaining } from "./debt.js";
 import { DebtTab } from "./DebtTab.jsx";
@@ -19,22 +20,29 @@ import { AccountsTab } from "./AccountsTab.jsx";
 import { BudgetTab } from "./BudgetTab.jsx";
 import { EmergencyFundTab } from "./EmergencyFundTab.jsx";
 import { PortfolioTab } from "./PortfolioTab.jsx";
-import { GoalsTab } from "./GoalsTab.jsx";
 import { AnalystTab } from "./AnalystTab.jsx";
 import { FinanceReports } from "./FinanceReports.jsx";
 import { sanitizeDoctrine } from "./doctrine.js";
 
+// Consolidated finance nav: Reports folds into Analyst; Budget + Accounts +
+// Emergency + Debt merge into one "Money" tab (inner SubTabs); Goals retired
+// (universal goals live in Journey). Five destinations instead of eleven.
 const FIN_TABS = [
   { id: "overview",  l: "Net Worth",   i: Layers        },
   { id: "income",    l: "Income",      i: DollarSign    },
   { id: "analyst",   l: "Analyst",     i: Activity      },
-  { id: "reports",   l: "Reports",     i: FileText      },
-  { id: "accounts",  l: "Accounts",    i: Shield        },
-  { id: "budget",    l: "Budget",      i: BarChart2     },
-  { id: "debt",      l: "Debt",        i: TrendingDown  },
-  { id: "emergency", l: "Emergency",   i: AlertTriangle },
+  { id: "money",     l: "Money",       i: Wallet        },
   { id: "portfolio", l: "Portfolio",   i: TrendingUp    },
-  { id: "goals",     l: "Goals",       i: Target        },
+];
+const ANALYST_SUB = [
+  { id: "analysis", l: "Analysis", i: Activity },
+  { id: "reports",  l: "Reports",  i: FileText },
+];
+const MONEY_SUB = [
+  { id: "budget",    l: "Budget",    i: BarChart2     },
+  { id: "accounts",  l: "Accounts",  i: Shield        },
+  { id: "emergency", l: "Emergency", i: AlertTriangle },
+  { id: "debt",      l: "Debt",      i: TrendingDown  },
 ];
 
 // Records saved by older versions may miss fields added since (or carry nulls
@@ -50,6 +58,8 @@ function normalizeFinance(raw) {
 
 export function FinanceOS() {
   const [finTab, setFinTab] = useState("overview");
+  const [moneySub, setMoneySub] = useState("budget");
+  const [insightSub, setInsightSub] = useState("analysis");
   const [rawState, setRawState] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const state = useMemo(() => normalizeFinance(rawState), [rawState]);
   // Setters always hand updaters the normalised shape, so tab code can trust
@@ -200,7 +210,7 @@ export function FinanceOS() {
         {finTab === "overview" && (
           <OverviewTab fmtKES={fmtKES} netWorthKES={netWorthKES} totalLiquid={totalLiquid} totalInvested={totalInvested}
             monthlyPassive={monthlyPassive} efBal={efBal} savBal={savBal} opBal={opBal}
-            personalDebt={personalDebt} setPersonalDebt={setPersonalDebt} debtTotal={debtTotal} debtCount={debts.length} onManageDebt={() => setFinTab("debt")}
+            personalDebt={personalDebt} setPersonalDebt={setPersonalDebt} debtTotal={debtTotal} debtCount={debts.length} onManageDebt={() => { setFinTab("money"); setMoneySub("debt"); }}
             xRate={xRate} fw={fw} firewalls={state.firewalls} setFirewalls={setFirewalls} accounts={tiAccounts}
             unfiledCountsNW={state.tradingUnfiledCountsNW} setUnfiledCountsNW={setUnfiledCountsNW}
             freedom={freedom} trajectory={trajectory} trajStats={trajStats} onCaptureSnapshot={captureSnapshot} />
@@ -210,27 +220,37 @@ export function FinanceOS() {
             gross={gross} setGross={setGross} g={g} paye={paye} nssf={nssf} shif={shif} ahl={ahl} totalDed={totalDed} netPay={netPay} />
         )}
         {finTab === "analyst" && (
-          <AnalystTab health={health} fmtKES={fmtKES} bySource={incomeStats.bySource} budgets={budgets} monthlyPassive={monthlyPassive}
-            trajStats={trajStats} doctrine={doctrine} setDoctrine={setDoctrine} freedom={freedom} />
+          <>
+            <SubTabs tabs={ANALYST_SUB} active={insightSub} onSelect={setInsightSub} accent={CY} />
+            {insightSub === "analysis" && (
+              <AnalystTab health={health} fmtKES={fmtKES} bySource={incomeStats.bySource} budgets={budgets} monthlyPassive={monthlyPassive}
+                trajStats={trajStats} doctrine={doctrine} setDoctrine={setDoctrine} freedom={freedom} />
+            )}
+            {insightSub === "reports" && (
+              <FinanceReports income={income} incomeStats={incomeStats} health={health} fmtKES={fmtKES}
+                budgets={budgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent}
+                efBal={efBal} savBal={savBal} totalInvested={totalInvested} monthlyPassive={monthlyPassive}
+                personalDebt={personalDebt} trades={trades} tradingStats={tradingStats} />
+            )}
+          </>
         )}
-        {finTab === "reports" && (
-          <FinanceReports income={income} incomeStats={incomeStats} health={health} fmtKES={fmtKES}
-            budgets={budgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent}
-            efBal={efBal} savBal={savBal} totalInvested={totalInvested} monthlyPassive={monthlyPassive}
-            personalDebt={personalDebt} trades={trades} tradingStats={tradingStats} />
-        )}
-        {finTab === "accounts" && (
-          <AccountsTab g={g} netPay={netPay} fmtKES={fmtKES} opBal={opBal} setOpBal={setOpBal} savBal={savBal} setSavBal={setSavBal} />
-        )}
-        {finTab === "budget" && (
-          <BudgetTab netPay={netPay} budgets={budgets} setBudgets={setBudgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent} bills={state.bills} setBills={setBills} income={income} doctrineValues={doctrine.values} />
-        )}
-        {finTab === "debt" && (
-          <DebtTab debts={debts} setDebts={setDebts} fmtKES={fmtKES} legacyDebt={+personalDebt || 0} />
-        )}
-        {finTab === "emergency" && (
-          <EmergencyFundTab efBal={efBal} setEfBal={setEfBal} efTarget3={efTarget3} efTarget6={efTarget6} efMMF={efMMF} setEfMMF={setEfMMF}
-            mmfs={mmfs} efYield={efYield} efMonthInt={efMonthInt} efContrib={efContrib} efRemaining={efRemaining} efMonths={efMonths} />
+        {finTab === "money" && (
+          <>
+            <SubTabs tabs={MONEY_SUB} active={moneySub} onSelect={setMoneySub} accent={CY} />
+            {moneySub === "budget" && (
+              <BudgetTab netPay={netPay} budgets={budgets} setBudgets={setBudgets} totalBudgeted={totalBudgeted} totalSpent={totalSpent} bills={state.bills} setBills={setBills} income={income} doctrineValues={doctrine.values} />
+            )}
+            {moneySub === "accounts" && (
+              <AccountsTab g={g} netPay={netPay} fmtKES={fmtKES} opBal={opBal} setOpBal={setOpBal} savBal={savBal} setSavBal={setSavBal} />
+            )}
+            {moneySub === "emergency" && (
+              <EmergencyFundTab efBal={efBal} setEfBal={setEfBal} efTarget3={efTarget3} efTarget6={efTarget6} efMMF={efMMF} setEfMMF={setEfMMF}
+                mmfs={mmfs} efYield={efYield} efMonthInt={efMonthInt} efContrib={efContrib} efRemaining={efRemaining} efMonths={efMonths} />
+            )}
+            {moneySub === "debt" && (
+              <DebtTab debts={debts} setDebts={setDebts} fmtKES={fmtKES} legacyDebt={+personalDebt || 0} />
+            )}
+          </>
         )}
         {finTab === "portfolio" && (
           <PortfolioTab fmtKES={fmtKES} totalInvested={totalInvested} monthlyPassive={monthlyPassive} totalMMF={totalMMF}
@@ -238,10 +258,6 @@ export function FinanceOS() {
             nseStocks={nseStocks} setNseStocks={setNseStocks} saccoBal={saccoBal} setSaccoBal={setSaccoBal}
             saccoYield={saccoYield} setSaccoYield={setSaccoYield} reitUnits={reitUnits} setReitUnits={setReitUnits}
             reitNAV={reitNAV} setReitNAV={setReitNAV} />
-        )}
-        {finTab === "goals" && (
-          <GoalsTab goals={goals} setGoals={setGoals} fmtKES={fmtKES}
-            liveMetrics={{ efBal: +efBal || 0, totalInvested, netWorth: netWorthKES, monthlyPassive }} />
         )}
       </div>
     </div>

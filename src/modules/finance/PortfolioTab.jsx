@@ -12,6 +12,14 @@ export function PortfolioTab({
   reitUnits, setReitUnits, reitNAV, setReitNAV,
 }) {
   const toast = useToast();
+  // MMFs are now fully editable — add / rename / remove funds, not just a
+  // fixed five. Balance & yield were always editable; this frees the list.
+  const addMmf = () => setMmfs((prev) => [...prev, { id: `mmf${Date.now()}`, name: "New MMF", balance: 0, yield: 13 }]);
+  const delMmf = (i) => {
+    const item = mmfs[i];
+    setMmfs((prev) => prev.filter((_, j) => j !== i));
+    toast(`${item?.name || "Fund"} removed`, { action: "Undo", onAction: () => setMmfs((prev) => { const n = [...prev]; n.splice(i, 0, item); return n; }), tone: "danger" });
+  };
   // Index-based deletes with undo — reinsert the captured holding at its slot.
   const delTbill = (i) => {
     const item = tbills[i];
@@ -39,14 +47,21 @@ export function PortfolioTab({
 
       <Card style={{ padding: "22px" }}>
         <SH title="Money Market Funds" sub="Liquid · daily interest · no lock-in · instant withdrawal" action={
-          <span style={{ fontSize: 12, color: T3 }}>Total: <strong style={{ color: CY, fontFamily: "monospace" }}>{fmtKES(totalMMF)}</strong></span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: T3 }}>Total: <strong style={{ color: CY, fontFamily: "monospace" }}>{fmtKES(totalMMF)}</strong></span>
+            <button onClick={addMmf} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", background: `${CY}22`, border: `1px solid ${CY}44`, borderRadius: 8, color: CY, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}><Plus size={12} />Add Fund</button>
+          </div>
         } />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
           {mmfs.map((m, i) => {
             const mi = (+m.balance || 0) * ((+m.yield || 0) / 100 / 12);
             return (
               <div key={m.id} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 12, padding: "16px" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: T1, marginBottom: 3 }}>{m.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3 }}>
+                  <input value={m.name} onChange={(e) => setMmfs((prev) => prev.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Fund name"
+                    style={{ flex: 1, minWidth: 0, background: B2, border: `1px solid ${BD}`, borderRadius: 6, padding: "4px 6px", fontSize: 11.5, fontWeight: 700, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+                  <button onClick={() => delMmf(i)} aria-label={`Remove ${m.name}`} style={{ background: "none", border: "none", color: RE, cursor: "pointer", padding: 2, display: "flex", flexShrink: 0 }}><Trash2 size={11} /></button>
+                </div>
                 <div style={{ fontSize: 20, color: GR, fontWeight: 700, fontFamily: "monospace" }}>{m.yield}%</div>
                 <div style={{ fontSize: 10, color: T3, marginBottom: 12 }}>p.a. current</div>
                 <div style={{ fontSize: 10, color: T3, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Balance (KES)</div>
