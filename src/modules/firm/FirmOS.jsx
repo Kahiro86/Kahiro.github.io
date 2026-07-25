@@ -16,7 +16,7 @@ import { FirmDoctrine } from "./FirmDoctrine.jsx";
 const GROUPS = [
   { id: "trading", l: "Trading", i: TrendingUp },
   { id: "wealth", l: "Wealth", i: DollarSign },
-  { id: "doctrine", l: "Doctrine", i: Building2 },
+  { id: "doctrine", l: "HQ", i: Building2 },
 ];
 
 export function FirmOS({ navHint } = {}) {

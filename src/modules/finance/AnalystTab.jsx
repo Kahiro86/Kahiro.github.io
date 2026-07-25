@@ -6,10 +6,11 @@ import { callClaude } from "../../shared/anthropic.js";
 import { KAIZEN_COACH_PREAMBLE } from "../../shared/kaizen.js";
 import { SUBSCORE_META } from "./financeHealth.js";
 import { financeNarrative } from "./coach.js";
+import { DoctrineTab } from "./DoctrineTab.jsx";
 
 const scoreColor = (n) => (n >= 80 ? GR : n >= 65 ? CY : n >= 50 ? AM : RE);
 
-export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive, trajStats, doctrine, freedom }) {
+export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive, trajStats, doctrine, setDoctrine, freedom }) {
   const coach = financeNarrative(health, trajStats, doctrine, freedom, fmtKES, budgets);
   const [analysis, setAnalysis] = useState("");
   const [loading, setLoading] = useState(false);
@@ -155,6 +156,16 @@ Sub-scores: ${SUBSCORE_META.map((m) => `${m.label} ${Math.round(health.sub[m.key
           <div style={{ padding: "18px", textAlign: "center", color: T3, fontSize: 13 }}>Generate an AI analysis of your finances with practical, Kaizen-style next steps. (Requires your Anthropic key in Settings.)</div>
         )}
       </Card>
+
+      {/* ── YOUR MONEY DOCTRINE — the identity layer, dissolved in here ── */}
+      <div style={{ borderTop: `1px solid ${BD}`, paddingTop: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <Compass size={16} color={PU} />
+          <div style={{ fontSize: 18, fontWeight: 800, color: T1 }}>Your Money Doctrine</div>
+        </div>
+        <div style={{ fontSize: 12.5, color: T3, marginTop: 4 }}>The identity behind the numbers — your why, the principles you're measured against above, and the values every shilling serves.</div>
+      </div>
+      <DoctrineTab doctrine={doctrine} setDoctrine={setDoctrine} freedom={freedom} fmtKES={fmtKES} embedded />
     </div>
   );
 }
