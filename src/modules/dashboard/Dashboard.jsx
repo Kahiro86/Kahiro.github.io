@@ -112,7 +112,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     const src = nn.length ? nn : active.filter((h) => isScheduled(h, ds));
     const done = src.filter((h) => isDone(h, ds)).length;
     const total = src.length;
-    const pct = total ? Math.round((done / total) * 100) : 0;
+    const pct = total ? Math.floor((done / total) * 100) : 0;
     return { label: nn.length ? "Non-Negotiables" : "Today's Habits", done, total, pct, left: total - done };
   }, [active, ds]);
   const xpToNext = xp ? Math.max(0, xp.nextLevelXp - xp.total) : 0;
