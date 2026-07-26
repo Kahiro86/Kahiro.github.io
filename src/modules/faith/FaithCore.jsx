@@ -5,11 +5,10 @@
 // (category "Spiritual"), so Life OS, the Command Center and this module
 // all see the same records.
 import { useMemo, useState } from "react";
-import { BookOpen, Plus, Check, Trash2, Pencil, Eye, Sparkles, ScrollText } from "lucide-react";
+import { Plus, Check, Trash2, Pencil, Eye, Sparkles, ScrollText } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, GR, RE, AM, PU, CY } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
-import { SubTabs } from "../../shared/SubTabs.jsx";
 import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -52,14 +51,14 @@ function MonthGrid({ habit }) {
 
 export function FaithCore({ habits, setHabits, loaded = true }) {
   const [tab, setTab] = useState("walk");
-  const [faithSub, setFaithSub] = useState("verses"); // verses | notes (merged Scripture & Notes tab)
   const [verses, setVerses] = useStorageState("faith_scripture", []);
   const [notes, setNotes] = useStorageState("faith_notes", []);
-  const [verseDraft, setVerseDraft] = useState(null); // { ref, text }
   const [noteDraft, setNoteDraft] = useState("");
   const [noteRef, setNoteRef] = useState("");
   const [noteDs, setNoteDs] = useState(localDateStr());
   const [editingNoteId, setEditingNoteId] = useState(null);
+  const [memorize, setMemorize] = useState(false); // composer: also commit this passage to Scripture memory
+  const [verseText, setVerseText] = useState("");   // composer: verse text when memorizing
   const toast = useToast();
   const ds = localDateStr();
 
@@ -84,14 +83,11 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
     toast("Prayer habit added — edit it in Life OS → Habits", { tone: "success" });
   };
 
-  const saveVerse = () => {
-    if (!verseDraft?.ref?.trim()) return;
+  const addVerse = (ref, text) => {
     setVerses((prev) => [
-      { id: `v${Date.now().toString(36)}`, ref: verseDraft.ref.trim(), text: (verseDraft.text || "").trim(), addedAt: ds, lastReviewed: null, reviews: 0 },
+      { id: `v${Date.now().toString(36)}`, ref: ref.trim(), text: (text || "").trim(), addedAt: ds, lastReviewed: null, reviews: 0 },
       ...(Array.isArray(prev) ? prev : []),
     ]);
-    setVerseDraft(null);
-    toast("Verse added — first review due tomorrow 📖", { tone: "success" });
   };
   const reviewVerse = (id) => {
     setVerses((prev) => (Array.isArray(prev) ? prev : []).map((v) =>
@@ -126,9 +122,25 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
     toast("Note removed", { action: "Undo", onAction: () => setNotes((p) => [n, ...(Array.isArray(p) ? p : [])]), tone: "danger" });
   };
 
+  // Unified composer: a reflection, and optionally commit its passage to Scripture memory — one act on the Word.
+  const saveWord = () => {
+    const ref = noteRef.trim();
+    const hasReflection = !!noteDraft.trim();
+    const wantVerse = memorize && !!ref && !editingNoteId;
+    if (!hasReflection && !wantVerse) return;
+    if (wantVerse) addVerse(ref, verseText);
+    if (hasReflection) {
+      saveNote(); // create/update note + reset note fields + toast
+    } else {
+      setNoteDraft(""); setNoteRef(""); setNoteDs(localDateStr()); setEditingNoteId(null);
+    }
+    if (wantVerse) toast(hasReflection ? "Reflection saved · passage set to memorise 📖" : "Verse added — first review due tomorrow 📖", { tone: "success" });
+    setMemorize(false); setVerseText("");
+  };
+
   const TABS = [
     { id: "walk",      l: "The Walk",         i: Sparkles },
-    { id: "scripture", l: "Scripture & Notes", i: ScrollText },
+    { id: "scripture", l: "The Word", i: ScrollText },
   ];
   const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 12px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
 
@@ -145,14 +157,6 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {!loaded && <Hydrating label="Opening Faith OS…" />}
-
-        {loaded && tab === "scripture" && (
-          <SubTabs accent={FA} active={faithSub} onSelect={setFaithSub}
-            tabs={[
-              { id: "verses", l: "Scripture", i: ScrollText },
-              { id: "notes",  l: "Devotional", i: BookOpen },
-            ]} />
-        )}
 
         {/* ══ THE WALK ══ */}
         {loaded && tab === "walk" && (
@@ -202,50 +206,70 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
           </div>
         )}
 
-        {/* ══ SCRIPTURE MEMORY ══ */}
-        {loaded && tab === "scripture" && faithSub === "verses" && (
+        {/* ══ THE WORD — reflection woven with Scripture memory ══ */}
+        {loaded && tab === "scripture" && (() => {
+          const feed = [
+            ...versesSafe.map((v) => ({ kind: "verse", id: v.id, date: v.lastReviewed || v.addedAt || "", due: isDue(v), v })),
+            ...notesSafe.map((n) => ({ kind: "note", id: n.id, date: (n.date || "").slice(0, 10), due: false, n })),
+          ].sort((a, b) => (a.due !== b.due ? (a.due ? -1 : 1) : String(b.date).localeCompare(String(a.date))));
+          const canSave = !!noteDraft.trim() || (memorize && !!noteRef.trim());
+          return (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: T1 }}>Scripture Memory</div>
-                <div style={{ fontSize: 12, color: T3, marginTop: 2 }}>Spaced review: 1 → 3 → 7 → 14 → 30 → 60 days. {due.length ? `${due.length} due now.` : "Nothing due — well kept."}</div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: T1 }}>The Word</div>
+              <div style={{ fontSize: 12, color: T3, marginTop: 2 }}>
+                {due.length ? `${due.length} verse${due.length === 1 ? "" : "s"} due for review · ` : ""}{versesSafe.length} memorising · {notesSafe.length} reflection{notesSafe.length === 1 ? "" : "s"}. Spaced review: 1 → 3 → 7 → 14 → 30 → 60 days.
               </div>
-              {!verseDraft && (
-                <button onClick={() => setVerseDraft({ ref: "", text: "" })} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 15px", background: `${FA}18`, border: `1px solid ${FA}44`, borderRadius: 10, color: FA, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                  <Plus size={13} />Add verse
-                </button>
-              )}
             </div>
 
-            {verseDraft && (
-              <Card style={{ padding: "16px", borderColor: `${FA}44` }}>
-                <input autoFocus value={verseDraft.ref} onChange={(e) => setVerseDraft((d) => ({ ...d, ref: e.target.value }))}
-                  placeholder="Reference — e.g. Philippians 4:6-7" style={{ ...input, width: "100%", marginBottom: 8 }} />
-                <textarea value={verseDraft.text} onChange={(e) => setVerseDraft((d) => ({ ...d, text: e.target.value }))}
-                  placeholder="The verse text (optional — recall from reference alone is stronger)"
-                  style={{ ...input, width: "100%", minHeight: 70, resize: "none", lineHeight: 1.6, marginBottom: 10 }} />
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button onClick={() => setVerseDraft(null)} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-                  <button onClick={saveVerse} disabled={!verseDraft.ref.trim()}
-                    style={{ padding: "8px 16px", background: verseDraft.ref.trim() ? `${FA}22` : GL, border: `1px solid ${verseDraft.ref.trim() ? FA + "55" : BD}`, borderRadius: 9, color: verseDraft.ref.trim() ? FA : T3, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save verse</button>
-                </div>
-              </Card>
-            )}
+            {/* Unified composer: reflect, and optionally commit the passage to memory */}
+            <Card style={{ padding: "16px 18px" }}>
+              <SH title={editingNoteId ? "Edit Reflection" : "Reflect on the Word"} sub={relativeDateLabel(noteDs)} />
+              <div style={{ marginBottom: 9 }}><DatePicker value={noteDs} onChange={setNoteDs} /></div>
+              <input value={noteRef} onChange={(e) => setNoteRef(e.target.value)} placeholder="Passage (optional) — e.g. Psalm 23" style={{ ...input, width: "100%", marginBottom: 8 }} />
+              <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="What is God teaching you today?"
+                style={{ ...input, width: "100%", minHeight: 90, resize: "none", lineHeight: 1.7, marginBottom: 9 }} />
 
-            {versesSafe.length === 0 && !verseDraft && (
+              {!editingNoteId && (
+                <div style={{ marginBottom: 9 }}>
+                  <button onClick={() => noteRef.trim() && setMemorize((m) => !m)} disabled={!noteRef.trim()} title={noteRef.trim() ? "" : "Add a passage above first"}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 12px", background: memorize ? `${FA}18` : GL, border: `1px solid ${memorize ? FA + "55" : BD}`, borderRadius: 9, color: memorize ? FA : T2, fontSize: 11.5, fontWeight: 700, cursor: noteRef.trim() ? "pointer" : "default", fontFamily: "inherit", opacity: noteRef.trim() ? 1 : 0.55 }}>
+                    {memorize ? <Check size={13} /> : <Plus size={13} />} Commit this passage to Scripture memory
+                  </button>
+                  {memorize && noteRef.trim() && (
+                    <textarea value={verseText} onChange={(e) => setVerseText(e.target.value)} placeholder="Verse text to memorise (optional — recall from the reference alone is stronger)"
+                      style={{ ...input, width: "100%", minHeight: 60, resize: "none", lineHeight: 1.6, marginTop: 8 }} />
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={saveWord} disabled={!canSave}
+                  style={{ flex: 1, padding: "9px", background: canSave ? `${FA}14` : GL, border: `1px solid ${canSave ? FA + "44" : BD}`, borderRadius: 10, color: canSave ? FA : T3, fontSize: 12, fontWeight: 700, cursor: canSave ? "pointer" : "default", fontFamily: "inherit" }}>
+                  {editingNoteId ? "Update reflection" : "Save"}
+                </button>
+                {editingNoteId && (
+                  <button onClick={cancelEditNote} style={{ padding: "9px 16px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, color: T2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                )}
+              </div>
+            </Card>
+
+            {feed.length === 0 && (
               <Card style={{ padding: "34px", textAlign: "center" }}>
                 <div style={{ fontSize: 26, marginBottom: 10 }}>📖</div>
-                <div style={{ fontSize: 13, color: T2 }}>No verses yet — add one and the system will schedule every review for you.</div>
+                <div style={{ fontSize: 13, color: T2 }}>Nothing here yet — write a reflection, or commit a passage to memory and the system will schedule every review for you.</div>
               </Card>
             )}
 
-            {[...versesSafe].sort((a, b) => (isDue(b) ? 1 : 0) - (isDue(a) ? 1 : 0)).map((v) => {
-              const dueNow = isDue(v);
+            {/* Interleaved feed — memorised verses (due first) woven with dated reflections */}
+            {feed.map((item) => item.kind === "verse" ? (() => {
+              const v = item.v; const dueNow = item.due;
               const nextIn = Math.max(0, nextInterval(v.reviews || 0) - daysSince(v.lastReviewed || v.addedAt));
               return (
-                <Card key={v.id} style={{ padding: "14px 16px", borderColor: dueNow ? `${AM}44` : undefined }}>
+                <Card key={`v${v.id}`} style={{ padding: "14px 16px", borderColor: dueNow ? `${AM}44` : undefined }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 9.5, color: FA, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 3 }}>📖 Memory</div>
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: T1 }}>{v.ref}</div>
                       {v.text && (dueNow && !revealed[v.id] ? (
                         <button onClick={() => setRevealed((r) => ({ ...r, [v.id]: true }))}
@@ -270,42 +294,24 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
                   </div>
                 </Card>
               );
-            })}
-          </div>
-        )}
-
-        {/* ══ DEVOTIONAL NOTES ══ */}
-        {loaded && tab === "scripture" && faithSub === "notes" && (
-          <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
-            <Card style={{ padding: "16px 18px" }}>
-              <SH title={editingNoteId ? "Edit Devotional Note" : "Devotional Note"} sub={relativeDateLabel(noteDs)} />
-              <div style={{ marginBottom: 9 }}><DatePicker value={noteDs} onChange={setNoteDs} /></div>
-              <input value={noteRef} onChange={(e) => setNoteRef(e.target.value)} placeholder="Passage (optional) — e.g. Psalm 23" style={{ ...input, width: "100%", marginBottom: 8 }} />
-              <textarea value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="What is God teaching you today?"
-                style={{ ...input, width: "100%", minHeight: 90, resize: "none", lineHeight: 1.7, marginBottom: 9 }} />
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={saveNote} disabled={!noteDraft.trim()}
-                  style={{ flex: 1, padding: "9px", background: noteDraft.trim() ? `${FA}14` : GL, border: `1px solid ${noteDraft.trim() ? FA + "44" : BD}`, borderRadius: 10, color: noteDraft.trim() ? FA : T3, fontSize: 12, fontWeight: 700, cursor: noteDraft.trim() ? "pointer" : "default", fontFamily: "inherit" }}>
-                  {editingNoteId ? "Update note" : "Save note"}
-                </button>
-                {editingNoteId && (
-                  <button onClick={cancelEditNote} style={{ padding: "9px 16px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, color: T2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-                )}
-              </div>
-            </Card>
-            {notesSafe.map((n) => (
-              <div key={n.id} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${n.id === editingNoteId ? FA + "55" : BD}`, display: "flex", gap: 9 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>
-                    {relativeDateLabel((n.date || "").slice(0, 10) || ds)}{n.ref ? ` · ${n.ref}` : ""}{n.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}
+            })() : (() => {
+              const n = item.n;
+              return (
+                <div key={`n${n.id}`} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${n.id === editingNoteId ? FA + "55" : BD}`, display: "flex", gap: 9 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>
+                      <span style={{ color: PU, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase" }}>✍️ Reflection</span> · {relativeDateLabel((n.date || "").slice(0, 10) || ds)}{n.ref ? ` · ${n.ref}` : ""}{n.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{n.text}</div>
                   </div>
-                  <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{n.text}</div>
+                  <button onClick={() => startEditNote(n)} aria-label="Edit note" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Pencil size={11} /></button>
+                  <button onClick={() => deleteNote(n)} aria-label="Delete note" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Trash2 size={11} /></button>
                 </div>
-                <button onClick={() => startEditNote(n)} aria-label="Edit note" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Pencil size={11} /></button>
-                <button onClick={() => deleteNote(n)} aria-label="Delete note" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Trash2 size={11} /></button>
-              </div>
-            ))}
+              );
+            })())}
           </div>
+          );
+        })()}
         )}
       </div>
     </div>
