@@ -2,11 +2,10 @@ import { useState } from "react";
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Ruler, Utensils, Pencil, Camera } from "lucide-react";
+import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Utensils, Pencil, Camera } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
-import { SubTabs } from "../../shared/SubTabs.jsx";
 import { NutritionTab } from "./NutritionTab.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -22,7 +21,6 @@ import { LogWorkoutForm } from "./LogWorkoutForm.jsx";
 
 export function AthleteOS() {
   const [view, setView] = useState("week");
-  const [nutSub, setNutSub] = useState("nutrition"); // nutrition | body (merged tab)
   const [workouts, setWorkouts] = useStorageState("athlete_workouts", []);
   const [exerciseLib, setExerciseLib] = useStorageState("athlete_exercises", DEFAULT_EXERCISES);
   const [templates, setTemplates] = useStorageState("athlete_templates", []);
@@ -583,19 +581,11 @@ export function AthleteOS() {
         )}
 
         {view === "nutrition" && (
-          <SubTabs accent={PU} active={nutSub} onSelect={setNutSub}
-            tabs={[
-              { id: "nutrition", l: "Nutrition", i: Utensils },
-              { id: "body",      l: "Body",      i: Ruler },
-            ]} />
-        )}
-
-        {view === "nutrition" && nutSub === "body" && (
-          <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 820 }}>
+          <div style={{ padding: "22px 24px 0", display: "flex", flexDirection: "column", gap: 16, maxWidth: 900 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Body</div>
-                <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Measurements over months — the scale is one signal, not the verdict.</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Body composition</div>
+                <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>The body today's fuel is building — the scale is one signal, not the verdict.</div>
               </div>
               {!mDraft && (
                 <button onClick={() => setMDraft({ date: localDateStr(), weight: "", waist: "", chest: "", arms: "", thighs: "", notes: "" })}
@@ -651,7 +641,13 @@ export function AthleteOS() {
                 })}
               </div>
             )}
+          </div>
+        )}
 
+        {view === "nutrition" && <NutritionTab />}
+
+        {view === "nutrition" && measures.length > 0 && (
+          <div style={{ padding: "4px 24px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 900 }}>
             {weightSeries.length >= 2 && (
               <Card style={{ padding: "20px" }}>
                 <SH title="Weight Trend" sub="Every logged entry" />
@@ -686,9 +682,6 @@ export function AthleteOS() {
             )}
           </div>
         )}
-
-        {/* ══ NUTRITION ══ */}
-        {view === "nutrition" && nutSub === "nutrition" && <NutritionTab />}
       </div>
     </div>
   );
