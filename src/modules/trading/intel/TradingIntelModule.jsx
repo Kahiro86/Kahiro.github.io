@@ -9,7 +9,6 @@ import { useStorageState } from "../../../shared/useStorageState.js";
 import { useToast } from "../../../shared/toast.jsx";
 import { Hydrating, Card } from "../../../shared/ui.jsx";
 import { ModuleTabs } from "../../../shared/ModuleTabs.jsx";
-import { SubTabs } from "../../../shared/SubTabs.jsx";
 import { AK, Lbl, Seg, NumInp, AutoCalc } from "./fields.jsx";
 import {
   uid, sanitizeTrades, sanitizeAccounts, sanitizeInstruments, sanitizeSessions,
@@ -68,7 +67,6 @@ function RiskTab({ instruments, account }) {
 
 export function TradingIntelModule() {
   const [tab, setTab] = useState("journal");
-  const [insightSub, setInsightSub] = useState("analytics"); // analytics | reviews (merged tab)
   const [view, setView] = useState("list"); // list | form | detail
   const [editing, setEditing] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -221,15 +219,18 @@ export function TradingIntelModule() {
             {tab === "journal" && view === "form" && <TradeForm initial={editing} libs={libs} accounts={accounts} activeId={activeId} reflectionQs={reflectionQs} reviewFields={reviewFields} psychFields={psychFields} lessons={lessons} reminders={reminders} presets={presets} onSavePreset={savePreset} onReinforceLesson={reinforceLesson} onSave={saveTrade} onCancel={() => { setView("list"); setEditing(null); }} />}
             {tab === "journal" && view === "detail" && detail && <TradeDetail trade={trades.find((x) => x.id === detail.id) || detail} reviewFields={reviewFields} psychFields={psychFields} onBack={() => { setView("list"); setDetail(null); }} onEdit={startEdit} />}
             {tab === "analytics" && (
-              <>
-                <SubTabs accent={CY} active={insightSub} onSelect={setInsightSub}
-                  tabs={[
-                    { id: "analytics", l: "Analytics", i: BarChart2 },
-                    { id: "reviews", l: pendingCount ? `Reviews (${pendingCount})` : "Reviews", i: ClipboardCheck },
-                  ]} />
-                {insightSub === "analytics" && <IntelAnalytics trades={trades} accounts={accounts} activeId={activeId} />}
-                {insightSub === "reviews" && <ReviewsTab trades={reviewTrades} reviews={rawReviews} setReviews={setReviews} />}
-              </>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {pendingCount > 0 && (
+                  <div style={{ margin: "18px 24px 0", display: "flex", alignItems: "center", gap: 10, padding: "11px 15px", borderRadius: 11, background: `${AM}12`, border: `1px solid ${AM}44`, flexWrap: "wrap" }}>
+                    <ClipboardCheck size={15} color={AM} />
+                    <span style={{ fontSize: 12.5, color: T1, fontWeight: 700 }}>{pendingCount} review{pendingCount === 1 ? "" : "s"} pending</span>
+                    <span style={{ fontSize: 11.5, color: T3 }}>— the numbers below tell you what happened; close the loop with a write-up further down.</span>
+                  </div>
+                )}
+                <IntelAnalytics trades={trades} accounts={accounts} activeId={activeId} />
+                <div style={{ height: 1, background: BD, margin: "6px 24px 0" }} />
+                <ReviewsTab trades={reviewTrades} reviews={rawReviews} setReviews={setReviews} />
+              </div>
             )}
             {tab === "accounts" && <AccountsTab accounts={accounts} setAccounts={setAccounts} trades={trades} activeId={activeId} onActivate={setActive} toast={toast} />}
             {tab === "library" && <LibraryTab libs={libs} set={set} forms={forms} setForms={setForms} accounts={accounts} onExport={exportLibrary} onImport={importLibrary} />}
