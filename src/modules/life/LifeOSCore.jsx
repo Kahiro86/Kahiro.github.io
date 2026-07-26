@@ -15,7 +15,6 @@ import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { ActivityHeatmap, Ring } from "../../shared/charts.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
-import { SubTabs } from "../../shared/SubTabs.jsx";
 import { REFLECTION_PROMPTS } from "../../shared/kaizen.js";
 import {
   newHabit, newRoutine, isScheduled, isDone, isSkipped, valueOn, tapHabit, toggleSkip, setHabitValue,
@@ -32,7 +31,6 @@ const today = () => localDateStr();
 
 export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInfo }) {
   const [tab, setTab] = useState("today");
-  const [habitsSub, setHabitsSub] = useState("habits"); // habits | routines (merged tab)
   const [editing, setEditing] = useState(null);         // habit being edited or newHabit()
   const [rawRoutines, setRoutines] = useStorageState("routines", []);
   const [routineDraft, setRoutineDraft] = useState(null);
@@ -219,6 +217,40 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
     );
   };
 
+  // Habit management card — reused inside routine groups and for ungrouped habits
+  const habitCard = (h) => {
+    const s30 = rangeStats(h, 30);
+    return (
+      <Card key={h.id} style={{ padding: "14px 16px", opacity: h.archived ? 0.55 : h.paused ? 0.75 : 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${h.color}18`, border: `1px solid ${h.color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{h.icon}</div>
+          <div style={{ flex: 1, minWidth: 150 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: T1, display: "flex", alignItems: "center", gap: 7 }}>
+              {h.name}
+              {h.paused && <span style={{ fontSize: 9, color: AM, padding: "1px 6px", borderRadius: 7, background: `${AM}18`, border: `1px solid ${AM}44` }}>PAUSED</span>}
+              {h.archived && <span style={{ fontSize: 9, color: T3, padding: "1px 6px", borderRadius: 7, background: GL, border: `1px solid ${BD}` }}>ARCHIVED</span>}
+            </div>
+            <div style={{ fontSize: 10.5, color: T3, marginTop: 2 }}>
+              {h.category} · {h.days.length === 7 ? "daily" : `${h.days.length}×/week`}{h.target > 1 ? ` · ${h.target}${h.unit ? ` ${h.unit}` : "×"}/day` : ""}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ textAlign: "center" }}><div style={{ fontSize: 14, fontWeight: 800, color: AM, fontFamily: "monospace" }}>{currentStreak(h)}</div><div style={{ fontSize: 8.5, color: T3, letterSpacing: 1 }}>STREAK</div></div>
+            <div style={{ textAlign: "center" }}><div style={{ fontSize: 14, fontWeight: 800, color: PU, fontFamily: "monospace" }}>{longestStreak(h)}</div><div style={{ fontSize: 8.5, color: T3, letterSpacing: 1 }}>BEST</div></div>
+            <div style={{ textAlign: "center" }}><div style={{ fontSize: 14, fontWeight: 800, color: s30.pct >= 70 ? GR : s30.pct >= 40 ? CY : RE, fontFamily: "monospace" }}>{s30.pct}%</div><div style={{ fontSize: 8.5, color: T3, letterSpacing: 1 }}>30 DAYS</div></div>
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button onClick={() => setEditing({ ...h })} title="Edit" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: T2, display: "flex" }}><Pencil size={12} /></button>
+            <button onClick={() => duplicateHabit(h)} title="Duplicate" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: CY, display: "flex" }}><Copy size={12} /></button>
+            <button onClick={() => patchHabit(h.id, { paused: !h.paused })} title={h.paused ? "Resume" : "Pause (streak safe)"} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: h.paused ? GR : AM, display: "flex" }}>{h.paused ? <Play size={12} /> : <Pause size={12} />}</button>
+            <button onClick={() => patchHabit(h.id, { archived: !h.archived })} title={h.archived ? "Restore" : "Archive"} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: h.archived ? GR : T3, display: "flex" }}>{h.archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}</button>
+            <button onClick={() => deleteHabit(h)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
   const TABS = [
     { id: "today",    l: "Today",    i: Sun },
     { id: "habits",   l: "Habits",   i: ListChecks },
@@ -359,83 +391,27 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
           </div>
         )}
 
-        {loaded && tab === "habits" && (
-          <SubTabs accent={CY} active={habitsSub} onSelect={setHabitsSub}
-            tabs={[
-              { id: "habits",   l: "Habits",   i: ListChecks },
-              { id: "routines", l: "Routines", i: Layers },
-            ]} />
-        )}
-
-        {/* ══ HABITS (manage) ══ */}
-        {loaded && tab === "habits" && habitsSub === "habits" && (
+        {/* ══ HABITS & ROUTINES (fused) ══ */}
+        {loaded && tab === "habits" && (() => {
+          const grouped = new Set(routines.flatMap((r) => r.habitIds));
+          const otherActive = active.filter((h) => !grouped.has(h.id));
+          const archivedList = habits.filter((h) => h.archived);
+          return (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
               <div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: T1 }}>Habits</div>
-                <div style={{ fontSize: 12.5, color: T3, marginTop: 2 }}>{active.length} active · {habits.filter((h) => h.archived).length} archived</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: T1 }}>Habits &amp; Routines</div>
+                <div style={{ fontSize: 12.5, color: T3, marginTop: 2 }}>{active.length} active · {routines.length} routine{routines.length !== 1 ? "s" : ""} · {archivedList.length} archived</div>
               </div>
-              {!editing && <button onClick={() => setEditing(newHabit())} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: `linear-gradient(135deg,${GR},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Plus size={14} />New Habit</button>}
+              {!editing && !routineDraft && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button onClick={() => setEditing(newHabit())} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: `linear-gradient(135deg,${GR},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Plus size={14} />New Habit</button>
+                  <button onClick={() => setRoutineDraft(newRoutine())} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: GL, border: `1px solid ${CY}55`, borderRadius: 10, color: CY, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Layers size={14} />New Routine</button>
+                </div>
+              )}
             </div>
 
             {editing && <HabitEditor habit={editing} categories={categories} onSave={saveHabit} onCancel={() => setEditing(null)} />}
-
-            {!editing && (nonNegHabits.length === 0 || wellnessHabits.length === 0) && (
-              <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
-                {nonNegHabits.length === 0 && (
-                  <button onClick={() => addStarterPack("nonneg")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${RE}12`, border: `1px dashed ${RE}44`, borderRadius: 10, color: RE, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add Non-Negotiables pack</button>
-                )}
-                {wellnessHabits.length === 0 && (
-                  <button onClick={() => addStarterPack("wellness")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${CY}12`, border: `1px dashed ${CY}44`, borderRadius: 10, color: CY, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add Wellness trackers</button>
-                )}
-              </div>
-            )}
-
-            {[...active, ...habits.filter((h) => h.archived)].map((h) => {
-              const s30 = rangeStats(h, 30);
-              return (
-                <Card key={h.id} style={{ padding: "14px 16px", opacity: h.archived ? 0.55 : h.paused ? 0.75 : 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${h.color}18`, border: `1px solid ${h.color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{h.icon}</div>
-                    <div style={{ flex: 1, minWidth: 150 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: T1, display: "flex", alignItems: "center", gap: 7 }}>
-                        {h.name}
-                        {h.paused && <span style={{ fontSize: 9, color: AM, padding: "1px 6px", borderRadius: 7, background: `${AM}18`, border: `1px solid ${AM}44` }}>PAUSED</span>}
-                        {h.archived && <span style={{ fontSize: 9, color: T3, padding: "1px 6px", borderRadius: 7, background: GL, border: `1px solid ${BD}` }}>ARCHIVED</span>}
-                      </div>
-                      <div style={{ fontSize: 10.5, color: T3, marginTop: 2 }}>
-                        {h.category} · {h.days.length === 7 ? "daily" : `${h.days.length}×/week`}{h.target > 1 ? ` · ${h.target}${h.unit ? ` ${h.unit}` : "×"}/day` : ""}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                      <div style={{ textAlign: "center" }}><div style={{ fontSize: 14, fontWeight: 800, color: AM, fontFamily: "monospace" }}>{currentStreak(h)}</div><div style={{ fontSize: 8.5, color: T3, letterSpacing: 1 }}>STREAK</div></div>
-                      <div style={{ textAlign: "center" }}><div style={{ fontSize: 14, fontWeight: 800, color: PU, fontFamily: "monospace" }}>{longestStreak(h)}</div><div style={{ fontSize: 8.5, color: T3, letterSpacing: 1 }}>BEST</div></div>
-                      <div style={{ textAlign: "center" }}><div style={{ fontSize: 14, fontWeight: 800, color: s30.pct >= 70 ? GR : s30.pct >= 40 ? CY : RE, fontFamily: "monospace" }}>{s30.pct}%</div><div style={{ fontSize: 8.5, color: T3, letterSpacing: 1 }}>30 DAYS</div></div>
-                    </div>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <button onClick={() => setEditing({ ...h })} title="Edit" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: T2, display: "flex" }}><Pencil size={12} /></button>
-                      <button onClick={() => duplicateHabit(h)} title="Duplicate" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: CY, display: "flex" }}><Copy size={12} /></button>
-                      <button onClick={() => patchHabit(h.id, { paused: !h.paused })} title={h.paused ? "Resume" : "Pause (streak safe)"} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: h.paused ? GR : AM, display: "flex" }}>{h.paused ? <Play size={12} /> : <Pause size={12} />}</button>
-                      <button onClick={() => patchHabit(h.id, { archived: !h.archived })} title={h.archived ? "Restore" : "Archive"} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: h.archived ? GR : T3, display: "flex" }}>{h.archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}</button>
-                      <button onClick={() => deleteHabit(h)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ══ ROUTINES ══ */}
-        {loaded && tab === "habits" && habitsSub === "routines" && (
-          <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: T1 }}>Routines</div>
-                <div style={{ fontSize: 12.5, color: T3, marginTop: 2 }}>Group habits — one tap completes them all</div>
-              </div>
-              {!routineDraft && <button onClick={() => setRoutineDraft(newRoutine())} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: `linear-gradient(135deg,${GR},${CY})`, border: "none", borderRadius: 10, color: "#000", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Plus size={14} />New Routine</button>}
-            </div>
 
             {routineDraft && (
               <Card style={{ padding: "18px", borderColor: CY + "44" }}>
@@ -467,37 +443,65 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               </Card>
             )}
 
-            {routines.length === 0 && !routineDraft && (
-              <Empty icon="🌅" title="No routines yet" sub="Bundle your morning, gym or night habits so one tap completes the whole block." />
+            {!editing && (nonNegHabits.length === 0 || wellnessHabits.length === 0) && (
+              <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+                {nonNegHabits.length === 0 && (
+                  <button onClick={() => addStarterPack("nonneg")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${RE}12`, border: `1px dashed ${RE}44`, borderRadius: 10, color: RE, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add Non-Negotiables pack</button>
+                )}
+                {wellnessHabits.length === 0 && (
+                  <button onClick={() => addStarterPack("wellness")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${CY}12`, border: `1px dashed ${CY}44`, borderRadius: 10, color: CY, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add Wellness trackers</button>
+                )}
+              </div>
             )}
 
+            {/* Routine groups — each routine is a header band over its member habit cards */}
             {routines.map((r) => {
               const p = routineProgress(habits, r);
               const members = active.filter((h) => r.habitIds.includes(h.id));
               return (
-                <Card key={r.id} style={{ padding: "16px 18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+                <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "11px 15px", borderRadius: 12, background: `${CY}0e`, border: `1px solid ${CY}33` }}>
                     <span style={{ fontSize: 20 }}>{r.icon}</span>
-                    <span style={{ fontSize: 14.5, fontWeight: 700, color: T1, flex: 1 }}>{r.name}</span>
+                    <div style={{ flex: 1, minWidth: 120 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 800, color: T1 }}>{r.name}</div>
+                      <div style={{ fontSize: 10.5, color: T3, marginTop: 1 }}>{members.length} habit{members.length !== 1 ? "s" : ""} · routine</div>
+                    </div>
                     <span style={{ fontSize: 11.5, color: p.pct === 100 ? GR : T3, fontFamily: "monospace" }}>{p.done}/{p.total} today</span>
-                    <button onClick={() => setRoutineDraft({ ...r })} title="Edit" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: T2, display: "flex" }}><Pencil size={12} /></button>
-                    <button onClick={() => deleteRoutine(r)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
+                    {p.pct < 100 && p.total > 0 && (
+                      <button onClick={() => runRoutine(r)} title={`Complete all ${p.total} habits`} style={{ padding: "6px 12px", background: `${GR}14`, border: `1px solid ${GR}44`, borderRadius: 9, color: GR, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Complete all →</button>
+                    )}
+                    <button onClick={() => setRoutineDraft({ ...r })} title="Edit routine" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: T2, display: "flex" }}><Pencil size={12} /></button>
+                    <button onClick={() => deleteRoutine(r)} title="Delete routine" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-                    {members.map((h) => (
-                      <span key={h.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "4px 10px", borderRadius: 14, background: isDone(h, ds) ? `${h.color}18` : GL, color: isDone(h, ds) ? h.color : T3, border: `1px solid ${isDone(h, ds) ? h.color + "44" : BD}` }}>
-                        {isDone(h, ds) ? <Check size={10} /> : null}{h.icon} {h.name}
-                      </span>
-                    ))}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 14, marginLeft: 7, borderLeft: `2px solid ${CY}22` }}>
+                    {members.length ? members.map(habitCard) : (
+                      <div style={{ fontSize: 11.5, color: T3, padding: "6px 2px" }}>No habits in this routine yet — edit it to add some.</div>
+                    )}
                   </div>
-                  {p.pct < 100 && (
-                    <button onClick={() => runRoutine(r)} style={{ padding: "8px 16px", background: `${GR}14`, border: `1px solid ${GR}44`, borderRadius: 9, color: GR, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Complete all {p.total} habits →</button>
-                  )}
-                </Card>
+                </div>
               );
             })}
+
+            {/* Ungrouped habits */}
+            {routines.length > 0 && otherActive.length > 0 && (
+              <div style={{ fontSize: 11, color: T3, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginTop: 4 }}>Other habits</div>
+            )}
+            {otherActive.map(habitCard)}
+
+            {active.length === 0 && routines.length === 0 && !editing && !routineDraft && (
+              <Empty icon="🌱" title="No habits yet" sub="Add your first habit, then bundle habits into routines you can finish in one tap." />
+            )}
+
+            {/* Archived */}
+            {archivedList.length > 0 && (
+              <>
+                <div style={{ fontSize: 11, color: T3, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginTop: 4 }}>Archived</div>
+                {archivedList.map(habitCard)}
+              </>
+            )}
           </div>
-        )}
+          );
+        })()}
 
         {/* ══ INSIGHTS ══ */}
         {loaded && tab === "insights" && (() => {
