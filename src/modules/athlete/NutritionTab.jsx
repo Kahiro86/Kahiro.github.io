@@ -8,6 +8,7 @@ import { Plus, Trash2, Star, Search, Copy, ChevronUp, Flame } from "lucide-react
 import { B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty } from "../../shared/ui.jsx";
 import { DatePicker } from "../../shared/DatePicker.jsx";
+import { useDayMarks, hasCheat, toggleMark } from "../../shared/dayMarks.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
@@ -41,6 +42,8 @@ export function NutritionTab() {
   // anchors on the real `today`, since a streak is inherently about what's
   // true right now, not whichever day the user happens to be viewing.
   const [logDs, setLogDs] = useState(() => localDateStr());
+  const [dayMarks, setDayMarks] = useDayMarks();
+  const cheatToday = hasCheat(dayMarks, logDs);
 
   const log = useMemo(() => sanitizeNutrition(rawLog), [rawLog]);
   const customFoods = useMemo(() => sanitizeFoods(rawFoods), [rawFoods]);
@@ -51,7 +54,7 @@ export function NutritionTab() {
   const totals = useMemo(() => dayTotals(entries), [entries]);
   const score = nutritionScore(totals, targets);
   const suggestions = useMemo(() => qualitySuggestions(totals, targets, entries), [totals, targets, entries]);
-  const streaks = useMemo(() => healthyStreaks(log, targets, today), [log, targets, today]);
+  const streaks = useMemo(() => healthyStreaks(log, targets, today, dayMarks.cheat), [log, targets, today, dayMarks.cheat]);
   const series = useMemo(() => nutritionSeries(log, targets, 14), [log, targets]);
   const report7 = useMemo(() => nutritionReport(log, targets, 7), [log, targets]);
   const report30 = useMemo(() => nutritionReport(log, targets, 30), [log, targets]);
@@ -231,7 +234,20 @@ export function NutritionTab() {
 
   return (
     <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 900 }}>
-      <DatePicker value={logDs} onChange={setLogDs} />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 220 }}><DatePicker value={logDs} onChange={setLogDs} /></div>
+        <button onClick={() => toggleMark(setDayMarks, "cheat", logDs)}
+          title={cheatToday ? "This day is a cheat day — your streak is protected" : "Mark this day as a planned cheat day (streak-safe)"}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 700,
+            background: cheatToday ? `${AM}1c` : GL, border: `1px solid ${cheatToday ? AM + "66" : BD}`, color: cheatToday ? AM : T2 }}>
+          🍔 {cheatToday ? "Cheat day ✓" : "Cheat day"}
+        </button>
+      </div>
+      {cheatToday && (
+        <div style={{ padding: "10px 15px", background: `${AM}0e`, border: `1px solid ${AM}33`, borderRadius: 11, fontSize: 12, color: T2, lineHeight: 1.5 }}>
+          🍔 Cheat day — eat freely. This day won't count against your healthy streak, and the streak carries straight across it.
+        </div>
+      )}
       <MotivePush context={["meal", "protein", "water"]} accent={GR} compact />
       {/* ── Daily dashboard ── */}
       <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${GR}08,transparent)` }}>

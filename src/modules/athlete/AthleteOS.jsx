@@ -18,10 +18,12 @@ import { WEEK_PLAN } from "./constants.js";
 import { getDayName } from "./helpers.js";
 import { DEFAULT_EXERCISES, uidT, lastValuesByExercise, overloadTrend } from "./library.js";
 import { LogWorkoutForm } from "./LogWorkoutForm.jsx";
+import { useDayMarks, hasRest, toggleMark } from "../../shared/dayMarks.js";
 
 export function AthleteOS() {
   const [view, setView] = useState("week");
   const [workouts, setWorkouts] = useStorageState("athlete_workouts", []);
+  const [dayMarks, setDayMarks] = useDayMarks();
   const [exerciseLib, setExerciseLib] = useStorageState("athlete_exercises", DEFAULT_EXERCISES);
   const [templates, setTemplates] = useStorageState("athlete_templates", []);
   const [logInitial, setLogInitial] = useState(null);
@@ -121,13 +123,14 @@ export function AthleteOS() {
   const latestM = mAsc[mAsc.length - 1];
   const prevM = mAsc[mAsc.length - 2];
 
+  const restMarks = new Set(dayMarks.rest);
   const streak = (() => {
     let count = 0, d = new Date();
     const dates = new Set(workouts.map((w) => w.date));
     for (let i = 0; i < 60; i++) {
       const ds = localDateStr(d);
       if (dates.has(ds)) { count++; d.setDate(d.getDate() - 1); }
-      else if (i === 0) { d.setDate(d.getDate() - 1); continue; }
+      else if (i === 0 || restMarks.has(ds)) { d.setDate(d.getDate() - 1); continue; } // today pending, or a rest day — streak survives
       else break;
     }
     return count;
@@ -136,6 +139,7 @@ export function AthleteOS() {
   const todayDay = getDayName();
   const todayPlan = WEEK_PLAN.find((d) => d.day === todayDay);
   const todayLogged = workouts.some((w) => w.date === localDateStr());
+  const todayRest = hasRest(dayMarks, localDateStr()); // ad-hoc rest day the user marked
 
   const filteredHistory = workouts.filter((w) => !filterType || w.type === filterType);
 
@@ -239,23 +243,44 @@ export function AthleteOS() {
               </div>
             )}
 
-            {!todayLogged && todayPlan && todayPlan.type !== "Rest" && (
-              <div style={{ padding: "14px 18px", background: `${PU}0D`, border: `1px solid ${PU}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
-                <span style={{ fontSize: 24 }}>{todayPlan.icon}</span>
+            {todayRest ? (
+              <div style={{ padding: "14px 18px", background: `${AM}0D`, border: `1px solid ${AM}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
+                <span style={{ fontSize: 24 }}>😴</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: PU }}>Today: {todayPlan.type}</div>
-                  <div style={{ fontSize: 12, color: T2 }}>A short, easy version still counts. Start small.</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: AM }}>Rest day</div>
+                  <div style={{ fontSize: 12, color: T2 }}>Recovery is training. Your streak is protected today.</div>
                 </div>
-                <button onClick={() => startLog()} style={{ padding: "8px 16px", background: `${PU}22`, border: `1px solid ${PU}44`, borderRadius: 9, color: PU, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                  Log Now
+                <button onClick={() => toggleMark(setDayMarks, "rest", localDateStr())} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  End rest day
                 </button>
               </div>
-            )}
-            {todayLogged && (
-              <div style={{ padding: "12px 18px", background: `${GR}0D`, border: `1px solid ${GR}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                <CheckCircle size={18} color={GR} />
-                <span style={{ fontSize: 13, color: T1 }}>Workout logged for today. Nice work.</span>
-              </div>
+            ) : (
+              <>
+                {!todayLogged && todayPlan && todayPlan.type !== "Rest" && (
+                  <div style={{ padding: "14px 18px", background: `${PU}0D`, border: `1px solid ${PU}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
+                    <span style={{ fontSize: 24 }}>{todayPlan.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: PU }}>Today: {todayPlan.type}</div>
+                      <div style={{ fontSize: 12, color: T2 }}>A short, easy version still counts. Start small.</div>
+                    </div>
+                    <button onClick={() => startLog()} style={{ padding: "8px 16px", background: `${PU}22`, border: `1px solid ${PU}44`, borderRadius: 9, color: PU, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                      Log Now
+                    </button>
+                  </div>
+                )}
+                {todayLogged && (
+                  <div style={{ padding: "12px 18px", background: `${GR}0D`, border: `1px solid ${GR}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                    <CheckCircle size={18} color={GR} />
+                    <span style={{ fontSize: 13, color: T1 }}>Workout logged for today. Nice work.</span>
+                  </div>
+                )}
+                {!todayLogged && (
+                  <button onClick={() => toggleMark(setDayMarks, "rest", localDateStr())}
+                    style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, color: T2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                    😴 Take a rest day
+                  </button>
+                )}
+              </>
             )}
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 12 }}>
@@ -288,16 +313,17 @@ export function AthleteOS() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 5 }}>
                 {WEEK_PLAN.map((d) => {
                   const isToday = d.day === todayDay;
-                  const dayLogged = workouts.some((w) => {
-                    const wd = new Date(w.date).toLocaleDateString("en-US", { weekday: "short" }).toUpperCase().slice(0, 3);
-                    const sameWeek = new Date(w.date) >= weekStart;
-                    return wd === d.day && sameWeek;
-                  });
+                  const matchesCol = (dateStr) => {
+                    const wd = new Date(dateStr).toLocaleDateString("en-US", { weekday: "short" }).toUpperCase().slice(0, 3);
+                    return wd === d.day && new Date(dateStr) >= weekStart;
+                  };
+                  const dayLogged = workouts.some((w) => matchesCol(w.date));
+                  const colRest = d.type !== "Rest" && dayMarks.rest.some(matchesCol); // ad-hoc rest this week
                   return (
-                    <div key={d.day} style={{ position: "relative", background: isToday ? `${d.color}14` : GL, border: `1px solid ${isToday ? d.color + "55" : BD}`, borderRadius: 8, padding: "7px 3px", textAlign: "center", opacity: d.type === "Rest" ? 0.5 : 1 }}>
+                    <div key={d.day} style={{ position: "relative", background: isToday ? `${d.color}14` : GL, border: `1px solid ${isToday ? d.color + "55" : BD}`, borderRadius: 8, padding: "7px 3px", textAlign: "center", opacity: d.type === "Rest" || colRest ? 0.5 : 1 }}>
                       <div style={{ fontSize: 8, color: isToday ? d.color : T3, letterSpacing: 1, marginBottom: 3, fontWeight: isToday ? 700 : 400 }}>{d.day}</div>
-                      <div style={{ fontSize: 14, marginBottom: 3, lineHeight: 1 }}>{d.icon}</div>
-                      <div style={{ fontSize: 8.5, color: d.color, fontWeight: 600, lineHeight: 1.2 }}>{d.type}</div>
+                      <div style={{ fontSize: 14, marginBottom: 3, lineHeight: 1 }}>{colRest ? "😴" : d.icon}</div>
+                      <div style={{ fontSize: 8.5, color: colRest ? AM : d.color, fontWeight: 600, lineHeight: 1.2 }}>{colRest ? "Rest" : d.type}</div>
                       {dayLogged && <CheckCircle size={9} color={GR} style={{ position: "absolute", top: 3, right: 3 }} />}
                     </div>
                   );

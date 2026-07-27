@@ -32,7 +32,7 @@ export function buildWeekReview(deps = {}) {
     const parts = [];
     const sched = active.filter((h) => isScheduled(h, d));
     if (sched.length) parts.push(sched.filter((h) => isDone(h, d)).length / sched.length);
-    parts.push(workoutOn(d) || isRestDay(d) ? 1 : 0);
+    parts.push(workoutOn(d) || isRestDay(d, deps.restDays) ? 1 : 0);
     parts.push(mealsOn(d) ? 1 : 0);
     parts.push(journaledOn(d) ? 1 : 0);
     return parts.length ? (parts.reduce((s, x) => s + x, 0) / parts.length) * 100 : 0;

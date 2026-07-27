@@ -9,6 +9,7 @@ import { B0, B1, BD, T1, T2, T3, AC, GR, AM, RE } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
 import { buildWeekReview, suggestFocus } from "./weekReview.js";
 import { setFocus, dismissFocus, isoWeekKey, sanitizeFocus, isDismissed } from "./review.js";
+import { useDayMarks } from "./dayMarks.js";
 import { localDateStr } from "./dates.js";
 
 const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; };
@@ -19,10 +20,11 @@ export function WeeklyReview({ habits, onClose }) {
   const [entries] = useStorageState("journal_entries", []);
   const [purity] = useStorageState("purity_log", {});
   const [focusRaw, setFocusRaw] = useStorageState("weekly_focus", {});
+  const [dayMarks] = useDayMarks();
 
   const review = useMemo(
-    () => buildWeekReview({ habits, workouts, nutrition, entries, purity, ds: localDateStr() }),
-    [habits, workouts, nutrition, entries, purity]
+    () => buildWeekReview({ habits, workouts, nutrition, entries, purity, restDays: dayMarks.rest, ds: localDateStr() }),
+    [habits, workouts, nutrition, entries, purity, dayMarks.rest]
   );
 
   // The focus applies to the week ahead: on Sunday (a complete week) that's
