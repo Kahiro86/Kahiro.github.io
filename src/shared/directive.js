@@ -14,7 +14,10 @@ import { billsDueSoon } from "../modules/finance/bills.js";
 
 // WEEK_PLAN is ordered MON→SUN; JS getDay() is 0=Sun..6=Sat.
 const planFor = (ds) => WEEK_PLAN[(new Date(`${ds}T12:00:00`).getDay() + 6) % 7];
-export const isRestDay = (ds) => planFor(ds)?.type === "Rest";
+// A rest day is either the plan's scheduled rest, or one the user marked
+// ad-hoc (restDays: array or Set of YYYY-MM-DD).
+export const isRestDay = (ds, restDays) => planFor(ds)?.type === "Rest"
+  || (restDays instanceof Set ? restDays.has(ds) : Array.isArray(restDays) ? restDays.includes(ds) : false);
 
 // deps: { habits, trades, reviews, bills, workouts, ds?, mission?, scoreDelta? }
 export function buildDirective(deps = {}) {
@@ -78,7 +81,7 @@ export function buildDirective(deps = {}) {
       const d = new Date(`${ds}T12:00:00`); d.setDate(d.getDate() - i);
       const key = localDateStr(d);
       weekDates.push(key);
-      if (!isRestDay(key)) expected++;
+      if (!isRestDay(key, deps.restDays)) expected++;
     }
     const doneThisWeek = new Set(workouts.map((w) => w.date).filter((k) => weekDates.includes(k))).size;
     const behind = expected - doneThisWeek;

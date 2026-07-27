@@ -536,19 +536,25 @@ export function nutritionSeries(log, targets, days = 14) {
 }
 
 // A "healthy day": logged, score ≥ 70. The nutrition streak everything
-// else (XP, achievements) keys off.
-export function healthyStreaks(log, targets, today = localDateStr()) {
+// else (XP, achievements) keys off. Cheat days are streak-safe — passed
+// over so a planned cheat neither breaks the streak nor counts against it.
+export function healthyStreaks(log, targets, today = localDateStr(), cheatDays = []) {
+  const cheat = cheatDays instanceof Set ? cheatDays : new Set(Array.isArray(cheatDays) ? cheatDays : []);
   let current = 0;
-  for (let i = statusScore(log, targets, today) != null ? 0 : 1; i < 800; i++) {
-    const s = statusScore(log, targets, daysAgoStr(i));
+  for (let i = statusScore(log, targets, today) != null || cheat.has(today) ? 0 : 1; i < 800; i++) {
+    const ds = daysAgoStr(i);
+    if (cheat.has(ds)) continue; // cheat day: pass over, streak survives
+    const s = statusScore(log, targets, ds);
     if (s != null && s >= 70) current++;
     else break;
   }
   let best = 0, run = 0;
   for (let i = 799; i >= 0; i--) {
-    const s = statusScore(log, targets, daysAgoStr(i));
+    const ds = daysAgoStr(i);
+    if (cheat.has(ds)) continue; // cheat day: run carries across
+    const s = statusScore(log, targets, ds);
     if (s != null && s >= 70) { run++; if (run > best) best = run; }
-    else if (daysAgoStr(i) !== today) run = 0;
+    else if (ds !== today) run = 0;
   }
   return { current, best: Math.max(best, current) };
 }

@@ -54,6 +54,7 @@ const SCENARIOS = {
   corruptFinance: { "architect:finance_state": JSON.stringify(null) },
   corruptRoutines: { "architect:life_routines": JSON.stringify([{ id: "r1", name: "Morning", habitIds: null }]) },
   corruptJournal: { "architect:journal_entries": JSON.stringify("string-not-array") },
+  corruptDayMarks: { "architect:athlete_day_marks": JSON.stringify({ rest: "not-an-array", cheat: [null, 5, "bad-date", "2026-07-27"] }) },
   everythingNull: {
     "architect:habits": "null",
     "architect:ict_trades": "null",

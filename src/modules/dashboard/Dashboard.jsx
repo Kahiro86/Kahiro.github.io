@@ -25,6 +25,7 @@ import {
 } from "../../shared/habitEngine.js";
 import { buildNudges } from "../../shared/insights.js";
 import { buildDirective, isRestDay } from "../../shared/directive.js";
+import { useDayMarks } from "../../shared/dayMarks.js";
 import { freedomMath } from "../../shared/freedom.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
 import { scalingGate } from "../../shared/firm.js";
@@ -68,6 +69,9 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [tiAccounts] = useStorageState("ti_accounts", []);
   const [tiSettings] = useStorageState("ti_settings", {});
   const [workouts] = useStorageState("athlete_workouts", []);
+  const [dayMarks] = useDayMarks();
+  const restDays = dayMarks.rest, cheatDays = dayMarks.cheat;
+  const restS = new Set(restDays);
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [entries] = useStorageState("journal_entries", []);
   const [rawReviews] = useStorageState("ict_reviews", []);
@@ -123,7 +127,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     const parts = [];
     const sched = active.filter((h) => isScheduled(h, d));
     if (sched.length) parts.push(sched.filter((h) => isDone(h, d)).length / sched.length);
-    parts.push(workoutOn(d) || isRestDay(d) ? 1 : 0);
+    parts.push(workoutOn(d) || isRestDay(d, restDays) ? 1 : 0);
     parts.push(mealsOn(d) > 0 ? 1 : 0);
     parts.push(journaledOn(d) ? 1 : 0);
     return parts.length ? Math.round((parts.reduce((s, x) => s + x, 0) / parts.length) * 100) : 0;
@@ -135,8 +139,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   // ── 🧭 THE DIRECTIVE: the single most important thing to do now, ranked
   //    across every domain, with a reason. The coach on top of the mirror. ──
   const directive = useMemo(
-    () => buildDirective({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, workouts, ds, mission, scoreDelta }),
-    [habitsV2, trades, rawReviews, finance.bills, workouts, ds, mission, scoreDelta]
+    () => buildDirective({ habits: habitsV2, trades, reviews: rawReviews, bills: finance.bills, workouts, restDays, ds, mission, scoreDelta }),
+    [habitsV2, trades, rawReviews, finance.bills, workouts, restDays, ds, mission, scoreDelta]
   );
 
   // ── ⚠️ PRIORITY ALERTS: the urgent nudges only, max 3 (minus any the
@@ -154,10 +158,10 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       .filter((s) => s.days >= 2);
     // Workout streak (today pending never breaks it).
     let wo = 0;
-    for (let i = 0; i < 400; i++) { const d = daysAgoStr(i); if (workoutOn(d)) wo++; else if (i > 0) break; }
+    for (let i = 0; i < 400; i++) { const d = daysAgoStr(i); if (workoutOn(d)) wo++; else if (restS.has(d)) continue; else if (i > 0) break; }
     if (wo >= 2) out.push({ icon: "🏋️", label: "Workouts", days: wo });
     // Clean-eating streak.
-    const hs = healthyStreaks(nutrition, nTargets, ds).current;
+    const hs = healthyStreaks(nutrition, nTargets, ds, cheatDays).current;
     if (hs >= 2) out.push({ icon: "🥗", label: "Nutrition", days: hs });
     // Purity / clean-days streak.
     const pl = sanitizePurity(purity);
@@ -229,7 +233,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     const kcalPct = nTargets.kcal ? t.kcal / nTargets.kcal : 0;
     const calories = mealsOn(ds) === 0 ? "bad" : kcalPct >= 0.8 && kcalPct <= 1.15 ? "good" : "low";
     // Recovery: rest day or good sleep after training → good; otherwise moderate.
-    const recovery = (sleep === "good" && (isRestDay(ds) || workoutOn(ds))) ? "good" : sleep === "bad" ? "bad" : "low";
+    const recovery = (sleep === "good" && (isRestDay(ds, restDays) || workoutOn(ds))) ? "good" : sleep === "bad" ? "bad" : "low";
     const word = { good: "Good", low: "Low", bad: "Poor" };
     const rword = { good: "Excellent", low: "Moderate", bad: "Low" };
     return [
