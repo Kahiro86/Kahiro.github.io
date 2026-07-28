@@ -2,7 +2,7 @@
 // A modal library: search everything, browse by category, read an article.
 // Also the home for replaying the app tour and toggling Help Mode.
 import { useState, useEffect, useMemo } from "react";
-import { X, Search, ChevronRight, PlayCircle, HelpCircle, ArrowLeft } from "lucide-react";
+import { X, Search, ChevronRight, PlayCircle, HelpCircle, ArrowLeft, Check } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, GL, CY, PU, GR } from "./designTokens.js";
 import { HELP_CATEGORIES, HELP_ARTICLES, searchHelp } from "./help.js";
 
@@ -22,7 +22,7 @@ function ArticleBody({ blocks }) {
   );
 }
 
-export function HelpCenter({ onClose, onStartTour, helpMode, setHelpMode }) {
+export function HelpCenter({ onClose, onStartTour, helpMode, setHelpMode, checklist }) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("start");
   const [openId, setOpenId] = useState(null);
@@ -74,6 +74,28 @@ export function HelpCenter({ onClose, onStartTour, helpMode, setHelpMode }) {
                 <button onClick={() => setHelpMode(!helpMode)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 13px", background: helpMode ? `${GR}18` : GL, border: `1px solid ${helpMode ? GR + "55" : BD}`, borderRadius: 10, color: helpMode ? GR : T2, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><HelpCircle size={14} />Help Mode: {helpMode ? "On" : "Off"}</button>
               </div>
             </div>
+
+            {/* Getting-started checklist */}
+            {checklist && !searching && (
+              <div style={{ margin: "0 18px 12px", padding: "13px 15px", background: B0, border: `1px solid ${checklist.allDone ? GR + "55" : BD}`, borderRadius: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: T1, flex: 1 }}>{checklist.allDone ? "🎉 Setup complete — welcome aboard!" : "Getting started"}</div>
+                  <span style={{ fontSize: 11, fontFamily: "monospace", color: checklist.allDone ? GR : CY, fontWeight: 700 }}>{checklist.pct}%</span>
+                </div>
+                <div style={{ height: 5, borderRadius: 3, background: GL, overflow: "hidden", marginBottom: 11 }}>
+                  <div style={{ width: `${checklist.pct}%`, height: "100%", background: checklist.allDone ? GR : `linear-gradient(90deg,${CY},${PU})`, transition: "width 0.4s" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {checklist.items.map((it) => (
+                    <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                      <span style={{ width: 17, height: 17, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: it.done ? GR : "transparent", border: `1.5px solid ${it.done ? GR : BD}` }}>{it.done && <Check size={11} color="#000" />}</span>
+                      <span style={{ fontSize: 12, color: it.done ? T3 : T1, textDecoration: it.done ? "line-through" : "none", flex: 1 }}>{it.label}</span>
+                      {!it.done && <span style={{ fontSize: 10, color: T3 }}>{it.hint}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Category pills */}
             {!searching && (
