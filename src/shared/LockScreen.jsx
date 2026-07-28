@@ -6,8 +6,10 @@ import { useEffect, useState } from "react";
 import { ShieldCheck, Delete } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, GR, RE } from "./designTokens.js";
 import { getLock, verifyPin } from "./lock.js";
+import { useIdentity } from "./identity.jsx";
 
 export function LockScreen({ onUnlock }) {
+  const { appName } = useIdentity();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -50,7 +52,7 @@ export function LockScreen({ onUnlock }) {
         <div style={{ width: 46, height: 46, margin: "0 auto 12px", borderRadius: 14, background: `${CY}14`, border: `1px solid ${CY}44`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <ShieldCheck size={21} color={CY} />
         </div>
-        <div style={{ fontSize: 14, fontWeight: 800, color: T1, letterSpacing: 3 }}>KAHIRO</div>
+        <div style={{ fontSize: 14, fontWeight: 800, color: T1, letterSpacing: 3 }}>{appName.toUpperCase()}</div>
         <div style={{ fontSize: 11.5, color: error ? RE : T3, marginTop: 5, marginBottom: 18, minHeight: 16 }}>
           {error ? "Wrong PIN — try again" : "Enter your PIN to unlock"}
         </div>

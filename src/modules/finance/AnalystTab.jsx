@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Cpu, Activity, Compass, Check, AlertCircle, ArrowRight } from "lucide-react";
 import { BD, GL, T1, T2, T3, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
+import { useIdentity, ownerRef } from "../../shared/identity.jsx";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { callClaude } from "../../shared/anthropic.js";
 import { KAIZEN_COACH_PREAMBLE } from "../../shared/kaizen.js";
@@ -11,6 +12,8 @@ import { DoctrineTab } from "./DoctrineTab.jsx";
 const scoreColor = (n) => (n >= 80 ? GR : n >= 65 ? CY : n >= 50 ? AM : RE);
 
 export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive, trajStats, doctrine, setDoctrine, freedom }) {
+  const { appName, ownerName } = useIdentity();
+  const owner = ownerRef(ownerName);
   const coach = financeNarrative(health, trajStats, doctrine, freedom, fmtKES, budgets);
   const [analysis, setAnalysis] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +25,7 @@ export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive, 
       const srcLine = bySource.length ? bySource.map((s) => `${s.source} ${Math.round(s.pct)}%`).join(", ") : "none logged";
       const overBudget = budgets.filter((b) => +b.spent > +b.budget && +b.budget > 0).map((b) => b.cat);
       const reply = await callClaude({
-        system: `You are KAHIRO — a Kaizen personal-finance analyst for Irisu (Nairobi, Kenya; KES). ${KAIZEN_COACH_PREAMBLE}
+        system: `You are ${appName} — a Kaizen personal-finance analyst for ${owner} (Nairobi, Kenya; KES). ${KAIZEN_COACH_PREAMBLE}
 Analyze the numbers below. Be specific and data-driven. Identify: unnecessary/rising spending, income sources getting stronger or weaker, savings opportunities, risks, and diversification. Give practical, achievable recommendations that improve long-term stability — not generic advice. Under 320 words. Structure: Verdict · What's working · What to watch · This week's one small step.`,
         messages: [{
           role: "user",
@@ -140,7 +143,7 @@ Sub-scores: ${SUBSCORE_META.map((m) => `${m.label} ${Math.round(health.sub[m.key
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Cpu size={16} color={CY} />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>KAHIRO — Financial Analysis</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>{appName} — Financial Analysis</div>
               <div style={{ fontSize: 11, color: T3 }}>AI review of your habits, risks, and opportunities</div>
             </div>
           </div>

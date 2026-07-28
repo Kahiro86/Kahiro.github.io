@@ -2,12 +2,15 @@ import { useState } from "react";
 import { localDateStr } from "../../shared/dates.js";
 import { Cpu, ArrowUp, ArrowDown } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
+import { useIdentity, ownerRef } from "../../shared/identity.jsx";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { callClaude } from "../../shared/anthropic.js";
 import { PSYCH, GRADES } from "./constants.js";
 import { getStats, gcol } from "./helpers.js";
 
 export function TradingReports({ trades, balance }) {
+  const { appName, ownerName } = useIdentity();
+  const owner = ownerRef(ownerName);
   const [period, setPeriod] = useState("week");
   const [aiReport, setAiReport] = useState("");
   const [ldReport, setLdReport] = useState(false);
@@ -47,7 +50,7 @@ export function TradingReports({ trades, balance }) {
     setLdReport(true); setAiReport("");
     try {
       const reply = await callClaude({
-        system: `You are KAHIRO — master ICT trading coach with a Kaizen mindset, generating a performance report for Irisu (Nairobi). Use expert ICT methodology. Be direct, data-driven, specific. Format as a structured report with clear sections, under 400 words. Frame all progress against the PRIOR period — Irisu's own past self, never other traders. Celebrate showing up, consistency, and any 1% improvement. Treat weak periods as learning, not failure — no guilt. Close with exactly ONE small, achievable focus for the next period.`,
+        system: `You are ${appName} — master ICT trading coach with a Kaizen mindset, generating a performance report for ${owner} (Nairobi). Use expert ICT methodology. Be direct, data-driven, specific. Format as a structured report with clear sections, under 400 words. Frame all progress against the PRIOR period — ${owner}'s own past self, never other traders. Celebrate showing up, consistency, and any 1% improvement. Treat weak periods as learning, not failure — no guilt. Close with exactly ONE small, achievable focus for the next period.`,
         messages: [{
           role: "user",
           content: `Generate a ${period} trading performance report:
@@ -88,7 +91,7 @@ Include: Performance verdict, what went right, what to fix, specific action item
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Reports & Scorecards</div>
-          <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Period analysis · Rolling scorecards · KAHIRO review</div>
+          <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Period analysis · Rolling scorecards · {appName} review</div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {[{ v: "today", l: "Today" }, { v: "week", l: "7 Days" }, { v: "month", l: "30 Days" }].map((p) => (
@@ -159,7 +162,7 @@ Include: Performance verdict, what went right, what to fix, specific action item
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Cpu size={16} color={CY} />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>KAHIRO {period === "today" ? "Daily" : period === "week" ? "Weekly" : "Monthly"} Report</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>{appName} {period === "today" ? "Daily" : period === "week" ? "Weekly" : "Monthly"} Report</div>
               <div style={{ fontSize: 11, color: T3 }}>AI-generated performance analysis and action plan</div>
             </div>
           </div>

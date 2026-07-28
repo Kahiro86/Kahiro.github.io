@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
+import { IdentityProvider } from "./shared/identity.jsx";
 import { initSync } from "./shared/sync.js";
 
 // Cloud sync engine: no-op until the user connects a Supabase project in
@@ -14,7 +15,9 @@ initSync();
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <IdentityProvider>
+        <App />
+      </IdentityProvider>
     </ErrorBoundary>
   </StrictMode>
 );
