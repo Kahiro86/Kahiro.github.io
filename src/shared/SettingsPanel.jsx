@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Check, AlertCircle, Download, Upload, ShieldAlert, Cloud, CloudOff, RefreshCw } from "lucide-react";
+import { X, Check, AlertCircle, Download, Upload, ShieldAlert, Cloud, CloudOff, RefreshCw, Share2, Link2, Smartphone } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "./designTokens.js";
+import { copyAppLink, downloadCleanCopy, shareAppLink, appLink } from "./cleanCopy.js";
 import { getApiKey, setApiKey, callClaude } from "./anthropic.js";
 import { storage } from "./storage.js";
 import { localDateStr } from "./dates.js";
@@ -29,7 +30,18 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const [dataMsg, setDataMsg] = useState(null); // { text, tone }
   const [armErase, setArmErase] = useState(false);
   const [armLegacy, setArmLegacy] = useState(false);
+  const [shareMsg, setShareMsg] = useState(null); // { text, tone }
   const fileRef = useRef(null);
+
+  const onCopyLink = async () => {
+    const { ok, link } = await copyAppLink();
+    setShareMsg(ok ? { text: "Link copied — send it to anyone. They'll open a fresh, empty app.", tone: GR } : { text: link, tone: T2 });
+  };
+  const onDownloadCopy = async () => {
+    try { await downloadCleanCopy(); setShareMsg({ text: "Clean app file downloaded — share Kahiro.html. It contains none of your data.", tone: GR }); }
+    catch (e) { setShareMsg({ text: e?.message || "Couldn't create the copy.", tone: RE }); }
+  };
+  const onShare = async () => { const ok = await shareAppLink(); if (!ok) onCopyLink(); };
 
   // ── Account & Cloud Sync state ─────────────────────────────────────
   const cfg0 = getSyncConfig();
@@ -476,6 +488,27 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importData(f); e.target.value = ""; }} />
         </div>
         {dataMsg && <div style={{ fontSize: 12, color: dataMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{dataMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        {/* ── Share a clean copy ─────────────────────────────────────── */}
+        <div style={{ fontSize: 11, color: CY, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Share a Clean Copy</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
+          Give the app to someone else — a friend, your brother — with none of your data. The app holds nothing personal; whoever opens it starts on a completely fresh, empty install with their own private data. Share the link (they can Add&nbsp;to&nbsp;Home&nbsp;Screen) or send them the app file.
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          {typeof navigator !== "undefined" && navigator.share
+            ? <button onClick={onShare} style={btn({ borderColor: `${CY}44`, color: CY })}><Share2 size={13} />Share app</button>
+            : <button onClick={onCopyLink} style={btn({ borderColor: `${CY}44`, color: CY })}><Link2 size={13} />Copy app link</button>}
+          <button onClick={onDownloadCopy} style={btn({ borderColor: `${GR}44`, color: GR })}><Download size={13} />Download clean copy</button>
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 11.5, color: T3, lineHeight: 1.55, marginBottom: shareMsg ? 8 : 4 }}>
+          <Smartphone size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>To install like a real app: open the link in a browser, then <b style={{ color: T2 }}>Add to Home Screen</b> (Android/iOS) — it runs full-screen and offline. A signed Android APK / Play Store build is possible too; see <b style={{ color: T2 }}>docs/ANDROID.md</b> in the project.</span>
+        </div>
+        {shareMsg && <div style={{ fontSize: 11.5, color: shareMsg.tone, marginBottom: 10, lineHeight: 1.5, wordBreak: "break-all" }}>{shareMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
         {/* Legacy trade data left over from before the Trading Intelligence
             rebuild. The new journal (The Firm → Trading) starts fresh; these old
