@@ -22,7 +22,7 @@ create policy "own rows only" on kv
   with check (auth.uid() = user_id);
 alter publication supabase_realtime add table kv;`;
 
-export function SettingsPanel({ onClose }) {
+export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setHelpMode }) {
   const [key, setKey] = useState(getApiKey());
   const [status, setStatus] = useState(null); // null | "testing" | "ok" | "error"
   const [errorMsg, setErrorMsg] = useState("");
@@ -265,6 +265,28 @@ export function SettingsPanel({ onClose }) {
           <div style={{ fontSize: 15, fontWeight: 700, color: T1 }}>Settings</div>
           <button onClick={onClose} aria-label="Close settings" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><X size={16} /></button>
         </div>
+
+        {(onStartTour || onOpenHelp) && (
+          <>
+            <div style={{ fontSize: 11, color: CY, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Help &amp; Guide</div>
+            <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
+              New here, or showing someone else? Replay the guided tour, browse the Help Centre, or keep Help Mode on to see (?) tips beside key features.
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+              {onStartTour && <button onClick={() => { onStartTour(); onClose(); }} style={btn({ background: `linear-gradient(135deg,${CY},${PU})`, border: "none", color: "#000", fontWeight: 700 })}>Replay app tour</button>}
+              {onOpenHelp && <button onClick={onOpenHelp} style={btn()}>Open Help Centre</button>}
+            </div>
+            {setHelpMode && (
+              <button onClick={() => setHelpMode(!helpMode)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 13px", background: GL, border: `1px solid ${helpMode ? GR + "55" : BD}`, borderRadius: 9, color: T1, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>
+                <span>Help Mode {helpMode ? "· showing tips" : ""}</span>
+                <span style={{ width: 38, height: 21, borderRadius: 11, background: helpMode ? GR : BD, position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+                  <span style={{ position: "absolute", top: 2, left: helpMode ? 19 : 2, width: 17, height: 17, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+                </span>
+              </button>
+            )}
+            <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+          </>
+        )}
 
         <div style={{ fontSize: 11, color: CY, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Anthropic API Key</div>
         <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>

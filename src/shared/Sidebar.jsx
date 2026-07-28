@@ -43,7 +43,7 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
                 const on = active === id;
                 return (
                   <button
-                    key={id} onClick={() => onNavigate(id)} title={isCollapsed ? label : ""}
+                    key={id} onClick={() => onNavigate(id)} title={isCollapsed ? label : ""} data-tour={`nav-${id}`}
                     style={{ display: "flex", alignItems: "center", gap: 10, padding: isCollapsed ? "10px 16px" : "9px 11px", borderRadius: 10, border: "none", cursor: "pointer", background: on ? `linear-gradient(135deg,${CY}16,${PU}16)` : "transparent", color: on ? CY : T2, borderLeft: `2px solid ${on ? CY : "transparent"}`, fontSize: 12.5, fontWeight: on ? 600 : 400, textAlign: "left", transition: "all 0.15s", whiteSpace: "nowrap", width: "100%", fontFamily: "inherit" }}
                     onMouseEnter={(e) => { if (!on) { e.currentTarget.style.background = GL; e.currentTarget.style.color = T1; } }}
                     onMouseLeave={(e) => { if (!on) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T2; } }}
