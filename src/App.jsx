@@ -30,6 +30,9 @@ import { Header } from "./shared/Header.jsx";
 import { AIPanel } from "./shared/AIPanel.jsx";
 import { SettingsPanel } from "./shared/SettingsPanel.jsx";
 import { getApiKey } from "./shared/anthropic.js";
+import { GuidedTour } from "./shared/GuidedTour.jsx";
+import { HelpCenter } from "./shared/HelpCenter.jsx";
+import { TOUR_OVERVIEW } from "./shared/help.js";
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -42,6 +45,21 @@ export default function App() {
   const [aiOpen, setAiOpen] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 820 && !!getApiKey() : false));
   const [showSettings, setShowSettings] = useState(false);
   const [reviewSignal, setReviewSignal] = useState(0); // ticks to open Week in Review
+  // Onboarding & help layer: a replayable spotlight tour, a searchable Help
+  // Centre, and Help Mode (persisted, shown app-wide via (?) markers).
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [tourOn, setTourOn] = useState(false);
+  const [helpMode, setHelpMode] = useStorageState("help_mode", false);
+  const [onboard, setOnboard, onboardLoaded] = useStorageState("onboarding", {});
+  // First launch: auto-run the app tour once, then never again unasked.
+  useEffect(() => {
+    if (onboardLoaded && !onboard?.overviewSeen) {
+      const t = setTimeout(() => setTourOn(true), 700);
+      return () => clearTimeout(t);
+    }
+  }, [onboardLoaded, onboard]);
+  const endTour = () => { setTourOn(false); setOnboard((o) => ({ ...(o && typeof o === "object" ? o : {}), overviewSeen: true })); };
+  const startTour = () => { setHelpOpen(false); setModule("dashboard"); setTourOn(true); };
   // Nav that also understands non-module destinations (e.g. the backup nudge
   // links to "settings", which is a panel, not a module) and compound ids
   // like "firm:wealth" — a merged module's outer shell plus which of its
@@ -204,7 +222,7 @@ export default function App() {
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
         <AmbientBackground module={module} animate={!isMobile} />
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
@@ -233,7 +251,9 @@ export default function App() {
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
         <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
-        {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+        {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
+        {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} />}
+        {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
       </div>
       </ToastProvider>
     );
@@ -248,7 +268,7 @@ export default function App() {
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
         <div key={module} style={{ flex: 1, overflowY: module === "firm" ? "hidden" : "auto", overflow: module === "firm" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
