@@ -35,6 +35,8 @@ import { HelpCenter } from "./shared/HelpCenter.jsx";
 import { WhatsNew } from "./shared/WhatsNew.jsx";
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
+import { useIdentity } from "./shared/identity.jsx";
+import { NameYourSystem } from "./shared/NameYourSystem.jsx";
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -56,13 +58,17 @@ export default function App() {
   const [onboard, setOnboard, onboardLoaded] = useStorageState("onboarding", {});
   const [wnSeen, setWnSeen, wnLoaded] = useStorageState("whatsnew_seen", "");
   const patchOnboard = useCallback((patch) => setOnboard((o) => ({ ...(o && typeof o === "object" ? o : {}), ...patch })), [setOnboard]);
-  // First launch: auto-run the app tour once, then never again unasked.
+  // Personalizable identity (app name / owner name). The "Name your system"
+  // card shows first on a fresh install; the tour waits until it's answered.
+  const identity = useIdentity();
+  const showNaming = identity.loaded && !identity.configured;
+  // First launch: auto-run the app tour once (after naming), then never again.
   useEffect(() => {
-    if (onboardLoaded && !onboard?.overviewSeen) {
+    if (onboardLoaded && identity.loaded && identity.configured && !onboard?.overviewSeen) {
       const t = setTimeout(() => setTourOn(true), 700);
       return () => clearTimeout(t);
     }
-  }, [onboardLoaded, onboard]);
+  }, [onboardLoaded, onboard, identity.loaded, identity.configured]);
   // What's New: once per version bump, but only for returning users — a new
   // user's first-run tour already covers it (endTour marks it seen).
   useEffect(() => {
@@ -243,7 +249,7 @@ export default function App() {
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
         <AmbientBackground module={module} animate={!isMobile} />
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
@@ -275,6 +281,7 @@ export default function App() {
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
         {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
         {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
+        {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
         {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
       </div>
       </ToastProvider>
@@ -290,7 +297,7 @@ export default function App() {
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
         <div key={module} style={{ flex: 1, overflowY: module === "firm" ? "hidden" : "auto", overflow: module === "firm" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
         </div>
@@ -305,6 +312,7 @@ export default function App() {
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
       {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
       {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
+      {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
     </div>
     </ToastProvider>

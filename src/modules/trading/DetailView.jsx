@@ -1,12 +1,15 @@
 import { useState, useRef } from "react";
 import { ChevronLeft, Edit3, ExternalLink, Cpu, Check, X } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, OR } from "../../shared/designTokens.js";
+import { useIdentity, ownerRef } from "../../shared/identity.jsx";
 import { callClaude } from "../../shared/anthropic.js";
 import { MACRO_CONFIG, SILVER_BULLET_CONFIG, CHECKLIST } from "./constants.js";
 import { calcPnl, gcol, ocol } from "./helpers.js";
 import { checklistEdge } from "./checklists.js";
 
 export function DetailView({ trade, trades = [], onBack, onEdit }) {
+  const { appName, ownerName } = useIdentity();
+  const owner = ownerRef(ownerName);
   const [aiReview, setAiReview] = useState("");
   const [ldState, setLdState] = useState(false);
   const loadingRef = useRef(false);
@@ -33,7 +36,7 @@ export function DetailView({ trade, trades = [], onBack, onEdit }) {
         .map((e) => ({ item: e.text, winRateWhenChecked: e.checkedWr, winRateWhenSkipped: e.skippedWr, timesChecked: e.checkedN, timesSkipped: e.skippedN }));
 
       const reply = await callClaude({
-        system: `You are KAHIRO — master ICT trading coach with a Kaizen mindset. Analyze this trade from Irisu (Nairobi, Kenya) on a FundedNext $15,000 challenge. Use expert ICT methodology. Be direct, specific, under 320 words. Structure your review around: (1) how the COMPLETED PRE-TRADE CHECKLIST lines up with the outcome — call out any mandatory step that was skipped and whether that skip pattern shows up on losses; (2) emotional discipline before vs after, and any mistakes logged; (3) which of Irisu's habits are becoming a real edge. Reference actual ICT concepts and praise real strengths. Be compassionate about losses — they are tuition, not failure. Measure this trade against Irisu's OWN past process, not perfection. End with the ONE smallest Kaizen adjustment to apply on the very next trade. No guilt.`,
+        system: `You are ${appName} — master ICT trading coach with a Kaizen mindset. Analyze this trade from ${owner} (Nairobi, Kenya) on a FundedNext $15,000 challenge. Use expert ICT methodology. Be direct, specific, under 320 words. Structure your review around: (1) how the COMPLETED PRE-TRADE CHECKLIST lines up with the outcome — call out any mandatory step that was skipped and whether that skip pattern shows up on losses; (2) emotional discipline before vs after, and any mistakes logged; (3) which of ${owner}'s habits are becoming a real edge. Reference actual ICT concepts and praise real strengths. Be compassionate about losses — they are tuition, not failure. Measure this trade against ${owner}'s OWN past process, not perfection. End with the ONE smallest Kaizen adjustment to apply on the very next trade. No guilt.`,
         messages: [{
           role: "user",
           content: `Analyze this trade:\n${JSON.stringify({
@@ -226,7 +229,7 @@ export function DetailView({ trade, trades = [], onBack, onEdit }) {
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <Cpu size={14} color={CY} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: CY }}>KAHIRO — Expert ICT Trade Review</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: CY }}>{appName} — Expert ICT Trade Review</div>
               <div style={{ fontSize: 10.5, color: T3 }}>Master ICT methodology analysis · AI coaching</div>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { Cpu, X, Send, KeyRound } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, PU, GR, AM } from "./designTokens.js";
 import { callClaude, getApiKey } from "./anthropic.js";
 import { KAIZEN_COACH_PREAMBLE } from "./kaizen.js";
+import { useIdentity, ownerRef } from "./identity.jsx";
 
 // Live cross-module snapshot — every number the model sees is real user data.
 const contextBlock = (ctx, habits) => {
@@ -18,7 +19,7 @@ const contextBlock = (ctx, habits) => {
   ].filter(Boolean).join("\n");
 };
 
-const SYSTEM_PROMPT = (ctx, habits) => `You are KAHIRO — elite AI operating system for Irisu (based in Nairobi, Kenya). Master ICT and hybrid athlete expertise.
+const SYSTEM_PROMPT = (ctx, habits, appName, owner) => `You are ${appName} — elite AI operating system for ${owner} (based in Nairobi, Kenya). Master ICT and hybrid athlete expertise.
 
 ${KAIZEN_COACH_PREAMBLE}
 
@@ -30,6 +31,7 @@ SCHEDULE: Afternoon/evening shift 1PM-12:30AM EAT. Morning window after 9:30AM.
 STYLE: Calm, supportive, direct, data-driven. Reference real ICT concepts and training physiology, but favor the smallest sustainable step. Under 250 words. No filler, no guilt.`;
 
 export function AIPanel({ onClose, onOpenSettings, ctx, habits = [], mobile }) {
+  const { appName, ownerName } = useIdentity();
   // Re-read on every render (cheap — one localStorage.getItem) so saving the
   // key in Settings and returning here reflects immediately, with no event
   // wiring needed between the two.
@@ -38,7 +40,7 @@ export function AIPanel({ onClose, onOpenSettings, ctx, habits = [], mobile }) {
   // current and never claims anything the data can't back.
   const t = ctx?.tradingStats || {};
   const doneHabits = habits.filter((h) => h.done).length;
-  const greeting = `KAHIRO online.\n\n→ Trading: ${t.total || 0} trade${(t.total || 0) === 1 ? "" : "s"} · ${t.wr || 0}% WR · Net $${(t.totalPnl || 0).toLocaleString()}\n→ Training: ${ctx?.sessionsWk || 0} session${(ctx?.sessionsWk || 0) === 1 ? "" : "s"} this week${ctx?.workedToday ? " · trained today ✓" : ""}\n→ Finance: net worth KES ${Math.round(ctx?.netWorth || 0).toLocaleString()} · passive KES ${Math.round(ctx?.monthlyPassive || 0).toLocaleString()}/mo\n→ Habits: ${doneHabits}/${habits.length} today\n\n1% better than yesterday is enough. What's one small thing we can improve today?`;
+  const greeting = `${appName} online.\n\n→ Trading: ${t.total || 0} trade${(t.total || 0) === 1 ? "" : "s"} · ${t.wr || 0}% WR · Net $${(t.totalPnl || 0).toLocaleString()}\n→ Training: ${ctx?.sessionsWk || 0} session${(ctx?.sessionsWk || 0) === 1 ? "" : "s"} this week${ctx?.workedToday ? " · trained today ✓" : ""}\n→ Finance: net worth KES ${Math.round(ctx?.netWorth || 0).toLocaleString()} · passive KES ${Math.round(ctx?.monthlyPassive || 0).toLocaleString()}/mo\n→ Habits: ${doneHabits}/${habits.length} today\n\n1% better than yesterday is enough. What's one small thing we can improve today?`;
 
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
@@ -57,7 +59,7 @@ export function AIPanel({ onClose, onOpenSettings, ctx, habits = [], mobile }) {
     setLoading(true);
     try {
       const reply = await callClaude({
-        system: SYSTEM_PROMPT(ctx, habits),
+        system: SYSTEM_PROMPT(ctx, habits, appName, ownerRef(ownerName)),
         messages: [{ role: "assistant", content: greeting }]
           .concat(msgs.map((m) => ({ role: m.role, content: m.content })))
           .concat([{ role: "user", content: msg }]),
@@ -80,7 +82,7 @@ export function AIPanel({ onClose, onOpenSettings, ctx, habits = [], mobile }) {
           <Cpu size={17} color={CY} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 2.5 }}>KAHIRO</div>
+          <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 2.5 }}>{appName.toUpperCase()}</div>
           <div style={{ fontSize: 10, color: hasKey ? GR : AM, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
             <span style={{ width: 5, height: 5, background: hasKey ? GR : AM, borderRadius: "50%", display: "inline-block", boxShadow: `0 0 6px ${hasKey ? GR : AM}` }} />
             {hasKey ? "LIVE DATA · KAIZEN COACH" : "NOT ACTIVATED"}
@@ -96,7 +98,7 @@ export function AIPanel({ onClose, onOpenSettings, ctx, habits = [], mobile }) {
           <div style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
             <KeyRound size={15} color={AM} style={{ flexShrink: 0, marginTop: 1 }} />
             <div style={{ fontSize: 12, color: T2, lineHeight: 1.6 }}>
-              KAHIRO isn't activated yet. Add a personal Anthropic API key (stored only on this device) to enable the coach, AI reviews, and reports.
+              {appName} isn't activated yet. Add a personal Anthropic API key (stored only on this device) to enable the coach, AI reviews, and reports.
             </div>
           </div>
           <button onClick={onOpenSettings}
@@ -141,7 +143,7 @@ export function AIPanel({ onClose, onOpenSettings, ctx, habits = [], mobile }) {
         <input
           value={input} onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder={hasKey ? "Query KAHIRO..." : "Add an API key to chat"}
+          placeholder={hasKey ? `Query ${appName}...` : "Add an API key to chat"}
           disabled={!hasKey}
           style={{ flex: 1, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "9px 12px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", opacity: hasKey ? 1 : 0.5 }}
         />

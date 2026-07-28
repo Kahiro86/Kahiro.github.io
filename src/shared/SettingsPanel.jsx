@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { X, Check, AlertCircle, Download, Upload, ShieldAlert, Cloud, CloudOff, RefreshCw, Share2, Link2, Smartphone } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "./designTokens.js";
 import { copyAppLink, downloadCleanCopy, shareAppLink, appLink } from "./cleanCopy.js";
+import { useIdentity, DEFAULT_APP_NAME } from "./identity.jsx";
 import { getApiKey, setApiKey, callClaude } from "./anthropic.js";
 import { storage } from "./storage.js";
 import { localDateStr } from "./dates.js";
@@ -31,6 +32,14 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const [armErase, setArmErase] = useState(false);
   const [armLegacy, setArmLegacy] = useState(false);
   const [shareMsg, setShareMsg] = useState(null); // { text, tone }
+
+  const identity = useIdentity();
+  const [idApp, setIdApp] = useState(identity.appName);
+  const [idOwner, setIdOwner] = useState(identity.ownerName);
+  const [idMsg, setIdMsg] = useState(null);
+  const idInput = { width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
+  const saveIdentity = () => { identity.save({ appName: idApp, ownerName: idOwner }); setIdApp(identity.appName); setIdMsg({ text: "Saved. Your name is now used across the app.", tone: GR }); };
+  const resetIdentity = () => { identity.reset(); setIdApp(DEFAULT_APP_NAME); setIdOwner(""); setIdMsg({ text: "Reset to default.", tone: T2 }); };
   const fileRef = useRef(null);
 
   const onCopyLink = async () => {
@@ -277,6 +286,21 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
           <div style={{ fontSize: 15, fontWeight: 700, color: T1 }}>Settings</div>
           <button onClick={onClose} aria-label="Close settings" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><X size={16} /></button>
         </div>
+
+        {/* ── Identity ──────────────────────────────────────────────── */}
+        <div style={{ fontSize: 11, color: CY, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Identity</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>Name the app and yourself. Used across the header, sidebar, lock screen, reports and the browser tab.</div>
+        <label style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase", display: "block", marginBottom: 5 }}>App name</label>
+        <input value={idApp} onChange={(e) => setIdApp(e.target.value.slice(0, 32))} maxLength={32} placeholder={DEFAULT_APP_NAME} style={{ ...idInput, marginBottom: 11 }} />
+        <label style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase", display: "block", marginBottom: 5 }}>Your name <span style={{ textTransform: "none", letterSpacing: 0, color: T3 }}>(optional)</span></label>
+        <input value={idOwner} onChange={(e) => setIdOwner(e.target.value.slice(0, 40))} maxLength={40} placeholder="e.g. Alex" style={{ ...idInput, marginBottom: 12 }} />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={saveIdentity} style={btn({ background: `linear-gradient(135deg,${CY},${PU})`, border: "none", color: "#000", fontWeight: 700 })}>Save</button>
+          <button onClick={resetIdentity} style={btn()}>Reset to default</button>
+        </div>
+        {idMsg && <div style={{ fontSize: 12, color: idMsg.tone, marginTop: 8, lineHeight: 1.5 }}>{idMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
         {(onStartTour || onOpenHelp) && (
           <>

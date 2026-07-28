@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Cpu, FileText, ArrowUp, ArrowDown } from "lucide-react";
 import { BD, GL, T1, T2, T3, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
+import { useIdentity, ownerRef } from "../../shared/identity.jsx";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { DonutChart, ChartLegend } from "../../shared/charts.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
@@ -29,6 +30,8 @@ function monthKeysBack(n, offset = 0) {
 }
 
 export function FinanceReports({ income, incomeStats, health, fmtKES, budgets, totalSpent, efBal, savBal, totalInvested, monthlyPassive, personalDebt, trades, tradingStats }) {
+  const { appName, ownerName } = useIdentity();
+  const owner = ownerRef(ownerName);
   const [period, setPeriod] = useState("month");
   const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,7 +73,7 @@ export function FinanceReports({ income, incomeStats, health, fmtKES, budgets, t
     setLoading(true); setSummary("");
     try {
       const reply = await callClaude({
-        system: `You are KAHIRO — a Kaizen personal-finance analyst for Irisu (Nairobi, KES). ${KAIZEN_COACH_PREAMBLE}
+        system: `You are ${appName} — a Kaizen personal-finance analyst for ${owner} (Nairobi, KES). ${KAIZEN_COACH_PREAMBLE}
 Write a concise ${cfg.l} financial report. Sections: Executive summary · Income · Cash flow · What improved vs the previous period · Risks/watch-outs · Recommendations for next period (each a small, achievable step). Under 380 words. Measure against the prior period, never other people.`,
         messages: [{
           role: "user",
@@ -182,7 +185,7 @@ Financial health score: ${health.overall}/100 (${health.band})`,
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Cpu size={16} color={CY} />
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>KAHIRO {cfg.l} Executive Summary</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: CY }}>{appName} {cfg.l} Executive Summary</div>
               <div style={{ fontSize: 11, color: T3 }}>AI-generated report with Kaizen recommendations</div>
             </div>
           </div>

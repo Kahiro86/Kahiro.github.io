@@ -1,8 +1,10 @@
 import { Cpu, ChevronRight, ChevronLeft, Settings, X } from "lucide-react";
 import { B1, BD, T1, T2, T3, GL, CY, PU, AC2 } from "./designTokens.js";
 import { NAV, NAV_SECTIONS } from "./nav.js";
+import { useIdentity } from "./identity.jsx";
 
 export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSettings, overlay }) {
+  const { appName } = useIdentity();
   // In overlay (mobile drawer) mode the sidebar is always expanded and
   // floats above content; the toggle becomes a close button.
   const isCollapsed = overlay ? false : collapsed;
@@ -17,7 +19,7 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
         </div>
         {!isCollapsed && (
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 3, whiteSpace: "nowrap" }}>KAHIRO</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{appName.toUpperCase()}</div>
             <div style={{ fontSize: 8.5, color: T3, letterSpacing: 2 }}>KAIZEN OS v3</div>
           </div>
         )}

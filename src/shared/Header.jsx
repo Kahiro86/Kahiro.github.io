@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import { Flame, Cpu, Menu, HelpCircle } from "lucide-react";
+import { Flame, Cpu, Menu, HelpCircle, Settings } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, AM, AC, AC2 } from "./designTokens.js";
 import { getActiveKillzone, getEATTimeStr } from "../modules/trading/timezone.js";
 import { NAV } from "./nav.js";
 import { Meter } from "./ui.jsx";
 import { CAT_LABEL } from "./xpEngine.js";
 import { NotificationCenter } from "./NotificationCenter.jsx";
+import { useIdentity } from "./identity.jsx";
 
 const CAT_COLOR = { life: GR, trading: CY, fitness: PU, finance: AM, faith: "#9C9C9C", mind: "#B8B8B8", awards: AM };
 
-export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigate, onOpenHelp, streak = 0, xp = 0, level = 1, xpTitle = "", pctToNext = 0, toNext = 0, xpToday = 0, xpTodayByCat = {} }) {
+export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigate, onOpenHelp, onOpenSettings, streak = 0, xp = 0, level = 1, xpTitle = "", pctToNext = 0, toNext = 0, xpToday = 0, xpTodayByCat = {} }) {
+  const { appName } = useIdentity();
   const label = NAV.find((n) => n.id === module)?.label || "Command Center";
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
@@ -52,7 +54,12 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
             <HelpCircle size={15} />
           </button>
         )}
-        <button onClick={onAIToggle} aria-label="KAHIRO AI" style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${aiOpen ? CY + "55" : BD}`, cursor: "pointer", background: aiOpen ? `linear-gradient(135deg,${CY}22,${PU}22)` : GL, color: aiOpen ? CY : T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {onOpenSettings && (
+          <button onClick={onOpenSettings} aria-label="Settings" style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${BD}`, cursor: "pointer", background: GL, color: T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Settings size={15} />
+          </button>
+        )}
+        <button onClick={onAIToggle} aria-label={`${appName} AI`} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${aiOpen ? CY + "55" : BD}`, cursor: "pointer", background: aiOpen ? `linear-gradient(135deg,${CY}22,${PU}22)` : GL, color: aiOpen ? CY : T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Cpu size={15} />
         </button>
       </div>
@@ -128,8 +135,13 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
           <HelpCircle size={15} />
         </button>
       )}
-      <button onClick={onAIToggle} style={{ height: 34, padding: "0 13px", borderRadius: 10, border: `1px solid ${aiOpen ? CY + "55" : BD}`, cursor: "pointer", background: aiOpen ? `linear-gradient(135deg,${CY}22,${PU}22)` : GL, color: aiOpen ? CY : T2, fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s", fontFamily: "inherit" }}>
-        <Cpu size={13} />KAHIRO
+      {onOpenSettings && (
+        <button onClick={onOpenSettings} aria-label="Settings" title="Settings" style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${BD}`, cursor: "pointer", background: GL, color: T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Settings size={15} />
+        </button>
+      )}
+      <button onClick={onAIToggle} title={`${appName} AI`} style={{ height: 34, padding: "0 13px", borderRadius: 10, border: `1px solid ${aiOpen ? CY + "55" : BD}`, cursor: "pointer", background: aiOpen ? `linear-gradient(135deg,${CY}22,${PU}22)` : GL, color: aiOpen ? CY : T2, fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+        <Cpu size={13} />{appName}
       </button>
     </div>
   );
