@@ -32,7 +32,9 @@ import { SettingsPanel } from "./shared/SettingsPanel.jsx";
 import { getApiKey } from "./shared/anthropic.js";
 import { GuidedTour } from "./shared/GuidedTour.jsx";
 import { HelpCenter } from "./shared/HelpCenter.jsx";
+import { WhatsNew } from "./shared/WhatsNew.jsx";
 import { TOUR_OVERVIEW } from "./shared/help.js";
+import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -49,8 +51,11 @@ export default function App() {
   // Centre, and Help Mode (persisted, shown app-wide via (?) markers).
   const [helpOpen, setHelpOpen] = useState(false);
   const [tourOn, setTourOn] = useState(false);
+  const [wnOpen, setWnOpen] = useState(false);
   const [helpMode, setHelpMode] = useStorageState("help_mode", false);
   const [onboard, setOnboard, onboardLoaded] = useStorageState("onboarding", {});
+  const [wnSeen, setWnSeen, wnLoaded] = useStorageState("whatsnew_seen", "");
+  const patchOnboard = useCallback((patch) => setOnboard((o) => ({ ...(o && typeof o === "object" ? o : {}), ...patch })), [setOnboard]);
   // First launch: auto-run the app tour once, then never again unasked.
   useEffect(() => {
     if (onboardLoaded && !onboard?.overviewSeen) {
@@ -58,7 +63,20 @@ export default function App() {
       return () => clearTimeout(t);
     }
   }, [onboardLoaded, onboard]);
-  const endTour = () => { setTourOn(false); setOnboard((o) => ({ ...(o && typeof o === "object" ? o : {}), overviewSeen: true })); };
+  // What's New: once per version bump, but only for returning users — a new
+  // user's first-run tour already covers it (endTour marks it seen).
+  useEffect(() => {
+    if (onboardLoaded && wnLoaded && onboard?.overviewSeen && wnSeen !== WHATS_NEW.version) setWnOpen(true);
+  }, [onboardLoaded, wnLoaded, onboard, wnSeen]);
+  const closeWhatsNew = () => { setWnOpen(false); setWnSeen(WHATS_NEW.version); };
+  // Light interaction flags that feed the getting-started checklist.
+  useEffect(() => { if (helpOpen && onboardLoaded && !onboard?.helpBrowsed) patchOnboard({ helpBrowsed: true }); }, [helpOpen, onboardLoaded]); // eslint-disable-line
+  useEffect(() => {
+    if (!onboardLoaded || module === "dashboard") return;
+    const ex = Array.isArray(onboard?.explored) ? onboard.explored : [];
+    if (!ex.includes(module)) patchOnboard({ explored: [...ex, module] });
+  }, [module, onboardLoaded]); // eslint-disable-line
+  const endTour = () => { setTourOn(false); patchOnboard({ overviewSeen: true }); setWnSeen(WHATS_NEW.version); };
   const startTour = () => { setHelpOpen(false); setModule("dashboard"); setTourOn(true); };
   // Nav that also understands non-module destinations (e.g. the backup nudge
   // links to "settings", which is a panel, not a module) and compound ids
@@ -98,6 +116,9 @@ export default function App() {
   );
   // Legacy shape ({name, icon, done, streak}) for Dashboard / AI / kaizen.
   const habits = useMemo(() => toLegacy(habitsV2), [habitsV2]);
+  // Getting-started checklist — derived from real data, nothing extra tracked.
+  const [goals] = useStorageState("goals", []);
+  const checklist = useMemo(() => computeChecklist({ onboard, habits: habitsV2, goals }), [onboard, habitsV2, goals]);
   const topStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
   // Global progression: XP derives from every store, never stored directly.
   const xpInfo = useXp();
@@ -252,7 +273,8 @@ export default function App() {
         <AutoGoalSync xp={xpInfo} />
         <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
-        {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} />}
+        {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
+        {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
         {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
       </div>
       </ToastProvider>
