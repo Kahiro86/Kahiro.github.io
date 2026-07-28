@@ -302,7 +302,10 @@ export default function App() {
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
         <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
+      {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
+      {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
+      {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
     </div>
     </ToastProvider>
   );
