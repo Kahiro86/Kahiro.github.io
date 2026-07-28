@@ -76,17 +76,19 @@ export function GuidedTour({ steps, onNavigate, onClose, onFinish, startAt = 0 }
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 300, animation: "fadeIn 0.25s ease" }}>
-      {/* Dimmer + spotlight hole (a lit box using a giant outer shadow). */}
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, animation: "fadeIn 0.25s ease", pointerEvents: "none" }}>
+      {/* Dimmer + spotlight hole (a lit box using a giant outer shadow). The
+          overlay is click-through so the user can tap the highlighted control
+          and so it never blocks the rest of the app; only the card is live. */}
       {rect ? (
         <div style={{ position: "fixed", top: rect.top - PAD, left: rect.left - PAD, width: rect.width + PAD * 2, height: rect.height + PAD * 2,
           borderRadius: 12, boxShadow: `0 0 0 9999px rgba(0,0,0,0.74), 0 0 0 2px ${CY}, 0 0 22px ${CY}77`, transition: "all 0.28s cubic-bezier(0.4,0,0.2,1)", pointerEvents: "none" }} />
       ) : (
-        <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.74)" }} />
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.74)", pointerEvents: "none" }} />
       )}
 
       {/* Caption card */}
-      <div role="dialog" aria-label="Guided tour" style={{ position: "fixed", top: tip.top, left: tip.left, width: tip.width,
+      <div role="dialog" aria-label="Guided tour" style={{ pointerEvents: "auto", position: "fixed", top: tip.top, left: tip.left, width: tip.width,
         background: B1, border: `1px solid ${BD}`, borderRadius: 14, padding: "15px 16px", boxShadow: "0 18px 50px rgba(0,0,0,0.6)", animation: "fadeIn 0.28s ease" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
           <span style={{ fontSize: 9.5, color: CY, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Step {i + 1} of {steps.length}</span>
