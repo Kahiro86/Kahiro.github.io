@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -31,6 +31,10 @@ export function AthleteOS() {
   const [rawMeasures, setMeasures] = useStorageState("athlete_measurements", []);
   const measures = (Array.isArray(rawMeasures) ? rawMeasures : []).filter((m) => m && m.id);
   const [mDraft, setMDraft] = useState(null); // { weight, waist, chest, arms, thighs, notes }
+  const measureFormRef = useRef(null); // scroll the editor into view when editing from the history below
+  useEffect(() => {
+    if (mDraft?.id && measureFormRef.current) measureFormRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [mDraft?.id]);
   const [rawPhotos, setPhotos] = useStorageState("athlete_photos", []);
   const photos = (Array.isArray(rawPhotos) ? rawPhotos : [])
     .filter((p) => p && p.id && typeof p.dataUrl === "string")
@@ -621,8 +625,10 @@ export function AthleteOS() {
               )}
             </div>
 
+            <div ref={measureFormRef}>
             {mDraft && (
               <Card style={{ padding: "16px", borderColor: `${PU}44` }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: PU, marginBottom: 10 }}>{mDraft.id ? "Edit measurement" : "New measurement"}</div>
                 <div style={{ marginBottom: 12 }}><DatePicker value={mDraft.date || localDateStr()} onChange={(v) => setMDraft((d) => ({ ...d, date: v }))} /></div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 10, marginBottom: 10 }}>
                   {[["weight", "Weight (kg)"], ["waist", "Waist (cm)"], ["chest", "Chest (cm)"], ["arms", "Arms (cm)"], ["thighs", "Thighs (cm)"]].map(([k, l]) => (
@@ -641,6 +647,7 @@ export function AthleteOS() {
                 </div>
               </Card>
             )}
+            </div>
 
             {measures.length === 0 && !mDraft && (
               <Card style={{ padding: "40px", textAlign: "center" }}>

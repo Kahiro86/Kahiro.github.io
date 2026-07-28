@@ -2,7 +2,7 @@
 // Log fast, learn slow: a sub-10-second meal logger on top of the
 // nutrition engine's full analysis. Water reads the Life OS Hydration
 // wellness habit — one hydration tracker across the whole app.
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Plus, Trash2, Star, Search, Copy, ChevronUp, Flame } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
@@ -29,6 +29,24 @@ import {
 
 const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
 const nowTime = () => new Date().toTimeString().slice(0, 5);
+
+// Number field with a local text buffer: lets you clear it and type freely
+// (intermediate/empty values allowed) and only commits the parsed number on
+// blur. Without this, a controlled input reading a value the engine clamps
+// every keystroke snaps back to the default mid-edit and feels uneditable.
+function NumField({ label, value, onCommit, width = 84 }) {
+  const [txt, setTxt] = useState(String(value ?? ""));
+  useEffect(() => { setTxt(String(value ?? "")); }, [value]);
+  return (
+    <label style={{ fontSize: 10, color: T3, display: "flex", flexDirection: "column", gap: 3 }}>{label}
+      <input type="number" inputMode="numeric" value={txt}
+        onChange={(e) => setTxt(e.target.value)}
+        onBlur={() => onCommit(txt.trim() === "" ? 0 : +txt)}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+        style={{ ...input, width, fontFamily: "monospace", marginTop: 3 }} />
+    </label>
+  );
+}
 
 export function NutritionTab() {
   const [rawLog, setLog] = useStorageState("nutrition_log", {});
@@ -540,10 +558,8 @@ export function NutritionTab() {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
           {[["age", "Age"], ["heightCm", "Height cm"], ["weightKg", "Weight kg"]].map(([k, l]) => (
-            <label key={k} style={{ fontSize: 10, color: T3, display: "flex", flexDirection: "column", gap: 3 }}>{l}
-              <input type="number" value={profile[k]} onChange={(e) => setProfile((prev) => ({ ...sanitizeProfile(prev), [k]: +e.target.value || 0 }))}
-                style={{ ...input, width: 84, fontFamily: "monospace" }} />
-            </label>
+            <NumField key={k} label={l} value={profile[k]}
+              onCommit={(v) => setProfile((prev) => ({ ...sanitizeProfile(prev), [k]: v }))} />
           ))}
           <label style={{ fontSize: 10, color: T3, display: "flex", flexDirection: "column", gap: 3 }}>Sex
             <select value={profile.sex} onChange={(e) => setProfile((prev) => ({ ...sanitizeProfile(prev), sex: e.target.value }))} style={{ ...input, width: 96 }}>
