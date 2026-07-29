@@ -7,6 +7,7 @@ import { migrateHabits, toLegacy, tapHabit } from "./shared/habitEngine.js";
 import { useXp } from "./shared/useXp.js";
 import { XPCelebration } from "./shared/XPCelebration.jsx";
 import { NotifTicker } from "./shared/NotifTicker.jsx";
+import { usePushQueueSync } from "./shared/push.js";
 import { AutoGoalSync } from "./shared/AutoGoalSync.jsx";
 import { WeeklyReviewGate } from "./shared/WeeklyReview.jsx";
 import { hasLock } from "./shared/lock.js";
@@ -40,6 +41,7 @@ import { NameYourSystem } from "./shared/NameYourSystem.jsx";
 
 export default function App() {
   const isMobile = useIsMobile();
+  usePushQueueSync(); // keep the closed-app push queue fresh when set up
   const [module, setModule] = useState("dashboard");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);

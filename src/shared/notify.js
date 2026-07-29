@@ -328,3 +328,50 @@ export function nextOccurrenceLabel(rem, now = new Date()) {
   }
   return probe && null;
 }
+
+// ── Push queue: upcoming occurrences for the server sender ───────────
+// The service-worker push channel can reach a fully-closed app, but only a
+// server can fire it. Rather than replicate this whole repeat engine
+// server-side, the client precomputes the next few days of occurrences
+// whenever it's open and syncs them as `push_queue`; the Edge Function just
+// delivers what's due. Pure + deterministic — same result on every device.
+export function upcomingOccurrences(rem, now = new Date(), horizonMs = 7 * 86400000) {
+  const end = new Date(now.getTime() + horizonMs);
+  const { kind, n } = rem.repeat;
+  const out = [];
+
+  if (kind === "hourly" || kind === "nHours") {
+    const step = (kind === "hourly" ? 1 : n) * 3600000;
+    const base = atTime(rem.date, rem.time).getTime();
+    let t = base;
+    if (t <= now.getTime()) t = base + Math.ceil((now.getTime() - base) / step) * step;
+    if (t <= now.getTime()) t += step;
+    for (; t <= end.getTime() && out.length < 400; t += step) out.push(new Date(t));
+    return out;
+  }
+
+  const days = Math.ceil(horizonMs / 86400000) + 1;
+  for (let i = 0; i <= days; i++) {
+    const ds = addDaysStr(localDateStr(now), i);
+    const cand = atTime(ds, rem.time);
+    if (cand <= now || cand > end) continue;
+    // Validate the candidate against the same repeat rule used everywhere.
+    const back = lastOccurrence(rem, new Date(cand.getTime() + 1000));
+    if (back && Math.abs(back - cand) < 60000) out.push(cand);
+  }
+  return out;
+}
+
+// Flat, time-sorted list of the next reminders to push: { occKey, at, title,
+// body, url }. Honours paused, silent priority and disabled categories.
+export function buildPushQueue(reminders, prefs, now = new Date(), horizonDays = 7) {
+  const p = sanitizePrefs(prefs);
+  const out = [];
+  for (const rem of sanitizeReminders(reminders)) {
+    if (rem.paused || rem.priority === "silent" || !catEnabled(p, rem.cat)) continue;
+    for (const occ of upcomingOccurrences(rem, now, horizonDays * 86400000)) {
+      out.push({ occKey: occKeyOf(rem, occ), at: occ.getTime(), title: `${rem.icon || "🔔"} ${rem.title}`, body: rem.desc || "Reminder", url: "./" });
+    }
+  }
+  return out.sort((a, b) => a.at - b.at).slice(0, 200);
+}
