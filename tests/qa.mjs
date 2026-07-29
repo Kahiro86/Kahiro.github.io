@@ -19,7 +19,7 @@ const EXE = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // module's inner groups get exercised.
 const MODULES = [
   ["dashboard", "Command Center"], ["firm", "The Firm"], ["life", "Life OS"],
-  ["faith", "Faith & Mind"], ["journey", "Journey"], ["analytics", "Analytics"],
+  ["faith", "Faith & Mind"], ["calendar", "Calendar"], ["journey", "Journey"], ["analytics", "Analytics"],
 ];
 
 // Per-module sub-tab labels to click through. A merged module (firm/life/
