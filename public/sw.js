@@ -39,3 +39,33 @@ self.addEventListener("fetch", (e) => {
       .catch(() => caches.match(e.request).then((hit) => hit || caches.match("./index.html")))
   );
 });
+
+// ── Web Push ─────────────────────────────────────────────────────────
+// The server sender (a Supabase Edge Function) posts a JSON payload
+// { title, body, url, tag }. Shown even when the app is fully closed.
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data && e.data.text ? e.data.text() : "" }; }
+  const title = d.title || "Kahiro";
+  const options = {
+    body: d.body || "",
+    icon: d.icon || "icon-192.png",
+    badge: d.badge || "icon-192.png",
+    tag: d.tag || title,
+    data: { url: d.url || "./" },
+    renotify: !!d.tag,
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Tapping a notification focuses an open app window or opens a new one.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = (e.notification.data && e.notification.data.url) || "./";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
+      for (const c of cs) { if ("focus" in c) return c.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })
+  );
+});

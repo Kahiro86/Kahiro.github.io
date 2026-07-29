@@ -57,6 +57,7 @@ const SCENARIOS = {
   corruptDayMarks: { "architect:athlete_day_marks": JSON.stringify({ rest: "not-an-array", cheat: [null, 5, "bad-date", "2026-07-27"] }) },
   corruptIdentity: { "architect:app_identity": JSON.stringify({ appName: 12345, ownerName: { nope: 1 }, configured: "yes" }) },
   corruptHell: { "architect:hell_mode": JSON.stringify({ on: "yes", since: 5, anchorXp: "lots", anchorLevel: null }) },
+  corruptPushQueue: { "architect:push_queue": JSON.stringify({ notAnArray: true, at: "soon" }) },
   everythingNull: {
     "architect:habits": "null",
     "architect:ict_trades": "null",

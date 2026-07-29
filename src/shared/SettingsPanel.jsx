@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Check, AlertCircle, Download, Upload, ShieldAlert, Cloud, CloudOff, RefreshCw, Share2, Link2, Smartphone } from "lucide-react";
+import { X, Check, AlertCircle, Download, Upload, ShieldAlert, Cloud, CloudOff, RefreshCw, Share2, Link2, Smartphone, Bell } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "./designTokens.js";
 import { copyAppLink, downloadCleanCopy, shareAppLink, appLink } from "./cleanCopy.js";
 import { useIdentity, DEFAULT_APP_NAME } from "./identity.jsx";
@@ -12,6 +12,7 @@ import { getGcalConfig, setGcalConfig, getToken as getGcalToken } from "./gcal.j
 import { hasLock, setPin, verifyPin, clearLock } from "./lock.js";
 import { useHell, HELL_MULT } from "./difficulty.js";
 import { useXp } from "./useXp.js";
+import { getPushVapid, setPushVapid, pushStatus, subscribeToPush, unsubscribeFromPush, sendLocalTestNotification } from "./push.js";
 
 const SETUP_SQL = `create table if not exists kv (
   user_id uuid not null default auth.uid(),
@@ -46,6 +47,24 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const { hell, enable: enableHell, disable: disableHell } = useHell();
   const liveXp = useXp();
   const [armHell, setArmHell] = useState(false);
+
+  // ── Push notifications state ────────────────────────────────────────
+  const [vapid, setVapid] = useState(getPushVapid());
+  const [pushInfo, setPushInfo] = useState({ supported: true, permission: "default", subscribed: false });
+  const [pushMsg, setPushMsg] = useState(null); // { text, tone }
+  useEffect(() => { pushStatus().then(setPushInfo).catch(() => {}); }, []);
+  const enablePush = async () => {
+    try { setPushVapid(vapid); await subscribeToPush(); setPushInfo(await pushStatus()); setPushMsg({ text: "Notifications enabled on this device.", tone: GR }); }
+    catch (e) { setPushMsg({ text: e.message, tone: RE }); }
+  };
+  const disablePush = async () => {
+    try { await unsubscribeFromPush(); setPushInfo(await pushStatus()); setPushMsg({ text: "Turned off on this device.", tone: T2 }); }
+    catch (e) { setPushMsg({ text: e.message, tone: RE }); }
+  };
+  const testPush = async () => {
+    try { await sendLocalTestNotification(); setPushMsg({ text: "Sent — check your notifications.", tone: GR }); }
+    catch (e) { setPushMsg({ text: e.message, tone: RE }); }
+  };
 
   const fileRef = useRef(null);
 
@@ -485,6 +504,37 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
           </>
         )}
         {syncMsg && <div style={{ fontSize: 12, color: syncMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{syncMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        {/* ── Push notifications (closed-app reminders) ─────────────── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <Bell size={14} color={CY} />
+          <div style={{ fontSize: 11, color: CY, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>Notifications</div>
+        </div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
+          Get reminders even when Kahiro is closed. This needs a one-time setup in your own Supabase project (cloud sync must be on) — the full steps are in <span style={{ color: T2 }}>docs/PUSH.md</span>. Paste your VAPID public key below, then enable.
+        </div>
+        {!pushInfo.supported ? (
+          <div style={{ fontSize: 12, color: AM, lineHeight: 1.5 }}>This browser doesn&apos;t support push notifications. On iPhone, add Kahiro to your Home Screen first, then open it from there.</div>
+        ) : (
+          <>
+            <label style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase", display: "block", marginBottom: 5 }}>VAPID public key</label>
+            <input value={vapid} onChange={(e) => setVapid(e.target.value.trim())} placeholder="BB…the public key from your setup" style={{ ...idInput, marginBottom: 10, fontFamily: "monospace", fontSize: 11.5 }} />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {pushInfo.subscribed ? (
+                <button onClick={disablePush} style={btn({ border: `1px solid ${RE}44`, color: RE })}>Turn off on this device</button>
+              ) : (
+                <button onClick={enablePush} style={btn({ background: `linear-gradient(135deg,${CY},${PU})`, border: "none", color: "#000", fontWeight: 700 })}>Enable notifications</button>
+              )}
+              <button onClick={testPush} style={btn({ flex: "none" })}>Send test</button>
+            </div>
+            <div style={{ fontSize: 11, color: T3, marginTop: 8 }}>
+              Status: {pushInfo.subscribed ? <b style={{ color: GR }}>on (this device)</b> : "off"} · permission {pushInfo.permission}
+            </div>
+            {pushMsg && <div style={{ fontSize: 12, color: pushMsg.tone, marginTop: 8, lineHeight: 1.5 }}>{pushMsg.text}</div>}
+          </>
+        )}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
