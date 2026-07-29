@@ -26,6 +26,7 @@ import { FaithOS } from "./modules/faith/FaithOS.jsx";
 import { AnalyticsOS } from "./modules/analytics/AnalyticsOS.jsx";
 import { JourneyModule } from "./modules/journey/JourneyModule.jsx";
 import { FirmOS } from "./modules/firm/FirmOS.jsx";
+import { CalendarModule } from "./modules/calendar/CalendarModule.jsx";
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
 import { AIPanel } from "./shared/AIPanel.jsx";
@@ -162,6 +163,7 @@ export default function App() {
       case "firm": return <FirmOS navHint={navHint?.module === "firm" ? navHint : null} />;
       case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} navHint={navHint?.module === "life" ? navHint : null} />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} navHint={navHint?.module === "faith" ? navHint : null} />;
+      case "calendar": return <CalendarModule habits={habitsV2} onNavigate={navTo} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
       case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={navTo} />;
       default: return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
