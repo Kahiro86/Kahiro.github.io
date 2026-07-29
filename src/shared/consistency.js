@@ -46,8 +46,15 @@ export function totalActivities(stats = {}) {
 
 // Everything below derives from `byDay` (xpEngine's per-date XP totals) — a
 // date counts if it has any XP at all, regardless of which module earned it.
-export function consistencyStats(byDay = {}, start, today = localDateStr()) {
-  const isDay = (d) => (byDay[d] || 0) > 0;
+// `opts.isFull(d)` is an optional Hell-mode predicate: return true/false to
+// force whether a day counts, or null to defer to the normal "any XP" rule
+// (used for days with nothing scheduled). Absent → normal mode, every day
+// with any XP counts.
+export function consistencyStats(byDay = {}, start, today = localDateStr(), opts = {}) {
+  const anyXp = (d) => (byDay[d] || 0) > 0;
+  const isDay = typeof opts.isFull === "function"
+    ? (d) => { const r = opts.isFull(d); return r === null || r === undefined ? anyXp(d) : !!r; }
+    : anyXp;
   const totalDays = Math.max(1, daysBetween(start, today) + 1);
 
   // Day N of 365 — rolls forward into "Cycle 2" past day 365 rather than
@@ -81,7 +88,11 @@ export function consistencyStats(byDay = {}, start, today = localDateStr()) {
   }
 
   let daysShownUp = 0;
-  for (const [d, xp] of Object.entries(byDay)) if (xp > 0 && d >= start && d <= today) daysShownUp++;
+  for (let i = daysBetween(start, today); i >= 0; i--) {
+    const d = daysAgoStr(i);
+    if (d < start || d > today) continue;
+    if (isDay(d)) daysShownUp++;
+  }
   const consistencyRate = Math.floor((daysShownUp / totalDays) * 100);
 
   // % of consistency-days within a trailing window (capped at `start`).

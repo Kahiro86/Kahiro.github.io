@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { BD, T1, T2, T3, GL, B2, AC, AC2, GR, AM, RE } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
+import { DayAgenda } from "../../shared/DayAgenda.jsx";
+import { billsDueSoon } from "../finance/bills.js";
 import { Ring } from "../../shared/charts.jsx";
 import { useCountUp } from "../../shared/useCountUp.js";
 
@@ -26,6 +28,7 @@ import {
 import { buildNudges } from "../../shared/insights.js";
 import { buildDirective, isRestDay } from "../../shared/directive.js";
 import { useDayMarks } from "../../shared/dayMarks.js";
+import { isFullDay } from "../../shared/difficulty.js";
 import { freedomMath } from "../../shared/freedom.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
 import { scalingGate } from "../../shared/firm.js";
@@ -95,7 +98,12 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   }, []);
 
   const ds = localDateStr();
-  const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, nowDs), [xp.byDay, consistencyStart, nowDs]);
+  // Hell mode: a day only counts when everything scheduled is done (rest/
+  // cheat days stay safe), so the streak and rate demand full completion.
+  const csOpts = useMemo(() => (xp.hell?.on
+    ? { isFull: (d) => isFullDay(habitsV2, dayMarks, d) }
+    : {}), [xp.hell?.on, habitsV2, dayMarks]);
+  const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, nowDs, csOpts), [xp.byDay, consistencyStart, nowDs, csOpts]);
   const totalAct = totalActivities(xp.stats);
   const consistencySentence = cs.currentStreak === 0
     ? "A new day is always available. Show up once — that's the whole game."
@@ -106,6 +114,28 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const entriesSafe = useMemo(() => (Array.isArray(entries) ? entries : []).filter((e) => e && e.id), [entries]);
   const nutrition = useMemo(() => sanitizeNutrition(nutritionLog), [nutritionLog]);
   const nTargets = useMemo(() => calcTargets(nutritionProfile), [nutritionProfile]);
+
+  // Unified day agenda — one honest line per daily domain, tap to jump in.
+  const agendaItems = useMemo(() => {
+    const sched = active.filter((h) => isScheduled(h, ds));
+    const hDone = sched.filter((h) => isDone(h, ds)).length;
+    const kcal = Math.round(dayTotals(dayEntries(nutrition, ds)).kcal || 0);
+    const workedOut = workouts.some((w) => w.date === ds);
+    const journaled = entriesSafe.some((e) => (e.date || "").slice(0, 10) === ds);
+    const due = billsDueSoon(finance.bills, ds).length;
+    return [
+      sched.length > 0 && { key: "habits", icon: "✅", label: "Habits", detail: `${hDone}/${sched.length} done`, state: hDone >= sched.length ? "done" : hDone > 0 ? "due" : "empty", nav: "life" },
+      { key: "meals", icon: "🍽️", label: "Nutrition", detail: kcal > 0 ? `${kcal.toLocaleString()} kcal` : "Nothing logged", state: kcal > 0 ? "done" : "empty", nav: "life" },
+      { key: "workout", icon: "🏋️", label: "Workout", detail: workedOut ? "Logged" : "None today", state: workedOut ? "done" : "empty", nav: "life" },
+      { key: "journal", icon: "📝", label: "Journal", detail: journaled ? "Written" : "Not yet", state: journaled ? "done" : "empty", nav: "life" },
+      due > 0 && { key: "bills", icon: "💸", label: "Bills due", detail: `${due} within 7 days`, state: "due", nav: "firm" },
+    ].filter(Boolean);
+  }, [active, nutrition, ds, workouts, entriesSafe, finance.bills]);
+
+  const agendaWeek = useMemo(() => Array.from({ length: 7 }, (_, i) => {
+    const dd = daysAgoStr(6 - i);
+    return { ds: dd, active: (xp.byDay?.[dd] || 0) > 0, today: dd === nowDs, label: new Date(`${dd}T12:00:00`).toLocaleDateString("en-US", { weekday: "narrow" }) };
+  }), [xp.byDay, nowDs]);
   const mealsOn = (d) => dayEntries(nutrition, d).length;
   const journaledOn = (d) => entriesSafe.some((e) => (e.date || "").slice(0, 10) === d);
   const workoutOn = (d) => workouts.some((w) => w.date === d);
@@ -309,6 +339,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
       <MotivePush context={["day-start", "legendary"].filter((c) => c !== "legendary" || cs.currentStreak >= 100)}
         state={{ streak: cs.currentStreak, missedYesterday: cs.currentStreak === 0, legendary: cs.longestStreak >= 100 && cs.currentStreak === cs.longestStreak }} accent={AC} />
+
+      <DayAgenda items={agendaItems} week={agendaWeek} onNavigate={onNavigate} />
 
       {/* ── 🎯 THE MISSION — the freedom north star, above everything ── */}
       <Card style={{ padding: "18px 22px", background: "linear-gradient(110deg,#161616,#0C0C0C)", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
