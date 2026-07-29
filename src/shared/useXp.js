@@ -5,6 +5,7 @@
 import { useMemo } from "react";
 import { useStorageState } from "./useStorageState.js";
 import { computeXp } from "./xpEngine.js";
+import { DEFAULT_HELL, sanitizeHell } from "./difficulty.js";
 
 export function useXp() {
   const [habits, , l1] = useStorageState("habits", []);
@@ -31,17 +32,19 @@ export function useXp() {
   const [wants] = useStorageState("wants", []);
   const [tiTrades] = useStorageState("ti_trades", []);
   const [photos] = useStorageState("athlete_photos", []);
+  const [hellRaw] = useStorageState("hell_mode", DEFAULT_HELL);
+  const hell = sanitizeHell(hellRaw);
 
   const xp = useMemo(
     () => computeXp({
       habits, purity, trades, reviews, workouts, measurements, finance,
       entries, missions, church, verses, faithNotes, library, mindNotes,
-      decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos,
+      decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos, hell,
     }),
     [habits, purity, trades, reviews, workouts, measurements, finance,
      entries, missions, church, verses, faithNotes, library, mindNotes,
-     decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos]
+     decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos, hell.on, hell.anchorXp, hell.anchorLevel]
   );
 
-  return { ...xp, loaded: l1 && l2 && l3 && l4, setUnlocked, setLogins };
+  return { ...xp, hell, loaded: l1 && l2 && l3 && l4, setUnlocked, setLogins };
 }

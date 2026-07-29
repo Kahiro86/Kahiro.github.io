@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Flame, Cpu, Menu, HelpCircle, Settings } from "lucide-react";
-import { BD, T1, T2, T3, GL, CY, PU, GR, AM, AC, AC2 } from "./designTokens.js";
+import { BD, T1, T2, T3, GL, CY, PU, GR, AM, AC, AC2, RE } from "./designTokens.js";
+import { useHell } from "./difficulty.js";
 import { getActiveKillzone, getEATTimeStr } from "../modules/trading/timezone.js";
 import { NAV } from "./nav.js";
 import { Meter } from "./ui.jsx";
@@ -12,7 +13,11 @@ const CAT_COLOR = { life: GR, trading: CY, fitness: PU, finance: AM, faith: "#9C
 
 export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigate, onOpenHelp, onOpenSettings, streak = 0, xp = 0, level = 1, xpTitle = "", pctToNext = 0, toNext = 0, xpToday = 0, xpTodayByCat = {} }) {
   const { appName } = useIdentity();
+  const { hell } = useHell();
   const label = NAV.find((n) => n.id === module)?.label || "Command Center";
+  const hellBadge = hell.on ? (
+    <span title="Hell mode is on" style={{ display: "flex", alignItems: "center", gap: 3, padding: "3px 7px", borderRadius: 7, background: `${RE}1A`, border: `1px solid ${RE}55`, color: RE, fontSize: 9.5, fontWeight: 800, letterSpacing: 1, flexShrink: 0 }}>🔥 HELL</span>
+  ) : null;
   const [kz, setKz] = useState(getActiveKillzone);
   const [eatTime, setEatTime] = useState(getEATTimeStr);
   const [xpOpen, setXpOpen] = useState(false);
@@ -48,6 +53,7 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
             {kz.label.split("(")[0].trim()} · {eatTime} EAT
           </div>
         </div>
+        {hellBadge}
         <NotificationCenter onNavigate={onNavigate} />
         {onOpenHelp && (
           <button onClick={onOpenHelp} data-tour="help-btn" aria-label="Help & guide" style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${BD}`, cursor: "pointer", background: GL, color: T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -128,6 +134,7 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
         </div>
       )}
 
+      {hellBadge}
       <NotificationCenter onNavigate={onNavigate} />
 
       {onOpenHelp && (

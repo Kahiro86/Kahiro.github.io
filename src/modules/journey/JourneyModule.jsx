@@ -19,6 +19,9 @@ import {
 } from "../../shared/goals.js";
 import { TITLES } from "../../shared/xpEngine.js";
 import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
+import { useDayMarks } from "../../shared/dayMarks.js";
+import { migrateHabits } from "../../shared/habitEngine.js";
+import { isFullDay } from "../../shared/difficulty.js";
 import { WantListModule } from "../wants/WantListModule.jsx";
 
 const JO = CY; // Nocturne cyan accent (monochrome theme)
@@ -192,8 +195,13 @@ function HallOfFame({ xp }) {
   const gotTiers = xp.journeys.reduce((s, j) => s + j.done, 0);
   const titleLadder = [...TITLES].reverse(); // Beginner → Legend
   const [logins] = useStorageState("xp_logins", {});
+  const [rawHabits] = useStorageState("habits", []);
+  const [dayMarks] = useDayMarks();
   const { start: consistencyStart } = useConsistencyStart(logins);
-  const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart), [xp.byDay, consistencyStart]);
+  const csOpts = useMemo(() => (xp.hell?.on
+    ? { isFull: (d) => isFullDay(migrateHabits(rawHabits), dayMarks, d) }
+    : {}), [xp.hell?.on, rawHabits, dayMarks]);
+  const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, undefined, csOpts), [xp.byDay, consistencyStart, csOpts]);
   const totalAct = totalActivities(xp.stats);
   const stats = [
     ["Habit completions", xp.stats.habitCompletions, GR], ["Best streak", `${xp.stats.bestStreak}d`, "#FFFFFF"],

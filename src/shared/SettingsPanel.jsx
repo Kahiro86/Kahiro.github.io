@@ -10,6 +10,8 @@ import { getSyncStatus, onSyncStatus, testConnection, pull, flush, onAuthChanged
 import { getSyncConfig, saveSyncConfig, signUp, signIn, signOut, resetPassword, updatePassword, getSession, onAuth } from "./supabase.js";
 import { getGcalConfig, setGcalConfig, getToken as getGcalToken } from "./gcal.js";
 import { hasLock, setPin, verifyPin, clearLock } from "./lock.js";
+import { useHell, HELL_MULT } from "./difficulty.js";
+import { useXp } from "./useXp.js";
 
 const SETUP_SQL = `create table if not exists kv (
   user_id uuid not null default auth.uid(),
@@ -40,6 +42,11 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const idInput = { width: "100%", background: B0, border: `1px solid ${BD}`, borderRadius: 9, padding: "10px 13px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
   const saveIdentity = () => { identity.save({ appName: idApp, ownerName: idOwner }); setIdApp(identity.appName); setIdMsg({ text: "Saved. Your name is now used across the app.", tone: GR }); };
   const resetIdentity = () => { identity.reset(); setIdApp(DEFAULT_APP_NAME); setIdOwner(""); setIdMsg({ text: "Reset to default.", tone: T2 }); };
+
+  const { hell, enable: enableHell, disable: disableHell } = useHell();
+  const liveXp = useXp();
+  const [armHell, setArmHell] = useState(false);
+
   const fileRef = useRef(null);
 
   const onCopyLink = async () => {
@@ -299,6 +306,40 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
           <button onClick={resetIdentity} style={btn()}>Reset to default</button>
         </div>
         {idMsg && <div style={{ fontSize: 12, color: idMsg.tone, marginTop: 8, lineHeight: 1.5 }}>{idMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        {/* ── Difficulty · Hell mode ─────────────────────────────────── */}
+        <div style={{ fontSize: 11, color: RE, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Difficulty · Hell mode</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
+          A harder-than-hard mode for when you want the system to stop being kind. It never deletes anything you&apos;ve earned — it only changes the rules going forward, and turning it off restores them.
+        </div>
+        <ul style={{ margin: "0 0 12px", padding: "0 0 0 18px", fontSize: 12, color: T2, lineHeight: 1.7 }}>
+          <li>Levelling up costs {HELL_MULT}× more XP from here on.</li>
+          <li>One incomplete day resets your consistency streak — no grace.</li>
+          <li>A day only counts when everything scheduled is done (rest &amp; cheat days stay safe).</li>
+        </ul>
+        {hell.on ? (
+          <div style={{ background: `${RE}12`, border: `1px solid ${RE}44`, borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ fontSize: 12.5, color: RE, fontWeight: 700, letterSpacing: 0.5, marginBottom: 3 }}>🔥 HELL MODE ACTIVE</div>
+            <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.5, marginBottom: 10 }}>
+              Anchored at Level {hell.anchorLevel}{hell.since ? ` · since ${hell.since.slice(0, 10)}` : ""}. Everything up to that point is preserved.
+            </div>
+            <button onClick={() => { disableHell(); setArmHell(false); }} style={btn()}>Turn off Hell mode</button>
+          </div>
+        ) : armHell ? (
+          <div style={{ background: `${RE}12`, border: `1px solid ${RE}44`, borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ fontSize: 12, color: T1, lineHeight: 1.55, marginBottom: 10 }}>
+              Enable Hell mode? Your current Level {liveXp.level} and {liveXp.total.toLocaleString()} XP are kept as the anchor — only the climb ahead gets steeper.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { enableHell(liveXp.total, liveXp.level); setArmHell(false); }} style={btn({ background: RE, border: "none", color: "#fff", fontWeight: 700 })}>Enter Hell mode</button>
+              <button onClick={() => setArmHell(false)} style={btn()}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setArmHell(true)} style={btn({ border: `1px solid ${RE}66`, color: RE, fontWeight: 700 })}>Enable Hell mode</button>
+        )}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
