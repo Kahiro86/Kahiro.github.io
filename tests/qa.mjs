@@ -80,6 +80,27 @@ const SCENARIOS = {
     "architect:nutrition_foods": JSON.stringify([null, 5, "x", { id: "cf1" }, { id: "cf2", name: "Bad", per100: "nope" }, { id: "cf3", name: "OK", per100: { kcal: 100, p: 5 }, bev: "yes", tags: "SUGAR", variants: "no" }]),
     "architect:nutrition_log": JSON.stringify({ "2026-07-30": [{ id: "e1", name: "Fizz", slot: "snack", grams: 520, bev: true, loggedAt: "bad", late: 1, n: { kcal: 31, na: 120 } }] }),
   },
+  corruptWorkoutSplits: {
+    "architect:workout_splits": JSON.stringify([null, 5, "x", { name: 12 }, { id: "sp1", name: "Push", exercises: "nope" }, { id: "sp2", name: "Pull", exercises: [null, { name: 9, type: "bad", sets: {}, giantSetId: 5 }] }]),
+    "architect:workout_week": JSON.stringify({ mon: "sp-missing", tue: 5, sun: "sp1", junk: "x" }),
+    "architect:workout_split_log": JSON.stringify({ "2026-07-30": "not-an-array", "bad": ["ex1"] }),
+  },
+  corruptTodayTrackers: {
+    "architect:daily_checklist": JSON.stringify({ notAnArray: true }),
+    "architect:daily_checklist_log": JSON.stringify("string"),
+    "architect:weekly_goal": JSON.stringify({ focus: 5, weekKey: 1, archive: "no" }),
+    "architect:monthly_overhead": JSON.stringify({ target: "lots", monthKey: 5, archive: null }),
+    "architect:life_pings": JSON.stringify([null, 5, { id: "p1", label: 9, every: "x", lastDismissed: {} }]),
+  },
+  corruptJournalFiles: {
+    "architect:journal_entries": JSON.stringify([null, { id: "j1", date: "bad-date", text: "x" }, { id: "j2", date: "2026-06-15", text: "ok" }, { id: "j3", text: "no date" }]),
+  },
+  corruptSeason: {
+    "architect:active_season": JSON.stringify({ templateId: 5, startDate: "nope", days: "many", name: {} }),
+  },
+  corruptSupps: {
+    "architect:nutrition_supps": JSON.stringify({ "2026-07-30": "not-an-array", junk: 5 }),
+  },
   everythingNull: {
     "architect:habits": "null",
     "architect:ict_trades": "null",
