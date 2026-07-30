@@ -1,6 +1,6 @@
 // ── Trade Log — fast, searchable journal ─────────────────────────────
 import { useMemo, useState } from "react";
-import { Plus, Search, Eye, Pencil, Copy, Trash2, X, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Copy, Trash2, X, ArrowUpRight, ArrowDownRight, Lock } from "lucide-react";
 import { BD, T1, T2, T3, GL, GR, RE, AM } from "../../../shared/designTokens.js";
 import { Card, Empty } from "../../../shared/ui.jsx";
 import { AK } from "./fields.jsx";
@@ -52,7 +52,7 @@ function Row({ t, account, onView, onEdit, onDuplicate, onDelete }) {
   );
 }
 
-export function TradeLog({ trades, accounts, activeId, onNew, onView, onEdit, onDuplicate, onDelete }) {
+export function TradeLog({ trades, accounts, activeId, onNew, logLocked = false, onView, onEdit, onDuplicate, onDelete }) {
   const [q, setQ] = useState("");
   const [scope, setScope] = useState("active"); // active | all
   const [res, setRes] = useState("all");
@@ -86,7 +86,9 @@ export function TradeLog({ trades, accounts, activeId, onNew, onView, onEdit, on
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search instrument, strategy, session, notes…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T1, fontSize: 12.5, fontFamily: "inherit" }} />
             {q && <button onClick={() => setQ("")} style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><X size={13} /></button>}
           </div>
-          <button onClick={onNew} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: `${AK}1E`, border: `1px solid ${AK}55`, borderRadius: 10, color: "#FFFFFF", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Plus size={14} /> New trade</button>
+          <button onClick={onNew} aria-disabled={logLocked} title={logLocked ? "Logging is locked — see the banner above" : "Log a new trade"}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: logLocked ? GL : `${AK}1E`, border: `1px solid ${logLocked ? BD : AK + "55"}`, borderRadius: 10, color: logLocked ? T3 : "#FFFFFF", fontSize: 12.5, fontWeight: 700, cursor: logLocked ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+            {logLocked ? <Lock size={13} /> : <Plus size={14} />} New trade</button>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <button onClick={() => setScope("active")} style={pill(scope === "active")}>Active account</button>
