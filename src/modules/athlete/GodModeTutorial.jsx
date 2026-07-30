@@ -1,4 +1,4 @@
-// ── Hard Mode walkthrough — 4 screens, the app's own voice ───────────
+// ── God Mode walkthrough — 4 screens, the app's own voice ────────────
 // Shown once on first activation, and re-readable any time from Settings.
 // It never auto-repeats. The last screen contrasts a clean day with a
 // failed one so the standard is concrete before the practice begins.
@@ -20,16 +20,16 @@ const DayCol = ({ title, tone, lines }) => (
   </div>
 );
 
-export function HardModeTutorial({ mode = "read", onClose, onConfirm }) {
+export function GodModeTutorial({ mode = "read", onClose, onConfirm }) {
   const [i, setI] = useState(0);
 
   const screens = [
     {
       k: "what",
-      title: "Hard Mode",
+      title: "God Mode",
       body: (
         <>
-          <p style={{ margin: "0 0 12px" }}>Hard Mode replaces willpower with structure. The rules stop being suggestions and start being enforced.</p>
+          <p style={{ margin: "0 0 12px" }}>God Mode replaces willpower with structure. The rules stop being suggestions and start being enforced.</p>
           <p style={{ margin: 0 }}>The key shift: <b style={{ color: GOLD }}>floors matter as much as ceilings.</b> Under-eating fails a day exactly the way overeating does. A day only stands when it clears both.</p>
         </>
       ),
@@ -54,7 +54,7 @@ export function HardModeTutorial({ mode = "read", onClose, onConfirm }) {
           <li>Don’t <b style={{ color: T1 }}>skip a meal to make room</b> for a later one.</li>
           <li>Don’t try to <b style={{ color: T1 }}>lower a floor mid-day</b> — threshold changes only take effect tomorrow.</li>
           <li>Don’t <b style={{ color: T1 }}>cut tomorrow’s floor</b> to pay for a high day. A floor edit after a surplus is blocked.</li>
-          <li>Don’t <b style={{ color: T1 }}>turn Hard Mode off mid-day</b>. Off takes effect tomorrow.</li>
+          <li>Don’t <b style={{ color: T1 }}>turn God Mode off mid-day</b>. Off takes effect tomorrow.</li>
         </ul>
       ),
     },
@@ -117,7 +117,7 @@ export function HardModeTutorial({ mode = "read", onClose, onConfirm }) {
           ) : (
             <button onClick={() => (mode === "activate" ? onConfirm?.() : onClose())}
               style={{ padding: "9px 20px", background: GOLD, border: "none", borderRadius: 10, color: "#1a1400", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
-              {mode === "activate" ? "Turn on Hard Mode" : "Got it"}
+              {mode === "activate" ? "Turn on God Mode" : "Got it"}
             </button>
           )}
         </div>

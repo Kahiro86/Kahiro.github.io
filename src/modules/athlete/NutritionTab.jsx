@@ -104,17 +104,17 @@ export function NutritionTab() {
 
   const allFoods = useMemo(() => [...customFoods, ...FOOD_DB], [customFoods]);
 
-  // ── Hard Mode (opt-in strict enforcement) ──────────────────────────
+  // ── God Mode (opt-in strict enforcement) ──────────────────────────
   const hard = useMemo(() => sanitizeHard(rawHard), [rawHard]);
   const hardOn = hardActiveOn(hard, logDs);
   const hardEval = useMemo(() => (hardOn ? evalDay(entries, hard, profile, logDs) : null), [hardOn, entries, hard, profile, logDs]);
-  // A day is locked from edits once it's marked complete, or once Hard Mode
+  // A day is locked from edits once it's marked complete, or once God Mode
   // has carried it into the past (no retroactive editing of a closed day).
   const dayLocked = hardOn && (isDayClosed(hard, logDs, today) || !!days[logDs]?.completedAt);
 
   // ── Mutations (always via sanitize → the log can never go bad) ──────
   const writeDay = (ds, fn) => {
-    if (dayLocked) { toast("This day is closed — Hard Mode locks completed and past days.", { tone: "info" }); return; }
+    if (dayLocked) { toast("This day is closed — God Mode locks completed and past days.", { tone: "info" }); return; }
     setLog((prev) => {
     const clean = sanitizeNutrition(prev);
     const next = fn(clean[ds] || []);
@@ -146,7 +146,7 @@ export function NutritionTab() {
     const n = src ? scaleNutrients(src.per100, g) : (e.grams > 0 ? Object.fromEntries(Object.entries(e.n).map(([k, v]) => [k, Math.round((v / e.grams) * g * 10) / 10])) : e.n);
     return { ...e, grams: g, n };
   }));
-  // Hard Mode caps sugared beverages: past the cap, the ONE-TAP shortcut is
+  // God Mode caps sugared beverages: past the cap, the ONE-TAP shortcut is
   // withdrawn (manual entry via search still works — the cap adds friction,
   // it doesn't forbid). Detected from the source food's tags.
   const sugaredCapBlocks = (name) => {
@@ -357,7 +357,7 @@ export function NutritionTab() {
           <Card style={{ padding: "15px 17px", border: `1px solid ${AC2}55`, background: `${AC2}0a` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <Lock size={13} color={AC2} />
-              <span style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 800, color: AC2 }}>Hard Mode · {done ? "Day closed" : "Day open"}</span>
+              <span style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 800, color: AC2 }}>God Mode · {done ? "Day closed" : "Day open"}</span>
               {dayLocked && <span style={{ fontSize: 10.5, color: T3 }}>· locked from edits</span>}
             </div>
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>

@@ -15,7 +15,7 @@ import { useXp } from "./useXp.js";
 import { useStorageState } from "./useStorageState.js";
 import { DEFAULT_HARD, sanitizeHard, hardActiveOn, enableHard, disableHard, proposeFloors, evalDay } from "../modules/athlete/nutritionHard.js";
 import { DEFAULT_PROFILE } from "../modules/athlete/nutrition.js";
-import { HardModeTutorial } from "../modules/athlete/HardModeTutorial.jsx";
+import { GodModeTutorial } from "../modules/athlete/GodModeTutorial.jsx";
 import { getPushVapid, setPushVapid, pushStatus, subscribeToPush, unsubscribeFromPush, sendLocalTestNotification } from "./push.js";
 
 const SETUP_SQL = `create table if not exists kv (
@@ -52,7 +52,7 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const liveXp = useXp();
   const [armHell, setArmHell] = useState(false);
 
-  // ── Nutrition Hard Mode state ───────────────────────────────────────
+  // ── Nutrition God Mode state ───────────────────────────────────────
   const [rawHardCfg, setHardCfg] = useStorageState("nutrition_hard", DEFAULT_HARD);
   const [hardLog] = useStorageState("nutrition_log", {});
   const [hardProfile] = useStorageState("nutrition_profile", DEFAULT_PROFILE);
@@ -64,8 +64,8 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const [kCeil, setKCeil] = useState(String(hardCfg.kcalCeil || ""));
   const [hardMsg, setHardMsg] = useState(null);
   const todayEval = () => evalDay(hardLog?.[localDateStr()] || [], hardCfg, hardProfile, localDateStr());
-  const confirmEnableHard = () => { setHardCfg((c) => ({ ...enableHard(sanitizeHard(c)), tutorialSeen: true })); setHardTut(null); setHardMsg({ text: "Hard Mode is on.", tone: GR }); };
-  const doDisableHard = () => { setHardCfg((c) => disableHard(sanitizeHard(c))); setHardMsg({ text: "Hard Mode turns off tomorrow — today still counts.", tone: T2 }); };
+  const confirmEnableHard = () => { setHardCfg((c) => ({ ...enableHard(sanitizeHard(c)), tutorialSeen: true })); setHardTut(null); setHardMsg({ text: "God Mode is on.", tone: GR }); };
+  const doDisableHard = () => { setHardCfg((c) => disableHard(sanitizeHard(c))); setHardMsg({ text: "God Mode turns off tomorrow — today still counts.", tone: T2 }); };
   const saveFloors = () => {
     const res = proposeFloors(hardCfg, { proteinFloor: +pFloor || 0, kcalFloor: +kFloor || 0, kcalCeil: +kCeil || 0 }, todayEval());
     if (!res.ok) { setHardMsg({ text: res.reason, tone: RE }); return; }
@@ -386,14 +386,14 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
-        {/* ── Nutrition · Hard Mode ──────────────────────────────────── */}
-        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Nutrition · Hard Mode</div>
+        {/* ── Nutrition · God Mode ───────────────────────────────────── */}
+        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Nutrition · God Mode</div>
         <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
           A strict mode for the nutrition tracker: floors are enforced as hard as ceilings, items must be logged within 20 minutes, closed days lock, and the escapes are delayed to tomorrow. Nothing you&apos;ve logged is ever changed.
         </div>
         {hardIsOn ? (
           <div style={{ background: `${AC2}12`, border: `1px solid ${AC2}44`, borderRadius: 10, padding: "12px 14px" }}>
-            <div style={{ fontSize: 12.5, color: AC2, fontWeight: 800, letterSpacing: 0.5, marginBottom: 10 }}>● HARD MODE ACTIVE</div>
+            <div style={{ fontSize: 12.5, color: AC2, fontWeight: 800, letterSpacing: 0.5, marginBottom: 10 }}>● GOD MODE ACTIVE</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
               <label style={{ fontSize: 10, color: T3 }}>Protein floor (g)<br /><input value={pFloor} onChange={(e) => setPFloor(e.target.value)} type="number" inputMode="numeric" placeholder="auto" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
               <label style={{ fontSize: 10, color: T3 }}>Calorie floor<br /><input value={kFloor} onChange={(e) => setKFloor(e.target.value)} type="number" inputMode="numeric" placeholder="auto" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
@@ -408,12 +408,12 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
           </div>
         ) : (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={() => setHardTut("activate")} style={btn({ flex: "none", border: `1px solid ${AC2}66`, color: AC2, fontWeight: 700 })}>Enable Hard Mode</button>
+            <button onClick={() => setHardTut("activate")} style={btn({ flex: "none", border: `1px solid ${AC2}66`, color: AC2, fontWeight: 700 })}>Enable God Mode</button>
             <button onClick={() => setHardTut("read")} style={btn({ flex: "none" })}>Read the walkthrough</button>
           </div>
         )}
         {hardMsg && <div style={{ fontSize: 12, color: hardMsg.tone, marginTop: 8, lineHeight: 1.5 }}>{hardMsg.text}</div>}
-        {hardTut && <HardModeTutorial mode={hardTut} onClose={() => setHardTut(null)} onConfirm={confirmEnableHard} />}
+        {hardTut && <GodModeTutorial mode={hardTut} onClose={() => setHardTut(null)} onConfirm={confirmEnableHard} />}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 

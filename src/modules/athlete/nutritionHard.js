@@ -1,4 +1,4 @@
-// ── Nutrition Hard Mode — structure replacing willpower ──────────────
+// ── Nutrition God Mode — structure replacing willpower ──────────────
 // A strict, opt-in mode for the nutrition tracker. The rules here are
 // enforced, not advisory: floors matter as much as ceilings, logging is
 // time-bound, closed days lock, and the escapes (turn it off, lower a floor,
