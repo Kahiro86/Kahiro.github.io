@@ -5,7 +5,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Plus, Trash2, Star, Search, Copy, ChevronUp, Flame } from "lucide-react";
-import { B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
+import { B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC2 } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty } from "../../shared/ui.jsx";
 import { DatePicker } from "../../shared/DatePicker.jsx";
 import { useDayMarks, hasCheat, toggleMark } from "../../shared/dayMarks.js";
@@ -26,6 +26,11 @@ import {
   frequentEntries, slotForNow, applyVariant, duplicateFood,
   AI_MEAL_SYSTEM, parseAiEstimate,
 } from "./nutrition.js";
+import {
+  DEFAULT_HARD, sanitizeHard, hardActiveOn, evalDay, isDayClosed,
+  isSugaredBev, LOW_APPETITE_OPTIONS,
+} from "./nutritionHard.js";
+import { Lock } from "lucide-react";
 
 const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
 const nowTime = () => new Date().toTimeString().slice(0, 5);
@@ -53,6 +58,8 @@ export function NutritionTab() {
   const [rawFoods, setFoods] = useStorageState("nutrition_foods", []);
   const [rawProfile, setProfile] = useStorageState("nutrition_profile", DEFAULT_PROFILE);
   const [rawHabits] = useStorageState("habits", []);
+  const [rawHard] = useStorageState("nutrition_hard", DEFAULT_HARD);
+  const [days, setDays] = useStorageState("nutrition_days", {}); // { ds: { completedAt, clean } }
   const toast = useToast();
   const today = localDateStr();
   // The log is backdatable — `logDs` is the day being viewed/logged (defaults
@@ -97,14 +104,30 @@ export function NutritionTab() {
 
   const allFoods = useMemo(() => [...customFoods, ...FOOD_DB], [customFoods]);
 
+  // ── Hard Mode (opt-in strict enforcement) ──────────────────────────
+  const hard = useMemo(() => sanitizeHard(rawHard), [rawHard]);
+  const hardOn = hardActiveOn(hard, logDs);
+  const hardEval = useMemo(() => (hardOn ? evalDay(entries, hard, profile, logDs) : null), [hardOn, entries, hard, profile, logDs]);
+  // A day is locked from edits once it's marked complete, or once Hard Mode
+  // has carried it into the past (no retroactive editing of a closed day).
+  const dayLocked = hardOn && (isDayClosed(hard, logDs, today) || !!days[logDs]?.completedAt);
+
   // ── Mutations (always via sanitize → the log can never go bad) ──────
-  const writeDay = (ds, fn) => setLog((prev) => {
+  const writeDay = (ds, fn) => {
+    if (dayLocked) { toast("This day is closed — Hard Mode locks completed and past days.", { tone: "info" }); return; }
+    setLog((prev) => {
     const clean = sanitizeNutrition(prev);
     const next = fn(clean[ds] || []);
     const out = { ...clean };
     if (next.length) out[ds] = next; else delete out[ds];
     return out;
-  });
+    });
+  };
+  const markDayComplete = () => {
+    if (!hardEval) return;
+    setDays((d) => ({ ...(d && typeof d === "object" ? d : {}), [logDs]: { completedAt: Date.now(), clean: hardEval.clean } }));
+    toast(hardEval.clean ? "Day completed — clean." : "Day completed.", { tone: "success" });
+  };
   const addEntry = (entry) => {
     writeDay(logDs, (list) => [...list, entry]);
     toast(`${entry.name} logged · ${Math.round(entry.n.kcal || 0)} kcal`, { tone: "success", duration: 2200 });
@@ -123,10 +146,21 @@ export function NutritionTab() {
     const n = src ? scaleNutrients(src.per100, g) : (e.grams > 0 ? Object.fromEntries(Object.entries(e.n).map(([k, v]) => [k, Math.round((v / e.grams) * g * 10) / 10])) : e.n);
     return { ...e, grams: g, n };
   }));
+  // Hard Mode caps sugared beverages: past the cap, the ONE-TAP shortcut is
+  // withdrawn (manual entry via search still works — the cap adds friction,
+  // it doesn't forbid). Detected from the source food's tags.
+  const sugaredCapBlocks = (name) => {
+    if (!hardOn || !hardEval || !hardEval.capReached) return false;
+    const src = allFoods.find((f) => f.name === name);
+    return !!(src && src.bev && Array.isArray(src.tags) && src.tags.includes("SUGAR"));
+  };
+  const capToast = () => toast(`Sugared-drink cap reached (${hard.sugaredCap}/day) — one-tap is off. Add it manually if you truly need it.`, { tone: "info" });
+
   // One-tap favourites: repeat meals log themselves into the slot the
   // current hour suggests — zero questions asked.
   const frequents = useMemo(() => frequentEntries(log), [log]);
   const logFrequent = (r) => {
+    if (sugaredCapBlocks(r.name)) return capToast();
     addEntry({ id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`, slot: slotForNow(), time: nowTime(),
       name: r.name, grams: r.grams, proc: r.proc, n: r.n });
   };
@@ -302,6 +336,61 @@ export function NutritionTab() {
           🍔 Cheat day — eat freely. This day won't count against your healthy streak, and the streak carries straight across it.
         </div>
       )}
+      {hardOn && hardEval && (() => {
+        const done = !!days[logDs]?.completedAt;
+        const f = hardEval.floors, tot = hardEval.totals;
+        const bar = (label, val, lo, hi, unit) => {
+          const ok = val >= lo && (hi == null || val <= hi);
+          return (
+            <div style={{ flex: 1, minWidth: 150 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, marginBottom: 3 }}>
+                <span style={{ color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{label}</span>
+                <span style={{ fontFamily: "monospace", color: ok ? GR : AC2 }}>{Math.round(val)}{unit} · floor {lo}{hi != null ? ` · ceil ${hi}` : ""}</span>
+              </div>
+              <div style={{ height: 4, background: BD, borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${Math.min(100, hi ? (val / hi) * 100 : (val / lo) * 100)}%`, background: ok ? GR : AC2 }} />
+              </div>
+            </div>
+          );
+        };
+        return (
+          <Card style={{ padding: "15px 17px", border: `1px solid ${AC2}55`, background: `${AC2}0a` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <Lock size={13} color={AC2} />
+              <span style={{ fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 800, color: AC2 }}>Hard Mode · {done ? "Day closed" : "Day open"}</span>
+              {dayLocked && <span style={{ fontSize: 10.5, color: T3 }}>· locked from edits</span>}
+            </div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
+              {bar("Protein", tot.p, f.proteinFloor, null, "g")}
+              {bar("Calories", tot.kcal, f.kcalFloor, f.kcalCeil, "")}
+            </div>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11.5, color: T2, marginBottom: hardEval.canComplete || done ? 12 : 10 }}>
+              <span>Post-shift meal: <b style={{ color: hardEval.postShiftLogged ? GR : AC2 }}>{hardEval.postShiftLogged ? "logged ✓" : "not yet"}</b></span>
+              <span>Logged on time: <b style={{ color: hardEval.lateItems.length ? AC2 : GR }}>{hardEval.lateItems.length ? `${hardEval.lateItems.length} late` : "all ✓"}</b></span>
+              <span>Sugared drinks: <b style={{ color: hardEval.capReached ? AC2 : T1 }}>{hardEval.sugaredCount}/{hard.sugaredCap}</b></span>
+            </div>
+            {/* Low-appetite path for the mandatory post-shift meal — never a skip. */}
+            {!hardEval.postShiftLogged && !done && (
+              <div style={{ padding: "10px 12px", background: B2, border: `1px solid ${BD}`, borderRadius: 10, marginBottom: 12 }}>
+                <div style={{ fontSize: 11.5, color: T2, marginBottom: 6, lineHeight: 1.5 }}>The post-shift meal is required. Low appetite? Log one of these instead of skipping:</div>
+                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11, color: T3, lineHeight: 1.7 }}>
+                  {LOW_APPETITE_OPTIONS.slice(0, 3).map((o) => <li key={o}>{o}</li>)}
+                </ul>
+              </div>
+            )}
+            {done ? (
+              <div style={{ fontSize: 12, color: days[logDs].clean ? GR : T2 }}>{days[logDs].clean ? "Clean day — logged, floors met, nothing late." : "Day completed."}</div>
+            ) : hardEval.canComplete ? (
+              <button onClick={markDayComplete} style={{ padding: "9px 18px", background: GR, border: "none", borderRadius: 10, color: "#04130a", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+                Mark day complete{hardEval.clean ? " · clean" : ""}
+              </button>
+            ) : (
+              // A failed/incomplete day states its one cause, neutrally. No alarm.
+              <div style={{ fontSize: 12, color: T2, lineHeight: 1.5 }}>{hardEval.failReason}</div>
+            )}
+          </Card>
+        );
+      })()}
       <MotivePush context={["meal", "protein", "water"]} accent={GR} compact />
       {/* ── Daily dashboard ── */}
       <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${GR}08,transparent)` }}>

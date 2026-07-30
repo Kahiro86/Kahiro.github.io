@@ -71,6 +71,11 @@ const SCENARIOS = {
   corruptIdentity: { "architect:app_identity": JSON.stringify({ appName: 12345, ownerName: { nope: 1 }, configured: "yes" }) },
   corruptHell: { "architect:hell_mode": JSON.stringify({ on: "yes", since: 5, anchorXp: "lots", anchorLevel: null }) },
   corruptPushQueue: { "architect:push_queue": JSON.stringify({ notAnArray: true, at: "soon" }) },
+  corruptNutritionHard: {
+    "architect:nutrition_hard": JSON.stringify({ enabled: "yes", offFrom: 5, proteinFloor: "lots", kcalFloor: -9, kcalCeil: {}, sugaredCap: "two", pending: { from: "bad", proteinFloor: "x" }, tutorialSeen: 1 }),
+    "architect:nutrition_days": JSON.stringify({ "not-a-date": { completedAt: "x" }, "2026-07-30": { completedAt: 123, clean: "yes" } }),
+    "architect:nutrition_log": JSON.stringify({ "2026-07-30": [{ id: "e1", name: "Chai", slot: "dinner", grams: 250, bev: true, sugared: true, time: "bad", loggedAt: "x", n: { kcal: 40, p: 1 } }] }),
+  },
   corruptNutritionFoods: {
     "architect:nutrition_foods": JSON.stringify([null, 5, "x", { id: "cf1" }, { id: "cf2", name: "Bad", per100: "nope" }, { id: "cf3", name: "OK", per100: { kcal: 100, p: 5 }, bev: "yes", tags: "SUGAR", variants: "no" }]),
     "architect:nutrition_log": JSON.stringify({ "2026-07-30": [{ id: "e1", name: "Fizz", slot: "snack", grams: 520, bev: true, loggedAt: "bad", late: 1, n: { kcal: 31, na: 120 } }] }),

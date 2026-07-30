@@ -442,6 +442,7 @@ export function sanitizeNutrition(raw) {
         proc: [1, 2, 3, 4].includes(+e.proc) ? +e.proc : 2,
         ...(e.ai ? { ai: true } : {}),
         ...(e.bev ? { bev: true } : {}),
+        ...(e.sugared ? { sugared: true } : {}),
         ...(typeof e.loggedAt === "number" ? { loggedAt: e.loggedAt } : {}),
         ...(e.late ? { late: true } : {}),
         n: cleanN(e.n),
@@ -469,6 +470,7 @@ export const newEntry = (food, grams, slot, time) => ({
   proc: food.proc || 2, n: scaleNutrients(food.per100, +grams || 0),
   loggedAt: Date.now(),
   ...(food.bev ? { bev: true } : {}),
+  ...(food.bev && Array.isArray(food.tags) && food.tags.includes("SUGAR") ? { sugared: true } : {}),
 });
 
 // Resolve a food to the per100 of a chosen variant (plain/Greek/…). Returns
