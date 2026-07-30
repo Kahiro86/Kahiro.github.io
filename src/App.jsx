@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { T1 } from "./shared/designTokens.js";
 import { storage } from "./shared/storage.js";
 import { useStorageState } from "./shared/useStorageState.js";
@@ -20,21 +20,25 @@ import { AmbientBackground } from "./shared/AmbientBackground.jsx";
 import { getStats } from "./modules/trading/helpers.js";
 import { financeSummary } from "./modules/finance/summary.js";
 import { HABITS_DEF } from "./modules/dashboard/domains.js";
-import { Dashboard } from "./modules/dashboard/Dashboard.jsx";
-import { LifeOSModule } from "./modules/life/LifeOSModule.jsx";
-import { FaithOS } from "./modules/faith/FaithOS.jsx";
-import { AnalyticsOS } from "./modules/analytics/AnalyticsOS.jsx";
-import { JourneyModule } from "./modules/journey/JourneyModule.jsx";
-import { FirmOS } from "./modules/firm/FirmOS.jsx";
-import { CalendarModule } from "./modules/calendar/CalendarModule.jsx";
+// Route-level code splitting: every module is its own lazy chunk, so first
+// paint ships only the shell + the landing module. Heavy deps that live
+// only inside modules (recharts, the AI/finance code) leave the initial
+// bundle entirely. Conditionally-rendered panels lazy-load on first open.
+const Dashboard = lazy(() => import("./modules/dashboard/Dashboard.jsx").then((m) => ({ default: m.Dashboard })));
+const LifeOSModule = lazy(() => import("./modules/life/LifeOSModule.jsx").then((m) => ({ default: m.LifeOSModule })));
+const FaithOS = lazy(() => import("./modules/faith/FaithOS.jsx").then((m) => ({ default: m.FaithOS })));
+const AnalyticsOS = lazy(() => import("./modules/analytics/AnalyticsOS.jsx").then((m) => ({ default: m.AnalyticsOS })));
+const JourneyModule = lazy(() => import("./modules/journey/JourneyModule.jsx").then((m) => ({ default: m.JourneyModule })));
+const FirmOS = lazy(() => import("./modules/firm/FirmOS.jsx").then((m) => ({ default: m.FirmOS })));
+const CalendarModule = lazy(() => import("./modules/calendar/CalendarModule.jsx").then((m) => ({ default: m.CalendarModule })));
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
-import { AIPanel } from "./shared/AIPanel.jsx";
-import { SettingsPanel } from "./shared/SettingsPanel.jsx";
+const AIPanel = lazy(() => import("./shared/AIPanel.jsx").then((m) => ({ default: m.AIPanel })));
+const SettingsPanel = lazy(() => import("./shared/SettingsPanel.jsx").then((m) => ({ default: m.SettingsPanel })));
 import { getApiKey } from "./shared/anthropic.js";
-import { GuidedTour } from "./shared/GuidedTour.jsx";
-import { HelpCenter } from "./shared/HelpCenter.jsx";
-import { WhatsNew } from "./shared/WhatsNew.jsx";
+const GuidedTour = lazy(() => import("./shared/GuidedTour.jsx").then((m) => ({ default: m.GuidedTour })));
+const HelpCenter = lazy(() => import("./shared/HelpCenter.jsx").then((m) => ({ default: m.HelpCenter })));
+const WhatsNew = lazy(() => import("./shared/WhatsNew.jsx").then((m) => ({ default: m.WhatsNew })));
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
@@ -255,7 +259,7 @@ export default function App() {
         <AmbientBackground module={module} animate={!isMobile} />
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
-          <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
+          <ErrorBoundary key={module}><Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T1, opacity: 0.3, fontSize: 13 }}>…</div>}>{renderModule()}</Suspense></ErrorBoundary>
         </div>
 
         {mobileNavOpen && (
@@ -274,7 +278,7 @@ export default function App() {
 
         {aiOpen && (
           <div style={{ position: "fixed", inset: 0, zIndex: 44 }}>
-            <AIPanel mobile onClose={() => setAiOpen(false)} onOpenSettings={() => { setShowSettings(true); setAiOpen(false); }} ctx={aiCtx} habits={habits} />
+            <Suspense fallback={null}><AIPanel mobile onClose={() => setAiOpen(false)} onOpenSettings={() => { setShowSettings(true); setAiOpen(false); }} ctx={aiCtx} habits={habits} /></Suspense>
           </div>
         )}
         <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || aiOpen || mobileNavOpen} offsetRight={16} />
@@ -282,11 +286,13 @@ export default function App() {
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
         <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
+        <Suspense fallback={null}>
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
         {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
         {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
-        {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
         {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
+        </Suspense>
+        {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
       </ToastProvider>
     );
@@ -303,21 +309,23 @@ export default function App() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
         <div key={module} style={{ flex: 1, overflowY: module === "firm" ? "hidden" : "auto", overflow: module === "firm" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
-          <ErrorBoundary key={module}>{renderModule()}</ErrorBoundary>
+          <ErrorBoundary key={module}><Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T1, opacity: 0.3, fontSize: 13 }}>…</div>}>{renderModule()}</Suspense></ErrorBoundary>
         </div>
       </div>
 
-      {aiOpen && <AIPanel onClose={() => setAiOpen(false)} onOpenSettings={() => setShowSettings(true)} ctx={aiCtx} habits={habits} />}
+      {aiOpen && <Suspense fallback={null}><AIPanel onClose={() => setAiOpen(false)} onOpenSettings={() => setShowSettings(true)} ctx={aiCtx} habits={habits} /></Suspense>}
       <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life"} offsetRight={aiOpen ? 364 : 24} />
       <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
         <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
+      <Suspense fallback={null}>
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
       {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
       {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
-      {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
+      </Suspense>
+      {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>
     </ToastProvider>
   );

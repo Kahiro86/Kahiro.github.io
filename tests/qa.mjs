@@ -1,16 +1,29 @@
 import { chromium } from "playwright";
+import { existsSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
-import { existsSync } from "node:fs";
+import { extname, join, normalize } from "node:path";
 
-// Portable: the built single-file app sits at ../dist/index.html relative to
-// this test. Launch Playwright's resolved Chromium; PLAYWRIGHT_CHROMIUM_PATH
-// overrides it (used by the dev sandbox where the browser lives elsewhere).
-const BASE = new URL("../dist/index.html", import.meta.url).href;
-const distPath = fileURLToPath(BASE);
-if (!existsSync(distPath)) {
-  console.error(`Build not found at ${distPath} — run "npm run build" first.`);
+// The built app is code-split, so it must be served over HTTP — module
+// chunks (dynamic import()) are CORS-blocked over file://. Spin up a tiny
+// static server over ./dist and point the browser at it. Launch Playwright's
+// resolved Chromium; PLAYWRIGHT_CHROMIUM_PATH overrides it (dev sandbox).
+const DIST = fileURLToPath(new URL("../dist", import.meta.url));
+if (!existsSync(join(DIST, "index.html"))) {
+  console.error(`Build not found at ${DIST}/index.html — run "npm run build" first.`);
   process.exit(1);
 }
+const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
+const server = createServer((req, res) => {
+  let p = decodeURIComponent((req.url || "/").split("?")[0]);
+  if (p === "/") p = "/index.html";
+  const fp = normalize(join(DIST, p));
+  if (!fp.startsWith(DIST) || !existsSync(fp)) { res.statusCode = 404; return res.end("not found"); }
+  res.setHeader("Content-Type", MIME[extname(fp)] || "application/octet-stream");
+  res.end(readFileSync(fp));
+});
+await new Promise((r) => server.listen(0, r));
+const BASE = `http://localhost:${server.address().port}/index.html`;
 const EXE = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // [module id, sidebar label] pairs — we navigate by clicking the sidebar button.
 // Trading/Finance live inside "firm" now (Trading/Wealth/Doctrine groups);
@@ -340,4 +353,5 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
 
 console.log(failures === 0 ? "\nALL PASS — no blank pages" : `\n${failures} BLANK cases`);
 await browser.close();
+server.close();
 process.exit(failures === 0 ? 0 : 1);
