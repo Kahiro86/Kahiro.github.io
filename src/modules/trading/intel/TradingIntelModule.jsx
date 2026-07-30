@@ -291,7 +291,7 @@ export function TradingIntelModule() {
               <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
                 <GateBanner gate={gate} sleepHours={sleepHours} onSleep={setSleepHours} />
                 <div style={{ flex: 1, overflow: "hidden" }}>
-                  <TradeLog trades={trades} accounts={accounts} activeId={activeId} onNew={requestNew} logLocked={!gate.canLog} onView={openDetail} onEdit={startEdit} onDuplicate={dupTrade} onDelete={delTrade} />
+                  <TradeLog trades={trades} accounts={accounts} activeId={activeId} onNew={requestNew} logLocked={!gate.canLog} showCurrency={gate.cfg.showCurrency} onView={openDetail} onEdit={startEdit} onDuplicate={dupTrade} onDelete={delTrade} />
                 </div>
               </div>
             )}

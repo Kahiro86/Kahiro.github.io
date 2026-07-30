@@ -9,9 +9,10 @@ import { MotivePush } from "../../../shared/MotivePush.jsx";
 
 const fmtDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-function Row({ t, account, onView, onEdit, onDuplicate, onDelete }) {
+function Row({ t, account, showCurrency, onView, onEdit, onDuplicate, onDelete }) {
   const r = tradeResult(t);
   const net = netPnl(t);
+  const rr = actualRR(t);
   const open = t.status !== "CLOSED" || t.exit === "" || t.exit == null;
   const rc = open ? T3 : RESULT_COLORS[r] || T2;
   return (
@@ -37,8 +38,8 @@ function Row({ t, account, onView, onEdit, onDuplicate, onDelete }) {
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           {open ? <span style={{ fontSize: 10.5, fontWeight: 700, color: AM, padding: "3px 9px", background: `${AM}14`, borderRadius: 7, border: `1px solid ${AM}33` }}>OPEN</span>
             : <>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: net >= 0 ? GR : RE, fontFamily: "'JetBrains Mono',monospace" }}>{net >= 0 ? "+" : ""}{fmtMoney(net)}</div>
-              <div style={{ fontSize: 9.5, color: rc, fontWeight: 700 }}>{r}{actualRR(t) ? ` · ${actualRR(t)}R` : ""}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: net >= 0 ? GR : RE, fontFamily: "'JetBrains Mono',monospace" }}>{showCurrency ? `${net >= 0 ? "+" : ""}${fmtMoney(net)}` : `${rr > 0 ? "+" : ""}${rr}R`}</div>
+              <div style={{ fontSize: 9.5, color: rc, fontWeight: 700 }}>{r}{showCurrency ? (rr ? ` · ${rr}R` : "") : ` · ${net >= 0 ? "+" : ""}${fmtMoney(net)}`}</div>
             </>}
         </div>
         <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
@@ -52,7 +53,7 @@ function Row({ t, account, onView, onEdit, onDuplicate, onDelete }) {
   );
 }
 
-export function TradeLog({ trades, accounts, activeId, onNew, logLocked = false, onView, onEdit, onDuplicate, onDelete }) {
+export function TradeLog({ trades, accounts, activeId, onNew, logLocked = false, showCurrency = false, onView, onEdit, onDuplicate, onDelete }) {
   const [q, setQ] = useState("");
   const [scope, setScope] = useState("active"); // active | all
   const [res, setRes] = useState("all");
@@ -104,7 +105,7 @@ export function TradeLog({ trades, accounts, activeId, onNew, logLocked = false,
           </Empty>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 9, maxWidth: 900 }}>
-            {list.map((t) => <Row key={t.id} t={t} account={accById[t.accountId]} onView={onView} onEdit={onEdit} onDuplicate={onDuplicate} onDelete={onDelete} />)}
+            {list.map((t) => <Row key={t.id} t={t} account={accById[t.accountId]} showCurrency={showCurrency} onView={onView} onEdit={onEdit} onDuplicate={onDuplicate} onDelete={onDelete} />)}
           </div>
         )}
       </div>
