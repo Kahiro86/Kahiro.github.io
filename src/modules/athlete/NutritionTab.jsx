@@ -103,6 +103,12 @@ export function NutritionTab() {
   }, [log]);
 
   const allFoods = useMemo(() => [...customFoods, ...FOOD_DB], [customFoods]);
+  // Quick calorie bumps (QUICK-ADD tag) — one tap logs the item at its serving.
+  const quickAddFoods = useMemo(() => [...customFoods, ...FOOD_DB].filter((f) => Array.isArray(f.tags) && f.tags.includes("QUICK-ADD")), [customFoods]);
+  // Supplement adherence (creatine / magnesium) — a daily checkmark, not a macro entry.
+  const [supps, setSupps] = useStorageState("nutrition_supps", {});
+  const suppsToday = (supps && typeof supps === "object" && supps[logDs] && typeof supps[logDs] === "object") ? supps[logDs] : {};
+  const toggleSupp = (id) => setSupps((p) => { const s = (p && typeof p === "object" && !Array.isArray(p)) ? { ...p } : {}; const d = { ...(s[logDs] || {}) }; d[id] = !d[id]; s[logDs] = d; return s; });
 
   // ── God Mode (opt-in strict enforcement) ──────────────────────────
   const hard = useMemo(() => sanitizeHard(rawHard), [rawHard]);
@@ -440,6 +446,30 @@ export function NutritionTab() {
           )}
         </div>
       )}
+      {/* Bump my calories — fast, low-effort adds to close a gap */}
+      {quickAddFoods.length > 0 && (
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase" }}>Bump my calories</span>
+          {quickAddFoods.map((f) => (
+            <button key={f.id} onClick={() => addEntry(newEntry(f, f.serving ? f.serving.g : 100, slotForNow(), nowTime()))} aria-label={`Add ${f.name}`}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: `${AM}10`, border: `1px solid ${AM}33`, borderRadius: 9, color: T1, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" }}>
+              <span>{f.name}</span>
+              <span style={{ fontSize: 9.5, color: T3, fontFamily: "monospace" }}>{Math.round((f.per100.kcal || 0) * (f.serving ? f.serving.g : 100) / 100)} kcal</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Supplement adherence — checkmarks, not calories */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase" }}>Supplements</span>
+        {[["creatine", "Creatine 5g"], ["magnesium", "Magnesium"]].map(([id, label]) => (
+          <button key={id} onClick={() => toggleSupp(id)} aria-pressed={!!suppsToday[id]}
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 12px", background: suppsToday[id] ? `${GR}12` : GL, border: `1px solid ${suppsToday[id] ? GR + "55" : BD}`, borderRadius: 9, color: suppsToday[id] ? GR : T2, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" }}>
+            <span style={{ width: 15, height: 15, borderRadius: 4, border: `1.5px solid ${suppsToday[id] ? GR : T3}`, background: suppsToday[id] ? GR : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>{suppsToday[id] && <span style={{ color: "#04130a", fontSize: 10 }}>✓</span>}</span>
+            {label}
+          </button>
+        ))}
+      </div>
       {SLOTS.map((slot) => {
         const list = entries.filter((e) => e.slot === slot.id);
         const slotKcal = Math.round(list.reduce((s, e) => s + (+e.n.kcal || 0), 0));
