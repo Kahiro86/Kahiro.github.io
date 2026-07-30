@@ -26,6 +26,7 @@ import { HabitEditor } from "./HabitEditor.jsx";
 import { WellnessPanel } from "./WellnessPanel.jsx";
 import { NonNegotiables } from "./NonNegotiables.jsx";
 import { PurityTab } from "./PurityTab.jsx";
+import { Journals } from "./Journals.jsx";
 
 const today = () => localDateStr();
 
@@ -705,19 +706,16 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
                 )}
               </div>
             </Card>
-            {entries.map((e) => (
-              <div key={e.id} style={{ padding: "12px 14px", background: GL, borderRadius: 11, border: `1px solid ${e.id === editingEntryId ? CY + "55" : BD}`, display: "flex", gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: T3, marginBottom: 4 }}>
-                    {relativeDateLabel((e.date || "").slice(0, 10) || today())}
-                    {e.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}
-                  </div>
-                  <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{e.text}</div>
-                </div>
-                <button onClick={() => startEditEntry(e)} title="Edit entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Pencil size={11} /></button>
-                <button onClick={() => deleteEntry(e.id)} title="Delete entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Trash2 size={11} /></button>
-              </div>
-            ))}
+            <div style={{ fontSize: 10.5, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: 700, color: T3, marginTop: 2 }}>Journals</div>
+            <Journals
+              entries={entries}
+              editingEntryId={editingEntryId}
+              onEdit={startEditEntry}
+              onDelete={deleteEntry}
+              relativeDateLabel={relativeDateLabel}
+              today={today}
+              onExport={(f) => toast(`Exported ${f.label}`, { tone: "success" })}
+            />
           </div>
         )}
 
