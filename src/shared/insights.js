@@ -182,7 +182,24 @@ export function buildNudges(deps) {
       text: `You haven't added to ${stalled.w.name} in ${Math.floor(stalled.gap / 7)} weeks — even a little keeps it alive.` });
   }
 
+  // One voice, not a chorus. Several rules above all speak to the same
+  // thing — "do your habits today" (open non-negotiables, a streak at risk,
+  // repeated misses, yesterday's gap, the weekly-weak-area focus). On a
+  // rough day they'd stack into four near-identical lines. Keep only the
+  // single most urgent, so the coach never repeats itself. Milestones and
+  // every other domain are untouched.
+  const habitPri = (n) => {
+    if (n.id === "nonneg") return 0;
+    if (n.id.startsWith("risk_")) return 1;
+    if (n.id === "yesterday_habits") return 2;
+    if (n.id.startsWith("miss_")) return 3;
+    if (n.id === "focus") return 4;
+    return null; // not a habit-completion nudge (milestones included)
+  };
+  const keepHabit = out.filter((n) => habitPri(n) !== null).sort((a, b) => habitPri(a) - habitPri(b))[0]?.id;
+  const deduped = out.filter((n) => habitPri(n) === null || n.id === keepHabit);
+
   // Urgent first, celebrations next, gentle guidance last.
   const order = { urgent: 0, celebrate: 1, info: 2 };
-  return out.sort((a, b) => order[a.tone] - order[b.tone]).slice(0, 6);
+  return deduped.sort((a, b) => order[a.tone] - order[b.tone]).slice(0, 6);
 }
