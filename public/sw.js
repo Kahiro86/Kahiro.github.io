@@ -1,7 +1,7 @@
 // Minimal offline shell: network-first for page loads with cache fallback,
 // so deploys land immediately but the app still opens with no connection.
 // All user data lives in localStorage, untouched by this cache.
-const CACHE = "kahiro-v4";
+const CACHE = "kahiro-v5";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -17,6 +17,22 @@ self.addEventListener("fetch", (e) => {
   // Same-origin images (the athlete backdrop): cache-first so the ambient
   // art works offline after it has been seen once.
   if (e.request.destination === "image" && new URL(e.request.url).origin === self.location.origin) {
+    e.respondWith(
+      caches.match(e.request).then((hit) =>
+        hit || fetch(e.request).then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+          return res;
+        })
+      )
+    );
+    return;
+  }
+  // Hashed code-split chunks (/assets/*.js|css) are immutable — cache-first
+  // so a lazy module opened once works fully offline forever after. A new
+  // deploy ships new hashes, so this can never serve a stale module.
+  if ((e.request.destination === "script" || e.request.destination === "style") &&
+      new URL(e.request.url).origin === self.location.origin) {
     e.respondWith(
       caches.match(e.request).then((hit) =>
         hit || fetch(e.request).then((res) => {
