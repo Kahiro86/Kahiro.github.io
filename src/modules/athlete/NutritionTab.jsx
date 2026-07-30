@@ -23,7 +23,7 @@ import {
   sanitizeNutrition, sanitizeFoods, sanitizeProfile, calcTargets,
   newEntry, scaleNutrients, dayTotals, dayEntries, coverage,
   nutritionScore, qualitySuggestions, nutritionSeries, healthyStreaks, nutritionReport,
-  frequentEntries, slotForNow,
+  frequentEntries, slotForNow, applyVariant, duplicateFood,
   AI_MEAL_SYSTEM, parseAiEstimate,
 } from "./nutrition.js";
 
@@ -146,7 +146,10 @@ export function NutritionTab() {
   const [mode, setMode] = useState("search");       // search | custom | quick
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(null);             // food being portioned
+  const [variant, setVariant] = useState(null);     // chosen variant id (plain/Greek/…)
   const [grams, setGramsInput] = useState("100");
+  // The food actually logged — resolves the chosen variant's macros.
+  const selFood = sel ? (variant ? applyVariant(sel, variant) : sel) : null;
   const [custom, setCustom] = useState(null);       // custom-food / recipe draft
   const [quick, setQuick] = useState({ name: "", kcal: "", p: "", c: "", f: "" });
   const [aiText, setAiText] = useState("");
@@ -161,7 +164,17 @@ export function NutritionTab() {
     return list.slice(0, 12);
   }, [q, allFoods, profile.favs]);
 
-  const closeAdd = () => { setAdding(null); setSel(null); setQ(""); setMode("search"); setCustom(null); setAiState({ busy: false, est: null, err: null }); };
+  const closeAdd = () => { setAdding(null); setSel(null); setVariant(null); setQ(""); setMode("search"); setCustom(null); setAiState({ busy: false, est: null, err: null }); };
+
+  // Duplicate any library item into an editable custom food, then open the
+  // editor on it — the copy's macros are yours to change (defaults, not truths).
+  const duplicateItem = (f) => {
+    const d = duplicateFood(f);
+    setFoods((prev) => [d, ...sanitizeFoods(prev)]);
+    setMode("custom"); setSel(null); setVariant(null);
+    setCustom({ recipe: false, editId: d.id, name: d.name, per100: { ...d.per100 }, items: [], iq: "" });
+    toast(`Duplicated "${d.name}" — edit its macros, then Save`, { tone: "success" });
+  };
 
   // AI estimation: describe → preview → confirm. Nothing logs without a look.
   const runAiEstimate = async () => {
@@ -189,9 +202,9 @@ export function NutritionTab() {
     setAiState({ busy: false, est: null, err: null });
   };
   const confirmAdd = () => {
-    if (!sel || !(+grams > 0)) return;
-    addEntry(newEntry(sel, +grams, adding, nowTime()));
-    setSel(null); setQ("");
+    if (!selFood || !(+grams > 0)) return;
+    addEntry(newEntry(selFood, +grams, adding, nowTime()));
+    setSel(null); setVariant(null); setQ("");
   };
   const addRecent = (r) => {
     const src = allFoods.find((f) => f.name === r.name);
@@ -226,9 +239,22 @@ export function NutritionTab() {
       for (const k of ["kcal", "p", "c", "f", "fib", "sug", "na"]) if (+custom.per100[k]) per100[k] = +custom.per100[k];
       if (!per100.kcal) return;
     }
+    // Editing a duplicated item updates it in place, keeping its
+    // serving/tags/bev/variants; a fresh food gets a new id.
+    if (custom.editId) {
+      let updated = null;
+      setFoods((prev) => sanitizeFoods(prev).map((f) => {
+        if (f.id !== custom.editId) return f;
+        updated = { ...f, name: custom.name.trim(), per100 };
+        return updated;
+      }));
+      setSel(updated); setVariant(null); setMode("search"); setCustom(null);
+      toast("Food updated — set the portion to log it", { tone: "success" });
+      return;
+    }
     const food = { id: `cf${Date.now().toString(36)}`, name: custom.name.trim(), per100, proc };
     setFoods((prev) => [food, ...sanitizeFoods(prev)]);
-    setSel(food); setMode("search"); setCustom(null);
+    setSel(food); setVariant(null); setMode("search"); setCustom(null);
     toast(`${custom.recipe ? "Recipe" : "Food"} saved — set the portion to log it`, { tone: "success" });
   };
 
@@ -238,11 +264,21 @@ export function NutritionTab() {
   const times = entries.map((e) => e.time).filter(Boolean).sort();
   const macroKcal = totals.p * 4 + totals.c * 4 + totals.f * 9 || 1;
 
+  const selectFood = (f) => { setSel(f); setVariant(Array.isArray(f.variants) && f.variants.length ? f.variants[0].id : null); setGramsInput(String(f.serving ? f.serving.g : f.id.startsWith("db_olive") ? 15 : 100)); };
   const foodRow = (f) => (
     <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: sel?.id === f.id ? `${GR}12` : GL, border: `1px solid ${sel?.id === f.id ? GR + "44" : BD}`, borderRadius: 9 }}>
-      <button onClick={() => { setSel(f); setGramsInput(String(f.serving ? f.serving.g : f.id.startsWith("db_olive") ? 15 : 100)); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", justifyContent: "space-between", gap: 8 }}>
-        <span style={{ fontSize: 12, color: T1 }}>{f.name}</span>
+      <button onClick={() => selectFood(f)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
+        <span style={{ fontSize: 12, color: T1, display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+          {f.bev && <span title="Beverage — counts toward fluids" style={{ fontSize: 9 }}>💧</span>}
+          {Array.isArray(f.tags) && f.tags.slice(0, 2).map((t) => (
+            <span key={t} style={{ fontSize: 8, letterSpacing: 0.5, color: T3, border: `1px solid ${BD}`, borderRadius: 5, padding: "1px 4px", whiteSpace: "nowrap" }}>{t}</span>
+          ))}
+        </span>
         <span style={{ fontSize: 10.5, color: T3, fontFamily: "monospace", whiteSpace: "nowrap" }}>{Math.round(f.per100.kcal || 0)} kcal · {Math.round(f.per100.p || 0)}g P /100g</span>
+      </button>
+      <button onClick={() => duplicateItem(f)} aria-label={`Duplicate ${f.name}`} title="Duplicate & edit into your own food" style={{ background: "none", border: "none", cursor: "pointer", display: "flex", padding: 2 }}>
+        <Copy size={12} color={T3} />
       </button>
       <button onClick={() => toggleFav(f.id)} aria-label={`Favorite ${f.name}`} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", padding: 2 }}>
         <Star size={12} color={profile.favs.includes(f.id) ? AM : T3} fill={profile.favs.includes(f.id) ? AM : "none"} />
@@ -291,6 +327,8 @@ export function NutritionTab() {
             <span>Macro split: <b style={{ fontFamily: "monospace", color: T1 }}>{Math.round((totals.p * 4 / macroKcal) * 100)}/{Math.round((totals.c * 4 / macroKcal) * 100)}/{Math.round((totals.f * 9 / macroKcal) * 100)}</b> <span style={{ color: T3 }}>P/C/F</span></span>
             <span>{entries.length} meal item{entries.length === 1 ? "" : "s"}{entries.length ? ` · avg ${Math.round(totals.kcal / entries.length)} kcal` : ""}{times.length ? ` · ${times[0]}–${times[times.length - 1]}` : ""}</span>
             {water && <span>Water: <b style={{ color: CY, fontFamily: "monospace" }}>{water.done}/{water.target}{water.unit}</b> <span style={{ color: T3 }}>(Life OS)</span></span>}
+            <span>Fluids logged: <b style={{ color: CY, fontFamily: "monospace" }}>{totals.fluidMl || 0} ml</b> <span style={{ color: T3 }}>/ {targets.waterMl}ml</span></span>
+            <span>Sodium: <b style={{ color: totals.na > 2300 ? AM : T1, fontFamily: "monospace" }}>{Math.round(totals.na || 0)} mg</b></span>
             <span style={{ display: "flex", alignItems: "center", gap: 4, color: AM }}><Flame size={11} />{streaks.current}d healthy streak · best {streaks.best}d</span>
           </div>
         </div>
@@ -378,10 +416,21 @@ export function NutritionTab() {
                     </div>
                     {sel && (
                       <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 7 }}>
+                        {/* Variant selector (e.g. plain / Greek / low-fat) — swaps macros live */}
+                        {Array.isArray(sel.variants) && sel.variants.length > 0 && (
+                          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }} aria-label="Variant">
+                            <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>Variant</span>
+                            {sel.variants.map((v) => (
+                              <button key={v.id} onClick={() => setVariant(v.id)} aria-label={`Variant ${v.l}`}
+                                style={{ padding: "4px 10px", borderRadius: 12, fontSize: 10.5, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${variant === v.id ? GR + "66" : BD}`, background: variant === v.id ? `${GR}14` : GL, color: variant === v.id ? GR : T3 }}>{v.l}</button>
+                            ))}
+                          </div>
+                        )}
+                        {/* Portion multipliers: ½ / serving / 2× / 100g */}
                         {(() => {
                           const s = sel.serving;
                           const chips = [
-                            ...(s ? [{ l: `${s.l} · ${s.g}g`, g: s.g }, { l: `½ · ${Math.round(s.g / 2)}g`, g: Math.round(s.g / 2) }, { l: `2× · ${s.g * 2}g`, g: s.g * 2 }] : []),
+                            ...(s ? [{ l: `½ · ${Math.round(s.g / 2)}g`, g: Math.round(s.g / 2) }, { l: `${s.l} · ${s.g}g`, g: s.g }, { l: `2× · ${s.g * 2}g`, g: s.g * 2 }] : []),
                             { l: "100 g", g: 100 },
                           ];
                           return (
@@ -390,16 +439,23 @@ export function NutritionTab() {
                                 <button key={c.l} onClick={() => setGramsInput(String(c.g))} aria-label={`Serving ${c.l}`}
                                   style={{ padding: "4px 10px", borderRadius: 12, fontSize: 10.5, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${+grams === c.g ? GR + "66" : BD}`, background: +grams === c.g ? `${GR}14` : GL, color: +grams === c.g ? GR : T3 }}>{c.l}</button>
                               ))}
+                              {sel.bev && <span style={{ fontSize: 9.5, color: CY, alignSelf: "center" }}>💧 counts as fluid</span>}
                             </div>
                           );
                         })()}
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                          <span style={{ fontSize: 11.5, color: T2, flex: 1 }}>{sel.name}</span>
+                          <span style={{ fontSize: 11.5, color: T2, flex: 1 }}>{selFood.name}</span>
                           <input type="number" value={grams} onChange={(e) => setGramsInput(e.target.value)} aria-label="Portion in grams" autoFocus
                             style={{ ...input, width: 76, fontFamily: "monospace", textAlign: "right" }} />
-                          <span style={{ fontSize: 10.5, color: T3 }}>g = {Math.round((sel.per100.kcal || 0) * (+grams || 0) / 100)} kcal</span>
+                          <span style={{ fontSize: 10.5, color: T3 }}>g</span>
                           <button onClick={confirmAdd} style={{ padding: "7px 16px", background: `linear-gradient(135deg,${GR},#5fae7c)`, border: "none", borderRadius: 9, color: "#04130a", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Log it</button>
                         </div>
+                        {/* Live macro preview at the chosen portion + variant */}
+                        {(() => { const n = scaleNutrients(selFood.per100, +grams || 0); return (
+                          <div style={{ fontSize: 10.5, color: T3, fontFamily: "monospace" }}>
+                            {Math.round(n.kcal || 0)} kcal · P{Math.round(n.p || 0)} C{Math.round(n.c || 0)} F{Math.round(n.f || 0)}{n.na ? ` · Na ${Math.round(n.na)}mg` : ""}{sel.bev ? ` · ${Math.round(+grams || 0)}ml fluid` : ""}
+                          </div>
+                        ); })()}
                       </div>
                     )}
                   </>

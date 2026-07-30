@@ -48,7 +48,18 @@ export const LIMITS = ["sug", "sat", "chol", "na"];
 // `serving` (optional): a realistic single portion { l: label, g: grams },
 // so the add panel can offer a one-tap serving-size selector alongside the
 // gram editor. Foods without one fall back to 100 g.
-const F = (name, proc, n, serving = null) => ({ id: `db_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, name, proc, per100: n, ...(serving ? { serving } : {}) });
+// `opts` (optional): { bev, tags, variants } —
+//   bev: true counts the entry toward the daily fluid total (grams ≈ ml);
+//   tags: string labels shown as chips (e.g. "BEVERAGE", "SUGAR");
+//   variants: [{ id, l, per100 }] swappable in the add panel (e.g. plain /
+//   Greek / low-fat yoghurt), each recalculating the macros live.
+const F = (name, proc, n, serving = null, opts = null) => ({
+  id: `db_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`, name, proc, per100: n,
+  ...(serving ? { serving } : {}),
+  ...(opts && opts.bev ? { bev: true } : {}),
+  ...(opts && Array.isArray(opts.tags) ? { tags: opts.tags } : {}),
+  ...(opts && Array.isArray(opts.variants) ? { variants: opts.variants } : {}),
+});
 export const FOOD_DB = [
   // Staples & grains
   F("Ugali (maize meal, cooked)", 2, { kcal: 112, p: 3, c: 23.5, f: 0.5, fib: 1.2, sug: 0.2, sat: 0.1, na: 2, k: 80, ca: 3, mg: 32, fe: 0.6, zn: 0.6, ph: 70, vb: 6, h2o: 72 }),
@@ -271,6 +282,21 @@ export const FOOD_DB = [
   F("Peanuts", 1, { kcal: 567, p: 25.8, c: 16.1, f: 49.2, fib: 8.5, sug: 4, sat: 6.3, na: 18, k: 705, ca: 92, mg: 168, fe: 4.6, zn: 3.3, ph: 376, vb: 30, ve: 8.3, h2o: 6.5 }, { l: "1 handful", g: 28 }),
   F("Dawa (honey, lemon & ginger drink)", 2, { kcal: 28, p: 0.1, c: 7.6, f: 0, sug: 7.3, na: 2, k: 15, ca: 2, mg: 1, ph: 2, vb: 1, vc: 3, h2o: 92 }, { l: "1 mug", g: 250 }),
   F("Smocha (smokie in chapati)", 4, { kcal: 272, p: 8.4, c: 28.6, f: 13.6, fib: 2.4, sug: 2.5, sat: 4.4, chol: 18, na: 510, k: 155, ca: 21, mg: 25, fe: 1.8, zn: 1.2, ph: 120, vb: 10, vc: 2, h2o: 38 }, { l: "1 smocha", g: 180 }),
+  // ── Added items (macros are editable defaults, not fixed truths) ─────
+  F("Ginger lime black tea, sugared", 3, { kcal: 14, p: 0, c: 3.6, f: 0, sug: 3.6, na: 2, h2o: 96 },
+    { l: "1 cup (250ml)", g: 250 }, { bev: true, tags: ["BEVERAGE", "SUGAR"] }),
+  F("Pineapple electrolyte fizz", 2, { kcal: 6, p: 0, c: 1.5, f: 0, sug: 1.4, na: 23, k: 8, h2o: 98 },
+    { l: "1 glass (520ml)", g: 520 }, { bev: true, tags: ["BEVERAGE", "HYDRATION"] }),
+  F("Mixed yoghurt with assorted berries", 2,
+    { kcal: 59, p: 2.9, c: 6.4, f: 2.5, fib: 0.9, sug: 5.4, sat: 1.5, na: 18, k: 90, ca: 90, h2o: 80 },
+    { l: "1 bowl (200g + 80g berries)", g: 280 },
+    { tags: ["PROTEIN", "SNACK"], variants: [
+      { id: "plain",  l: "Plain",   per100: { kcal: 59, p: 2.9, c: 6.4, f: 2.5, fib: 0.9, sug: 5.4, sat: 1.5, na: 18, k: 90, ca: 90, h2o: 80 } },
+      { id: "greek",  l: "Greek",   per100: { kcal: 86, p: 7.5, c: 6.4, f: 3.6, fib: 0.9, sug: 4,   sat: 2,   na: 18, k: 95, ca: 110, h2o: 78 } },
+      { id: "lowfat", l: "Low-fat", per100: { kcal: 47, p: 3.6, c: 7.5, f: 0.7, fib: 0.9, sug: 5,   sat: 0.4, na: 20, k: 95, ca: 100, h2o: 82 } },
+    ] }),
+  F("Beef samosa, 30g", 4, { kcal: 317, p: 13.3, c: 26.7, f: 20, sat: 8, na: 250, k: 90, fe: 1.5, h2o: 30 },
+    { l: "1 samosa (30g)", g: 30 }, { tags: ["SNACK", "FRIED"] }),
 ];
 
 // Backfill realistic servings onto common existing foods (data-only; keeps
@@ -415,6 +441,9 @@ export function sanitizeNutrition(raw) {
         grams: Number.isFinite(+e.grams) && +e.grams > 0 ? +e.grams : 0,
         proc: [1, 2, 3, 4].includes(+e.proc) ? +e.proc : 2,
         ...(e.ai ? { ai: true } : {}),
+        ...(e.bev ? { bev: true } : {}),
+        ...(typeof e.loggedAt === "number" ? { loggedAt: e.loggedAt } : {}),
+        ...(e.late ? { late: true } : {}),
         n: cleanN(e.n),
       }));
     if (clean.length) out[d] = clean;
@@ -438,15 +467,48 @@ export const newEntry = (food, grams, slot, time) => ({
   id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`,
   slot, time: time || "", name: food.name, grams: +grams || 0,
   proc: food.proc || 2, n: scaleNutrients(food.per100, +grams || 0),
+  loggedAt: Date.now(),
+  ...(food.bev ? { bev: true } : {}),
 });
+
+// Resolve a food to the per100 of a chosen variant (plain/Greek/…). Returns
+// a food-like object so newEntry/scaleNutrients need no variant awareness;
+// the variant label is appended to the logged name for clarity.
+export function applyVariant(food, variantId) {
+  const v = Array.isArray(food?.variants) ? food.variants.find((x) => x.id === variantId) : null;
+  if (!v) return food;
+  return { ...food, per100: v.per100, name: `${food.name} · ${v.l}` };
+}
+
+// Clone any library item (built-in or custom) into an editable custom food.
+// The user's copy owns its macros — defaults become a starting point, not a
+// truth. `tags`/`bev`/`serving`/`variants` carry over; the id is fresh.
+export function duplicateFood(food) {
+  return {
+    id: `cf_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`,
+    name: `${(food?.name || "Food").replace(/ · .*$/, "")} (copy)`,
+    proc: [1, 2, 3, 4].includes(+food?.proc) ? +food.proc : 2,
+    per100: { ...(food?.per100 || {}) },
+    ...(food?.serving ? { serving: { ...food.serving } } : {}),
+    ...(food?.bev ? { bev: true } : {}),
+    ...(Array.isArray(food?.tags) ? { tags: [...food.tags] } : {}),
+    ...(Array.isArray(food?.variants) ? { variants: food.variants.map((v) => ({ ...v, per100: { ...v.per100 } })) } : {}),
+    custom: true,
+  };
+}
 
 export function dayTotals(entries) {
   const t = {};
   for (const k of NUTRIENT_KEYS) t[k] = 0;
-  for (const e of entries || []) for (const k of NUTRIENT_KEYS) t[k] += +e.n?.[k] || 0;
+  let fluidMl = 0;
+  for (const e of entries || []) {
+    for (const k of NUTRIENT_KEYS) t[k] += +e.n?.[k] || 0;
+    if (e.bev) fluidMl += +e.grams || 0; // beverages count as fluid (ml ≈ g)
+  }
   for (const k of NUTRIENT_KEYS) t[k] = Math.round(t[k] * 10) / 10;
   t.netC = Math.max(0, Math.round((t.c - t.fib) * 10) / 10);
   t.unsat = Math.max(0, Math.round((t.f - t.sat) * 10) / 10);
+  t.fluidMl = Math.round(fluidMl);
   return t;
 }
 
