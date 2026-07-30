@@ -11,6 +11,7 @@ import {
 import { BD, T1, T2, T3, GL, B2, AC, AC2, GR, AM, RE } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
 import { DayAgenda } from "../../shared/DayAgenda.jsx";
+import { TodayTrackers } from "../../shared/TodayTrackers.jsx";
 import { billsDueSoon } from "../finance/bills.js";
 import { Ring } from "../../shared/charts.jsx";
 import { useCountUp } from "../../shared/useCountUp.js";
@@ -223,6 +224,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
   // ── 💰 FINANCE: today's income + net worth (the glanceable figures) ──
   const fin = useMemo(() => financeSummary(finance), [finance]);
+  // Monthly overhead actual (proxy: sum of tracked bills) for the ceiling card.
+  const monthExpenses = useMemo(() => (Array.isArray(finance.bills) ? finance.bills.reduce((s, b) => s + (+b?.amount || 0), 0) : 0), [finance.bills]);
   const incomeToday = useMemo(
     () => (Array.isArray(finance.income) ? finance.income : []).filter((e) => e && (e.date || "").slice(0, 10) === ds).reduce((s, e) => s + (+e.amount || 0), 0),
     [finance.income, ds]
@@ -339,6 +342,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         state={{ streak: cs.currentStreak, missedYesterday: cs.currentStreak === 0, legendary: cs.longestStreak >= 100 && cs.currentStreak === cs.longestStreak }} accent={AC} />
 
       <DayAgenda items={agendaItems} week={agendaWeek} onNavigate={onNavigate} />
+      <TodayTrackers overheadActual={monthExpenses} />
 
       {/* ── 🎯 THE MISSION — the freedom north star, above everything ── */}
       <Card style={{ padding: "18px 22px", background: "linear-gradient(110deg,#161616,#0C0C0C)", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
