@@ -58,6 +58,10 @@ const SCENARIOS = {
   corruptIdentity: { "architect:app_identity": JSON.stringify({ appName: 12345, ownerName: { nope: 1 }, configured: "yes" }) },
   corruptHell: { "architect:hell_mode": JSON.stringify({ on: "yes", since: 5, anchorXp: "lots", anchorLevel: null }) },
   corruptPushQueue: { "architect:push_queue": JSON.stringify({ notAnArray: true, at: "soon" }) },
+  corruptNutritionFoods: {
+    "architect:nutrition_foods": JSON.stringify([null, 5, "x", { id: "cf1" }, { id: "cf2", name: "Bad", per100: "nope" }, { id: "cf3", name: "OK", per100: { kcal: 100, p: 5 }, bev: "yes", tags: "SUGAR", variants: "no" }]),
+    "architect:nutrition_log": JSON.stringify({ "2026-07-30": [{ id: "e1", name: "Fizz", slot: "snack", grams: 520, bev: true, loggedAt: "bad", late: 1, n: { kcal: 31, na: 120 } }] }),
+  },
   everythingNull: {
     "architect:habits": "null",
     "architect:ict_trades": "null",
