@@ -13,6 +13,7 @@ import {
   sanitizeOverhead, monthKey,
   sanitizePings, DEFAULT_PINGS, newPing, pingDue,
 } from "./today.js";
+import { sanitizeSeason, seasonActive, seasonDay } from "./season.js";
 
 const kes0 = (n) => Math.round(+n || 0).toLocaleString();
 const inp = { width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "8px 11px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
@@ -69,8 +70,19 @@ export function TodayTrackers({ overheadActual = null }) {
   const duePings = pings.filter((p) => pingDue(p, ds));
   const dismissPing = (id) => setPings((p) => sanitizePings(p).map((x) => (x.id === id ? { ...x, lastDone: ds } : x)));
 
+  // Season day counter (Daniel Fast etc.) surfaced on the today screen.
+  const [rawSeason] = useStorageState("active_season", null);
+  const season = sanitizeSeason(rawSeason);
+  const seasonOn = seasonActive(rawSeason, ds);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {seasonOn && season && (
+        <Card style={{ padding: "12px 15px", display: "flex", alignItems: "center", gap: 10, borderColor: `${AC2}55`, background: `${AC2}0a` }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: AC2 }}>🕊️ {season.name}</span>
+          <span style={{ fontSize: 12.5, color: T2, fontFamily: "monospace", marginLeft: "auto" }}>Day {seasonDay(rawSeason, ds)} of {season.days}</span>
+        </Card>
+      )}
       {/* Life pings — dismissible, no lock */}
       {duePings.map((p) => (
         <Card key={p.id} style={{ padding: "12px 15px", display: "flex", alignItems: "center", gap: 10, borderColor: `${AM}44` }}>

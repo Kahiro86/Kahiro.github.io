@@ -459,6 +459,7 @@ export function sanitizeNutrition(raw) {
         ...(e.ai ? { ai: true } : {}),
         ...(e.bev ? { bev: true } : {}),
         ...(e.sugared ? { sugared: true } : {}),
+        ...(typeof e.season === "string" ? { season: e.season } : {}),
         ...(typeof e.loggedAt === "number" ? { loggedAt: e.loggedAt } : {}),
         ...(e.late ? { late: true } : {}),
         n: cleanN(e.n),

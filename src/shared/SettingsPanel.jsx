@@ -17,6 +17,7 @@ import { DEFAULT_HARD, sanitizeHard, hardActiveOn, enableHard, disableHard, prop
 import { DEFAULT_PROFILE } from "../modules/athlete/nutrition.js";
 import { GodModeTutorial } from "../modules/athlete/GodModeTutorial.jsx";
 import { DEFAULT_GATES, sanitizeGates, proposeGateChange } from "./tradeGates.js";
+import { SEASON_TEMPLATES, sanitizeSeason, seasonActive, seasonDay, startSeason } from "./season.js";
 import { getPushVapid, setPushVapid, pushStatus, subscribeToPush, unsubscribeFromPush, sendLocalTestNotification } from "./push.js";
 
 const SETUP_SQL = `create table if not exists kv (
@@ -92,6 +93,15 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
     setGateMsg({ text: "Pre-trade checklist saved.", tone: GR });
   };
   const toggleCurrency = () => setGatesCfg((c) => ({ ...sanitizeGates(c), showCurrency: !sanitizeGates(c).showCurrency }));
+
+  // ── Season (fasting/blocks) state ───────────────────────────────────
+  const [rawSeason, setSeason] = useStorageState("active_season", null);
+  const season = sanitizeSeason(rawSeason);
+  const seasonOn = seasonActive(rawSeason);
+  const [seasStart, setSeasStart] = useState(localDateStr());
+  const [seasDays, setSeasDays] = useState("21");
+  const [seasTpl, setSeasTpl] = useState(SEASON_TEMPLATES[0].id);
+  const beginSeason = () => setSeason(startSeason(seasTpl, seasStart || localDateStr(), Math.max(1, +seasDays || 21)));
 
   // ── Push notifications state ────────────────────────────────────────
   const [vapid, setVapid] = useState(getPushVapid());
@@ -460,6 +470,31 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
           </button>
         </div>
         {gateMsg && <div style={{ fontSize: 12, color: gateMsg.tone, marginTop: 8, lineHeight: 1.5 }}>{gateMsg.text}</div>}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        {/* ── Season (fasting / blocks) ──────────────────────────────── */}
+        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Season</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
+          A time-boxed mode over nutrition. The Daniel Fast reframes to whole foods and reasonably lowers the protein floor while active; it ends automatically at the day count and reverts.
+        </div>
+        {seasonOn && season ? (
+          <div style={{ background: `${AC2}12`, border: `1px solid ${AC2}44`, borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ fontSize: 12.5, color: AC2, fontWeight: 800, marginBottom: 6 }}>🕊️ {season.name} · Day {seasonDay(rawSeason)} of {season.days}</div>
+            <button onClick={() => setSeason(null)} style={btn({ flex: "none", border: `1px solid ${RE}44`, color: RE })}>End season now</button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <label style={{ fontSize: 10, color: T3 }}>Template<br />
+              <select value={seasTpl} onChange={(e) => setSeasTpl(e.target.value)} style={{ ...idInput, width: 150, marginTop: 4 }}>
+                {SEASON_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </label>
+            <label style={{ fontSize: 10, color: T3 }}>Start<br /><input type="date" value={seasStart} onChange={(e) => setSeasStart(e.target.value)} style={{ ...idInput, width: 140, marginTop: 4 }} /></label>
+            <label style={{ fontSize: 10, color: T3 }}>Days<br /><input type="number" inputMode="numeric" value={seasDays} onChange={(e) => setSeasDays(e.target.value)} style={{ ...idInput, width: 70, marginTop: 4 }} /></label>
+            <button onClick={beginSeason} style={btn({ flex: "none", border: `1px solid ${AC2}66`, color: AC2, fontWeight: 700 })}>Start season</button>
+          </div>
+        )}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
