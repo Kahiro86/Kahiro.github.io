@@ -47,7 +47,7 @@ const SUBTABS_MAP = {
   ],
   life: [
     { group: "Life", subtabs: ["Habits", "Insights", "Journal", "Projects", "Purity", "Today"] },
-    { group: "Athlete", subtabs: ["History", "Progress", "Nutrition", "This Week"] },
+    { group: "Athlete", subtabs: ["History", "Progress", "Nutrition", "Splits", "This Week"] },
   ],
   faith: [
     { group: "Faith", subtabs: ["Scripture & Notes", "The Walk"] },
