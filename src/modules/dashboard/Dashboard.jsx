@@ -245,7 +245,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     return { count: todays.length, pnl: todays.reduce((s, t) => s + tiNetPnl(t), 0) };
   }, [tiTrades, tiAccounts, tiSettings, ds]);
   const tradeCountToday = tradesToday.length + tiToday.count;
-  const dailyPnlAll = tiToday.pnl;
   const isTradingDay = kz.active || tradeCountToday > 0;
   const checklistOk = tradesToday.length > 0 && tradesToday.every((t) => +t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal);
 
@@ -287,7 +286,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const cuScore = useCountUp(lifeScore);
   const cuXp = useCountUp(xp?.total ?? 0);
   const cuNet = useCountUp(fin.personalNetWorth);
-  const cuPnl = useCountUp(Math.round(dailyPnlAll));
   const cuFreedom = useCountUp(freedom.freedomPct);
 
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
@@ -520,15 +518,15 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
         {isTradingDay && (
           <StatCard onClick={() => onNavigate("firm:trading")} style={{ borderColor: kz.active ? `${AC}44` : BD }}>
-            <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Live" : ""}</SectionLabel>
+            <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Killzone" : ""}</SectionLabel>
+            {/* Discipline, not P&L — the dashboard answers "what am I allowed
+                to do", never runs a live money ticker. */}
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 26, ...big, color: dailyPnlAll > 0 ? GR : dailyPnlAll < 0 ? RE : T1 }}>
-                {dailyPnlAll >= 0 ? "+" : "−"}${Math.abs(cuPnl + tiToday.pnl).toLocaleString()}
-              </span>
-              <span style={{ fontSize: 11, color: T3 }}>today</span>
+              <span style={{ fontSize: 26, ...big, color: T1 }}>{tradeCountToday}</span>
+              <span style={{ fontSize: 11, color: T3 }}>trade{tradeCountToday === 1 ? "" : "s"} logged today</span>
             </div>
             <div style={{ display: "flex", gap: 16, marginTop: 9, fontSize: 11.5, color: T2 }}>
-              <span>{tradeCountToday} trade{tradeCountToday === 1 ? "" : "s"}</span>
+              <span style={{ color: kz.active ? GR : T3 }}>{kz.active ? "Session live" : "Outside killzone"}</span>
               {tradesToday.length > 0 && (
                 <span style={{ color: checklistOk ? GR : AM, display: "flex", alignItems: "center", gap: 4 }}>
                   {checklistOk ? <><Check size={11} /> Checklist</> : "Checklist gaps"}

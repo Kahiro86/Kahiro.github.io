@@ -16,6 +16,7 @@ import { useStorageState } from "./useStorageState.js";
 import { DEFAULT_HARD, sanitizeHard, hardActiveOn, enableHard, disableHard, proposeFloors, evalDay } from "../modules/athlete/nutritionHard.js";
 import { DEFAULT_PROFILE } from "../modules/athlete/nutrition.js";
 import { GodModeTutorial } from "../modules/athlete/GodModeTutorial.jsx";
+import { DEFAULT_GATES, sanitizeGates, proposeGateChange } from "./tradeGates.js";
 import { getPushVapid, setPushVapid, pushStatus, subscribeToPush, unsubscribeFromPush, sendLocalTestNotification } from "./push.js";
 
 const SETUP_SQL = `create table if not exists kv (
@@ -71,6 +72,26 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
     if (!res.ok) { setHardMsg({ text: res.reason, tone: RE }); return; }
     setHardCfg(res.cfg); setHardMsg({ text: `Saved — new thresholds apply from ${res.from}.`, tone: GR });
   };
+
+  // ── Trading enforcement (gates) state ──────────────────────────────
+  const [rawGatesCfg, setGatesCfg] = useStorageState("trade_gates", DEFAULT_GATES);
+  const gcfg = sanitizeGates(rawGatesCfg);
+  const [gCap, setGCap] = useState(String(gcfg.dailyCap));
+  const [gCool, setGCool] = useState(String(gcfg.cooldownMin));
+  const [gSleep, setGSleep] = useState(String(gcfg.sleepThreshold));
+  const [gHalf, setGHalf] = useState(String(gcfg.halfSizeThreshold));
+  const [gChecklist, setGChecklist] = useState(gcfg.checklist.join("\n"));
+  const [gateMsg, setGateMsg] = useState(null);
+  const saveGateThresholds = () => {
+    const next = proposeGateChange(gcfg, { dailyCap: +gCap, cooldownMin: +gCool, sleepThreshold: +gSleep, halfSizeThreshold: +gHalf });
+    setGatesCfg(next); setGateMsg({ text: `Thresholds staged — they take effect ${next.from} (never mid-session).`, tone: GR });
+  };
+  const saveChecklist = () => {
+    const items = gChecklist.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 20);
+    setGatesCfg((c) => ({ ...sanitizeGates(c), checklist: items.length ? items : sanitizeGates(c).checklist }));
+    setGateMsg({ text: "Pre-trade checklist saved.", tone: GR });
+  };
+  const toggleCurrency = () => setGatesCfg((c) => ({ ...sanitizeGates(c), showCurrency: !sanitizeGates(c).showCurrency }));
 
   // ── Push notifications state ────────────────────────────────────────
   const [vapid, setVapid] = useState(getPushVapid());
@@ -414,6 +435,31 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
         )}
         {hardMsg && <div style={{ fontSize: 12, color: hardMsg.tone, marginTop: 8, lineHeight: 1.5 }}>{hardMsg.text}</div>}
         {hardTut && <GodModeTutorial mode={hardTut} onClose={() => setHardTut(null)} onConfirm={confirmEnableHard} />}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        {/* ── Trading · Enforcement ──────────────────────────────────── */}
+        <div style={{ fontSize: 11, color: RE, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Trading · Enforcement</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
+          The gates that turn the journal into an enforcement layer. Threshold changes take effect the next day — never mid-session.
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          <label style={{ fontSize: 10, color: T3 }}>Daily cap<br /><input value={gCap} onChange={(e) => setGCap(e.target.value)} type="number" inputMode="numeric" style={{ ...idInput, width: 78, marginTop: 4 }} /></label>
+          <label style={{ fontSize: 10, color: T3 }}>Cooldown (min)<br /><input value={gCool} onChange={(e) => setGCool(e.target.value)} type="number" inputMode="numeric" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
+          <label style={{ fontSize: 10, color: T3 }}>Sleep floor (h)<br /><input value={gSleep} onChange={(e) => setGSleep(e.target.value)} type="number" inputMode="decimal" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
+          <label style={{ fontSize: 10, color: T3 }}>Half-size (h)<br /><input value={gHalf} onChange={(e) => setGHalf(e.target.value)} type="number" inputMode="decimal" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
+        </div>
+        <button onClick={saveGateThresholds} style={btn({ flex: "none", marginBottom: 12 })}>Save thresholds (apply tomorrow)</button>
+        {gcfg.pending && <div style={{ fontSize: 11, color: AM, marginBottom: 10 }}>Staged: cap {gcfg.pending.dailyCap} · cooldown {gcfg.pending.cooldownMin}m · sleep {gcfg.pending.sleepThreshold}/{gcfg.pending.halfSizeThreshold}h from {gcfg.pending.from}.</div>}
+        <label style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase", display: "block", marginBottom: 5 }}>Pre-trade checklist (one rule per line)</label>
+        <textarea value={gChecklist} onChange={(e) => setGChecklist(e.target.value)} rows={6} style={{ ...idInput, width: "100%", resize: "vertical", lineHeight: 1.6, fontSize: 12.5, marginBottom: 8 }} />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <button onClick={saveChecklist} style={btn({ flex: "none" })}>Save checklist</button>
+          <button onClick={toggleCurrency} style={btn({ flex: "none", borderColor: gcfg.showCurrency ? `${GR}55` : BD, color: gcfg.showCurrency ? GR : T2 })}>
+            Performance unit: {gcfg.showCurrency ? "Currency" : "R-multiple"}
+          </button>
+        </div>
+        {gateMsg && <div style={{ fontSize: 12, color: gateMsg.tone, marginTop: 8, lineHeight: 1.5 }}>{gateMsg.text}</div>}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
