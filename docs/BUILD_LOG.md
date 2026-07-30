@@ -42,3 +42,20 @@ _Autonomous run while owner is offline. Assumptions, deferrals, and decisions lo
 ## Assumptions added
 - A4: "Streak counters/badges tied to trade frequency" and "duplicate performance charts on the dashboard" (Phase 2 removals) — none exist in the current app (dashboard streaks are consistency streaks, not trade-frequency; equity/win-rate charts live only in the journal/analytics). Nothing to remove there; logged as already-satisfied.
 - A5: Threshold edits for trading gates apply next day via a staged `pending` config; the editable checklist + currency toggle apply immediately (they don't soften a mid-session risk threshold).
+
+## Addendum (A–I) — built this run, queued after the phase work
+- **E — Clean bulk target:** nutrition bulk goal now the fixed 3000 kcal / 190P / 80F / ~355C, all editable in Settings. `calcTargets` honors `goal.fixed`.
+- **H — Nutrition additions:** QUICK-ADD "Bump my calories" one-tap row (groundnut paste, honey, whole milk, avocado, boiled egg); electrolyte variants (watermelon-pineapple fizz, plain honey fizz, whey protein); creatine + magnesium as 0-kcal daily adherence checkmarks (`nutrition_supps`).
+- **A — Daily checklist:** user-editable core/optional items, reorder, per-day completion history, no gamification. **No items invented** — ships empty for the owner to fill (`daily_checklist`).
+- **B — Weekly goal:** single focus text, prompt on a new week (Monday-anchored `weekKey`), dated read-only archive.
+- **C — Monthly overhead ceiling:** editable KSh target, actual-vs-target shown monthly (surfaces late-month), archive. **Actual uses the bills-sum proxy** (see D-note below).
+- **I — Recurring life pings:** generic interval pattern; Laundry + Haircut every 14 days; dismissible today-surface notice; dismiss resets the counter; no gates/locks.
+- **D — Season mode (Daniel Fast):** reusable pattern, start date + duration (default 21d), whole-foods framing, **auto-lowers the God Mode protein floor** (meat out) via `seasonFloorAdjust`, does not force samosa/whey; season-tagged entries excluded from normal healthy-streak history; Day X of N counter; auto-ends. Settings picker to start/end.
+- **F — Workout split templates:** 7 named day-types (Upper+Core, Lower+Core, Rest, Full Body, Cardio, Mobility, Recovery) shipping as **placeholder structure only — no invented exercises**. Edit/add/remove/reorder/duplicate exercises (name/type/sets/reps-or-duration/note), giant-set blocks, weekly weekday→split plan (Rest defaults to Sunday), today's split surfaces as a runnable checklist (`workout_split_log`). New "Splits" tab in Athlete OS.
+- **G — File-based journals:** the endless inline reflection feed is replaced by per-month **files**, collapsed by date; the current month opens by default, older months sit closed out of the active view until opened. Per-file Markdown export. Only reshapes presentation — stored `journal_entries` are unchanged.
+
+## Assumptions added (addendum)
+- A6: **Life-ping intervals** — Laundry/Haircut ship at the spec'd 14 days with dismiss-resets-counter working; a Settings editor to change intervals/add pings is **deferred** (defaults + dismiss cover the stated need). Logged.
+- A7: **Monthly overhead "actual"** — no dedicated monthly-spend ledger exists, so actual-vs-target reuses the sum of tracked `finance` bills as the closest real proxy. Flagged in-UI as an approximation; a dedicated monthly-spend feed is a low-risk follow-up.
+- A8: **Season protein-floor multiplier** (Daniel Fast = 0.6×) is a chosen default, editable via the God Mode floors; the spec asked only that the floor "auto-lower since meat is out" without a number.
+- A9: **Daily-checklist / workout-split content** deliberately ships empty per the addendum's explicit "do not invent items / placeholder structure only." This is intended, not an omission.
