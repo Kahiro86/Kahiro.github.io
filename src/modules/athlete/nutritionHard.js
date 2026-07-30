@@ -60,13 +60,15 @@ export const hardActiveOn = (cfg, ds = localDateStr()) =>
 
 // The floors/ceiling in force on `ds`. A staged threshold edit only takes
 // hold from its `from` date — never mid-day.
-export function effectiveFloors(cfg, profile, ds = localDateStr()) {
+export function effectiveFloors(cfg, profile, ds = localDateStr(), floorAdjust = null) {
   const t = calcTargets(profile);
   let src = cfg;
   if (cfg.pending && ds >= cfg.pending.from) src = { ...cfg, ...cfg.pending };
+  const pMult = floorAdjust?.proteinFloorMult ?? 1;
+  const kMult = floorAdjust?.kcalFloorMult ?? 1;
   return {
-    proteinFloor: src.proteinFloor || t.p,
-    kcalFloor: src.kcalFloor || Math.round(t.kcal * 0.9),
+    proteinFloor: Math.round((src.proteinFloor || t.p) * pMult),
+    kcalFloor: Math.round((src.kcalFloor || Math.round(t.kcal * 0.9)) * kMult),
     kcalCeil: src.kcalCeil || Math.round(t.kcal * 1.1),
   };
 }
@@ -85,9 +87,9 @@ export function isLate(entry, windowMin = 20) {
 export const isSugaredBev = (e) => !!(e && e.bev && (e.sugared || (Array.isArray(e.tags) && e.tags.includes("SUGAR"))));
 
 // The whole verdict for one day. Neutral: `failReason` is a single line.
-export function evalDay(entries, cfg, profile, ds = localDateStr()) {
+export function evalDay(entries, cfg, profile, ds = localDateStr(), floorAdjust = null) {
   const list = Array.isArray(entries) ? entries : [];
-  const floors = effectiveFloors(cfg, profile, ds);
+  const floors = effectiveFloors(cfg, profile, ds, floorAdjust);
   const totals = dayTotals(list);
   const lateItems = list.filter((e) => isLate(e, cfg.logWindowMin));
   const sugaredCount = list.filter(isSugaredBev).length;

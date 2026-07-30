@@ -11,6 +11,7 @@ import {
 import { BD, T1, T2, T3, GL, B2, AC, AC2, GR, AM, RE } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
 import { DayAgenda } from "../../shared/DayAgenda.jsx";
+import { TodayTrackers } from "../../shared/TodayTrackers.jsx";
 import { billsDueSoon } from "../finance/bills.js";
 import { Ring } from "../../shared/charts.jsx";
 import { useCountUp } from "../../shared/useCountUp.js";
@@ -223,6 +224,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
   // ── 💰 FINANCE: today's income + net worth (the glanceable figures) ──
   const fin = useMemo(() => financeSummary(finance), [finance]);
+  // Monthly overhead actual (proxy: sum of tracked bills) for the ceiling card.
+  const monthExpenses = useMemo(() => (Array.isArray(finance.bills) ? finance.bills.reduce((s, b) => s + (+b?.amount || 0), 0) : 0), [finance.bills]);
   const incomeToday = useMemo(
     () => (Array.isArray(finance.income) ? finance.income : []).filter((e) => e && (e.date || "").slice(0, 10) === ds).reduce((s, e) => s + (+e.amount || 0), 0),
     [finance.income, ds]
@@ -245,7 +248,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     return { count: todays.length, pnl: todays.reduce((s, t) => s + tiNetPnl(t), 0) };
   }, [tiTrades, tiAccounts, tiSettings, ds]);
   const tradeCountToday = tradesToday.length + tiToday.count;
-  const dailyPnlAll = tiToday.pnl;
   const isTradingDay = kz.active || tradeCountToday > 0;
   const checklistOk = tradesToday.length > 0 && tradesToday.every((t) => +t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal);
 
@@ -287,7 +289,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const cuScore = useCountUp(lifeScore);
   const cuXp = useCountUp(xp?.total ?? 0);
   const cuNet = useCountUp(fin.personalNetWorth);
-  const cuPnl = useCountUp(Math.round(dailyPnlAll));
   const cuFreedom = useCountUp(freedom.freedomPct);
 
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
@@ -341,6 +342,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         state={{ streak: cs.currentStreak, missedYesterday: cs.currentStreak === 0, legendary: cs.longestStreak >= 100 && cs.currentStreak === cs.longestStreak }} accent={AC} />
 
       <DayAgenda items={agendaItems} week={agendaWeek} onNavigate={onNavigate} />
+      <TodayTrackers overheadActual={monthExpenses} />
 
       {/* ── 🎯 THE MISSION — the freedom north star, above everything ── */}
       <Card style={{ padding: "18px 22px", background: "linear-gradient(110deg,#161616,#0C0C0C)", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
@@ -520,15 +522,15 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
         {isTradingDay && (
           <StatCard onClick={() => onNavigate("firm:trading")} style={{ borderColor: kz.active ? `${AC}44` : BD }}>
-            <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Live" : ""}</SectionLabel>
+            <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Killzone" : ""}</SectionLabel>
+            {/* Discipline, not P&L — the dashboard answers "what am I allowed
+                to do", never runs a live money ticker. */}
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 26, ...big, color: dailyPnlAll > 0 ? GR : dailyPnlAll < 0 ? RE : T1 }}>
-                {dailyPnlAll >= 0 ? "+" : "−"}${Math.abs(cuPnl + tiToday.pnl).toLocaleString()}
-              </span>
-              <span style={{ fontSize: 11, color: T3 }}>today</span>
+              <span style={{ fontSize: 26, ...big, color: T1 }}>{tradeCountToday}</span>
+              <span style={{ fontSize: 11, color: T3 }}>trade{tradeCountToday === 1 ? "" : "s"} logged today</span>
             </div>
             <div style={{ display: "flex", gap: 16, marginTop: 9, fontSize: 11.5, color: T2 }}>
-              <span>{tradeCountToday} trade{tradeCountToday === 1 ? "" : "s"}</span>
+              <span style={{ color: kz.active ? GR : T3 }}>{kz.active ? "Session live" : "Outside killzone"}</span>
               {tradesToday.length > 0 && (
                 <span style={{ color: checklistOk ? GR : AM, display: "flex", alignItems: "center", gap: 4 }}>
                   {checklistOk ? <><Check size={11} /> Checklist</> : "Checklist gaps"}

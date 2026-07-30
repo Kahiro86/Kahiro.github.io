@@ -2,10 +2,13 @@
 // Methodology-agnostic journal + research engine. Holds the storage, seeds
 // the editable libraries once, tracks the active account, and routes between
 // the log, the entry form, the detail view, analytics, accounts and library.
-import { useEffect, useMemo, useState } from "react";
-import { FileText, BarChart2, Wallet, Library as LibIcon, Calculator, Star, ClipboardCheck } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FileText, BarChart2, Wallet, Library as LibIcon, Calculator, Star, ClipboardCheck, Lock, Moon } from "lucide-react";
 import { BD, T1, T2, T3, GL, GR, RE, AM, CY } from "../../../shared/designTokens.js";
 import { useStorageState } from "../../../shared/useStorageState.js";
+import { localDateStr } from "../../../shared/dates.js";
+import { DEFAULT_GATES, sanitizeSleep, evalGates } from "../../../shared/tradeGates.js";
+import { PreTradeGate } from "./PreTradeGate.jsx";
 import { useToast } from "../../../shared/toast.jsx";
 import { Hydrating, Card } from "../../../shared/ui.jsx";
 import { ModuleTabs } from "../../../shared/ModuleTabs.jsx";
@@ -13,7 +16,7 @@ import { AK, Lbl, Seg, NumInp, AutoCalc } from "./fields.jsx";
 import {
   uid, sanitizeTrades, sanitizeAccounts, sanitizeInstruments, sanitizeSessions,
   sanitizeConditions, sanitizeConfluences, sanitizeStrategies, sanitizeMistakes,
-  sanitizeEmotions, sanitizeReflectionQs, sanitizeReviewFields, sanitizePsychFields, sanitizeLessons, sanitizeReminders, sanitizePresets, newPreset, accountMetrics, fmtMoney, tiToLegacyTrades,
+  sanitizeEmotions, sanitizeReflectionQs, sanitizeReviewFields, sanitizePsychFields, sanitizeLessons, sanitizeReminders, sanitizePresets, newPreset, accountMetrics, fmtMoney, tiToLegacyTrades, netPnl,
 } from "./tradingIntel.js";
 import { ReviewsTab } from "../ReviewsTab.jsx";
 import { pendingReviews, sanitizeReviews } from "../reviews.js";
@@ -65,6 +68,36 @@ function RiskTab({ instruments, account }) {
   );
 }
 
+// The enforcement banner above the journal: sleep input, the day's cap, and
+// any active lock — locks are the loudest element, data is quiet.
+function GateBanner({ gate, sleepHours, onSleep }) {
+  const hard = gate.blocks.filter((b) => b.id !== "checklist");
+  return (
+    <div style={{ margin: "14px 20px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <Moon size={14} color={T3} />
+          <span style={{ fontSize: 11.5, color: T3 }}>Slept</span>
+          <input type="number" inputMode="decimal" step="0.5" value={sleepHours ?? ""} onChange={(e) => onSleep(e.target.value)} placeholder="—"
+            aria-label="Hours slept last night" style={{ width: 58, background: GL, border: `1px solid ${BD}`, borderRadius: 8, padding: "6px 8px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "monospace", textAlign: "right" }} />
+          <span style={{ fontSize: 11.5, color: T3 }}>h</span>
+        </div>
+        <div style={{ fontSize: 11.5, color: T3 }}>Today: <b style={{ color: gate.count >= gate.cap ? RE : T2, fontFamily: "monospace" }}>{gate.count}/{gate.cap}</b> logged</div>
+        {gate.sleep === "HALF SIZE" && <span style={{ fontSize: 11, fontWeight: 800, color: AM, letterSpacing: 1, padding: "3px 9px", border: `1px solid ${AM}55`, borderRadius: 20 }}>HALF SIZE</span>}
+      </div>
+      {hard.map((b) => (
+        <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 14px", background: `${RE}14`, border: `1px solid ${RE}55`, borderRadius: 11 }}>
+          <Lock size={15} color={RE} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: RE }}>{b.reason}</div>
+            <div style={{ fontSize: 11, color: T3 }}>Lifts: {b.lifts}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TradingIntelModule() {
   const [tab, setTab] = useState("journal");
   const [view, setView] = useState("list"); // list | form | detail
@@ -89,6 +122,28 @@ export function TradingIntelModule() {
   const [emotions, setEmotions] = useSeededLib("ti_emotions", sanitizeEmotions);
 
   const trades = useMemo(() => sanitizeTrades(rawTrades), [rawTrades]);
+
+  // ── Enforcement gates (Phase 2 rules engine) ───────────────────────
+  const [rawGates] = useStorageState("trade_gates", DEFAULT_GATES);
+  const [rawSleep, setSleep] = useStorageState("trade_sleep", {});
+  const [checklistLog, setChecklistLog] = useStorageState("trade_checklists", {});
+  const [checklistDone, setChecklistDone] = useState(false); // per-session, reset after each log
+  const [gateModal, setGateModal] = useState(false);
+  const checklistRef = useRef([]);
+  const [nowTick, setNowTick] = useState(Date.now());
+  const todayDs = localDateStr();
+  const sleepMap = useMemo(() => sanitizeSleep(rawSleep), [rawSleep]);
+  const sleepHours = sleepMap[todayDs];
+  const gate = useMemo(() => evalGates({ trades, cfg: rawGates, sleepHours, checklistDone, netPnlOf: netPnl, now: nowTick, ds: todayDs }),
+    [trades, rawGates, sleepHours, checklistDone, nowTick, todayDs]);
+  // Tick only while a cooldown is counting down (keeps the minute display live
+  // without a permanent 1s render loop).
+  useEffect(() => {
+    if (gate.cooldownMs <= 0) return;
+    const id = setInterval(() => setNowTick(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, [gate.cooldownMs]);
+
   const accounts = useMemo(() => sanitizeAccounts(rawAccounts), [rawAccounts]);
   const lessons = useMemo(() => sanitizeLessons(rawLessons), [rawLessons]);
   const reminders = useMemo(() => sanitizeReminders(rawReminders), [rawReminders]);
@@ -164,7 +219,13 @@ export function TradingIntelModule() {
     l.id === lessonId ? { ...l, reinforcementCount: l.reinforcementCount + 1, linkedTrades: l.linkedTrades.includes(tradeId) ? l.linkedTrades : [...l.linkedTrades, tradeId] } : l));
 
   const saveTrade = (t) => {
+    const isNew = !sanitizeTrades(rawTrades).some((x) => x.id === t.id);
     setTrades((prev) => { const s = sanitizeTrades(prev); const i = s.findIndex((x) => x.id === t.id); return i >= 0 ? s.map((x) => (x.id === t.id ? t : x)) : [t, ...s]; });
+    // Store the pre-trade checklist that unlocked this trade (per-trade record).
+    if (isNew && checklistRef.current.length) {
+      setChecklistLog((p) => ({ ...(p && typeof p === "object" && !Array.isArray(p) ? p : {}), [t.id]: checklistRef.current }));
+    }
+    setChecklistDone(false); checklistRef.current = []; // next trade must clear the gate again
     setView("list"); setEditing(null); setTab("journal");
     toast(t.editedAt ? "Trade updated" : "Trade logged 📈", { tone: "success" });
   };
@@ -176,6 +237,17 @@ export function TradingIntelModule() {
   const dupTrade = (id) => setTrades((prev) => { const s = sanitizeTrades(prev); const o = s.find((x) => x.id === id); if (!o) return s; return [{ ...o, id: uid("t"), status: "OPEN", exit: "", createdAt: new Date().toISOString(), editedAt: null }, ...s]; });
 
   const startNew = () => { setEditing(null); setView("form"); };
+  // Gated entry to logging. Hard blocks (cap / cooldown / sleep) refuse
+  // outright; if only the checklist remains, open it. Editing an existing
+  // trade is never gated — the gate is about opening NEW risk.
+  const requestNew = () => {
+    const hard = gate.blocks.filter((b) => b.id !== "checklist");
+    if (hard.length) { toast(hard[0].reason, { tone: "danger" }); return; }
+    if (!checklistDone) { setGateModal(true); return; }
+    startNew();
+  };
+  const proceedChecklist = (items) => { checklistRef.current = items; setChecklistDone(true); setGateModal(false); startNew(); };
+  const setSleepHours = (h) => setSleep((p) => ({ ...(p && typeof p === "object" && !Array.isArray(p) ? p : {}), [todayDs]: Math.max(0, Math.min(24, +h || 0)) }));
   const startEdit = (t) => { setEditing(t); setView("form"); };
   const openDetail = (t) => { setDetail(t); setView("detail"); };
 
@@ -215,7 +287,14 @@ export function TradingIntelModule() {
       <div style={{ flex: 1, overflow: view === "list" && tab === "journal" ? "hidden" : "auto" }}>
         {!loaded ? <Hydrating label="Loading your trading intelligence…" /> : (
           <>
-            {tab === "journal" && view === "list" && <TradeLog trades={trades} accounts={accounts} activeId={activeId} onNew={startNew} onView={openDetail} onEdit={startEdit} onDuplicate={dupTrade} onDelete={delTrade} />}
+            {tab === "journal" && view === "list" && (
+              <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                <GateBanner gate={gate} sleepHours={sleepHours} onSleep={setSleepHours} />
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <TradeLog trades={trades} accounts={accounts} activeId={activeId} onNew={requestNew} logLocked={!gate.canLog} showCurrency={gate.cfg.showCurrency} onView={openDetail} onEdit={startEdit} onDuplicate={dupTrade} onDelete={delTrade} />
+                </div>
+              </div>
+            )}
             {tab === "journal" && view === "form" && <TradeForm initial={editing} libs={libs} accounts={accounts} activeId={activeId} reflectionQs={reflectionQs} reviewFields={reviewFields} psychFields={psychFields} lessons={lessons} reminders={reminders} presets={presets} onSavePreset={savePreset} onReinforceLesson={reinforceLesson} onSave={saveTrade} onCancel={() => { setView("list"); setEditing(null); }} />}
             {tab === "journal" && view === "detail" && detail && <TradeDetail trade={trades.find((x) => x.id === detail.id) || detail} reviewFields={reviewFields} psychFields={psychFields} onBack={() => { setView("list"); setDetail(null); }} onEdit={startEdit} />}
             {tab === "analytics" && (
@@ -238,6 +317,7 @@ export function TradingIntelModule() {
           </>
         )}
       </div>
+      {gateModal && <PreTradeGate items={gate.cfg.checklist} onProceed={proceedChecklist} onClose={() => setGateModal(false)} />}
     </div>
   );
 }

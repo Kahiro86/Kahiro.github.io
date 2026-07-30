@@ -1,6 +1,6 @@
 // ── Trade Log — fast, searchable journal ─────────────────────────────
 import { useMemo, useState } from "react";
-import { Plus, Search, Eye, Pencil, Copy, Trash2, X, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, Search, Eye, Pencil, Copy, Trash2, X, ArrowUpRight, ArrowDownRight, Lock } from "lucide-react";
 import { BD, T1, T2, T3, GL, GR, RE, AM } from "../../../shared/designTokens.js";
 import { Card, Empty } from "../../../shared/ui.jsx";
 import { AK } from "./fields.jsx";
@@ -9,9 +9,10 @@ import { MotivePush } from "../../../shared/MotivePush.jsx";
 
 const fmtDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-function Row({ t, account, onView, onEdit, onDuplicate, onDelete }) {
+function Row({ t, account, showCurrency, onView, onEdit, onDuplicate, onDelete }) {
   const r = tradeResult(t);
   const net = netPnl(t);
+  const rr = actualRR(t);
   const open = t.status !== "CLOSED" || t.exit === "" || t.exit == null;
   const rc = open ? T3 : RESULT_COLORS[r] || T2;
   return (
@@ -37,8 +38,8 @@ function Row({ t, account, onView, onEdit, onDuplicate, onDelete }) {
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           {open ? <span style={{ fontSize: 10.5, fontWeight: 700, color: AM, padding: "3px 9px", background: `${AM}14`, borderRadius: 7, border: `1px solid ${AM}33` }}>OPEN</span>
             : <>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: net >= 0 ? GR : RE, fontFamily: "'JetBrains Mono',monospace" }}>{net >= 0 ? "+" : ""}{fmtMoney(net)}</div>
-              <div style={{ fontSize: 9.5, color: rc, fontWeight: 700 }}>{r}{actualRR(t) ? ` · ${actualRR(t)}R` : ""}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: net >= 0 ? GR : RE, fontFamily: "'JetBrains Mono',monospace" }}>{showCurrency ? `${net >= 0 ? "+" : ""}${fmtMoney(net)}` : `${rr > 0 ? "+" : ""}${rr}R`}</div>
+              <div style={{ fontSize: 9.5, color: rc, fontWeight: 700 }}>{r}{showCurrency ? (rr ? ` · ${rr}R` : "") : ` · ${net >= 0 ? "+" : ""}${fmtMoney(net)}`}</div>
             </>}
         </div>
         <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
@@ -52,7 +53,7 @@ function Row({ t, account, onView, onEdit, onDuplicate, onDelete }) {
   );
 }
 
-export function TradeLog({ trades, accounts, activeId, onNew, onView, onEdit, onDuplicate, onDelete }) {
+export function TradeLog({ trades, accounts, activeId, onNew, logLocked = false, showCurrency = false, onView, onEdit, onDuplicate, onDelete }) {
   const [q, setQ] = useState("");
   const [scope, setScope] = useState("active"); // active | all
   const [res, setRes] = useState("all");
@@ -86,7 +87,9 @@ export function TradeLog({ trades, accounts, activeId, onNew, onView, onEdit, on
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search instrument, strategy, session, notes…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T1, fontSize: 12.5, fontFamily: "inherit" }} />
             {q && <button onClick={() => setQ("")} style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><X size={13} /></button>}
           </div>
-          <button onClick={onNew} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: `${AK}1E`, border: `1px solid ${AK}55`, borderRadius: 10, color: "#FFFFFF", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}><Plus size={14} /> New trade</button>
+          <button onClick={onNew} aria-disabled={logLocked} title={logLocked ? "Logging is locked — see the banner above" : "Log a new trade"}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: logLocked ? GL : `${AK}1E`, border: `1px solid ${logLocked ? BD : AK + "55"}`, borderRadius: 10, color: logLocked ? T3 : "#FFFFFF", fontSize: 12.5, fontWeight: 700, cursor: logLocked ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+            {logLocked ? <Lock size={13} /> : <Plus size={14} />} New trade</button>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <button onClick={() => setScope("active")} style={pill(scope === "active")}>Active account</button>
@@ -102,7 +105,7 @@ export function TradeLog({ trades, accounts, activeId, onNew, onView, onEdit, on
           </Empty>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 9, maxWidth: 900 }}>
-            {list.map((t) => <Row key={t.id} t={t} account={accById[t.accountId]} onView={onView} onEdit={onEdit} onDuplicate={onDuplicate} onDelete={onDelete} />)}
+            {list.map((t) => <Row key={t.id} t={t} account={accById[t.accountId]} showCurrency={showCurrency} onView={onView} onEdit={onEdit} onDuplicate={onDuplicate} onDelete={onDelete} />)}
           </div>
         )}
       </div>

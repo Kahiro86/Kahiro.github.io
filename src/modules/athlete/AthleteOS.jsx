@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Utensils, Pencil, Camera } from "lucide-react";
+import { Layers, FileText, TrendingUp, Flame, Plus, CheckCircle, Trash2, Copy, Zap, ArrowUp, ArrowDown, Minus, Utensils, Pencil, Camera, Dumbbell } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Chip } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { NutritionTab } from "./NutritionTab.jsx";
+import { WorkoutSplits } from "./WorkoutSplits.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
@@ -205,6 +206,7 @@ export function AthleteOS() {
 
   const TABS = [
     { id: "week",      l: "This Week", i: Layers },
+    { id: "splits",    l: "Splits",    i: Dumbbell },
     { id: "history",   l: "History",   i: FileText },
     { id: "progress",  l: "Progress",  i: TrendingUp },
     { id: "nutrition", l: "Nutrition", i: Utensils },
@@ -677,6 +679,7 @@ export function AthleteOS() {
           </div>
         )}
 
+        {view === "splits" && <WorkoutSplits />}
         {view === "nutrition" && <NutritionTab />}
 
         {view === "nutrition" && measures.length > 0 && (

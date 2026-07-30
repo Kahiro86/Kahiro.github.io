@@ -297,6 +297,19 @@ export const FOOD_DB = [
     ] }),
   F("Beef samosa, 30g", 4, { kcal: 317, p: 13.3, c: 26.7, f: 20, sat: 8, na: 250, k: 90, fe: 1.5, h2o: 30 },
     { l: "1 samosa (30g)", g: 30 }, { tags: ["SNACK", "FRIED"] }),
+  // ── Quick calorie bumps (one-tap, close a gap without volume) ────────
+  F("Groundnut paste", 1, { kcal: 594, p: 25, c: 19, f: 50, fib: 8, na: 6, k: 700 }, { l: "1 tbsp", g: 16 }, { tags: ["QUICK-ADD", "PROTEIN"] }),
+  F("Honey", 2, { kcal: 305, p: 0, c: 81, f: 0, sug: 81 }, { l: "1 tbsp", g: 21 }, { tags: ["QUICK-ADD", "SUGAR"] }),
+  F("Whole milk", 1, { kcal: 60, p: 3.2, c: 4.8, f: 3.2, sat: 1.9, ca: 120, na: 43, h2o: 88 }, { l: "1 glass (250ml)", g: 250 }, { bev: true, tags: ["QUICK-ADD", "BEVERAGE"] }),
+  F("Avocado", 1, { kcal: 120, p: 1.5, c: 6, f: 11, fib: 5, k: 485, na: 4, h2o: 73 }, { l: "½ avocado", g: 100 }, { tags: ["QUICK-ADD"] }),
+  F("Boiled egg", 1, { kcal: 156, p: 12, c: 1, f: 10, sat: 3, chol: 373, na: 124, h2o: 75 }, { l: "1 egg", g: 50 }, { tags: ["QUICK-ADD", "PROTEIN"] }),
+  // ── Electrolyte / supplement variants (with the pineapple fizz) ──────
+  F("Watermelon pineapple fizz", 2, { kcal: 3.3, p: 0, c: 0.7, f: 0, sug: 0.7, na: 18.5, k: 6, h2o: 99 },
+    { l: "1 glass (540ml)", g: 540 }, { bev: true, tags: ["BEVERAGE", "HYDRATION"] }),
+  F("Plain honey fizz", 2, { kcal: 4.7, p: 0, c: 1.2, f: 0, sug: 1.2, na: 19.7, h2o: 99 },
+    { l: "1 glass (500ml)", g: 507 }, { bev: true, tags: ["BEVERAGE", "HYDRATION"] }),
+  F("Whey protein", 2, { kcal: 400, p: 80, c: 10, f: 5, na: 200, ca: 500 },
+    { l: "1 scoop", g: 30 }, { tags: ["PROTEIN", "SUPPLEMENT"] }),
 ];
 
 // Backfill realistic servings onto common existing foods (data-only; keeps
@@ -361,7 +374,7 @@ export const ACTIVITY = [
 ];
 export const GOALS = [
   { id: "muscle",      l: "Muscle gain",   kcalAdj: 0.10,  gkg: 2.0, fatPct: 0.25 },
-  { id: "bulk",        l: "Clean bulk",    kcalAdj: 0.07,  gkg: 1.8, fatPct: 0.25 },
+  { id: "bulk",        l: "Clean bulk",    kcalAdj: 0.07,  gkg: 1.8, fatPct: 0.25, fixed: { kcal: 3000, p: 190, f: 80, c: 355 } },
   { id: "cut",         l: "Fat loss",      kcalAdj: -0.20, gkg: 2.2, fatPct: 0.25 },
   { id: "maintain",    l: "Maintenance",   kcalAdj: 0,     gkg: 1.6, fatPct: 0.28 },
   { id: "performance", l: "Athletic performance", kcalAdj: 0.05, gkg: 1.8, fatPct: 0.25 },
@@ -394,10 +407,13 @@ export function calcTargets(profileRaw) {
   const p = sanitizeProfile(profileRaw);
   const goal = GOALS.find((g) => g.id === p.goal);
   const bmr = 10 * p.weightKg + 6.25 * p.heightCm - 5 * p.age + (p.sex === "male" ? 5 : -161);
-  const kcal = Math.round(bmr * p.activity * (1 + goal.kcalAdj));
-  const protein = Math.round(goal.gkg * p.weightKg);
-  const fat = Math.round((kcal * goal.fatPct) / 9);
-  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
+  // A goal may pin explicit macro targets (e.g. Clean bulk = 3000 kcal / 190P
+  // / 80F / 355C) instead of deriving from the formula; overrides still win.
+  const fx = goal.fixed || {};
+  const kcal = Number.isFinite(+fx.kcal) ? +fx.kcal : Math.round(bmr * p.activity * (1 + goal.kcalAdj));
+  const protein = Number.isFinite(+fx.p) ? +fx.p : Math.round(goal.gkg * p.weightKg);
+  const fat = Number.isFinite(+fx.f) ? +fx.f : Math.round((kcal * goal.fatPct) / 9);
+  const carbs = Number.isFinite(+fx.c) ? +fx.c : Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
   const o = p.overrides || {};
   const pick = (key, calc) => (Number.isFinite(+o[key]) && +o[key] > 0 ? Math.round(+o[key]) : calc);
   const outKcal = pick("kcal", kcal);
@@ -443,6 +459,7 @@ export function sanitizeNutrition(raw) {
         ...(e.ai ? { ai: true } : {}),
         ...(e.bev ? { bev: true } : {}),
         ...(e.sugared ? { sugared: true } : {}),
+        ...(typeof e.season === "string" ? { season: e.season } : {}),
         ...(typeof e.loggedAt === "number" ? { loggedAt: e.loggedAt } : {}),
         ...(e.late ? { late: true } : {}),
         n: cleanN(e.n),
