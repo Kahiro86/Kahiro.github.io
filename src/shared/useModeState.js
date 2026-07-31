@@ -9,7 +9,7 @@ import { localDateStr, daysAgoStr } from "./dates.js";
 import {
   DEFAULT_MODE_CFG, sanitizeModeCfg, evalMode, cutoffPassed,
   sleepStatus, cooldownStatus, capStatus, pingsStatus, checklistStatus,
-  nutritionFloorStatus, nutritionCeilStatus, commitClosedDay,
+  nutritionFloorStatus, nutritionCeilStatus, commitClosedDay, dayEngaged,
 } from "./modes.js";
 import { sanitizeTrades, netPnl } from "../modules/trading/intel/tradingIntel.js";
 import { sanitizeGates, sanitizeSleep, evalGates } from "./tradeGates.js";
@@ -50,7 +50,12 @@ function buildStatuses(ds, dayClosed, S, cfg) {
   out.push({ key: "checklist", label: "Daily checklist", status: checklistStatus(coreItems.length, coreDone, passedCutoff) });
 
   // ── Recurring life pings (an overdue ping is a violation) ─────────
-  const anyDue = S.pings.some((p) => pingDue(p, ds));
+  // ── Recurring life pings (an *overdue* ping is a violation) ───────
+  // A ping that has never been actioned (lastDone null — the shipped
+  // defaults) has no lapsed cadence to violate; only a ping that was kept
+  // and has now slipped past its interval counts. Otherwise God would be
+  // permanently unreachable for anyone who never touched the pings feature.
+  const anyDue = S.pings.some((p) => p.lastDone && pingDue(p, ds));
   out.push({ key: "pings", label: "Recurring pings", status: pingsStatus(anyDue) });
 
   return out;
@@ -103,6 +108,7 @@ export function useModeState() {
     const y = daysAgoStr(1);
     if (history && history[y]) return;
     const yStatuses = buildStatuses(y, true, S, cfg);
+    if (!dayEngaged(yStatuses)) return; // don't record a day the owner never touched
     const yResult = evalMode(yStatuses, cfg);
     setHistory((h) => commitClosedDay(h, y, yResult));
   }, [ds, S, cfg]); // eslint-disable-line

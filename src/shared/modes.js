@@ -70,6 +70,17 @@ export function evalMode(statuses, cfg) {
   return { mode, fails, incompletes, clean, ambiguous, threshold: c.hellThreshold };
 }
 
+// Did the day see real engagement? Cap/cooldown/pings pass trivially on a day
+// the owner never touched the app, so they don't count — only an actual fail or
+// a completed actionable gate (sleep entered, checklist done, nutrition logged)
+// marks a day worth recording in history.
+const ACTIONABLE = new Set(["sleep", "checklist", "nutriFloor", "nutriCeil"]);
+export function dayEngaged(statuses) {
+  return (Array.isArray(statuses) ? statuses : []).some(
+    (s) => s.status === "fail" || (ACTIONABLE.has(s.key) && s.status === "pass")
+  );
+}
+
 // At day-close: prefer the plainer label on an ambiguous boundary, and record
 // the ambiguity for later review rather than silently resolving it.
 export function resolveClosingMode(result) {

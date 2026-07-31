@@ -205,9 +205,9 @@ export default function App() {
          veil driven by the mode indicator. God adds a faint gold warmth; Hell
          quietly darkens the palette; Normal shows nothing. Urgency stays with
          individual locks — this is only a mood, never an alarm. */
-      body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:2; opacity:0; transition:opacity 0.7s ease, background 0.7s ease; }
-      :root[data-mode="god"] body::after { opacity:1; background: radial-gradient(120% 80% at 50% 0%, rgba(240,180,41,0.05), transparent 68%); }
-      :root[data-mode="hell"] body::after { opacity:1; background: rgba(6,7,9,0.17); }
+      .mode-veil { position:fixed; inset:0; pointer-events:none; z-index:900; opacity:0; transition:opacity 0.7s ease, background 0.7s ease; }
+      :root[data-mode="god"] .mode-veil { opacity:1; background: radial-gradient(120% 80% at 50% 0%, rgba(240,180,41,0.05), transparent 68%); }
+      :root[data-mode="hell"] .mode-veil { opacity:1; background: rgba(6,7,9,0.17); }
       body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
       /* tabular figures everywhere numbers matter — dashboards & finance line up */
       [style*="monospace"], input { font-variant-numeric: tabular-nums; }
@@ -285,6 +285,7 @@ export default function App() {
       <ToastProvider>
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
+        <div className="mode-veil" aria-hidden="true" />
         <AmbientBackground module={module} animate={!isMobile} />
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} onOpenWhoIAm={() => setWhoOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
@@ -332,6 +333,7 @@ export default function App() {
     <ToastProvider>
     <div style={{ display: "flex", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
       {globalStyle}
+      <div className="mode-veil" aria-hidden="true" />
       <AmbientBackground module={module} animate={!isMobile} />
 
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
