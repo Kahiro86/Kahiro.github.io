@@ -123,3 +123,54 @@ refinement only in 6–8, no lock/gate/cap weakened, no user data touched.
   from App to avoid coupling; streak is live today. Logged.
 - A13: **FMP/TTI not lab-measured** on throttled mid-range Android in-sandbox;
   bundle + font wins reported instead as the honest, measurable proxy.
+
+## Addendum — God / Normal / Hell mode (built this run)
+Derived entirely from the existing rules engine (per the stated assumption),
+never a manual toggle. Every gate already exposed a queryable status, so no
+gate logic is duplicated.
+- **Engine (`modes.js`) + `useModeState` hook** — the single read-out. God =
+  every active gate clean, nothing pending; Hell = `hellThreshold`+ gates
+  failing at once (default 2, configurable); Normal = the rest. An unevaluable
+  gate is "incomplete": it keeps a day out of God but never counts toward Hell.
+  Reads local data only (never a pending-sync state); recomputes live on a 60s
+  tick; commits each closed day's final state to `mode_history` once (midnight
+  rollover handled). Season lowers nutrition floors via the existing
+  `seasonFloorAdjust`, so a fast never forces Hell.
+- **Gate audit (E):** cap/cooldown/sleep from `tradeGates.evalGates`; nutrition
+  floor/ceiling from `nutritionHard.evalDay`; daily-checklist core items past a
+  configurable cutoff; overdue recurring pings. All already expose clean
+  booleans/enums — no gate needed a status retrofit.
+- **UI (A):** small crest+label on the today surface (`ModeIndicator`), tap for
+  the plain gate-driver list; restrained global treatment via a `data-mode`
+  attribute + pointer-through `body::after` veil (God faint gold, Hell quiet
+  darkening, Normal none) — deliberately NOT a `filter` on an ancestor (that
+  breaks `position:fixed` overlays). Live recalc, no manual refresh.
+- **History (B):** `ModeHistoryStrip` — a monthly calendar of closed-day states,
+  filed in the Journals section only, never on the dashboard (a pattern to
+  review, not a daily-glanced metric).
+- **Tutorials (C):** God + Hell walkthroughs (own screens), neutral and
+  no-shame throughout, reachable from the detail view and Settings.
+- **Contingencies (D):** partial day → incomplete gates excluded from both
+  thresholds; season handled via floor-adjust; midnight rollover commits the
+  prior day then evaluates fresh; offline = local-only compute; ambiguous
+  boundary (exactly at threshold with pending gates) resolves to the plainer
+  label and is flagged in history for review.
+
+## Assumptions added (modes)
+- A14: **"Checklist" gate = the daily checklist (addendum A) core items**, not
+  the transient per-trade pre-trade checklist (which has no daily-completion or
+  cutoff concept). Cutoff hour configurable (default 21:00).
+- A15: **Trade cap is informational** (reaching it is the system working, not a
+  violation) — it only reads "fail" if somehow exceeded, which enforcement
+  prevents. Cooldown/sleep/nutrition/checklist/pings are the real violation
+  signals.
+- A16: **Nutrition floor is "incomplete" while the day is open** (still time),
+  "fail" only once the day has closed; the ceiling is "fail" immediately when
+  exceeded. Nutrition gates are excluded entirely unless God-Mode nutrition is
+  active that day.
+- A17: **Global mode treatment is a pointer-through veil, not an ancestor
+  filter** — a CSS `filter` on `#root` would reparent every `position:fixed`
+  overlay. The veil tints the main UI and leaves modals crisp.
+- A18: **`useModeState` is only imported by lazy chunks** (today surface /
+  Settings), never by the eager `App` entry, so the Supabase/Phase-8 initial
+  bundle win is preserved.

@@ -201,6 +201,13 @@ export default function App() {
          no render-blocking @import, works fully offline. */
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body { max-width: 100%; overflow-x: hidden; background: #000000; }
+      /* Day-state treatment (God/Normal/Hell): a restrained, pointer-through
+         veil driven by the mode indicator. God adds a faint gold warmth; Hell
+         quietly darkens the palette; Normal shows nothing. Urgency stays with
+         individual locks — this is only a mood, never an alarm. */
+      body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:2; opacity:0; transition:opacity 0.7s ease, background 0.7s ease; }
+      :root[data-mode="god"] body::after { opacity:1; background: radial-gradient(120% 80% at 50% 0%, rgba(240,180,41,0.05), transparent 68%); }
+      :root[data-mode="hell"] body::after { opacity:1; background: rgba(6,7,9,0.17); }
       body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
       /* tabular figures everywhere numbers matter — dashboards & finance line up */
       [style*="monospace"], input { font-variant-numeric: tabular-nums; }

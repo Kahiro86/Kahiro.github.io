@@ -27,6 +27,7 @@ import { WellnessPanel } from "./WellnessPanel.jsx";
 import { NonNegotiables } from "./NonNegotiables.jsx";
 import { PurityTab } from "./PurityTab.jsx";
 import { Journals } from "./Journals.jsx";
+import { ModeHistoryStrip } from "../../shared/ModeHistoryStrip.jsx";
 
 const today = () => localDateStr();
 
@@ -716,6 +717,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               today={today}
               onExport={(f) => toast(`Exported ${f.label}`, { tone: "success" })}
             />
+            <ModeHistoryStrip />
           </div>
         )}
 
