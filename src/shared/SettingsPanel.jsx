@@ -18,6 +18,8 @@ import { DEFAULT_PROFILE } from "../modules/athlete/nutrition.js";
 import { GodModeTutorial } from "../modules/athlete/GodModeTutorial.jsx";
 import { DEFAULT_GATES, sanitizeGates, proposeGateChange } from "./tradeGates.js";
 import { SEASON_TEMPLATES, sanitizeSeason, seasonActive, seasonDay, startSeason } from "./season.js";
+import { DEFAULT_MODE_CFG, sanitizeModeCfg } from "./modes.js";
+import { ModeTutorial } from "./ModeTutorial.jsx";
 import { getPushVapid, setPushVapid, pushStatus, subscribeToPush, unsubscribeFromPush, sendLocalTestNotification } from "./push.js";
 
 const SETUP_SQL = `create table if not exists kv (
@@ -94,6 +96,10 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   };
   const toggleCurrency = () => setGatesCfg((c) => ({ ...sanitizeGates(c), showCurrency: !sanitizeGates(c).showCurrency }));
 
+  // ── Modes (God/Normal/Hell thresholds) state ───────────────────────
+  const [rawModeCfg, setModeCfg] = useStorageState("mode_cfg", DEFAULT_MODE_CFG);
+  const modeCfg = sanitizeModeCfg(rawModeCfg);
+  const [modeTut, setModeTut] = useState(null); // "god" | "hell"
   // ── Season (fasting/blocks) state ───────────────────────────────────
   const [rawSeason, setSeason] = useStorageState("active_season", null);
   const season = sanitizeSeason(rawSeason);
@@ -495,6 +501,31 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
             <button onClick={beginSeason} style={btn({ flex: "none", border: `1px solid ${AC2}66`, color: AC2, fontWeight: 700 })}>Start season</button>
           </div>
         )}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        {/* ── Modes (God / Normal / Hell) ────────────────────────────── */}
+        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Modes</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
+          A read-out of the day, derived from your existing gates — not a manual switch. <b style={{ color: T2 }}>God</b> = every active gate clean. <b style={{ color: T2 }}>Hell</b> = this many gates failing at once. <b style={{ color: T2 }}>Normal</b> = everything between.
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 10 }}>
+          <label style={{ fontSize: 10, color: T3 }}>Hell threshold (gates)<br />
+            <input type="number" inputMode="numeric" min={2} max={6} value={modeCfg.hellThreshold}
+              onChange={(e) => setModeCfg({ ...modeCfg, hellThreshold: e.target.value })}
+              style={{ ...idInput, width: 90, marginTop: 4 }} />
+          </label>
+          <label style={{ fontSize: 10, color: T3 }}>Checklist cutoff (hour)<br />
+            <input type="number" inputMode="numeric" min={0} max={23} value={modeCfg.checklistCutoffHour}
+              onChange={(e) => setModeCfg({ ...modeCfg, checklistCutoffHour: e.target.value })}
+              style={{ ...idInput, width: 110, marginTop: 4 }} />
+          </label>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={() => setModeTut("god")} style={btn({ flex: "none", border: `1px solid ${AC2}55`, color: AC2 })}>Read: God Mode</button>
+          <button onClick={() => setModeTut("hell")} style={btn({ flex: "none", border: `1px solid ${BD}`, color: T2 })}>Read: Hell Mode</button>
+        </div>
+        {modeTut && <ModeTutorial which={modeTut} onClose={() => setModeTut(null)} />}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 

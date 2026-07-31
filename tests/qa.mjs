@@ -106,6 +106,17 @@ const SCENARIOS = {
     "architect:who_i_am_revisions": JSON.stringify("not-an-array"),
     "architect:who_i_am_meta": JSON.stringify([1, 2, 3]),
   },
+  corruptModes: {
+    "architect:mode_cfg": JSON.stringify({ hellThreshold: "lots", checklistCutoffHour: 99 }),
+    "architect:mode_history": JSON.stringify({ "not-a-date": { mode: "x" }, "2026-07-30": "nope", "2026-07-29": { mode: "hell", ambiguous: "yes" } }),
+  },
+  modesHellDay: {
+    "architect:mode_cfg": JSON.stringify({ hellThreshold: 2 }),
+    "architect:trade_sleep": JSON.stringify({ "2026-07-31": 4 }),
+    "architect:nutrition_hard": JSON.stringify({ enabled: true, proteinFloor: 180, kcalFloor: 2600, kcalCeil: 3200, sugaredCap: 1, logWindowMin: 20, postShiftRequired: true }),
+    "architect:daily_checklist": JSON.stringify([{ id: "c1", text: "Core", core: true }]),
+    "architect:life_pings": JSON.stringify([{ id: "p1", name: "Laundry", intervalDays: 14, lastDone: "2026-01-01" }]),
+  },
   everythingNull: {
     "architect:habits": "null",
     "architect:ict_trades": "null",
