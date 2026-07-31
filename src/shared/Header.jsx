@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Flame, Cpu, Menu, HelpCircle, Settings } from "lucide-react";
+import { Flame, Cpu, Menu, HelpCircle, Settings, Gem } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, AM, AC, AC2, RE } from "./designTokens.js";
 import { useHell } from "./difficulty.js";
 import { getActiveKillzone, getEATTimeStr } from "../modules/trading/timezone.js";
@@ -11,7 +11,7 @@ import { useIdentity } from "./identity.jsx";
 
 const CAT_COLOR = { life: GR, trading: CY, fitness: PU, finance: AM, faith: "#9C9C9C", mind: "#B8B8B8", awards: AM };
 
-export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigate, onOpenHelp, onOpenSettings, streak = 0, xp = 0, level = 1, xpTitle = "", pctToNext = 0, toNext = 0, xpToday = 0, xpTodayByCat = {} }) {
+export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigate, onOpenHelp, onOpenSettings, onOpenWhoIAm, streak = 0, xp = 0, level = 1, xpTitle = "", pctToNext = 0, toNext = 0, xpToday = 0, xpTodayByCat = {} }) {
   const { appName } = useIdentity();
   const { hell } = useHell();
   const label = NAV.find((n) => n.id === module)?.label || "Command Center";
@@ -55,6 +55,11 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
         </div>
         {hellBadge}
         <NotificationCenter onNavigate={onNavigate} />
+        {onOpenWhoIAm && (
+          <button onClick={onOpenWhoIAm} aria-label="Who I Am" title="Who I Am" style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${AC2}44`, cursor: "pointer", background: `${AC2}12`, color: AC2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Gem size={15} />
+          </button>
+        )}
         {onOpenHelp && (
           <button onClick={onOpenHelp} data-tour="help-btn" aria-label="Help & guide" style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${BD}`, cursor: "pointer", background: GL, color: T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <HelpCircle size={15} />
@@ -137,6 +142,11 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
       {hellBadge}
       <NotificationCenter onNavigate={onNavigate} />
 
+      {onOpenWhoIAm && (
+        <button onClick={onOpenWhoIAm} aria-label="Who I Am" title="Who I Am" style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${AC2}44`, cursor: "pointer", background: `${AC2}12`, color: AC2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Gem size={15} />
+        </button>
+      )}
       {onOpenHelp && (
         <button onClick={onOpenHelp} data-tour="help-btn" aria-label="Help & guide" title="Help & guide" style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${BD}`, cursor: "pointer", background: GL, color: T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <HelpCircle size={15} />
