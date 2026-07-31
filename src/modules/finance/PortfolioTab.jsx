@@ -65,10 +65,10 @@ export function PortfolioTab({
                 <div style={{ fontSize: 20, color: GR, fontWeight: 700, fontFamily: "monospace" }}>{m.yield}%</div>
                 <div style={{ fontSize: 10, color: T3, marginBottom: 12 }}>p.a. current</div>
                 <div style={{ fontSize: 10, color: T3, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Balance (KES)</div>
-                <input type="number" value={m.balance || ""} onChange={(e) => setMmfs((prev) => prev.map((x, j) => (j === i ? { ...x, balance: +e.target.value || 0 } : x)))} placeholder="0"
+                <input type="number" inputMode="decimal" value={m.balance || ""} onChange={(e) => setMmfs((prev) => prev.map((x, j) => (j === i ? { ...x, balance: +e.target.value || 0 } : x)))} placeholder="0"
                   style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 7, padding: "7px 9px", fontSize: 13, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box", marginBottom: 6 }} />
                 <div style={{ fontSize: 10, color: T3, marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>Yield (%)</div>
-                <input type="number" value={m.yield || ""} onChange={(e) => setMmfs((prev) => prev.map((x, j) => (j === i ? { ...x, yield: +e.target.value || 0 } : x)))}
+                <input type="number" inputMode="decimal" value={m.yield || ""} onChange={(e) => setMmfs((prev) => prev.map((x, j) => (j === i ? { ...x, yield: +e.target.value || 0 } : x)))}
                   style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 9px", fontSize: 12, color: GR, outline: "none", fontFamily: "monospace", boxSizing: "border-box", marginBottom: 8 }} />
                 {mi > 0 && <div style={{ fontSize: 11, color: GR, fontFamily: "monospace" }}>+KES {Math.round(mi).toLocaleString()}/mo</div>}
               </div>
@@ -101,9 +101,9 @@ export function PortfolioTab({
                   style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 8px", fontSize: 11, color: T1, outline: "none", fontFamily: "inherit", appearance: "none", cursor: "pointer", width: "100%" }}>
                   {TBILL_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
-                <input type="number" value={t.faceValue || ""} onChange={(e) => setTbills((prev) => prev.map((x, j) => (j === i ? { ...x, faceValue: +e.target.value || 0 } : x)))} placeholder="100000"
+                <input type="number" inputMode="decimal" value={t.faceValue || ""} onChange={(e) => setTbills((prev) => prev.map((x, j) => (j === i ? { ...x, faceValue: +e.target.value || 0 } : x)))} placeholder="100000"
                   style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 8px", fontSize: 12, color: T1, outline: "none", fontFamily: "monospace", width: "100%", boxSizing: "border-box" }} />
-                <input type="number" value={t.rate || ""} onChange={(e) => setTbills((prev) => prev.map((x, j) => (j === i ? { ...x, rate: +e.target.value || 0 } : x)))}
+                <input type="number" inputMode="decimal" value={t.rate || ""} onChange={(e) => setTbills((prev) => prev.map((x, j) => (j === i ? { ...x, rate: +e.target.value || 0 } : x)))}
                   style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 8px", fontSize: 12, color: GR, outline: "none", fontFamily: "monospace", width: "100%", boxSizing: "border-box" }} />
                 <input type="date" value={t.purchaseDate || ""} onChange={(e) => setTbills((prev) => prev.map((x, j) => (j === i ? { ...x, purchaseDate: e.target.value } : x)))}
                   style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 7px", fontSize: 11, color: T2, outline: "none", fontFamily: "inherit", width: "100%", boxSizing: "border-box" }} />
@@ -149,7 +149,7 @@ export function PortfolioTab({
                     style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 6, padding: "6px 8px", fontSize: 13, color: CY, outline: "none", fontFamily: "monospace", fontWeight: 700 }} />
                   <input value={st.name} onChange={(e) => setNseStocks((prev) => prev.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Company name"
                     style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 6, padding: "6px 8px", fontSize: 12, color: T1, outline: "none", fontFamily: "inherit" }} />
-                  <input type="number" value={st.shares || ""} onChange={(e) => setNseStocks((prev) => prev.map((x, j) => (j === i ? { ...x, shares: +e.target.value || 0 } : x)))} placeholder="Shares"
+                  <input type="number" inputMode="decimal" value={st.shares || ""} onChange={(e) => setNseStocks((prev) => prev.map((x, j) => (j === i ? { ...x, shares: +e.target.value || 0 } : x)))} placeholder="Shares"
                     style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 6, padding: "6px 8px", fontSize: 12, color: T1, outline: "none", fontFamily: "monospace" }} />
                   <button onClick={() => delStock(i)} aria-label="Remove stock"
                     style={{ background: "none", border: `1px solid ${RE}33`, borderRadius: 6, padding: "5px", cursor: "pointer", color: RE, display: "flex", alignItems: "center" }}>
@@ -166,7 +166,7 @@ export function PortfolioTab({
                     <div key={x.l}>
                       <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, marginBottom: 3, textTransform: "uppercase" }}>{x.l}</div>
                       {x.isInp
-                        ? <input type="number" value={st[x.k] || ""} onChange={(e) => setNseStocks((prev) => prev.map((xx, j) => (j === i ? { ...xx, [x.k]: +e.target.value || 0 } : xx)))} placeholder="0"
+                        ? <input type="number" inputMode="decimal" value={st[x.k] || ""} onChange={(e) => setNseStocks((prev) => prev.map((xx, j) => (j === i ? { ...xx, [x.k]: +e.target.value || 0 } : xx)))} placeholder="0"
                             style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 6, padding: "5px 8px", fontSize: 12, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box" }} />
                         : <div style={{ fontSize: 14, fontWeight: 700, color: x.c, fontFamily: "monospace" }}>{x.v}</div>}
                     </div>
@@ -181,11 +181,11 @@ export function PortfolioTab({
           <Card style={{ padding: "20px" }}>
             <SH title="SACCO" sub="Cooperative savings + share capital" />
             <Fld label="SACCO Balance (KES)">
-              <input type="number" value={saccoBal || ""} onChange={(e) => setSaccoBal(+e.target.value || 0)} placeholder="0"
+              <input type="number" inputMode="decimal" value={saccoBal || ""} onChange={(e) => setSaccoBal(+e.target.value || 0)} placeholder="0"
                 style={{ width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 12px", fontSize: 14, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box" }} />
             </Fld>
             <Fld label="Dividend Yield (% p.a.)">
-              <input type="number" value={saccoYield || ""} onChange={(e) => setSaccoYield(+e.target.value || 0)} placeholder="12"
+              <input type="number" inputMode="decimal" value={saccoYield || ""} onChange={(e) => setSaccoYield(+e.target.value || 0)} placeholder="12"
                 style={{ width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 12px", fontSize: 14, color: GR, outline: "none", fontFamily: "monospace", boxSizing: "border-box" }} />
             </Fld>
             {saccoBal > 0 && (
@@ -198,11 +198,11 @@ export function PortfolioTab({
           <Card style={{ padding: "20px" }}>
             <SH title="ILAM Fahari I-REIT" sub="Real Estate Investment Trust — NSE listed" />
             <Fld label="Units Held">
-              <input type="number" value={reitUnits || ""} onChange={(e) => setReitUnits(+e.target.value || 0)} placeholder="0"
+              <input type="number" inputMode="decimal" value={reitUnits || ""} onChange={(e) => setReitUnits(+e.target.value || 0)} placeholder="0"
                 style={{ width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 12px", fontSize: 14, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box" }} />
             </Fld>
             <Fld label="NAV per Unit (KES)">
-              <input type="number" value={reitNAV || ""} onChange={(e) => setReitNAV(+e.target.value || 7.5)} placeholder="7.50"
+              <input type="number" inputMode="decimal" value={reitNAV || ""} onChange={(e) => setReitNAV(+e.target.value || 7.5)} placeholder="7.50"
                 style={{ width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 12px", fontSize: 14, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box" }} />
             </Fld>
             {reitUnits > 0 && (

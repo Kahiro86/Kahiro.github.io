@@ -515,7 +515,7 @@ export function NutritionTab() {
                   <div style={{ fontSize: 10, color: T3, fontFamily: "monospace" }}>{e.time ? `${e.time} · ` : ""}{Math.round(e.n.kcal || 0)} kcal · P{Math.round(e.n.p || 0)} C{Math.round(e.n.c || 0)} F{Math.round(e.n.f || 0)}</div>
                 </div>
                 {e.grams > 0 && (
-                  <input type="number" value={e.grams} onChange={(ev) => setGrams(e.id, ev.target.value)} aria-label={`Grams of ${e.name}`}
+                  <input type="number" inputMode="decimal" value={e.grams} onChange={(ev) => setGrams(e.id, ev.target.value)} aria-label={`Grams of ${e.name}`}
                     style={{ ...input, width: 64, padding: "5px 8px", fontSize: 11.5, fontFamily: "monospace", textAlign: "right" }} />
                 )}
                 {e.grams > 0 && <span style={{ fontSize: 10, color: T3 }}>g</span>}
@@ -587,7 +587,7 @@ export function NutritionTab() {
                         })()}
                         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                           <span style={{ fontSize: 11.5, color: T2, flex: 1 }}>{selFood.name}</span>
-                          <input type="number" value={grams} onChange={(e) => setGramsInput(e.target.value)} aria-label="Portion in grams" autoFocus
+                          <input type="number" inputMode="decimal" value={grams} onChange={(e) => setGramsInput(e.target.value)} aria-label="Portion in grams" autoFocus
                             style={{ ...input, width: 76, fontFamily: "monospace", textAlign: "right" }} />
                           <span style={{ fontSize: 10.5, color: T3 }}>g</span>
                           <button onClick={confirmAdd} style={{ padding: "7px 16px", background: `linear-gradient(135deg,${GR},#5fae7c)`, border: "none", borderRadius: 9, color: "#04130a", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>Log it</button>
@@ -649,7 +649,7 @@ export function NutritionTab() {
                   <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
                     <input value={quick.name} onChange={(e) => setQuick((s) => ({ ...s, name: e.target.value }))} placeholder="Name (optional)" style={{ ...input, flex: 1, minWidth: 120 }} />
                     {[["kcal", "kcal"], ["p", "P g"], ["c", "C g"], ["f", "F g"]].map(([k, ph]) => (
-                      <input key={k} type="number" value={quick[k]} onChange={(e) => setQuick((s) => ({ ...s, [k]: e.target.value }))} placeholder={ph} aria-label={ph}
+                      <input key={k} type="number" inputMode="decimal" value={quick[k]} onChange={(e) => setQuick((s) => ({ ...s, [k]: e.target.value }))} placeholder={ph} aria-label={ph}
                         style={{ ...input, width: 68, fontFamily: "monospace" }} />
                     ))}
                     <button onClick={saveQuick} disabled={!(+quick.kcal > 0)} style={{ padding: "8px 15px", background: +quick.kcal > 0 ? `${GR}14` : GL, border: `1px solid ${+quick.kcal > 0 ? GR + "44" : BD}`, borderRadius: 9, color: +quick.kcal > 0 ? GR : T3, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Log</button>
@@ -662,7 +662,7 @@ export function NutritionTab() {
                     {!custom.recipe && (
                       <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                         {[["kcal", "kcal/100g"], ["p", "P g"], ["c", "C g"], ["f", "F g"], ["fib", "Fiber g"], ["sug", "Sugar g"], ["na", "Sodium mg"]].map(([k, ph]) => (
-                          <input key={k} type="number" value={custom.per100[k] || ""} onChange={(e) => setCustom((s) => ({ ...s, per100: { ...s.per100, [k]: e.target.value } }))} placeholder={ph} aria-label={ph}
+                          <input key={k} type="number" inputMode="decimal" value={custom.per100[k] || ""} onChange={(e) => setCustom((s) => ({ ...s, per100: { ...s.per100, [k]: e.target.value } }))} placeholder={ph} aria-label={ph}
                             style={{ ...input, width: 86, fontFamily: "monospace" }} />
                         ))}
                       </div>
@@ -681,7 +681,7 @@ export function NutritionTab() {
                         {custom.items.map((it, i) => (
                           <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ flex: 1, fontSize: 11.5, color: T1 }}>{it.food.name}</span>
-                            <input type="number" value={it.grams} onChange={(e) => setCustom((s) => ({ ...s, items: s.items.map((x, j) => j === i ? { ...x, grams: +e.target.value || 0 } : x) }))}
+                            <input type="number" inputMode="decimal" value={it.grams} onChange={(e) => setCustom((s) => ({ ...s, items: s.items.map((x, j) => j === i ? { ...x, grams: +e.target.value || 0 } : x) }))}
                               aria-label={`Grams of ${it.food.name}`} style={{ ...input, width: 64, fontFamily: "monospace", textAlign: "right" }} />
                             <span style={{ fontSize: 10, color: T3 }}>g</span>
                             <button onClick={() => setCustom((s) => ({ ...s, items: s.items.filter((_, j) => j !== i) }))} aria-label={`Remove ${it.food.name}`} style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><Trash2 size={11} /></button>

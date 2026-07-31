@@ -71,9 +71,9 @@ export function DebtTab({ debts = [], setDebts, fmtKES, legacyDebt = 0 }) {
           <input autoFocus value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Name (e.g. Personal loan, Card)" style={{ ...inp, marginBottom: 12 }} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 11, marginBottom: 14 }}>
             <label><span style={lbl}>Original balance</span><MoneyInp value={draft.original} onChange={(v) => setDraft((d) => ({ ...d, original: v }))} placeholder="0" /></label>
-            <label><span style={lbl}>APR %</span><input type="number" value={draft.apr} onChange={(e) => setDraft((d) => ({ ...d, apr: e.target.value }))} placeholder="0" style={{ ...inp, fontFamily: "monospace" }} /></label>
+            <label><span style={lbl}>APR %</span><input type="number" inputMode="decimal" value={draft.apr} onChange={(e) => setDraft((d) => ({ ...d, apr: e.target.value }))} placeholder="0" style={{ ...inp, fontFamily: "monospace" }} /></label>
             <label><span style={lbl}>Min payment / mo</span><MoneyInp value={draft.minPayment} onChange={(v) => setDraft((d) => ({ ...d, minPayment: v }))} placeholder="0" /></label>
-            <label><span style={lbl}>Due day (1–31)</span><input type="number" min="1" max="31" value={draft.dueDay} onChange={(e) => setDraft((d) => ({ ...d, dueDay: e.target.value }))} placeholder="—" style={{ ...inp, fontFamily: "monospace" }} /></label>
+            <label><span style={lbl}>Due day (1–31)</span><input type="number" inputMode="decimal" min="1" max="31" value={draft.dueDay} onChange={(e) => setDraft((d) => ({ ...d, dueDay: e.target.value }))} placeholder="—" style={{ ...inp, fontFamily: "monospace" }} /></label>
           </div>
           <div style={{ display: "flex", gap: 9, justifyContent: "flex-end" }}>
             <button onClick={cancel} style={{ padding: "8px 15px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
@@ -124,7 +124,7 @@ export function DebtTab({ debts = [], setDebts, fmtKES, legacyDebt = 0 }) {
 
                 {payFor === d.id && (
                   <div style={{ display: "flex", gap: 7, marginBottom: 11 }}>
-                    <input type="number" autoFocus value={payAmt} onChange={(e) => setPayAmt(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") recordPayment(d); if (e.key === "Escape") setPayFor(null); }} placeholder="Payment amount (KES)"
+                    <input type="number" inputMode="decimal" autoFocus value={payAmt} onChange={(e) => setPayAmt(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") recordPayment(d); if (e.key === "Escape") setPayFor(null); }} placeholder="Payment amount (KES)"
                       style={{ flex: 1, background: B2, border: `1px solid ${GR}44`, borderRadius: 8, padding: "8px 10px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "monospace", minWidth: 0 }} />
                     <button onClick={() => recordPayment(d)} style={{ padding: "0 13px", background: `${GR}22`, border: `1px solid ${GR}55`, borderRadius: 8, color: GR, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Log</button>
                   </div>

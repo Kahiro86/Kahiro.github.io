@@ -636,7 +636,7 @@ export function AthleteOS() {
                   {[["weight", "Weight (kg)"], ["waist", "Waist (cm)"], ["chest", "Chest (cm)"], ["arms", "Arms (cm)"], ["thighs", "Thighs (cm)"]].map(([k, l]) => (
                     <label key={k}>
                       <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{l}</span>
-                      <input type="number" value={mDraft[k]} onChange={(e) => setMDraft((d) => ({ ...d, [k]: e.target.value }))}
+                      <input type="number" inputMode="decimal" value={mDraft[k]} onChange={(e) => setMDraft((d) => ({ ...d, [k]: e.target.value }))}
                         style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, color: T1, outline: "none", fontFamily: "monospace", marginTop: 4, boxSizing: "border-box" }} />
                     </label>
                   ))}

@@ -137,9 +137,9 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
                 {ex.sets.map((s, i) => (
                   <div key={i} style={{ display: "grid", gridTemplateColumns: "24px 1fr 1fr 28px", gap: 7, marginBottom: 6, alignItems: "center" }}>
                     <span style={{ fontSize: 11, color: T3, textAlign: "center" }}>{i + 1}</span>
-                    <input type="number" value={s.reps} onChange={(e) => setSetVal(ex.id, i, "reps", e.target.value)} placeholder="10"
+                    <input type="number" inputMode="decimal" value={s.reps} onChange={(e) => setSetVal(ex.id, i, "reps", e.target.value)} placeholder="10"
                       style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 7, padding: "7px 9px", fontSize: 12, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box" }} />
-                    <input type="number" value={s.weight} onChange={(e) => setSetVal(ex.id, i, "weight", e.target.value)} placeholder="40"
+                    <input type="number" inputMode="decimal" value={s.weight} onChange={(e) => setSetVal(ex.id, i, "weight", e.target.value)} placeholder="40"
                       style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 7, padding: "7px 9px", fontSize: 12, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box" }} />
                     {ex.sets.length > 1 && (
                       <button onClick={() => removeSet(ex.id, i)} style={{ background: "none", border: "none", color: "#999", cursor: "pointer", display: "flex", justifyContent: "center" }}><X size={12} /></button>
@@ -162,8 +162,8 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: type === "cardio" ? "1fr 1fr 1fr" : "1fr 1fr", gap: 13 }}>
-            <Fld label="Duration (minutes)"><Inp type="number" value={duration} onChange={setDuration} placeholder="45" mono /></Fld>
-            {type === "cardio" && <Fld label="Distance (km, optional)"><Inp type="number" value={distance} onChange={setDistance} placeholder="5" mono /></Fld>}
+            <Fld label="Duration (minutes)"><Inp type="number" inputMode="decimal" value={duration} onChange={setDuration} placeholder="45" mono /></Fld>
+            {type === "cardio" && <Fld label="Distance (km, optional)"><Inp type="number" inputMode="decimal" value={distance} onChange={setDistance} placeholder="5" mono /></Fld>}
             <Fld label="Intensity"><Radio value={intensity} onChange={setIntensity} options={["Easy", "Moderate", "Hard"]} color={CY} /></Fld>
           </div>
         )}
@@ -199,7 +199,7 @@ export function LogWorkoutForm({ onSave, onCancel, exerciseLib = [], setExercise
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
               {[{ k: "defSets", l: "Sets" }, { k: "defReps", l: "Reps" }, { k: "defWeight", l: "Weight" }].map((f) => (
                 <label key={f.k}><span style={{ fontSize: 10, color: T3, textTransform: "uppercase" }}>{f.l}</span>
-                  <input type="number" value={newEx[f.k]} onChange={(e) => setNewEx((n) => ({ ...n, [f.k]: e.target.value }))} style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "8px", fontSize: 12.5, color: T1, marginTop: 4, fontFamily: "monospace", boxSizing: "border-box" }} />
+                  <input type="number" inputMode="decimal" value={newEx[f.k]} onChange={(e) => setNewEx((n) => ({ ...n, [f.k]: e.target.value }))} style={{ width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "8px", fontSize: 12.5, color: T1, marginTop: 4, fontFamily: "monospace", boxSizing: "border-box" }} />
                 </label>
               ))}
             </div>

@@ -251,7 +251,7 @@ export function NotificationCenter({ onNavigate }) {
                     {REPEATS.map((r) => <option key={r.id} value={r.id}>{r.l}</option>)}
                   </select>
                   {REPEATS.find((r) => r.id === editing.repeat.kind)?.n && (
-                    <input type="number" min={1} max={90} value={editing.repeat.n} onChange={(e) => setEditing((s) => ({ ...s, repeat: { ...s.repeat, n: +e.target.value || 2 } }))} aria-label="Repeat interval N" style={{ ...input, width: 58 }} />
+                    <input type="number" inputMode="decimal" min={1} max={90} value={editing.repeat.n} onChange={(e) => setEditing((s) => ({ ...s, repeat: { ...s.repeat, n: +e.target.value || 2 } }))} aria-label="Repeat interval N" style={{ ...input, width: 58 }} />
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>

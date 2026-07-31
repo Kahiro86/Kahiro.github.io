@@ -117,7 +117,7 @@ export function IncomeTab({ income, setIncome, fmtKES, gross, setGross, g, paye,
       <Card style={{ padding: "20px", borderColor: editingId ? CY + "44" : BD }}>
         <SH title={editingId ? "Edit Income Entry" : "Log Income"} sub="Record any income — salary, trading, freelance, gifts, anything" />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 13 }}>
-          <Fld label="Amount" required><Inp type="number" value={form.amount} onChange={(v) => set("amount", v)} placeholder="0" mono /></Fld>
+          <Fld label="Amount" required><Inp type="number" inputMode="decimal" value={form.amount} onChange={(v) => set("amount", v)} placeholder="0" mono /></Fld>
           <Fld label="Date Received" required><DatePicker value={form.date} onChange={(v) => set("date", v)} /></Fld>
           <Fld label="Source" required><Sel value={form.source} onChange={(v) => set("source", v)} options={INCOME_SOURCES} /></Fld>
           <Fld label="Category"><Sel value={form.category} onChange={(v) => set("category", v)} options={INCOME_CATEGORIES} /></Fld>
@@ -191,7 +191,7 @@ export function IncomeTab({ income, setIncome, fmtKES, gross, setGross, g, paye,
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 22 }}>
               <div>
                 <div style={{ fontSize: 10, color: T3, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>Gross Monthly Salary</div>
-                <input type="number" value={gross} onChange={(e) => setGross(e.target.value)} placeholder="e.g. 80000"
+                <input type="number" inputMode="decimal" value={gross} onChange={(e) => setGross(e.target.value)} placeholder="e.g. 80000"
                   style={{ width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "14px 16px", fontSize: 24, color: T1, outline: "none", fontFamily: "monospace", fontWeight: 800, boxSizing: "border-box" }} />
                 {g > 0 && (
                   <div style={{ marginTop: 12, padding: "12px", background: `${CY}0A`, border: `1px solid ${CY}22`, borderRadius: 10, fontSize: 12, color: T2, lineHeight: 1.7 }}>

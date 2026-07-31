@@ -187,7 +187,7 @@ export function FinanceOS() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: GL, border: `1px solid ${BD}`, borderRadius: 9 }}>
           <span style={{ fontSize: 10, color: T3 }}>1 USD =</span>
-          <input type="number" value={xRate} onChange={(e) => setXRate(+e.target.value || 130)}
+          <input type="number" inputMode="decimal" value={xRate} onChange={(e) => setXRate(+e.target.value || 130)}
             style={{ width: 52, background: "transparent", border: "none", fontSize: 12, color: AM, fontFamily: "monospace", fontWeight: 700, outline: "none", textAlign: "right" }} />
           <span style={{ fontSize: 10, color: T3 }}>KES</span>
         </div>
