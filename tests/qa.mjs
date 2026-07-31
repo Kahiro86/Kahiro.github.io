@@ -101,6 +101,11 @@ const SCENARIOS = {
   corruptSupps: {
     "architect:nutrition_supps": JSON.stringify({ "2026-07-30": "not-an-array", junk: 5 }),
   },
+  corruptWhoIAm: {
+    "architect:who_i_am": JSON.stringify({ text: 12345, updatedAt: {} }),
+    "architect:who_i_am_revisions": JSON.stringify("not-an-array"),
+    "architect:who_i_am_meta": JSON.stringify([1, 2, 3]),
+  },
   everythingNull: {
     "architect:habits": "null",
     "architect:ict_trades": "null",

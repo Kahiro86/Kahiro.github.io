@@ -39,10 +39,12 @@ import { getApiKey } from "./shared/anthropic.js";
 const GuidedTour = lazy(() => import("./shared/GuidedTour.jsx").then((m) => ({ default: m.GuidedTour })));
 const HelpCenter = lazy(() => import("./shared/HelpCenter.jsx").then((m) => ({ default: m.HelpCenter })));
 const WhatsNew = lazy(() => import("./shared/WhatsNew.jsx").then((m) => ({ default: m.WhatsNew })));
+const WhoIAm = lazy(() => import("./shared/WhoIAm.jsx").then((m) => ({ default: m.WhoIAm })));
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
 import { NameYourSystem } from "./shared/NameYourSystem.jsx";
+import { WHO_KEY, WHO_META_KEY, shouldAutoShow, todayVisionLine } from "./shared/whoIAm.js";
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -138,6 +140,25 @@ export default function App() {
   const xp = xpInfo.total;
   const level = xpInfo.level;
 
+  // "Who I Am" — the five-year identity panel. Opens from a crest in the
+  // header (manual) and auto-shows once per day on the first command-center
+  // open, but only after the owner has actually written a vision, and never
+  // over the lock/naming gates. Nothing here gates any functionality.
+  const [whoOpen, setWhoOpen] = useState(false);
+  const [whoAuto, setWhoAuto] = useState(false);
+  const [rawWho] = useStorageState(WHO_KEY, { text: "", updatedAt: null });
+  const [whoMeta, setWhoMeta] = useStorageState(WHO_META_KEY, { lastShownDs: "" });
+  useEffect(() => {
+    if (locked || showNaming || !habitsLoaded) return;
+    if (shouldAutoShow(rawWho, whoMeta)) {
+      setWhoAuto(true);
+      setWhoMeta({ lastShownDs: localDateStr() });
+    }
+  }, [locked, showNaming, habitsLoaded]); // eslint-disable-line
+  const whoTodayLine = useMemo(() => todayVisionLine({ streak: topStreak }), [topStreak]);
+  const closeWho = () => { setWhoOpen(false); setWhoAuto(false); };
+  const whoVisible = whoOpen || whoAuto;
+
   // Live cross-module context for the AI panel — real numbers only.
   const [aiCtx, setAiCtx] = useState(null);
   useEffect(() => {
@@ -176,7 +197,8 @@ export default function App() {
 
   const globalStyle = (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+      /* Fonts are self-hosted + latin-subset, loaded via <link> in index.html —
+         no render-blocking @import, works fully offline. */
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body { max-width: 100%; overflow-x: hidden; background: #000000; }
       body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
@@ -257,7 +279,7 @@ export default function App() {
       <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "transparent", position: "relative", zIndex: 1, fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", color: T1, overflow: "hidden" }}>
         {globalStyle}
         <AmbientBackground module={module} animate={!isMobile} />
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} onOpenWhoIAm={() => setWhoOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
         <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}><Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T1, opacity: 0.3, fontSize: 13 }}>…</div>}>{renderModule()}</Suspense></ErrorBoundary>
         </div>
@@ -291,6 +313,7 @@ export default function App() {
         {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
         {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
         {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
+        {whoVisible && <WhoIAm autoShow={whoAuto && !whoOpen} todayLine={whoTodayLine} onClose={closeWho} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -307,7 +330,7 @@ export default function App() {
       <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
+        <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} onOpenWhoIAm={() => setWhoOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
         <div key={module} style={{ flex: 1, overflowY: module === "firm" ? "hidden" : "auto", overflow: module === "firm" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}><Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T1, opacity: 0.3, fontSize: 13 }}>…</div>}>{renderModule()}</Suspense></ErrorBoundary>
         </div>
@@ -324,6 +347,7 @@ export default function App() {
       {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
       {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
       {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
+      {whoVisible && <WhoIAm autoShow={whoAuto && !whoOpen} todayLine={whoTodayLine} onClose={closeWho} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>

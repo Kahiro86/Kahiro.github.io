@@ -15,7 +15,7 @@
 //   · Sync runs only while signed in; signed out, data stays local.
 import { storage } from "./storage.js";
 import { readMeta, applyExternal, registerSyncNotify } from "./useStorageState.js";
-import { supabase, getSyncConfig, getSession, onAuth } from "./supabase.js";
+import { supabase, getSyncConfig, getSession, onAuth, ensureSdk } from "./supabase.js";
 
 export { getSyncConfig } from "./supabase.js";
 
@@ -200,11 +200,16 @@ export function initSync() {
   setInterval(() => {
     if (document.visibilityState === "visible" && getSyncConfig()) pull();
   }, 60000);
+  // Only pull the supabase SDK (dynamic chunk) once sync is actually
+  // configured — an unconfigured app never downloads it. Auth wiring waits
+  // for the SDK so onAuth()/onAuthChanged() see a live client, not null.
   if (getSyncConfig()) {
-    onAuth((event) => {
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") { if (!channel) onAuthChanged(true); }
-      if (event === "SIGNED_OUT") onAuthChanged(false);
+    ensureSdk().then(() => {
+      onAuth((event) => {
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") { if (!channel) onAuthChanged(true); }
+        if (event === "SIGNED_OUT") onAuthChanged(false);
+      });
+      onAuthChanged(true); // no-op path resolves to "auth" status when signed out
     });
-    onAuthChanged(true); // no-op path resolves to "auth" status when signed out
   }
 }

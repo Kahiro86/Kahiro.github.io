@@ -60,7 +60,7 @@ export function HabitEditor({ habit, categories, onSave, onCancel }) {
         <div>
           <span style={lbl}>Daily target {d.target > 1 ? `· ${d.target}${d.unit ? ` ${d.unit}` : "×"}` : ""}</span>
           <div style={{ display: "flex", gap: 7 }}>
-            <input type="number" min="1" value={d.target} onChange={(e) => set("target", Math.max(1, +e.target.value || 1))} style={{ ...inp, width: 64, fontFamily: "monospace" }} />
+            <input type="number" inputMode="decimal" min="1" value={d.target} onChange={(e) => set("target", Math.max(1, +e.target.value || 1))} style={{ ...inp, width: 64, fontFamily: "monospace" }} />
             <input value={d.unit} onChange={(e) => set("unit", e.target.value)} placeholder="unit (L, pages…)" style={inp} />
           </div>
         </div>
@@ -76,7 +76,7 @@ export function HabitEditor({ habit, categories, onSave, onCancel }) {
       {weekly ? (
         <div style={{ marginBottom: 12 }}>
           <span style={lbl}>Times per week · {d.weeklyTarget}×</span>
-          <input type="number" min="1" max="7" value={d.weeklyTarget} onChange={(e) => set("weeklyTarget", Math.max(1, Math.min(7, +e.target.value || 1)))} style={{ ...inp, width: 90, fontFamily: "monospace" }} />
+          <input type="number" inputMode="decimal" min="1" max="7" value={d.weeklyTarget} onChange={(e) => set("weeklyTarget", Math.max(1, Math.min(7, +e.target.value || 1)))} style={{ ...inp, width: 90, fontFamily: "monospace" }} />
         </div>
       ) : (
         <>

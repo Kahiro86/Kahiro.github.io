@@ -21,7 +21,7 @@ export function EmergencyFundTab({ efBal, setEfBal, efTarget3, efTarget6, efMMF,
         <Card style={{ padding: "22px" }}>
           <SH title="Current Balance" sub="Update monthly after MMF statement" />
           <div style={{ fontSize: 10, color: T3, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Balance (KES)</div>
-          <input type="number" value={efBal || ""} onChange={(e) => setEfBal(+e.target.value || 0)} placeholder="0"
+          <input type="number" inputMode="decimal" value={efBal || ""} onChange={(e) => setEfBal(+e.target.value || 0)} placeholder="0"
             style={{ width: "100%", background: GL, border: `1px solid ${GR}44`, borderRadius: 10, padding: "14px 16px", fontSize: 24, color: GR, outline: "none", fontFamily: "monospace", fontWeight: 800, boxSizing: "border-box", marginBottom: 20 }} />
           {[
             { label: "3-Month Target", target: efTarget3, color: CY },

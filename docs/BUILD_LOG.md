@@ -59,3 +59,67 @@ _Autonomous run while owner is offline. Assumptions, deferrals, and decisions lo
 - A7: **Monthly overhead "actual"** — no dedicated monthly-spend ledger exists, so actual-vs-target reuses the sum of tracked `finance` bills as the closest real proxy. Flagged in-UI as an approximation; a dedicated monthly-spend feed is a low-risk follow-up.
 - A8: **Season protein-floor multiplier** (Daniel Fast = 0.6×) is a chosen default, editable via the God Mode floors; the spec asked only that the floor "auto-lower since meat is out" without a number.
 - A9: **Daily-checklist / workout-split content** deliberately ships empty per the addendum's explicit "do not invent items / placeholder structure only." This is intended, not an omission.
+
+## Phases 6–9 — built this run (post approval-gate)
+Owner approved passing the Phase 5 gate ("Go"). Constraints held: subtraction/
+refinement only in 6–8, no lock/gate/cap weakened, no user data touched.
+
+- **Phase 8 — Performance.** Before/after against the budgets:
+  - **Initial JS bundle: ~190KB → ~137KB gz** (budget <200KB). Supabase SDK
+    (~55KB gz) moved behind a dynamic `import()` — it left the first-paint
+    critical path and now downloads only once sync is configured. The entry
+    HTML now module-preloads only `index.dev` + `vendor-react`.
+    Auth wrappers `await` the lazy SDK; sync retries until it lands.
+  - **Fonts self-hosted + latin-subset** (Inter 6 weights, JetBrains Mono 3,
+    Spectral serif 4) — dropped the render-blocking Google-Fonts `@import`,
+    preloaded the two first-paint faces. Offline-first; unused weight 300 cut.
+    (True glyph subsetting beyond unicode-range needs fonttools, absent here —
+    unicode-range latin split is the effective subset; logged.)
+  - **Count-up removed** everywhere (spec bans animating a number) — figures
+    render at their true value; a log/tap registers instantly.
+  - **Rules engines already memoized** at call sites (evalGates, evalDay,
+    scalingGate all in `useMemo`) — verified, no change needed.
+  - FMP/TTI: not re-measured on a throttled Android profile in this sandbox;
+    the ~28% initial-bundle cut + eliminated font round-trip move both toward
+    the <1.5s / <2.5s targets. Logged as estimated, not lab-measured.
+- **Phase 6 — Interface.** Refinement, not redesign:
+  - **Serif section headings** — the shared `SH` primitive now renders in
+    Spectral (16.5px/600), bringing the serif identity to every module's
+    headings while dense data stays sans + tabular mono (the spec's
+    heading-vs-label split).
+  - **Numeric keypad** — `inputMode="decimal"` added to every remaining
+    `type=number` input.
+  - Locks-loudest / optimistic-log / 5-states already hold from prior waves;
+    a full per-module 5-state re-audit is deferred (verification-only, no gap
+    found in the modules exercised).
+- **Phase 7 — Modules.** Verified, not re-architected: consolidation already
+  happened in Waves A–D (Trading+Finance+Firm merged; Athlete→Life;
+  Mind→Faith). Config-driven rules engines (`tradeGates`, `nutritionHard`,
+  `firm`, `season`) share one pattern (config → eval → {locked, reason}); a
+  single physically-unified engine is deferred as a high-risk refactor with no
+  functional gain. The "today" surface (`TodayTrackers` + Dashboard) composes
+  every module's current state. A forced further module merge would violate
+  "subtraction/refinement only" without evidence it's needed.
+- **Phase 9 — "Who I Am" identity panel.** Full-screen Spectral serif,
+  dark-brown/gold. READ mode by default; WRITE is a deliberate second action
+  with fading ember prompts, autosave, no save button, no char limit. Every
+  edit kept as a dated revision (never overwritten). One-time present-tense
+  nudge. Daily auto-show on first command-center open (only once a vision
+  exists, skippable by tap, never gates anything) with one honest line from
+  today's real state. Gold crest entry point, distinct from the gear.
+  Plain-text, local-first, carried in the all-keys backup. Never
+  auto-generates the words.
+
+## Assumptions added (Phases 6–9)
+- A10: **"Go" = approval to pass the Phase 5 gate** and build Phases 6–9. The
+  gate was the only pause point; the owner cleared it.
+- A11: **Serif applied to headings + the vision panel, not to numerals.**
+  Stacked numbers stay in tabular JetBrains Mono (the spec also demands
+  tabular-figure alignment) — serifing dense dashboard figures would fight
+  that. The spec's own "test before deciding" hedge supports this split.
+- A12: **Today-line for the vision daily surface** uses the real consistency
+  streak (an honest signal). Richer rules-engine lines (active trading-gate %,
+  God-Mode clean-day count) are supported by `todayVisionLine` but not yet fed
+  from App to avoid coupling; streak is live today. Logged.
+- A13: **FMP/TTI not lab-measured** on throttled mid-range Android in-sandbox;
+  bundle + font wins reported instead as the honest, measurable proxy.

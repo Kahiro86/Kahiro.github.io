@@ -1,5 +1,5 @@
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { B1, B2, GL, BD, T1, T2, T3, RE, GR, CY, PU } from "./designTokens.js";
+import { B1, B2, GL, BD, T1, T2, T3, RE, GR, CY, PU, SERIF } from "./designTokens.js";
 
 // Frosted-glass surface: translucent so the module's ambient background shows
 // through the blur, with a thin illuminated top edge and soft floating shadow.
@@ -21,7 +21,7 @@ export const Card = ({ children, style = {}, className = "", ...rest }) => (
 export const SH = ({ title, sub, action }) => (
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
     <div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: T1 }}>{title}</div>
+      <div style={{ fontFamily: SERIF, fontSize: 16.5, fontWeight: 600, letterSpacing: 0.2, color: T1 }}>{title}</div>
       {sub && <div style={{ fontSize: 11, color: T3, marginTop: 3 }}>{sub}</div>}
     </div>
     {action}
