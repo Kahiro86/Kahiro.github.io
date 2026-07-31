@@ -14,7 +14,6 @@ import { DayAgenda } from "../../shared/DayAgenda.jsx";
 import { TodayTrackers } from "../../shared/TodayTrackers.jsx";
 import { billsDueSoon } from "../finance/bills.js";
 import { Ring } from "../../shared/charts.jsx";
-import { useCountUp } from "../../shared/useCountUp.js";
 
 const GOLD = "#F0B429"; // reserved for the perfect-day hero only
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -283,13 +282,15 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const gate = useMemo(() => scalingGate(trades, rawReviews, firmWithdrawals), [trades, rawReviews, firmWithdrawals]);
   const topStreakDays = streaks.length ? streaks[0].days : 0;
 
-  // Animated figures — roll up on load, tick on change.
+  // Numbers render at their true value immediately — no count-up animation
+  // (the discipline framing values honesty over spectacle; a figure never
+  // rolls, it simply is).
   const perfect = mission.pct === 100 && mission.total > 0;
-  const cuPct = useCountUp(mission.pct);
-  const cuScore = useCountUp(lifeScore);
-  const cuXp = useCountUp(xp?.total ?? 0);
-  const cuNet = useCountUp(fin.personalNetWorth);
-  const cuFreedom = useCountUp(freedom.freedomPct);
+  const cuPct = mission.pct;
+  const cuScore = lifeScore;
+  const cuXp = xp?.total ?? 0;
+  const cuNet = fin.personalNetWorth;
+  const cuFreedom = freedom.freedomPct;
 
   if (!loaded) return <Hydrating label="Waking the Command Center…" />;
 

@@ -176,7 +176,8 @@ export default function App() {
 
   const globalStyle = (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+      /* Fonts are self-hosted + latin-subset, loaded via <link> in index.html —
+         no render-blocking @import, works fully offline. */
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body { max-width: 100%; overflow-x: hidden; background: #000000; }
       body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }

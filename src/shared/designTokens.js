@@ -25,3 +25,10 @@ export const AC2 = "#F0B429";
 
 // Status colours — kept distinguishable, tuned for contrast on black.
 export const GR = "#3FB950", AM = "#E3B341", RE = "#F85149", BL = "#4C8DFF";
+
+// Type families. SANS drives dense UI (labels, inputs, data); MONO keeps
+// stacked numerals in tabular alignment; SERIF (Spectral, self-hosted) is the
+// solemn identity voice — section headings and the "Who I Am" vision passage.
+export const SANS = "'Inter',-apple-system,BlinkMacSystemFont,sans-serif";
+export const MONO = "'JetBrains Mono',ui-monospace,monospace";
+export const SERIF = "'Spectral',Georgia,'Times New Roman',serif";

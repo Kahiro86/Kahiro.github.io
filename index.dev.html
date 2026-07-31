@@ -10,6 +10,11 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
+<!-- Self-hosted, latin-subset fonts (offline-first, no CDN round-trip). Preload
+     only the faces on the first-paint critical path; the rest load on demand. -->
+<link rel="preload" as="font" type="font/woff2" href="./fonts/inter-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="./fonts/inter-700.woff2" crossorigin>
+<link rel="stylesheet" href="./fonts/fonts.css">
 <title>Kahiro — Kaizen OS</title>
 </head>
 <body>
