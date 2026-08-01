@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, AC, AC2 } from "./designTokens.js";
-import { searchAll, PAGES } from "./search.js";
+import { searchAll, recentItems, PAGES } from "./search.js";
 
 export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm }) {
   const [q, setQ] = useState("");
@@ -13,11 +13,15 @@ export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm }) {
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
-  // Empty query → the pages, as quick navigation. Otherwise ranked hits.
+  // Empty query → "jump back in" (recent items) then the pages, each under a
+  // section header. A typed query → flat ranked hits, order = relevance.
   const results = useMemo(() => {
     const query = q.trim();
-    if (!query) return PAGES.map((p) => ({ ...p, subtitle: p.subtitle || "Jump to" }));
-    return searchAll(query);
+    if (query) return searchAll(query);
+    const rows = [];
+    for (const r of recentItems({ limit: 5 })) rows.push({ ...r, _group: "Recent" });
+    for (const p of PAGES) rows.push({ ...p, subtitle: p.subtitle || "Jump to", _group: "Jump to" });
+    return rows;
   }, [q]);
 
   useEffect(() => { setActive(0); }, [q]);
@@ -61,16 +65,21 @@ export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm }) {
               No matches for “{q.trim()}”.
             </div>
           ) : results.map((r, i) => (
-            <button key={r.id} data-i={i} onClick={() => go(r)} onMouseEnter={() => setActive(i)}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10, border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                background: i === active ? GL : "transparent" }}>
-              <span style={{ width: 26, height: 26, borderRadius: 7, background: B2, border: `1px solid ${BD}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: i === active ? AC2 : T2, flexShrink: 0 }}>{r.icon || "•"}</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: 13.5, color: T1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.title}</span>
-                {r.subtitle && <span style={{ display: "block", fontSize: 11, color: T3, marginTop: 1 }}>{r.subtitle}</span>}
-              </span>
-              {i === active && <span style={{ fontSize: 10, color: T3 }}>↵</span>}
-            </button>
+            <div key={r.id}>
+              {r._group && r._group !== results[i - 1]?._group && (
+                <div style={{ padding: "10px 12px 4px", fontSize: 10, fontWeight: 700, color: T3, letterSpacing: 1.4, textTransform: "uppercase" }}>{r._group}</div>
+              )}
+              <button data-i={i} onClick={() => go(r)} onMouseEnter={() => setActive(i)}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10, border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                  background: i === active ? GL : "transparent" }}>
+                <span style={{ width: 26, height: 26, borderRadius: 7, background: B2, border: `1px solid ${BD}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: i === active ? AC2 : T2, flexShrink: 0 }}>{r.icon || "•"}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 13.5, color: T1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.title}</span>
+                  {r.subtitle && <span style={{ display: "block", fontSize: 11, color: T3, marginTop: 1 }}>{r.subtitle}</span>}
+                </span>
+                {i === active && <span style={{ fontSize: 10, color: T3 }}>↵</span>}
+              </button>
+            </div>
           ))}
         </div>
       </div>

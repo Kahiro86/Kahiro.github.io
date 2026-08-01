@@ -16,6 +16,20 @@ export const PAGES = [
   { id: "page:whoiam", type: "Page", title: "Who I Am", subtitle: "Your five-year identity", nav: "__whoiam__", icon: "❖" },
 ];
 
+// Deep destinations — jump straight to a group inside a merged module via the
+// app's existing "module:group" deep-links. Keywords widen matching (searching
+// "finance" or "gym" lands the right tab) without over-promising inner-tab
+// names in the visible label.
+export const DESTINATIONS = [
+  { id: "dest:firm:trading", type: "Section", title: "Trading Journal", nav: "firm:trading", icon: "▲", keywords: "trade trades journal ict setups lessons intel entries" },
+  { id: "dest:firm:wealth", type: "Section", title: "Wealth", nav: "firm:wealth", icon: "◈", keywords: "finance money income net worth bills cashflow vault withdrawals savings debt" },
+  { id: "dest:firm:doctrine", type: "Section", title: "The Firm — HQ", nav: "firm:doctrine", icon: "▲", keywords: "doctrine firm campaign gate covenant contingency mission" },
+  { id: "dest:life:athlete", type: "Section", title: "Athlete", nav: "life:athlete", icon: "🏋", keywords: "workout gym lifting running measurements recovery mobility pr splits" },
+  { id: "dest:life:life", type: "Section", title: "Habits & Journal", nav: "life:life", icon: "◍", keywords: "habits routines journal insights purity today nutrition meals food" },
+  { id: "dest:faith:faith", type: "Section", title: "Faith", nav: "faith:faith", icon: "✝", keywords: "scripture verses devotional church attendance walk recall prayer" },
+  { id: "dest:faith:mind", type: "Section", title: "Mind", nav: "faith:mind", icon: "📖", keywords: "reading books library decisions notes author momentum" },
+];
+
 // Data sources: which store, how to label it, where it lives, and the fields
 // worth reading. Extraction is defensive — any field may be missing.
 export const SOURCES = [
@@ -67,6 +81,12 @@ export function searchAll(query, { readKey = readKeyLocal, limit = 40 } = {}) {
     if (s > 0) out.push({ ...p, score: s + 5 }); // pages rank a touch higher — they're exact destinations
   }
 
+  // Deep destinations — title match, or a softer hit on a keyword alias.
+  for (const d of DESTINATIONS) {
+    const s = Math.max(score(d.title, q), d.keywords ? score(d.keywords, q) - 25 : 0);
+    if (s > 0) out.push({ id: d.id, type: d.type, icon: d.icon, nav: d.nav, title: d.title, subtitle: "Jump to", score: s + 3 });
+  }
+
   for (const src of SOURCES) {
     const raw = readKey(src.key);
     const list = Array.isArray(raw) ? raw : [];
@@ -101,4 +121,30 @@ export function searchAll(query, { readKey = readKeyLocal, limit = 40 } = {}) {
   }
 
   return out.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title)).slice(0, limit);
+}
+
+// Most-recently touched items across every store — the empty-query "jump back
+// in" list. Ranks by editedAt, then added/logged date (all ISO-ish, so a
+// lexical compare orders them correctly). Corruption-tolerant like searchAll.
+export function recentItems({ readKey = readKeyLocal, limit = 5 } = {}) {
+  const items = [];
+  for (const src of SOURCES) {
+    const raw = readKey(src.key);
+    if (!Array.isArray(raw)) continue;
+    for (const item of raw) {
+      if (!item || typeof item !== "object") continue;
+      const label = str(firstField(item, src.fields)).trim();
+      if (!label) continue;
+      const when = str(item.editedAt) || str(item.addedAt) || (src.date ? str(item[src.date]) : "") || str(item.date);
+      if (!when) continue;
+      items.push({
+        when,
+        id: `${src.key}:${item.id || label.slice(0, 12)}`,
+        type: src.type, icon: src.icon, nav: src.nav,
+        title: label.length > 90 ? label.slice(0, 90) + "…" : label,
+        subtitle: [src.type, when.slice(0, 10)].filter(Boolean).join(" · "),
+      });
+    }
+  }
+  return items.sort((a, b) => (b.when || "").localeCompare(a.when || "")).slice(0, limit);
 }
