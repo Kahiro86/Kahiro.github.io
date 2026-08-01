@@ -21,6 +21,7 @@ export const PAGES = [
 // matching without cluttering the visible label.
 export const ACTIONS = [
   { id: "act:quicklog", type: "Action", title: "Quick Log", subtitle: "Log the day's habits fast", act: "quicklog", icon: "⚡", keywords: "log habit tap tick check mark done quick complete" },
+  { id: "act:shutdown", type: "Action", title: "Evening Shutdown", subtitle: "Close the day + set tomorrow's top 3", act: "shutdown", icon: "🌙", keywords: "evening shutdown night review reflect rating win lesson tomorrow priorities close day" },
   { id: "act:review", type: "Action", title: "Week in Review", subtitle: "Reflect on your week", act: "review", icon: "◔", keywords: "weekly review reflect recap summary retrospective" },
   { id: "act:ai", type: "Action", title: "Ask the AI coach", subtitle: "Open the coach panel", act: "ai", icon: "✦", keywords: "ai coach assistant chat ask claude advice" },
   { id: "act:help", type: "Action", title: "Help & Guide", subtitle: "Browse the help centre", act: "help", icon: "?", keywords: "help guide docs support how faq" },
