@@ -149,6 +149,15 @@ export default function App() {
   const [whoAuto, setWhoAuto] = useState(false);
   // Global search (command palette) — opens from the header or Cmd/Ctrl+K / "/".
   const [searchOpen, setSearchOpen] = useState(false);
+  const [quickSignal, setQuickSignal] = useState(0); // ticks to open Quick Log from the palette
+  // Command-palette actions → app intents.
+  const onSearchAction = useCallback((act) => {
+    if (act === "quicklog") setQuickSignal((n) => n + 1);
+    else if (act === "review") setReviewSignal((n) => n + 1);
+    else if (act === "ai") setAiOpen(true);
+    else if (act === "help") setHelpOpen(true);
+    else if (act === "tour") startTour();
+  }, [startTour]);
   useEffect(() => {
     const onKey = (e) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -325,7 +334,7 @@ export default function App() {
             <Suspense fallback={null}><AIPanel mobile onClose={() => setAiOpen(false)} onOpenSettings={() => { setShowSettings(true); setAiOpen(false); }} ctx={aiCtx} habits={habits} /></Suspense>
           </div>
         )}
-        <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || aiOpen || mobileNavOpen} offsetRight={16} />
+        <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || aiOpen || mobileNavOpen} offsetRight={16} openSignal={quickSignal} />
         <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
@@ -336,7 +345,7 @@ export default function App() {
         {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
         {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
         {whoVisible && <WhoIAm autoShow={whoAuto && !whoOpen} todayLine={whoTodayLine} onClose={closeWho} />}
-        {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} onNavigate={navTo} onOpenWhoIAm={() => setWhoOpen(true)} />}
+        {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} onNavigate={navTo} onOpenWhoIAm={() => setWhoOpen(true)} onAction={onSearchAction} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -361,7 +370,7 @@ export default function App() {
       </div>
 
       {aiOpen && <Suspense fallback={null}><AIPanel onClose={() => setAiOpen(false)} onOpenSettings={() => setShowSettings(true)} ctx={aiCtx} habits={habits} /></Suspense>}
-      <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life"} offsetRight={aiOpen ? 364 : 24} />
+      <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life"} offsetRight={aiOpen ? 364 : 24} openSignal={quickSignal} />
       <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
@@ -372,7 +381,7 @@ export default function App() {
       {wnOpen && <WhatsNew onClose={closeWhatsNew} onStartTour={startTour} />}
       {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
       {whoVisible && <WhoIAm autoShow={whoAuto && !whoOpen} todayLine={whoTodayLine} onClose={closeWho} />}
-        {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} onNavigate={navTo} onOpenWhoIAm={() => setWhoOpen(true)} />}
+        {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} onNavigate={navTo} onOpenWhoIAm={() => setWhoOpen(true)} onAction={onSearchAction} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>

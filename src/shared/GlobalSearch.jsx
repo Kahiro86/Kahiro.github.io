@@ -5,21 +5,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, AC, AC2 } from "./designTokens.js";
-import { searchAll, recentItems, PAGES } from "./search.js";
+import { searchAll, recentItems, PAGES, ACTIONS } from "./search.js";
 
-export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm }) {
+export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm, onAction }) {
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
-  // Empty query → "jump back in" (recent items) then the pages, each under a
-  // section header. A typed query → flat ranked hits, order = relevance.
+  // Empty query → "jump back in" (recent items), then commands, then the pages,
+  // each under a section header. A typed query → flat ranked hits by relevance.
   const results = useMemo(() => {
     const query = q.trim();
     if (query) return searchAll(query);
     const rows = [];
     for (const r of recentItems({ limit: 5 })) rows.push({ ...r, _group: "Recent" });
+    for (const a of ACTIONS) rows.push({ ...a, _group: "Actions" });
     for (const p of PAGES) rows.push({ ...p, subtitle: p.subtitle || "Jump to", _group: "Jump to" });
     return rows;
   }, [q]);
@@ -29,6 +30,7 @@ export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm }) {
 
   const go = (r) => {
     if (!r) return;
+    if (r.act) { onAction?.(r.act); onClose(); return; }
     if (r.nav === "__whoiam__") { onOpenWhoIAm?.(); onClose(); return; }
     onNavigate?.(r.nav);
     onClose();
