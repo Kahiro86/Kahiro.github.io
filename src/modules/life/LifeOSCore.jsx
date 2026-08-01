@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Sun, ListChecks, Layers, TrendingUp, BookOpen, Plus, Check, Flame, SkipForward,
@@ -28,11 +28,15 @@ import { NonNegotiables } from "./NonNegotiables.jsx";
 import { PurityTab } from "./PurityTab.jsx";
 import { Journals } from "./Journals.jsx";
 import { ModeHistoryStrip } from "../../shared/ModeHistoryStrip.jsx";
+import { useFocusRequest } from "../../shared/searchFocus.js";
 
 const today = () => localDateStr();
 
 export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInfo }) {
   const [tab, setTab] = useState("today");
+  // A palette result deep-links here — land on the record's own inner tab.
+  const focus = useFocusRequest();
+  useEffect(() => { if (focus?.module === "life" && focus.tab) setTab(focus.tab); }, [focus?.nonce]); // eslint-disable-line
   const [editing, setEditing] = useState(null);         // habit being edited or newHabit()
   const [rawRoutines, setRoutines] = useStorageState("routines", []);
   const [routineDraft, setRoutineDraft] = useState(null);
