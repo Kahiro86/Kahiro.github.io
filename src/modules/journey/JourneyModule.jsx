@@ -3,11 +3,12 @@
 // lifelong tiered milestones). Goals live in the synced `goals` store;
 // everything in the Hall of Fame derives from the XP engine's stats, so
 // nothing here can drift or be edited into existence.
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Target, Trophy, Plus, Check, Pencil, Archive, Link2, Gem } from "lucide-react";
 import { BD, T1, T2, T3, GL, B2, GR, RE, AM, CY, AC2 } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty, Hydrating } from "../../shared/ui.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
+import { useFocusRequest } from "../../shared/searchFocus.js";
 import { Collapse } from "../../shared/Collapse.jsx";
 import { ActivityHeatmap } from "../../shared/charts.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -310,6 +311,9 @@ function HallOfFame({ xp }) {
 // ── Module shell ─────────────────────────────────────────────────────
 export function JourneyModule({ xpInfo }) {
   const [tab, setTab] = useState("goals");
+  // A palette result deep-links here — land on the record's own inner tab.
+  const focus = useFocusRequest();
+  useEffect(() => { if (focus?.module === "journey" && focus.tab) setTab(focus.tab); }, [focus?.nonce]); // eslint-disable-line
   const [rawGoals, setGoals, goalsLoaded] = useStorageState("goals", []);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);

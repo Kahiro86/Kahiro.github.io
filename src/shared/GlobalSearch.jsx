@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, AC, AC2 } from "./designTokens.js";
 import { searchAll, recentItems, PAGES, ACTIONS } from "./search.js";
+import { requestFocus } from "./searchFocus.js";
 
 export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm, onAction }) {
   const [q, setQ] = useState("");
@@ -32,6 +33,7 @@ export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm, onAction }) {
     if (!r) return;
     if (r.act) { onAction?.(r.act); onClose(); return; }
     if (r.nav === "__whoiam__") { onOpenWhoIAm?.(); onClose(); return; }
+    if (r.focus) requestFocus(r.focus); // land on the record's own inner tab
     onNavigate?.(r.nav);
     onClose();
   };

@@ -44,12 +44,12 @@ export const DESTINATIONS = [
 // Data sources: which store, how to label it, where it lives, and the fields
 // worth reading. Extraction is defensive — any field may be missing.
 export const SOURCES = [
-  { key: "journal_entries", type: "Journal", icon: "✎", nav: "life", fields: ["text"], date: "date" },
+  { key: "journal_entries", type: "Journal", icon: "✎", nav: "life", fields: ["text"], date: "date", deep: { nav: "life:life", module: "life", tab: "journal" } },
   { key: "habits", type: "Habit", icon: "◍", nav: "life", fields: ["name"] },
-  { key: "life_projects", type: "Project", icon: "◒", nav: "life", fields: ["name", "next"] },
+  { key: "life_projects", type: "Project", icon: "◒", nav: "life", fields: ["name", "next"], deep: { nav: "life:life", module: "life", tab: "projects" } },
   { key: "nutrition_foods", type: "Food", icon: "🍽", nav: "life", fields: ["name"] },
-  { key: "wants", type: "Want", icon: "✦", nav: "journey", fields: ["name", "note"] },
-  { key: "goals", type: "Goal", icon: "◆", nav: "journey", fields: ["title", "name", "text"] },
+  { key: "wants", type: "Want", icon: "✦", nav: "journey", fields: ["name", "note"], deep: { nav: "journey", module: "journey", tab: "wants" } },
+  { key: "goals", type: "Goal", icon: "◆", nav: "journey", fields: ["title", "name", "text"], deep: { nav: "journey", module: "journey", tab: "goals" } },
   { key: "ict_trades", type: "Trade", icon: "▲", nav: "firm", fields: ["pair", "notes", "note", "setup", "lesson"], date: "date" },
   { key: "ti_trades", type: "Trade", icon: "▲", nav: "firm", fields: ["pair", "notes", "note", "setup", "lesson"], date: "date" },
   { key: "ti_lessons", type: "Lesson", icon: "◈", nav: "firm", fields: ["title", "note", "text"] },
@@ -120,11 +120,16 @@ export function searchAll(query, { readKey = readKeyLocal, limit = 40 } = {}) {
       if (best <= 0) continue;
       const label = str(firstField(item, src.fields)) || "(untitled)";
       const date = src.date ? str(item[src.date]).slice(0, 10) : "";
+      // A `deep` source lands the result on the exact inner tab (via the focus
+      // bus); others navigate to the module as before.
+      const nav = src.deep ? src.deep.nav : src.nav;
+      const focus = src.deep ? { module: src.deep.module, tab: src.deep.tab, id: item.id } : null;
       out.push({
         id: `${src.key}:${item.id || label.slice(0, 12)}`,
-        type: src.type, icon: src.icon, nav: src.nav,
+        type: src.type, icon: src.icon, nav,
         title: label.length > 90 ? label.slice(0, 90) + "…" : label,
         subtitle: [src.type, date].filter(Boolean).join(" · "),
+        focus,
         score: best,
       });
     }
