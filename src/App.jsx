@@ -42,6 +42,7 @@ const WhatsNew = lazy(() => import("./shared/WhatsNew.jsx").then((m) => ({ defau
 const WhoIAm = lazy(() => import("./shared/WhoIAm.jsx").then((m) => ({ default: m.WhoIAm })));
 const GlobalSearch = lazy(() => import("./shared/GlobalSearch.jsx").then((m) => ({ default: m.GlobalSearch })));
 const EveningReview = lazy(() => import("./shared/EveningReview.jsx").then((m) => ({ default: m.EveningReview })));
+const StreakInsurance = lazy(() => import("./shared/StreakInsurance.jsx").then((m) => ({ default: m.StreakInsurance })));
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
@@ -152,6 +153,7 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [quickSignal, setQuickSignal] = useState(0); // ticks to open Quick Log from the palette
   const [eveningOpen, setEveningOpen] = useState(false);
+  const [streakOpen, setStreakOpen] = useState(false);
   // Command-palette actions → app intents.
   const onSearchAction = useCallback((act) => {
     if (act === "quicklog") setQuickSignal((n) => n + 1);
@@ -160,6 +162,7 @@ export default function App() {
     else if (act === "help") setHelpOpen(true);
     else if (act === "tour") startTour();
     else if (act === "shutdown") setEveningOpen(true);
+    else if (act === "streak") setStreakOpen(true);
   }, [startTour]);
   useEffect(() => {
     const onKey = (e) => {
@@ -350,6 +353,7 @@ export default function App() {
         {whoVisible && <WhoIAm autoShow={whoAuto && !whoOpen} todayLine={whoTodayLine} onClose={closeWho} />}
         {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} onNavigate={navTo} onOpenWhoIAm={() => setWhoOpen(true)} onAction={onSearchAction} />}
         {eveningOpen && <EveningReview onClose={() => setEveningOpen(false)} habits={habitsV2} />}
+        {streakOpen && <StreakInsurance onClose={() => setStreakOpen(false)} byDay={xpInfo.byDay} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -387,6 +391,7 @@ export default function App() {
       {whoVisible && <WhoIAm autoShow={whoAuto && !whoOpen} todayLine={whoTodayLine} onClose={closeWho} />}
         {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} onNavigate={navTo} onOpenWhoIAm={() => setWhoOpen(true)} onAction={onSearchAction} />}
         {eveningOpen && <EveningReview onClose={() => setEveningOpen(false)} habits={habitsV2} />}
+        {streakOpen && <StreakInsurance onClose={() => setStreakOpen(false)} byDay={xpInfo.byDay} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>
