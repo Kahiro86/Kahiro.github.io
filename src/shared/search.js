@@ -12,8 +12,19 @@ export const PAGES = [
   { id: "page:calendar", type: "Page", title: "Calendar", nav: "calendar", icon: "▦" },
   { id: "page:journey", type: "Page", title: "Journey", subtitle: "Hall of Fame · Want List · Goals", nav: "journey", icon: "◆" },
   { id: "page:analytics", type: "Page", title: "Analytics", nav: "analytics", icon: "◔" },
-  { id: "page:settings", type: "Page", title: "Settings", nav: "settings", icon: "⚙" },
-  { id: "page:whoiam", type: "Page", title: "Who I Am", subtitle: "Your five-year identity", nav: "__whoiam__", icon: "❖" },
+  { id: "page:settings", type: "Page", title: "Settings", nav: "settings", icon: "⚙", keywords: "settings preferences backup export import data lock pin sync api key restore download" },
+  { id: "page:whoiam", type: "Page", title: "Who I Am", subtitle: "Your five-year identity", nav: "__whoiam__", icon: "❖", keywords: "vision identity purpose why mission" },
+];
+
+// Actions — commands that DO something rather than navigate. Each dispatches a
+// named intent the app routes (see App.jsx onAction). Keyword aliases widen
+// matching without cluttering the visible label.
+export const ACTIONS = [
+  { id: "act:quicklog", type: "Action", title: "Quick Log", subtitle: "Log the day's habits fast", act: "quicklog", icon: "⚡", keywords: "log habit tap tick check mark done quick complete" },
+  { id: "act:review", type: "Action", title: "Week in Review", subtitle: "Reflect on your week", act: "review", icon: "◔", keywords: "weekly review reflect recap summary retrospective" },
+  { id: "act:ai", type: "Action", title: "Ask the AI coach", subtitle: "Open the coach panel", act: "ai", icon: "✦", keywords: "ai coach assistant chat ask claude advice" },
+  { id: "act:help", type: "Action", title: "Help & Guide", subtitle: "Browse the help centre", act: "help", icon: "?", keywords: "help guide docs support how faq" },
+  { id: "act:tour", type: "Action", title: "Replay app tour", subtitle: "Guided walkthrough", act: "tour", icon: "◎", keywords: "tour onboarding walkthrough intro guide again" },
 ];
 
 // Deep destinations — jump straight to a group inside a merged module via the
@@ -77,8 +88,14 @@ export function searchAll(query, { readKey = readKeyLocal, limit = 40 } = {}) {
   const out = [];
 
   for (const p of PAGES) {
-    const s = Math.max(score(p.title, q), p.subtitle ? score(p.subtitle, q) - 20 : 0);
+    const s = Math.max(score(p.title, q), p.subtitle ? score(p.subtitle, q) - 20 : 0, p.keywords ? score(p.keywords, q) - 25 : 0);
     if (s > 0) out.push({ ...p, score: s + 5 }); // pages rank a touch higher — they're exact destinations
+  }
+
+  // Actions — command intents. Title match, or a softer hit on a keyword alias.
+  for (const a of ACTIONS) {
+    const s = Math.max(score(a.title, q), a.keywords ? score(a.keywords, q) - 25 : 0);
+    if (s > 0) out.push({ id: a.id, type: a.type, icon: a.icon, act: a.act, title: a.title, subtitle: a.subtitle, score: s + 4 });
   }
 
   // Deep destinations — title match, or a softer hit on a keyword alias.

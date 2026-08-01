@@ -4,7 +4,7 @@
 // are written straight into their own stores (nutrition_log /
 // athlete_workouts), so XP, streaks and every module pick them up exactly
 // as if logged from inside the Athlete tab — with an Undo on each.
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Zap, Check, X, Utensils, Dumbbell, Copy, RotateCcw } from "lucide-react";
 import { B1, BD, BD2, T1, T2, T3, GL, CY, GR, AM } from "./designTokens.js";
 import { localDateStr, daysAgoStr } from "./dates.js";
@@ -22,7 +22,7 @@ const SectionHead = ({ icon, children }) => (
   </div>
 );
 
-export function QuickLog({ habits, onTap, hidden, offsetRight = 24 }) {
+export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal = 0 }) {
   const [open, setOpen] = useState(false);
   const ds = localDateStr();
   const toast = useToast();
@@ -32,8 +32,14 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24 }) {
   const log = useMemo(() => sanitizeNutrition(rawLog), [rawLog]);
   const workouts = Array.isArray(rawWorkouts) ? rawWorkouts : [];
 
+  // The command palette can open the sheet from anywhere (openSignal ticks up).
+  useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
+
   const scheduled = habits.filter((h) => !h.archived && !h.paused && isScheduled(h, ds));
-  if (hidden || !scheduled.length) return null;
+  // Nothing scheduled → nothing to quick-log. Otherwise keep the FAB hidden
+  // where it should be, but still let a command-opened sheet show through.
+  if (!scheduled.length) return null;
+  if (hidden && !open) return null;
 
   const done = scheduled.filter((h) => isDone(h, ds));
   const pct = Math.round((done.length / scheduled.length) * 100);
