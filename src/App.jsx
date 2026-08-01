@@ -44,6 +44,7 @@ const GlobalSearch = lazy(() => import("./shared/GlobalSearch.jsx").then((m) => 
 const EveningReview = lazy(() => import("./shared/EveningReview.jsx").then((m) => ({ default: m.EveningReview })));
 const StreakInsurance = lazy(() => import("./shared/StreakInsurance.jsx").then((m) => ({ default: m.StreakInsurance })));
 const FocusTimer = lazy(() => import("./shared/FocusTimer.jsx").then((m) => ({ default: m.FocusTimer })));
+const WeeklyPlan = lazy(() => import("./shared/WeeklyPlan.jsx").then((m) => ({ default: m.WeeklyPlan })));
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
@@ -156,6 +157,7 @@ export default function App() {
   const [eveningOpen, setEveningOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
   const [focusOpen, setFocusOpen] = useState(false);
+  const [weeklyOpen, setWeeklyOpen] = useState(false);
   // Command-palette actions → app intents.
   const onSearchAction = useCallback((act) => {
     if (act === "quicklog") setQuickSignal((n) => n + 1);
@@ -166,6 +168,7 @@ export default function App() {
     else if (act === "shutdown") setEveningOpen(true);
     else if (act === "streak") setStreakOpen(true);
     else if (act === "focus") setFocusOpen(true);
+    else if (act === "weekly") setWeeklyOpen(true);
   }, [startTour]);
   useEffect(() => {
     const onKey = (e) => {
@@ -358,6 +361,7 @@ export default function App() {
         {eveningOpen && <EveningReview onClose={() => setEveningOpen(false)} habits={habitsV2} />}
         {streakOpen && <StreakInsurance onClose={() => setStreakOpen(false)} byDay={xpInfo.byDay} />}
         {focusOpen && <FocusTimer onClose={() => setFocusOpen(false)} />}
+        {weeklyOpen && <WeeklyPlan onClose={() => setWeeklyOpen(false)} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -397,6 +401,7 @@ export default function App() {
         {eveningOpen && <EveningReview onClose={() => setEveningOpen(false)} habits={habitsV2} />}
         {streakOpen && <StreakInsurance onClose={() => setStreakOpen(false)} byDay={xpInfo.byDay} />}
         {focusOpen && <FocusTimer onClose={() => setFocusOpen(false)} />}
+        {weeklyOpen && <WeeklyPlan onClose={() => setWeeklyOpen(false)} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>
