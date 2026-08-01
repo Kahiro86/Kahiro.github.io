@@ -38,6 +38,7 @@ import {
 import { sanitizePurity } from "../life/purity.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
 import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
+import { makeIsFull } from "../../shared/streakInsurance.js";
 
 const kes0 = (n) => Math.round(+n || 0).toLocaleString();
 // isRestDay comes from directive.js (indexed against WEEK_PLAN, MON→SUN) —
@@ -86,6 +87,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [firmConfig] = useStorageState("firm_config", null);
   const [firmWithdrawals] = useStorageState("firm_withdrawals", []);
   const [logins] = useStorageState("xp_logins", {});
+  const [freezes] = useStorageState("streak_freezes", { frozen: [] });
   const { start: consistencyStart } = useConsistencyStart(logins);
   // `xp`'s memo only recomputes when a watched store changes — with zero
   // interaction across a passive midnight the Day N counter would otherwise
@@ -100,9 +102,13 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const ds = localDateStr();
   // Hell mode: a day only counts when everything scheduled is done (rest/
   // cheat days stay safe), so the streak and rate demand full completion.
-  const csOpts = useMemo(() => (xp.hell?.on
-    ? { isFull: (d) => isFullDay(habitsV2, dayMarks, d) }
-    : {}), [xp.hell?.on, habitsV2, dayMarks]);
+  // Streak insurance: a protected (frozen) day counts toward the streak. This
+  // composes onto the Hell-mode predicate and is a no-op with no freezes.
+  const csOpts = useMemo(() => {
+    const base = xp.hell?.on ? (d) => isFullDay(habitsV2, dayMarks, d) : null;
+    const isFull = makeIsFull(freezes, base);
+    return isFull ? { isFull } : {};
+  }, [xp.hell?.on, habitsV2, dayMarks, freezes]);
   const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, nowDs, csOpts), [xp.byDay, consistencyStart, nowDs, csOpts]);
   const totalAct = totalActivities(xp.stats);
   const consistencySentence = cs.currentStreak === 0
