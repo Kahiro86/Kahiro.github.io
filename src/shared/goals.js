@@ -75,6 +75,10 @@ export function sanitizeGoals(raw) {
       deadline: dOf(g.deadline),
       note: typeof g.note === "string" ? g.note.slice(0, 500) : "",
       ms,
+      // Goal cascade (optional, additive): where a goal sits on the horizon
+      // ladder and, optionally, the higher goal it ladders up to.
+      horizon: ["year", "quarter", "month", "week"].includes(g.horizon) ? g.horizon : "",
+      parent: typeof g.parent === "string" ? g.parent : "",
       createdAt: dOf(g.createdAt) || localDateStr(),
       completedAt: dOf(g.completedAt),
       archived: !!g.archived,
@@ -83,11 +87,11 @@ export function sanitizeGoals(raw) {
   return out;
 }
 
-export const newGoal = ({ area = "custom", name, target = 1, unit = "", deadline = null, note = "", current = 0, source = "", sourceBase = 0 }) =>
+export const newGoal = ({ area = "custom", name, target = 1, unit = "", deadline = null, note = "", current = 0, source = "", sourceBase = 0, horizon = "", parent = "" }) =>
   stamp({
     id: `g${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
     area, name: (name || "").trim(), unit, target: num(target) || 1, current: num(current),
-    source, sourceBase: num(sourceBase),
+    source, sourceBase: num(sourceBase), horizon, parent,
     deadline: dOf(deadline), note, ms: {}, createdAt: localDateStr(), completedAt: null, archived: false,
   });
 

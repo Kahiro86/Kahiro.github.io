@@ -25,6 +25,7 @@ export const ACTIONS = [
   { id: "act:streak", type: "Action", title: "Streak Insurance", subtitle: "Protect a missed day with a token", act: "streak", icon: "🛡", keywords: "streak freeze token protect insurance missed day recovery grace shield consistency" },
   { id: "act:focus", type: "Action", title: "Focus Session", subtitle: "Start a deep-work timer", act: "focus", icon: "🎯", keywords: "focus timer deep work pomodoro concentrate session 25 50 90 block" },
   { id: "act:weekly", type: "Action", title: "Weekly Plan", subtitle: "Set the week's theme + top 3", act: "weekly", icon: "🗓", keywords: "weekly plan week theme priorities intentions planning monday review" },
+  { id: "act:cascade", type: "Action", title: "Goal Cascade", subtitle: "Ladder goals from year to week", act: "cascade", icon: "🪜", keywords: "goal cascade ladder horizon year quarter month week parent rollup align" },
   { id: "act:review", type: "Action", title: "Week in Review", subtitle: "Reflect on your week", act: "review", icon: "◔", keywords: "weekly review reflect recap summary retrospective" },
   { id: "act:ai", type: "Action", title: "Ask the AI coach", subtitle: "Open the coach panel", act: "ai", icon: "✦", keywords: "ai coach assistant chat ask claude advice" },
   { id: "act:help", type: "Action", title: "Help & Guide", subtitle: "Browse the help centre", act: "help", icon: "?", keywords: "help guide docs support how faq" },
