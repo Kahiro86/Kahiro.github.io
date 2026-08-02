@@ -31,6 +31,7 @@ import { useDayMarks } from "../../shared/dayMarks.js";
 import { isFullDay } from "../../shared/difficulty.js";
 import { freedomMath } from "../../shared/freedom.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
+import { FocusToday } from "../../shared/FocusToday.jsx";
 import { scalingGate } from "../../shared/firm.js";
 import {
   sanitizeNutrition, dayEntries, dayTotals, calcTargets, healthyStreaks,
@@ -349,6 +350,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         state={{ streak: cs.currentStreak, missedYesterday: cs.currentStreak === 0, legendary: cs.longestStreak >= 100 && cs.currentStreak === cs.longestStreak }} accent={AC} />
 
       <DayAgenda items={agendaItems} week={agendaWeek} onNavigate={onNavigate} />
+      <FocusToday />
       <TodayTrackers overheadActual={monthExpenses} />
 
       {/* ── 🎯 THE MISSION — the freedom north star, above everything ── */}
