@@ -7,24 +7,35 @@ import { Search } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, AC, AC2 } from "./designTokens.js";
 import { searchAll, recentItems, PAGES, ACTIONS } from "./search.js";
 import { requestFocus } from "./searchFocus.js";
+import { useStorageState } from "./useStorageState.js";
+import { REVIEW_KEY, todayFocus } from "./eveningReview.js";
+import { WEEKLY_KEY, mondayOf, getPlan } from "./weeklyPlan.js";
 
 export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm, onAction }) {
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  // Surfaced daily loop: last night's top-3 and this week's theme, so the
+  // command bar opens on "what matters right now".
+  const [reviews] = useStorageState(REVIEW_KEY, {});
+  const [plans] = useStorageState(WEEKLY_KEY, {});
 
-  // Empty query → "jump back in" (recent items), then commands, then the pages,
-  // each under a section header. A typed query → flat ranked hits by relevance.
+  // Empty query → today's focus, then "jump back in" (recent items), commands,
+  // and pages, each under a section header. Typed query → flat ranked hits.
   const results = useMemo(() => {
     const query = q.trim();
     if (query) return searchAll(query);
     const rows = [];
+    const focus = todayFocus(reviews);
+    const theme = getPlan(plans, mondayOf())?.theme;
+    focus.forEach((f, i) => rows.push({ id: `focus:${i}`, icon: "◎", title: f, subtitle: "Today's focus", act: "shutdown", _group: "Today" }));
+    if (theme) rows.push({ id: "weektheme", icon: "🗓", title: theme, subtitle: "This week's theme", act: "weekly", _group: "Today" });
     for (const r of recentItems({ limit: 5 })) rows.push({ ...r, _group: "Recent" });
     for (const a of ACTIONS) rows.push({ ...a, _group: "Actions" });
     for (const p of PAGES) rows.push({ ...p, subtitle: p.subtitle || "Jump to", _group: "Jump to" });
     return rows;
-  }, [q]);
+  }, [q, reviews, plans]);
 
   useEffect(() => { setActive(0); }, [q]);
   useEffect(() => { inputRef.current?.focus(); }, []);
