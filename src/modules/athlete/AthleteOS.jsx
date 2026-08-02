@@ -250,12 +250,19 @@ export function AthleteOS() {
             )}
 
             {todayRest ? (
-              <div style={{ padding: "14px 18px", background: `${AM}0D`, border: `1px solid ${AM}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ padding: "14px 18px", background: `${AM}0D`, border: `1px solid ${AM}33`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 24 }}>😴</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: AM }}>Rest day</div>
-                  <div style={{ fontSize: 12, color: T2 }}>Recovery is training. Your streak is protected today.</div>
+                <div style={{ flex: 1, minWidth: 150 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: AM }}>Rest day — counts as a day done</div>
+                  <div style={{ fontSize: 12, color: T2 }}>Recovery is training. Your streak and consistency rate are safe today.</div>
                 </div>
+                {todayLogged ? (
+                  <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: GR, fontWeight: 700 }}><CheckCircle size={15} /> Logged</span>
+                ) : (
+                  <button onClick={() => startLog()} style={{ padding: "8px 14px", background: `${PU}22`, border: `1px solid ${PU}44`, borderRadius: 9, color: PU, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                    Log a workout
+                  </button>
+                )}
                 <button onClick={() => toggleMark(setDayMarks, "rest", localDateStr())} style={{ padding: "8px 14px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T2, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                   End rest day
                 </button>

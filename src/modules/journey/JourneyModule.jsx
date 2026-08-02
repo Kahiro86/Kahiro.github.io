@@ -22,7 +22,7 @@ import { TITLES } from "../../shared/xpEngine.js";
 import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
 import { useDayMarks } from "../../shared/dayMarks.js";
 import { migrateHabits } from "../../shared/habitEngine.js";
-import { isFullDay } from "../../shared/difficulty.js";
+import { consistencyOpts } from "../../shared/consistencyOpts.js";
 import { WantListModule } from "../wants/WantListModule.jsx";
 
 const JO = CY; // Nocturne cyan accent (monochrome theme)
@@ -197,11 +197,15 @@ function HallOfFame({ xp }) {
   const titleLadder = [...TITLES].reverse(); // Beginner → Legend
   const [logins] = useStorageState("xp_logins", {});
   const [rawHabits] = useStorageState("habits", []);
+  const [freezes] = useStorageState("streak_freezes", { frozen: [] });
   const [dayMarks] = useDayMarks();
   const { start: consistencyStart } = useConsistencyStart(logins);
-  const csOpts = useMemo(() => (xp.hell?.on
-    ? { isFull: (d) => isFullDay(migrateHabits(rawHabits), dayMarks, d) }
-    : {}), [xp.hell?.on, rawHabits, dayMarks]);
+  // Same definition of "a day that counts" as the Command Center — rest/cheat
+  // and protected days count, Hell mode demands a full day.
+  const csOpts = useMemo(
+    () => consistencyOpts({ hell: xp.hell?.on, habits: migrateHabits(rawHabits), marks: dayMarks, freezes }),
+    [xp.hell?.on, rawHabits, dayMarks, freezes]
+  );
   const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, undefined, csOpts), [xp.byDay, consistencyStart, csOpts]);
   const totalAct = totalActivities(xp.stats);
   const stats = [

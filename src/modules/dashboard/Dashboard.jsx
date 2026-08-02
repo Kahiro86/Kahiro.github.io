@@ -28,7 +28,7 @@ import {
 import { buildNudges } from "../../shared/insights.js";
 import { buildDirective, isRestDay } from "../../shared/directive.js";
 import { useDayMarks } from "../../shared/dayMarks.js";
-import { isFullDay } from "../../shared/difficulty.js";
+import { consistencyOpts } from "../../shared/consistencyOpts.js";
 import { freedomMath } from "../../shared/freedom.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
 import { FocusToday } from "../../shared/FocusToday.jsx";
@@ -40,7 +40,6 @@ import {
 import { sanitizePurity } from "../life/purity.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
 import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
-import { makeIsFull } from "../../shared/streakInsurance.js";
 
 const kes0 = (n) => Math.round(+n || 0).toLocaleString();
 // isRestDay comes from directive.js (indexed against WEEK_PLAN, MON→SUN) —
@@ -102,15 +101,13 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   }, []);
 
   const ds = localDateStr();
-  // Hell mode: a day only counts when everything scheduled is done (rest/
-  // cheat days stay safe), so the streak and rate demand full completion.
-  // Streak insurance: a protected (frozen) day counts toward the streak. This
-  // composes onto the Hell-mode predicate and is a no-op with no freezes.
-  const csOpts = useMemo(() => {
-    const base = xp.hell?.on ? (d) => isFullDay(habitsV2, dayMarks, d) : null;
-    const isFull = makeIsFull(freezes, base);
-    return isFull ? { isFull } : {};
-  }, [xp.hell?.on, habitsV2, dayMarks, freezes]);
+  // Which days count toward the streak/rate — rest & cheat days always count
+  // (a planned day off is a day done), protected days count, and Hell mode
+  // demands a full day. One shared definition (see consistencyOpts).
+  const csOpts = useMemo(
+    () => consistencyOpts({ hell: xp.hell?.on, habits: habitsV2, marks: dayMarks, freezes }),
+    [xp.hell?.on, habitsV2, dayMarks, freezes]
+  );
   const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, nowDs, csOpts), [xp.byDay, consistencyStart, nowDs, csOpts]);
   const totalAct = totalActivities(xp.stats);
   const consistencySentence = cs.currentStreak === 0
@@ -129,16 +126,17 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     const hDone = sched.filter((h) => isDone(h, ds)).length;
     const kcal = Math.round(dayTotals(dayEntries(nutrition, ds)).kcal || 0);
     const workedOut = workouts.some((w) => w.date === ds);
+    const isRest = restS.has(ds); // planned day off — a rest day is a day done
     const journaled = entriesSafe.some((e) => (e.date || "").slice(0, 10) === ds);
     const due = billsDueSoon(finance.bills, ds).length;
     return [
       sched.length > 0 && { key: "habits", icon: "✅", label: "Habits", detail: `${hDone}/${sched.length} done`, state: hDone >= sched.length ? "done" : hDone > 0 ? "due" : "empty", nav: "life" },
       { key: "meals", icon: "🍽️", label: "Nutrition", detail: kcal > 0 ? `${kcal.toLocaleString()} kcal` : "Nothing logged", state: kcal > 0 ? "done" : "empty", nav: "life" },
-      { key: "workout", icon: "🏋️", label: "Workout", detail: workedOut ? "Logged" : "None today", state: workedOut ? "done" : "empty", nav: "life" },
+      { key: "workout", icon: "🏋️", label: "Workout", detail: workedOut ? "Logged" : isRest ? "Rest day" : "None today", state: workedOut || isRest ? "done" : "empty", nav: "life" },
       { key: "journal", icon: "📝", label: "Journal", detail: journaled ? "Written" : "Not yet", state: journaled ? "done" : "empty", nav: "life" },
       due > 0 && { key: "bills", icon: "💸", label: "Bills due", detail: `${due} within 7 days`, state: "due", nav: "firm" },
     ].filter(Boolean);
-  }, [active, nutrition, ds, workouts, entriesSafe, finance.bills]);
+  }, [active, nutrition, ds, workouts, entriesSafe, finance.bills, restDays]);
 
   const agendaWeek = useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const dd = daysAgoStr(6 - i);
