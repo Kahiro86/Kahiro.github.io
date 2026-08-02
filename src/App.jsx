@@ -50,6 +50,7 @@ const HabitIntel = lazy(() => import("./shared/HabitIntel.jsx").then((m) => ({ d
 const RiskCalculator = lazy(() => import("./shared/RiskCalculator.jsx").then((m) => ({ default: m.RiskCalculator })));
 const OverheadLedger = lazy(() => import("./shared/OverheadLedger.jsx").then((m) => ({ default: m.OverheadLedger })));
 const PrayerList = lazy(() => import("./shared/PrayerList.jsx").then((m) => ({ default: m.PrayerList })));
+const Flashcards = lazy(() => import("./shared/Flashcards.jsx").then((m) => ({ default: m.Flashcards })));
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
@@ -168,6 +169,7 @@ export default function App() {
   const [riskOpen, setRiskOpen] = useState(false);
   const [overheadOpen, setOverheadOpen] = useState(false);
   const [prayerOpen, setPrayerOpen] = useState(false);
+  const [cardsOpen, setCardsOpen] = useState(false);
   // Command-palette actions → app intents.
   const onSearchAction = useCallback((act) => {
     if (act === "quicklog") setQuickSignal((n) => n + 1);
@@ -184,6 +186,7 @@ export default function App() {
     else if (act === "risk") setRiskOpen(true);
     else if (act === "overhead") setOverheadOpen(true);
     else if (act === "prayer") setPrayerOpen(true);
+    else if (act === "cards") setCardsOpen(true);
   }, [startTour]);
   useEffect(() => {
     const onKey = (e) => {
@@ -382,6 +385,7 @@ export default function App() {
         {riskOpen && <RiskCalculator onClose={() => setRiskOpen(false)} />}
         {overheadOpen && <OverheadLedger onClose={() => setOverheadOpen(false)} />}
         {prayerOpen && <PrayerList onClose={() => setPrayerOpen(false)} />}
+        {cardsOpen && <Flashcards onClose={() => setCardsOpen(false)} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -427,6 +431,7 @@ export default function App() {
         {riskOpen && <RiskCalculator onClose={() => setRiskOpen(false)} />}
         {overheadOpen && <OverheadLedger onClose={() => setOverheadOpen(false)} />}
         {prayerOpen && <PrayerList onClose={() => setPrayerOpen(false)} />}
+        {cardsOpen && <Flashcards onClose={() => setCardsOpen(false)} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>
