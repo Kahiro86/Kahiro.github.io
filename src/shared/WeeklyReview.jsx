@@ -11,6 +11,7 @@ import { buildWeekReview, suggestFocus } from "./weekReview.js";
 import { setFocus, dismissFocus, isoWeekKey, sanitizeFocus, isDismissed } from "./review.js";
 import { useDayMarks } from "./dayMarks.js";
 import { localDateStr } from "./dates.js";
+import { whenNotTyping } from "./typing.js";
 
 const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; };
 
@@ -177,13 +178,18 @@ export function WeeklyReviewGate({ habits, openSignal = 0 }) {
   }, [openSignal]);
 
   // Auto-open once on Sundays if the coming week has no focus decision yet.
+  // A passive trigger must never pop over an input mid-type: if the user is
+  // typing, defer until focus leaves the field (whenNotTyping). We commit the
+  // once-only decision immediately so it can't re-arm on every keystroke.
   useEffect(() => {
     if (!loaded || autoDone) return;
     const d = new Date();
     if (d.getDay() !== 0) return; // Sundays only
     const t = new Date(); t.setDate(t.getDate() + 1);
     const key = isoWeekKey(t);
-    if (!sanitizeFocus(focusRaw)[key]) { setOpen(true); setAutoDone(true); }
+    if (sanitizeFocus(focusRaw)[key]) return;
+    setAutoDone(true);
+    return whenNotTyping(() => setOpen(true));
   }, [loaded, focusRaw, autoDone]);
 
   if (!open) return null;

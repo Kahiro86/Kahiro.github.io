@@ -58,6 +58,7 @@ import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
 import { NameYourSystem } from "./shared/NameYourSystem.jsx";
 import { WHO_KEY, WHO_META_KEY, shouldAutoShow, todayVisionLine } from "./shared/whoIAm.js";
+import { whenNotTyping } from "./shared/typing.js";
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -87,14 +88,18 @@ export default function App() {
   // First launch: auto-run the app tour once (after naming), then never again.
   useEffect(() => {
     if (onboardLoaded && identity.loaded && identity.configured && !onboard?.overviewSeen) {
-      const t = setTimeout(() => setTourOn(true), 700);
+      // Passive auto-open — never over an active input (see typing.js).
+      const t = setTimeout(() => whenNotTyping(() => setTourOn(true)), 700);
       return () => clearTimeout(t);
     }
   }, [onboardLoaded, onboard, identity.loaded, identity.configured]);
   // What's New: once per version bump, but only for returning users — a new
-  // user's first-run tour already covers it (endTour marks it seen).
+  // user's first-run tour already covers it (endTour marks it seen). Deferred
+  // while typing so it can't steal focus mid-entry.
   useEffect(() => {
-    if (onboardLoaded && wnLoaded && onboard?.overviewSeen && wnSeen !== WHATS_NEW.version) setWnOpen(true);
+    if (onboardLoaded && wnLoaded && onboard?.overviewSeen && wnSeen !== WHATS_NEW.version) {
+      return whenNotTyping(() => setWnOpen(true));
+    }
   }, [onboardLoaded, wnLoaded, onboard, wnSeen]);
   const closeWhatsNew = () => { setWnOpen(false); setWnSeen(WHATS_NEW.version); };
   // Light interaction flags that feed the getting-started checklist.
@@ -210,8 +215,12 @@ export default function App() {
   useEffect(() => {
     if (locked || showNaming || !habitsLoaded) return;
     if (shouldAutoShow(rawWho, whoMeta)) {
-      setWhoAuto(true);
-      setWhoMeta({ lastShownDs: localDateStr() });
+      // Passive daily auto-show — defer while an input is focused so it can't
+      // interrupt typing (regression scope of the Week-in-Review fix).
+      return whenNotTyping(() => {
+        setWhoAuto(true);
+        setWhoMeta({ lastShownDs: localDateStr() });
+      });
     }
   }, [locked, showNaming, habitsLoaded]); // eslint-disable-line
   const whoTodayLine = useMemo(() => todayVisionLine({ streak: topStreak }), [topStreak]);
