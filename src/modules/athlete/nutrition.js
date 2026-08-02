@@ -77,6 +77,7 @@ export const FOOD_DB = [
   // Proteins
   F("Chicken breast (grilled)", 1, { kcal: 165, p: 31, c: 0, f: 3.6, sat: 1, chol: 85, na: 74, k: 256, ca: 15, mg: 29, fe: 1, zn: 1, ph: 228, vb: 40, vd: 0.1, ve: 0.3, h2o: 65 }),
   F("Beef (lean, cooked)", 1, { kcal: 250, p: 26, c: 0, f: 15, sat: 6, chol: 90, na: 72, k: 318, ca: 18, mg: 21, fe: 2.6, zn: 6.3, ph: 198, vb: 45, vd: 0.1, h2o: 57 }),
+  F("Boiled beef", 1, { kcal: 200, p: 28, c: 0, f: 9, sat: 3.5, chol: 85, na: 55, k: 320, ca: 12, mg: 22, fe: 2.8, zn: 6, ph: 200, vb: 38, vd: 0.1, h2o: 61 }),
   F("Nyama choma (grilled goat)", 1, { kcal: 143, p: 27, c: 0, f: 3, sat: 0.9, chol: 75, na: 82, k: 344, ca: 17, mg: 0, fe: 3.7, zn: 4.5, ph: 201, vb: 35, h2o: 68 }),
   F("Tilapia (cooked)", 1, { kcal: 128, p: 26, c: 0, f: 2.7, sat: 0.9, o3: 0.2, chol: 57, na: 56, k: 380, ca: 14, mg: 34, fe: 0.7, zn: 0.4, ph: 204, vb: 30, vd: 3.7, ve: 0.8, h2o: 71 }),
   F("Salmon (cooked)", 1, { kcal: 206, p: 22, c: 0, f: 12, sat: 2.5, o3: 2.2, chol: 63, na: 61, k: 384, ca: 15, mg: 30, fe: 0.3, zn: 0.4, ph: 252, vb: 55, vd: 13, ve: 1.1, h2o: 64 }),
@@ -317,6 +318,7 @@ export const FOOD_DB = [
 const SERVING_BY_NAME = {
   "Chicken breast (grilled)": { l: "1 breast", g: 120 },
   "Beef (lean, cooked)": { l: "1 serving", g: 150 },
+  "Boiled beef": { l: "1 serving", g: 150 },
   "Salmon (cooked)": { l: "1 fillet", g: 150 },
   "Tilapia (cooked)": { l: "1 fillet", g: 150 },
   "Nyama choma (grilled goat)": { l: "1 serving", g: 150 },
