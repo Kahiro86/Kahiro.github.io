@@ -49,6 +49,7 @@ const GoalCascade = lazy(() => import("./shared/GoalCascade.jsx").then((m) => ({
 const HabitIntel = lazy(() => import("./shared/HabitIntel.jsx").then((m) => ({ default: m.HabitIntel })));
 const RiskCalculator = lazy(() => import("./shared/RiskCalculator.jsx").then((m) => ({ default: m.RiskCalculator })));
 const OverheadLedger = lazy(() => import("./shared/OverheadLedger.jsx").then((m) => ({ default: m.OverheadLedger })));
+const PrayerList = lazy(() => import("./shared/PrayerList.jsx").then((m) => ({ default: m.PrayerList })));
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
@@ -166,6 +167,7 @@ export default function App() {
   const [habitIntelOpen, setHabitIntelOpen] = useState(false);
   const [riskOpen, setRiskOpen] = useState(false);
   const [overheadOpen, setOverheadOpen] = useState(false);
+  const [prayerOpen, setPrayerOpen] = useState(false);
   // Command-palette actions → app intents.
   const onSearchAction = useCallback((act) => {
     if (act === "quicklog") setQuickSignal((n) => n + 1);
@@ -181,6 +183,7 @@ export default function App() {
     else if (act === "habitintel") setHabitIntelOpen(true);
     else if (act === "risk") setRiskOpen(true);
     else if (act === "overhead") setOverheadOpen(true);
+    else if (act === "prayer") setPrayerOpen(true);
   }, [startTour]);
   useEffect(() => {
     const onKey = (e) => {
@@ -378,6 +381,7 @@ export default function App() {
         {habitIntelOpen && <HabitIntel onClose={() => setHabitIntelOpen(false)} habits={habitsV2} />}
         {riskOpen && <RiskCalculator onClose={() => setRiskOpen(false)} />}
         {overheadOpen && <OverheadLedger onClose={() => setOverheadOpen(false)} />}
+        {prayerOpen && <PrayerList onClose={() => setPrayerOpen(false)} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -422,6 +426,7 @@ export default function App() {
         {habitIntelOpen && <HabitIntel onClose={() => setHabitIntelOpen(false)} habits={habitsV2} />}
         {riskOpen && <RiskCalculator onClose={() => setRiskOpen(false)} />}
         {overheadOpen && <OverheadLedger onClose={() => setOverheadOpen(false)} />}
+        {prayerOpen && <PrayerList onClose={() => setPrayerOpen(false)} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>
