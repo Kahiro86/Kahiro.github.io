@@ -51,11 +51,19 @@ export function buildWeekReview(deps = {}) {
   const prevScore = avg(prevWeek);
   const delta = score - prevScore;
 
-  // Per-habit hold vs slip across the elapsed week.
-  const inWeek = new Set(thisWeek);
+  // Per-habit hold vs slip across the elapsed week. The in-progress current
+  // day is NOT counted as a miss until it's over — otherwise "held all week"
+  // collapses to 0 the moment the review surfaces on Sunday (today's habits
+  // aren't done yet), contradicting the streaks/wins that reflect completed
+  // days. This mirrors currentStreak, which treats today as "in progress".
   const habitRows = active.map((h) => {
     let sched = 0, done = 0;
-    for (const d of thisWeek) { if (isScheduled(h, d)) { sched++; if (isDone(h, d)) done++; } }
+    for (const d of thisWeek) {
+      if (!isScheduled(h, d)) continue;
+      if (d === ds && !isDone(h, d)) continue; // today, not yet done → not a miss
+      sched++;
+      if (isDone(h, d)) done++;
+    }
     return { name: h.name, icon: h.icon || "✅", sched, done, pct: sched ? Math.round((done / sched) * 100) : null };
   }).filter((r) => r.sched > 0);
   const kept = habitRows.filter((r) => r.pct === 100).sort((a, b) => b.sched - a.sched);
@@ -76,6 +84,19 @@ export function buildWeekReview(deps = {}) {
   if (Object.keys(purity).length && pure > 0) wins.push({ icon: "🌿", text: `${pure}/${thisWeek.length} clean days` });
   if (ml >= 4) wins.push({ icon: "🍽️", text: `Nutrition logged ${ml} days` });
 
+  // Integrity check: the weekly hold, the streaks and the wins ALL derive from
+  // the same raw habit log (h.log) — there is no parallel counter. So the only
+  // way they can disagree is a corrupt/inconsistent log. Surface that rather
+  // than silently show contradictory numbers; the raw daily log stays ground
+  // truth (this only reports, it never overrides the derived figures).
+  const integrity = [];
+  for (const r of habitRows) {
+    const h = active.find((x) => x.name === r.name);
+    const st = h ? currentStreak(h) : 0;
+    if (r.pct !== null && r.pct < 50 && st >= 7) integrity.push(`${r.name}: ${st}-day streak vs ${r.pct}% held this week`);
+  }
+  if (integrity.length && typeof console !== "undefined") console.warn("[weekReview] log inconsistency (raw log is ground truth):", integrity);
+
   return {
     rangeLabel: `${monthDay(monday)} – ${monthDay(addDaysStr(monday, 6))}`,
     daysCounted: thisWeek.length,
@@ -84,6 +105,7 @@ export function buildWeekReview(deps = {}) {
     kept, slipped, keptTotal: habitRows.length,
     wins: wins.slice(0, 5),
     weakest: weakestArea(active), // { cat, pct } | null — seeds next week's focus
+    integrity,
   };
 }
 
