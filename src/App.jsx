@@ -47,6 +47,7 @@ const FocusTimer = lazy(() => import("./shared/FocusTimer.jsx").then((m) => ({ d
 const WeeklyPlan = lazy(() => import("./shared/WeeklyPlan.jsx").then((m) => ({ default: m.WeeklyPlan })));
 const GoalCascade = lazy(() => import("./shared/GoalCascade.jsx").then((m) => ({ default: m.GoalCascade })));
 const HabitIntel = lazy(() => import("./shared/HabitIntel.jsx").then((m) => ({ default: m.HabitIntel })));
+const RiskCalculator = lazy(() => import("./shared/RiskCalculator.jsx").then((m) => ({ default: m.RiskCalculator })));
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
@@ -162,6 +163,7 @@ export default function App() {
   const [weeklyOpen, setWeeklyOpen] = useState(false);
   const [cascadeOpen, setCascadeOpen] = useState(false);
   const [habitIntelOpen, setHabitIntelOpen] = useState(false);
+  const [riskOpen, setRiskOpen] = useState(false);
   // Command-palette actions → app intents.
   const onSearchAction = useCallback((act) => {
     if (act === "quicklog") setQuickSignal((n) => n + 1);
@@ -175,6 +177,7 @@ export default function App() {
     else if (act === "weekly") setWeeklyOpen(true);
     else if (act === "cascade") setCascadeOpen(true);
     else if (act === "habitintel") setHabitIntelOpen(true);
+    else if (act === "risk") setRiskOpen(true);
   }, [startTour]);
   useEffect(() => {
     const onKey = (e) => {
@@ -370,6 +373,7 @@ export default function App() {
         {weeklyOpen && <WeeklyPlan onClose={() => setWeeklyOpen(false)} />}
         {cascadeOpen && <GoalCascade onClose={() => setCascadeOpen(false)} />}
         {habitIntelOpen && <HabitIntel onClose={() => setHabitIntelOpen(false)} habits={habitsV2} />}
+        {riskOpen && <RiskCalculator onClose={() => setRiskOpen(false)} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -412,6 +416,7 @@ export default function App() {
         {weeklyOpen && <WeeklyPlan onClose={() => setWeeklyOpen(false)} />}
         {cascadeOpen && <GoalCascade onClose={() => setCascadeOpen(false)} />}
         {habitIntelOpen && <HabitIntel onClose={() => setHabitIntelOpen(false)} habits={habitsV2} />}
+        {riskOpen && <RiskCalculator onClose={() => setRiskOpen(false)} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>
