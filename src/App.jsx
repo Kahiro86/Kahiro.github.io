@@ -52,6 +52,7 @@ const OverheadLedger = lazy(() => import("./shared/OverheadLedger.jsx").then((m)
 const PrayerList = lazy(() => import("./shared/PrayerList.jsx").then((m) => ({ default: m.PrayerList })));
 const Flashcards = lazy(() => import("./shared/Flashcards.jsx").then((m) => ({ default: m.Flashcards })));
 const QuickJournal = lazy(() => import("./shared/QuickJournal.jsx").then((m) => ({ default: m.QuickJournal })));
+const Correlations = lazy(() => import("./shared/Correlations.jsx").then((m) => ({ default: m.Correlations })));
 import { TOUR_OVERVIEW } from "./shared/help.js";
 import { computeChecklist, WHATS_NEW } from "./shared/onboarding.js";
 import { useIdentity } from "./shared/identity.jsx";
@@ -172,6 +173,7 @@ export default function App() {
   const [prayerOpen, setPrayerOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [reflectOpen, setReflectOpen] = useState(false);
+  const [corrOpen, setCorrOpen] = useState(false);
   // Command-palette actions → app intents.
   const onSearchAction = useCallback((act) => {
     if (act === "quicklog") setQuickSignal((n) => n + 1);
@@ -190,6 +192,7 @@ export default function App() {
     else if (act === "prayer") setPrayerOpen(true);
     else if (act === "cards") setCardsOpen(true);
     else if (act === "reflect") setReflectOpen(true);
+    else if (act === "correlations") setCorrOpen(true);
   }, [startTour]);
   useEffect(() => {
     const onKey = (e) => {
@@ -390,6 +393,7 @@ export default function App() {
         {prayerOpen && <PrayerList onClose={() => setPrayerOpen(false)} />}
         {cardsOpen && <Flashcards onClose={() => setCardsOpen(false)} />}
         {reflectOpen && <QuickJournal onClose={() => setReflectOpen(false)} />}
+        {corrOpen && <Correlations onClose={() => setCorrOpen(false)} byDay={xpInfo.byDay} habits={habitsV2} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -437,6 +441,7 @@ export default function App() {
         {prayerOpen && <PrayerList onClose={() => setPrayerOpen(false)} />}
         {cardsOpen && <Flashcards onClose={() => setCardsOpen(false)} />}
         {reflectOpen && <QuickJournal onClose={() => setReflectOpen(false)} />}
+        {corrOpen && <Correlations onClose={() => setCorrOpen(false)} byDay={xpInfo.byDay} habits={habitsV2} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>

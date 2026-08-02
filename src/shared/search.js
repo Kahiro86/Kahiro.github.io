@@ -32,6 +32,7 @@ export const ACTIONS = [
   { id: "act:prayer", type: "Action", title: "Prayer List", subtitle: "Requests + answered log", act: "prayer", icon: "🙏", keywords: "prayer list request pray answered faith intercession thanksgiving petition" },
   { id: "act:cards", type: "Action", title: "Flashcards", subtitle: "Spaced-repetition review", act: "cards", icon: "🃏", keywords: "flashcards spaced repetition review recall memory lessons study anki cards learn" },
   { id: "act:reflect", type: "Action", title: "Reflect", subtitle: "Guided journal entry", act: "reflect", icon: "✍️", keywords: "reflect journal write prompt mood tags diary entry reflection today" },
+  { id: "act:correlations", type: "Action", title: "Correlations", subtitle: "What moves together", act: "correlations", icon: "📈", keywords: "correlation correlations analytics relationship link pattern sleep performance compare signals stats insight" },
   { id: "act:review", type: "Action", title: "Week in Review", subtitle: "Reflect on your week", act: "review", icon: "◔", keywords: "weekly review reflect recap summary retrospective" },
   { id: "act:ai", type: "Action", title: "Ask the AI coach", subtitle: "Open the coach panel", act: "ai", icon: "✦", keywords: "ai coach assistant chat ask claude advice" },
   { id: "act:help", type: "Action", title: "Help & Guide", subtitle: "Browse the help centre", act: "help", icon: "?", keywords: "help guide docs support how faq" },
