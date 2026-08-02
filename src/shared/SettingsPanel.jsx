@@ -13,6 +13,7 @@ import { hasLock, setPin, verifyPin, clearLock } from "./lock.js";
 import { useHell, HELL_MULT } from "./difficulty.js";
 import { useXp } from "./useXp.js";
 import { useStorageState } from "./useStorageState.js";
+import { CHECKIN_CFG_KEY, CADENCES, getCadence } from "./focusCheckin.js";
 import { DEFAULT_HARD, sanitizeHard, hardActiveOn, enableHard, disableHard, proposeFloors, evalDay } from "../modules/athlete/nutritionHard.js";
 import { DEFAULT_PROFILE } from "../modules/athlete/nutrition.js";
 import { GodModeTutorial } from "../modules/athlete/GodModeTutorial.jsx";
@@ -96,6 +97,9 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   };
   const toggleCurrency = () => setGatesCfg((c) => ({ ...sanitizeGates(c), showCurrency: !sanitizeGates(c).showCurrency }));
 
+  // ── Priorities (weekly-focus check-in cadence) state ───────────────
+  const [focusCfg, setFocusCfg] = useStorageState(CHECKIN_CFG_KEY, { cadence: "daily" });
+  const focusCadence = getCadence(focusCfg);
   // ── Modes (God/Normal/Hell thresholds) state ───────────────────────
   const [rawModeCfg, setModeCfg] = useStorageState("mode_cfg", DEFAULT_MODE_CFG);
   const modeCfg = sanitizeModeCfg(rawModeCfg);
@@ -501,6 +505,22 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
             <button onClick={beginSeason} style={btn({ flex: "none", border: `1px solid ${AC2}66`, color: AC2, fontWeight: 700 })}>Start season</button>
           </div>
         )}
+
+        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
+
+        {/* ── Priorities (weekly-focus check-in) ─────────────────────── */}
+        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Priorities</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
+          Weekly-focus check-in — a one-tap "did today serve this week's focus?" on the today surface. In-app only (no push).
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+          {CADENCES.map((c) => (
+            <button key={c} onClick={() => setFocusCfg({ ...focusCfg, cadence: c })}
+              style={btn(focusCadence === c ? { background: `${AC2}1E`, border: `1px solid ${AC2}66`, color: AC2, fontWeight: 700, textTransform: "capitalize" } : { textTransform: "capitalize" })}>
+              {c}
+            </button>
+          ))}
+        </div>
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 

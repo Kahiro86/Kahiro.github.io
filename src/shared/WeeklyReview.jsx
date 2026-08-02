@@ -8,10 +8,11 @@ import { X, TrendingUp, TrendingDown, Minus, Target, Check } from "lucide-react"
 import { B0, B1, BD, T1, T2, T3, AC, GR, AM, RE } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
 import { buildWeekReview, suggestFocus } from "./weekReview.js";
-import { setFocus, dismissFocus, isoWeekKey, sanitizeFocus, isDismissed } from "./review.js";
+import { setFocus, dismissFocus, isoWeekKey, sanitizeFocus, isDismissed, focusThisWeek } from "./review.js";
 import { useDayMarks } from "./dayMarks.js";
 import { localDateStr } from "./dates.js";
 import { whenNotTyping } from "./typing.js";
+import { CHECKIN_KEY, ANSWERS, weekAnswers } from "./focusCheckin.js";
 
 const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; };
 
@@ -21,7 +22,13 @@ export function WeeklyReview({ habits, onClose }) {
   const [entries] = useStorageState("journal_entries", []);
   const [purity] = useStorageState("purity_log", {});
   const [focusRaw, setFocusRaw] = useStorageState("weekly_focus", {});
+  const [checkins] = useStorageState(CHECKIN_KEY, {});
   const [dayMarks] = useDayMarks();
+  // The closing week's focus + how each day answered "did it serve the focus?"
+  const weekFocus = focusThisWeek(focusRaw);
+  const answers = useMemo(() => weekAnswers(checkins), [checkins]);
+  const answered = answers.filter((a) => a.answer);
+  const A_TONE = { good: GR, mid: AM, bad: RE };
 
   const review = useMemo(
     () => buildWeekReview({ habits, workouts, nutrition, entries, purity, restDays: dayMarks.rest, ds: localDateStr() }),
@@ -116,6 +123,25 @@ export function WeeklyReview({ habits, onClose }) {
                   <span style={{ fontSize: 15 }}>{w.icon}</span>{w.text}
                 </div>
               ))}
+            </div>
+          </Section>
+        )}
+
+        {/* This week's focus, and how each day answered to it */}
+        {weekFocus && !isDismissed(weekFocus) && answered.length > 0 && (
+          <Section label="This week's focus">
+            <div style={{ fontSize: 14, color: T1, marginBottom: 10 }}>{weekFocus}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {answers.map((a) => {
+                const m = a.answer ? ANSWERS.find((x) => x.id === a.answer) : null;
+                const c = m ? A_TONE[m.tone] : BD;
+                return (
+                  <span key={a.ds} title={`${a.ds.slice(5)}${m ? ` · ${m.label}` : " · —"}`}
+                    style={{ width: 26, height: 26, borderRadius: 7, background: m ? `${c}22` : "transparent", border: `1px solid ${m ? c : BD}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: m ? c : T3 }}>
+                    {a.answer === "yes" ? "Y" : a.answer === "partial" ? "~" : a.answer === "no" ? "N" : "·"}
+                  </span>
+                );
+              })}
             </div>
           </Section>
         )}
