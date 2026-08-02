@@ -30,6 +30,7 @@ export const ACTIONS = [
   { id: "act:risk", type: "Action", title: "Risk Calculator", subtitle: "Position size from % risk", act: "risk", icon: "🧮", keywords: "risk calculator position size lot stop reward r multiple trade money management sizing" },
   { id: "act:overhead", type: "Action", title: "Overhead & Runway", subtitle: "Monthly burn + runway", act: "overhead", icon: "💸", keywords: "overhead runway burn expenses bills subscriptions monthly cost finance savings recurring" },
   { id: "act:prayer", type: "Action", title: "Prayer List", subtitle: "Requests + answered log", act: "prayer", icon: "🙏", keywords: "prayer list request pray answered faith intercession thanksgiving petition" },
+  { id: "act:cards", type: "Action", title: "Flashcards", subtitle: "Spaced-repetition review", act: "cards", icon: "🃏", keywords: "flashcards spaced repetition review recall memory lessons study anki cards learn" },
   { id: "act:review", type: "Action", title: "Week in Review", subtitle: "Reflect on your week", act: "review", icon: "◔", keywords: "weekly review reflect recap summary retrospective" },
   { id: "act:ai", type: "Action", title: "Ask the AI coach", subtitle: "Open the coach panel", act: "ai", icon: "✦", keywords: "ai coach assistant chat ask claude advice" },
   { id: "act:help", type: "Action", title: "Help & Guide", subtitle: "Browse the help centre", act: "help", icon: "?", keywords: "help guide docs support how faq" },
