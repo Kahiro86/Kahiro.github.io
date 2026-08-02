@@ -14,6 +14,7 @@ import { useHell, HELL_MULT } from "./difficulty.js";
 import { useXp } from "./useXp.js";
 import { useStorageState } from "./useStorageState.js";
 import { CHECKIN_CFG_KEY, CADENCES, getCadence } from "./focusCheckin.js";
+import { OVERHEAD_CFG_KEY, getCheckpoints, DEFAULT_CHECKPOINTS } from "./overheadPriority.js";
 import { DEFAULT_HARD, sanitizeHard, hardActiveOn, enableHard, disableHard, proposeFloors, evalDay } from "../modules/athlete/nutritionHard.js";
 import { DEFAULT_PROFILE } from "../modules/athlete/nutrition.js";
 import { GodModeTutorial } from "../modules/athlete/GodModeTutorial.jsx";
@@ -97,9 +98,17 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   };
   const toggleCurrency = () => setGatesCfg((c) => ({ ...sanitizeGates(c), showCurrency: !sanitizeGates(c).showCurrency }));
 
-  // ── Priorities (weekly-focus check-in cadence) state ───────────────
+  // ── Priorities (weekly-focus check-in + overhead checkpoints) state ─
   const [focusCfg, setFocusCfg] = useStorageState(CHECKIN_CFG_KEY, { cadence: "daily" });
   const focusCadence = getCadence(focusCfg);
+  const [ohCfg, setOhCfg] = useStorageState(OVERHEAD_CFG_KEY, {});
+  const [ohDraft, setOhDraft] = useState(() => getCheckpoints(ohCfg).join(", "));
+  const saveOhCheckpoints = () => {
+    const parsed = ohDraft.split(",").map((s) => Math.round(+s.trim())).filter((n) => n > 0 && n <= 100);
+    const next = parsed.length ? [...new Set(parsed)].sort((a, b) => a - b) : DEFAULT_CHECKPOINTS;
+    setOhCfg({ ...ohCfg, checkpoints: next });
+    setOhDraft(next.join(", "));
+  };
   // ── Modes (God/Normal/Hell thresholds) state ───────────────────────
   const [rawModeCfg, setModeCfg] = useStorageState("mode_cfg", DEFAULT_MODE_CFG);
   const modeCfg = sanitizeModeCfg(rawModeCfg);
@@ -513,13 +522,22 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
         <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
           Weekly-focus check-in — a one-tap "did today serve this week's focus?" on the today surface. In-app only (no push).
         </div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           {CADENCES.map((c) => (
             <button key={c} onClick={() => setFocusCfg({ ...focusCfg, cadence: c })}
               style={btn(focusCadence === c ? { background: `${AC2}1E`, border: `1px solid ${AC2}66`, color: AC2, fontWeight: 700, textTransform: "capitalize" } : { textTransform: "capitalize" })}>
               {c}
             </button>
           ))}
+        </div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 8 }}>
+          Overhead alert checkpoints — % of the monthly ceiling that each fire once. Overage past 100% alerts every further 10% automatically.
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input value={ohDraft} onChange={(e) => setOhDraft(e.target.value)} onBlur={saveOhCheckpoints}
+            onKeyDown={(e) => { if (e.key === "Enter") saveOhCheckpoints(); }} placeholder="50, 80, 100"
+            style={{ ...idInput, flex: 1 }} />
+          <button onClick={saveOhCheckpoints} style={btn({ flex: "none" })}>Save</button>
         </div>
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />

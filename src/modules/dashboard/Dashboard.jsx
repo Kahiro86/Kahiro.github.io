@@ -32,6 +32,7 @@ import { isFullDay } from "../../shared/difficulty.js";
 import { freedomMath } from "../../shared/freedom.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
 import { FocusToday } from "../../shared/FocusToday.jsx";
+import { OverheadToday } from "../../shared/OverheadToday.jsx";
 import { scalingGate } from "../../shared/firm.js";
 import {
   sanitizeNutrition, dayEntries, dayTotals, calcTargets, healthyStreaks,
@@ -351,6 +352,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
       <DayAgenda items={agendaItems} week={agendaWeek} onNavigate={onNavigate} />
       <FocusToday />
+      <OverheadToday actual={monthExpenses} />
       <TodayTrackers overheadActual={monthExpenses} />
 
       {/* ── 🎯 THE MISSION — the freedom north star, above everything ── */}
