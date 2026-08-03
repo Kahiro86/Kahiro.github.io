@@ -149,6 +149,11 @@ export const FOOD_DB = [
   F("Yoghurt (fruit / flavoured)", 3, { kcal: 99, p: 3.9, c: 18.6, f: 1.4, sug: 18.6, sat: 0.9, chol: 5, na: 58, k: 180, ca: 152, mg: 14, ph: 120, vb: 8, vc: 1, h2o: 77 }, { l: "1 pot", g: 150 }),
   // Drinks
   F("Fresh fruit juice (squeezed)", 2, { kcal: 45, p: 0.7, c: 10.4, f: 0.2, fib: 0.2, sug: 8.4, na: 1, k: 200, ca: 11, mg: 11, fe: 0.2, ph: 17, vc: 50, vb: 6, h2o: 88 }, { l: "1 glass", g: 250 }),
+  // Coffee (café standard, whole milk where milk is used)
+  F("Espresso", 1, { kcal: 9, p: 0.1, c: 1.7, f: 0.2, na: 14, k: 115, mg: 24, ph: 7, h2o: 99 }, { l: "1 shot (30 ml)", g: 30 }, { bev: true }),
+  F("Latte", 2, { kcal: 50, p: 2.7, c: 4, f: 2.7, sug: 4, sat: 1.6, chol: 8, na: 36, k: 130, ca: 95, mg: 12, ph: 75, va: 34, vb: 10, vd: 1, h2o: 88 }, { l: "1 cup (300 ml)", g: 300 }, { bev: true }),
+  F("Cappuccino", 2, { kcal: 47, p: 2.6, c: 3.8, f: 2.5, sug: 3.8, sat: 1.5, chol: 8, na: 35, k: 125, ca: 92, mg: 11, ph: 72, va: 32, vb: 10, vd: 1, h2o: 89 }, { l: "1 cup (180 ml)", g: 180 }, { bev: true }),
+  F("Triple shot latte", 2, { kcal: 45, p: 2.4, c: 3.6, f: 2.4, sug: 3.6, sat: 1.4, chol: 7, na: 32, k: 135, ca: 85, mg: 12, ph: 68, va: 29, vb: 9, vd: 0.9, h2o: 90 }, { l: "1 cup (400 ml)", g: 400 }, { bev: true }),
 
   // ── Round 2 — comprehensive healthy-food coverage ────────────────────
   // Vegetables
