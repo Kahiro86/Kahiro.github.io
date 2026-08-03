@@ -101,6 +101,7 @@ export const FOOD_DB = [
   F("Carrot", 1, { kcal: 41, p: 0.9, c: 9.6, f: 0.2, fib: 2.8, sug: 4.7, na: 69, k: 320, ca: 33, mg: 12, fe: 0.3, zn: 0.2, ph: 35, va: 835, vb: 8, vc: 6, ve: 0.7, vk: 13, h2o: 88 }),
   F("Onion", 1, { kcal: 40, p: 1.1, c: 9.3, f: 0.1, fib: 1.7, sug: 4.2, na: 4, k: 146, ca: 23, mg: 10, fe: 0.2, zn: 0.2, ph: 29, vb: 6, vc: 7, vk: 0.4, h2o: 89 }),
   F("Avocado", 1, { kcal: 160, p: 2, c: 8.5, f: 14.7, fib: 6.7, sug: 0.7, sat: 2.1, o3: 0.1, na: 7, k: 485, ca: 12, mg: 29, fe: 0.6, zn: 0.6, ph: 52, va: 7, vb: 18, vc: 10, ve: 2.1, vk: 21, h2o: 73 }),
+  F("Mixed vegetables (steamed, buttered)", 2, { kcal: 73, p: 2.7, c: 9, f: 3.7, fib: 3, sug: 3.5, sat: 2.2, chol: 10, na: 45, k: 260, ca: 40, mg: 20, fe: 0.9, zn: 0.4, ph: 50, va: 350, vb: 8, vc: 25, ve: 1, vk: 45, h2o: 82 }, { l: "1 serving", g: 300 }),
   // Fruits
   F("Banana", 1, { kcal: 89, p: 1.1, c: 22.8, f: 0.3, fib: 2.6, sug: 12.2, na: 1, k: 358, ca: 5, mg: 27, fe: 0.3, zn: 0.2, ph: 22, va: 3, vb: 15, vc: 8.7, ve: 0.1, vk: 0.5, h2o: 75 }),
   F("Mango", 1, { kcal: 60, p: 0.8, c: 15, f: 0.4, fib: 1.6, sug: 13.7, na: 1, k: 168, ca: 11, mg: 10, fe: 0.2, zn: 0.1, ph: 14, va: 54, vb: 8, vc: 36, ve: 0.9, vk: 4, h2o: 83 }),
@@ -113,6 +114,7 @@ export const FOOD_DB = [
   F("Olive oil", 2, { kcal: 884, p: 0, c: 0, f: 100, sat: 13.8, o3: 0.8, na: 2, ve: 14.4, vk: 60, h2o: 0 }),
   F("Dark chocolate (70%)", 3, { kcal: 598, p: 7.8, c: 45.9, f: 42.6, fib: 10.9, sug: 24, sat: 24.5, na: 20, k: 715, ca: 73, mg: 228, fe: 11.9, zn: 3.3, ph: 308, vb: 6, vk: 7.3, h2o: 1 }),
   F("Honey", 2, { kcal: 304, p: 0.3, c: 82.4, f: 0, sug: 82.1, na: 4, k: 52, ca: 6, mg: 2, fe: 0.4, zn: 0.2, ph: 4, vb: 2, vc: 0.5, h2o: 17 }),
+  F("Mushroom sauce", 3, { kcal: 100, p: 2, c: 6, f: 8, fib: 0.5, sug: 1.5, sat: 4, chol: 15, na: 350, k: 130, ca: 25, mg: 8, fe: 0.5, zn: 0.3, ph: 45, vb: 4, h2o: 80 }, { l: "50 ml", g: 50 }),
   // Processed / treats (logged honestly)
   F("Mandazi", 4, { kcal: 350, p: 6, c: 45, f: 16, fib: 1.5, sug: 8, sat: 7, chol: 20, na: 250, k: 90, ca: 40, mg: 15, fe: 1.5, zn: 0.5, ph: 80, vb: 6, h2o: 30 }),
   F("French fries", 4, { kcal: 312, p: 3.4, c: 41, f: 15, fib: 3.8, sug: 0.3, sat: 2.3, na: 210, k: 579, ca: 12, mg: 27, fe: 0.7, zn: 0.4, ph: 100, vb: 10, vc: 4, ve: 1.6, vk: 16, h2o: 39 }),
