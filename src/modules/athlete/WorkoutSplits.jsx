@@ -10,7 +10,7 @@ import { Card } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { localDateStr } from "../../shared/dates.js";
 import {
-  EX_TYPES, WEEK_DAYS, DAY_LABEL, DEFAULT_SPLITS, sanitizeSplits, sanitizeWeek,
+  EX_TYPES, DAY_LABEL, DEFAULT_SPLITS, sanitizeSplits, sanitizeWeek,
   newExercise, newSplit, splitForDay, groupedExercises, newGiantId, weekdayKey,
 } from "../../shared/workoutSplits.js";
 
@@ -20,7 +20,7 @@ const chip = (extra = {}) => ({ display: "flex", alignItems: "center", gap: 5, p
 export function WorkoutSplits() {
   const ds = localDateStr();
   const [rawSplits, setSplits] = useStorageState("workout_splits", DEFAULT_SPLITS());
-  const [rawWeek, setWeek] = useStorageState("workout_week", {});
+  const [rawWeek] = useStorageState("workout_week", {});
   const [rawDone, setDone] = useStorageState("workout_split_log", {}); // { ds: [exIds] }
   const splits = useMemo(() => sanitizeSplits(rawSplits), [rawSplits]);
   const week = useMemo(() => sanitizeWeek(rawWeek, splits), [rawWeek, splits]);
@@ -65,22 +65,7 @@ export function WorkoutSplits() {
               </div>
             ))}
           </>
-        ) : <div style={{ fontSize: 13, color: T3 }}>No split assigned to today — set the weekly plan below.</div>}
-      </Card>
-
-      {/* Weekly plan */}
-      <Card style={{ padding: "15px 17px" }}>
-        <div style={{ fontSize: 10.5, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, color: T3, marginBottom: 10 }}>Weekly plan</div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {WEEK_DAYS.map((d) => (
-            <label key={d} style={{ fontSize: 10, color: T3, display: "flex", flexDirection: "column", gap: 3 }}>{DAY_LABEL[d]}
-              <select value={week[d] || ""} onChange={(e) => setWeek((p) => ({ ...sanitizeWeek(p, splits), [d]: e.target.value || null }))} style={{ ...inp, width: 104 }}>
-                <option value="">—</option>
-                {splits.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </label>
-          ))}
-        </div>
+        ) : <div style={{ fontSize: 13, color: T3 }}>No split assigned to today — set the weekly plan in the Week tab.</div>}
       </Card>
 
       {/* Split editor */}

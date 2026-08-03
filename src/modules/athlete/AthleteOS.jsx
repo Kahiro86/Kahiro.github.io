@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -20,11 +20,17 @@ import { getDayName } from "./helpers.js";
 import { DEFAULT_EXERCISES, uidT, lastValuesByExercise, overloadTrend } from "./library.js";
 import { LogWorkoutForm } from "./LogWorkoutForm.jsx";
 import { useDayMarks, hasRest, toggleMark } from "../../shared/dayMarks.js";
+import { WEEK_DAYS, DAY_LABEL, DEFAULT_SPLITS, sanitizeSplits, sanitizeWeek, weekdayKey } from "../../shared/workoutSplits.js";
 
 export function AthleteOS() {
   const [view, setView] = useState("week");
   const [workouts, setWorkouts] = useStorageState("athlete_workouts", []);
   const [dayMarks, setDayMarks] = useDayMarks();
+  // The one editable weekly plan — day → split, shared with the Splits tab.
+  const [rawSplits] = useStorageState("workout_splits", DEFAULT_SPLITS());
+  const [rawWeek, setWeek] = useStorageState("workout_week", {});
+  const splits = useMemo(() => sanitizeSplits(rawSplits), [rawSplits]);
+  const week = useMemo(() => sanitizeWeek(rawWeek, splits), [rawWeek, splits]);
   const [exerciseLib, setExerciseLib] = useStorageState("athlete_exercises", DEFAULT_EXERCISES);
   const [templates, setTemplates] = useStorageState("athlete_templates", []);
   const [logInitial, setLogInitial] = useState(null);
@@ -322,22 +328,18 @@ export function AthleteOS() {
             )}
 
             <Card style={{ padding: "20px" }}>
-              <SH title="Weekly Plan" sub="Simple split — adjust as needed" />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 5 }}>
-                {WEEK_PLAN.map((d) => {
-                  const isToday = d.day === todayDay;
-                  const matchesCol = (dateStr) => {
-                    const wd = new Date(dateStr).toLocaleDateString("en-US", { weekday: "short" }).toUpperCase().slice(0, 3);
-                    return wd === d.day && new Date(dateStr) >= weekStart;
-                  };
-                  const dayLogged = workouts.some((w) => matchesCol(w.date));
-                  const colRest = d.type !== "Rest" && dayMarks.rest.some(matchesCol); // ad-hoc rest this week
+              <SH title="Weekly Plan" sub="Assign a split to each day — synced with Splits" />
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {WEEK_DAYS.map((d) => {
+                  const isToday = d === weekdayKey(new Date());
                   return (
-                    <div key={d.day} style={{ position: "relative", background: isToday ? `${d.color}14` : GL, border: `1px solid ${isToday ? d.color + "55" : BD}`, borderRadius: 8, padding: "7px 3px", textAlign: "center", opacity: d.type === "Rest" || colRest ? 0.5 : 1 }}>
-                      <div style={{ fontSize: 8, color: isToday ? d.color : T3, letterSpacing: 1, marginBottom: 3, fontWeight: isToday ? 700 : 400 }}>{d.day}</div>
-                      <div style={{ fontSize: 14, marginBottom: 3, lineHeight: 1 }}>{colRest ? "😴" : d.icon}</div>
-                      <div style={{ fontSize: 8.5, color: colRest ? AM : d.color, fontWeight: 600, lineHeight: 1.2 }}>{colRest ? "Rest" : d.type}</div>
-                      {dayLogged && <CheckCircle size={9} color={GR} style={{ position: "absolute", top: 3, right: 3 }} />}
+                    <div key={d} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 12px", background: isToday ? `${PU}12` : GL, border: `1px solid ${isToday ? PU + "44" : BD}`, borderRadius: 10 }}>
+                      <span style={{ width: 42, flexShrink: 0, fontSize: 11, fontWeight: 700, letterSpacing: 1, color: isToday ? PU : T3, textTransform: "uppercase" }}>{DAY_LABEL[d]}</span>
+                      <select value={week[d] || ""} onChange={(e) => setWeek((p) => ({ ...sanitizeWeek(p, splits), [d]: e.target.value || null }))}
+                        style={{ flex: 1, background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "9px 11px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit" }}>
+                        <option value="">Rest / none</option>
+                        {splits.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
                     </div>
                   );
                 })}
