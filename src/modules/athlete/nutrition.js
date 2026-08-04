@@ -81,6 +81,7 @@ export const FOOD_DB = [
   F("Nyama choma (grilled goat)", 1, { kcal: 143, p: 27, c: 0, f: 3, sat: 0.9, chol: 75, na: 82, k: 344, ca: 17, mg: 0, fe: 3.7, zn: 4.5, ph: 201, vb: 35, h2o: 68 }),
   F("Tilapia (cooked)", 1, { kcal: 128, p: 26, c: 0, f: 2.7, sat: 0.9, o3: 0.2, chol: 57, na: 56, k: 380, ca: 14, mg: 34, fe: 0.7, zn: 0.4, ph: 204, vb: 30, vd: 3.7, ve: 0.8, h2o: 71 }),
   F("Salmon (cooked)", 1, { kcal: 206, p: 22, c: 0, f: 12, sat: 2.5, o3: 2.2, chol: 63, na: 61, k: 384, ca: 15, mg: 30, fe: 0.3, zn: 0.4, ph: 252, vb: 55, vd: 13, ve: 1.1, h2o: 64 }),
+  F("Pan-fried salmon", 2, { kcal: 230, p: 22, c: 0, f: 15, sat: 3, o3: 2.2, chol: 63, na: 65, k: 384, ca: 15, mg: 30, fe: 0.4, zn: 0.4, ph: 250, vb: 50, vd: 12, ve: 1.5, h2o: 58 }, { l: "1 fillet (200 g)", g: 200 }),
   F("Sardines (canned)", 2, { kcal: 208, p: 25, c: 0, f: 11.5, sat: 1.5, o3: 1.5, chol: 142, na: 307, k: 397, ca: 382, mg: 39, fe: 2.9, zn: 1.3, ph: 490, vb: 50, vd: 4.8, ve: 2, h2o: 60 }),
   F("Tuna (canned in water)", 2, { kcal: 116, p: 26, c: 0, f: 0.8, sat: 0.2, o3: 0.3, chol: 47, na: 247, k: 237, ca: 11, mg: 27, fe: 1.5, zn: 0.8, ph: 217, vb: 35, vd: 1.7, h2o: 74 }),
   F("Eggs (whole, cooked)", 1, { kcal: 155, p: 13, c: 1.1, f: 11, sat: 3.3, o3: 0.1, chol: 373, na: 124, k: 126, ca: 50, mg: 10, fe: 1.2, zn: 1, ph: 172, va: 149, vb: 30, vd: 2.2, ve: 1, vk: 0.3, h2o: 75 }),
@@ -154,6 +155,7 @@ export const FOOD_DB = [
   F("Latte", 2, { kcal: 50, p: 2.7, c: 4, f: 2.7, sug: 4, sat: 1.6, chol: 8, na: 36, k: 130, ca: 95, mg: 12, ph: 75, va: 34, vb: 10, vd: 1, h2o: 88 }, { l: "1 cup (300 ml)", g: 300 }, { bev: true }),
   F("Cappuccino", 2, { kcal: 47, p: 2.6, c: 3.8, f: 2.5, sug: 3.8, sat: 1.5, chol: 8, na: 35, k: 125, ca: 92, mg: 11, ph: 72, va: 32, vb: 10, vd: 1, h2o: 89 }, { l: "1 cup (180 ml)", g: 180 }, { bev: true }),
   F("Triple shot latte", 2, { kcal: 45, p: 2.4, c: 3.6, f: 2.4, sug: 3.6, sat: 1.4, chol: 7, na: 32, k: 135, ca: 85, mg: 12, ph: 68, va: 29, vb: 9, vd: 0.9, h2o: 90 }, { l: "1 cup (400 ml)", g: 400 }, { bev: true }),
+  F("Greek yoghurt berry smoothie", 2, { kcal: 72, p: 6.8, c: 6, f: 1.6, fib: 1, sug: 5, sat: 0.9, chol: 3, na: 25, k: 130, ca: 90, mg: 12, ph: 100, vc: 15, vb: 8, h2o: 80 }, { l: "1 glass (250 ml)", g: 250 }, { bev: true }),
 
   // ── Round 2 — comprehensive healthy-food coverage ────────────────────
   // Vegetables
