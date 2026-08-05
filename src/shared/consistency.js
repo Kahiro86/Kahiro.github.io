@@ -46,7 +46,7 @@ export function totalActivities(stats = {}) {
 
 // Everything below derives from `byDay` (xpEngine's per-date XP totals) — a
 // date counts if it has any XP at all, regardless of which module earned it.
-// `opts.isFull(d)` is an optional Hell-mode predicate: return true/false to
+// `opts.isFull(d)` is an optional predicate: return true/false to
 // force whether a day counts, or null to defer to the normal "any XP" rule
 // (used for days with nothing scheduled). Absent → normal mode, every day
 // with any XP counts.

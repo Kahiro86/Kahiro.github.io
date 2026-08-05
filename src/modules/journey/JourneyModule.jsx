@@ -201,10 +201,10 @@ function HallOfFame({ xp }) {
   const [dayMarks] = useDayMarks();
   const { start: consistencyStart } = useConsistencyStart(logins);
   // Same definition of "a day that counts" as the Command Center — rest/cheat
-  // and protected days count, Hell mode demands a full day.
+  // and protected days count.
   const csOpts = useMemo(
-    () => consistencyOpts({ hell: xp.hell?.on, habits: migrateHabits(rawHabits), marks: dayMarks, freezes }),
-    [xp.hell?.on, rawHabits, dayMarks, freezes]
+    () => consistencyOpts({ habits: migrateHabits(rawHabits), marks: dayMarks, freezes }),
+    [rawHabits, dayMarks, freezes]
   );
   const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, undefined, csOpts), [xp.byDay, consistencyStart, csOpts]);
   const totalAct = totalActivities(xp.stats);

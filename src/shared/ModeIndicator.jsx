@@ -1,62 +1,56 @@
-// ── Mode indicator — small, always-visible day-state mark ────────────
-// A restrained glyph + one-word label on the today surface (never a banner).
-// Tap it for the plain list of gates driving the current state. Drives a
-// `data-mode` attribute the global stylesheet uses for the subtle palette
-// treatment (God: faint gold warmth; Hell: a quiet darkening; Normal: none).
-// Urgency lives in individual locks, never here.
-import { useEffect, useState } from "react";
-import { AC2, T1, T2, T3, GL, BD, B1, B2, GR, AM } from "./designTokens.js";
+// ── God Mode indicator — one continuous score, always visible ────────
+// A small badge showing today's God Mode score (0–100). Tap it for the
+// gate-by-gate detail: what's holding, what's down, and exactly how much each
+// miss costs the score. One score, one colour logic (gold intensity scales
+// with the number), one tutorial. No shame language — rigorous, not harsh.
+import { useState, useEffect } from "react";
+import { AC2, T1, T2, T3, GL, BD, B1, GR, AM } from "./designTokens.js";
 import { useModeState } from "./useModeState.js";
-import { MODE_META, godScore, scoreTier } from "./modes.js";
+import { TIER_META, GATE_LABEL, scoreColor } from "./modes.js";
 import { ModeTutorial } from "./ModeTutorial.jsx";
 
-const TONE = {
-  god: { fg: AC2, bd: `${AC2}55`, bg: `${AC2}12` },
-  normal: { fg: T3, bd: BD, bg: GL },
-  hell: { fg: "#9AA0A6", bd: "#3A3E44", bg: "rgba(30,32,36,0.6)" },
-};
 const DOT = { fail: AM, incomplete: T3, pass: GR };
-const STATUS_WORD = { fail: "not met", incomplete: "pending", pass: "clean" };
+const STATUS_WORD = { fail: "not met", incomplete: "pending", pass: "held" };
 
 export function ModeIndicator() {
-  const { mode, result, statuses } = useModeState();
+  const { score, tier, weekAvg, impacts, statuses } = useModeState();
   const [open, setOpen] = useState(false);
-  const [tut, setTut] = useState(null); // "god" | "hell"
-  // Single-spectrum God score drives the badge; colour follows the score tier,
-  // while the veil/detail below still use the discrete `mode`.
-  const score = godScore(statuses);
-  const tier = scoreTier(score);
-  const meta = MODE_META[mode] || MODE_META.normal;
-  const tone = TONE[tier] || TONE.normal;
+  const [tut, setTut] = useState(false);
+  const col = scoreColor(score);
+  const meta = tier ? TIER_META[tier] : null;
 
-  // Broadcast the state so the global stylesheet can apply the subtle veil.
+  // Broadcast the score tier so the global stylesheet can apply the faint
+  // gold warmth on a full-structure day (one-directional, never a darkening).
+  // Set-only (no unmount cleanup): this renders in two places, and the
+  // always-mounted header instance keeps the attribute correct.
   useEffect(() => {
-    document.documentElement.setAttribute("data-mode", mode);
-    return () => document.documentElement.removeAttribute("data-mode");
-  }, [mode]);
+    if (tier) document.documentElement.setAttribute("data-mode", tier);
+    else document.documentElement.removeAttribute("data-mode");
+  }, [tier]);
 
-  const ordered = [...statuses]
-    .filter((s) => s.status !== "off")
-    .sort((a, b) => {
-      const rank = { fail: 0, incomplete: 1, pass: 2 };
-      return rank[a.status] - rank[b.status];
-    });
+  // Not-passed gates first (with the biggest cost on top), then the held ones.
+  const active = statuses.filter((s) => s.status !== "off");
+  const ordered = [...active].sort((a, b) => {
+    const rank = { fail: 0, incomplete: 1, pass: 2 };
+    if (rank[a.status] !== rank[b.status]) return rank[a.status] - rank[b.status];
+    return (impacts[b.key] || 0) - (impacts[a.key] || 0);
+  });
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label={`God score ${score == null ? "not yet scored" : score + " percent"}. View detail.`}
-        title={`God score${score == null ? "" : ` ${score}%`} — tap for detail`}
-        style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, border: `1px solid ${tone.bd}`, background: tone.bg, color: tone.fg, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 800, letterSpacing: 0.5 }}
+        aria-label={`God Mode score ${score == null ? "not yet scored" : score + " percent"}. View detail.`}
+        title={`God Mode${score == null ? "" : ` ${score}%`} — tap for detail`}
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, border: `1px solid ${score == null ? BD : col + "66"}`, background: score == null ? GL : `${col}14`, color: score == null ? T3 : col, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 800, letterSpacing: 0.5 }}
       >
-        <span style={{ fontSize: 12, lineHeight: 1 }}>{MODE_META[tier]?.glyph || meta.glyph}</span>
+        <span style={{ fontSize: 12, lineHeight: 1 }}>◆</span>
         {score == null ? (
           <span style={{ letterSpacing: 1 }}>GOD —</span>
         ) : (
           <>
-            <span style={{ width: 30, height: 4, borderRadius: 2, background: `${tone.fg}22`, overflow: "hidden", flexShrink: 0 }}>
-              <span style={{ display: "block", height: "100%", width: `${score}%`, background: tone.fg }} />
+            <span style={{ width: 30, height: 4, borderRadius: 2, background: `${col}33`, overflow: "hidden", flexShrink: 0 }}>
+              <span style={{ display: "block", height: "100%", width: `${score}%`, background: col }} />
             </span>
             <span style={{ fontFamily: "monospace" }}>{score}%</span>
           </>
@@ -65,44 +59,50 @@ export function ModeIndicator() {
 
       {open && (
         <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 4100, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 400, background: B1, border: `1px solid ${BD}`, borderRadius: 16, padding: "18px 18px 16px", boxShadow: "0 18px 50px rgba(0,0,0,0.6)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4 }}>
-              <span style={{ fontSize: 15, color: tone.fg }}>{meta.glyph}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: 1, color: tone.fg }}>{meta.label}{score != null ? ` · ${score}%` : ""}</span>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 420, background: B1, border: `1px solid ${BD}`, borderRadius: 16, padding: "18px 18px 16px", boxShadow: "0 18px 50px rgba(0,0,0,0.6)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <span style={{ fontSize: 15, color: col }}>◆</span>
+              <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.5, color: T1 }}>God Mode</span>
+              <span style={{ fontSize: 22, fontWeight: 900, color: col, fontFamily: "'JetBrains Mono',monospace", marginLeft: 2 }}>{score == null ? "—" : `${score}%`}</span>
+              {meta && <span style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{meta.label}</span>}
               <button onClick={() => setOpen(false)} aria-label="Close" style={{ marginLeft: "auto", background: "none", border: "none", color: T3, fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
             </div>
+
+            {weekAvg != null && (
+              <div style={{ fontSize: 11.5, color: T2, marginBottom: 12 }}>
+                <b style={{ color: T1, fontFamily: "monospace" }}>{weekAvg}%</b> over the last 7 days — one clean day doesn&apos;t overwrite the week.
+              </div>
+            )}
             <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.55, marginBottom: 13 }}>
-              {mode === "god" && "Every active gate is clean. Nothing to do differently — this is a read-out, not a mode to perform for."}
-              {mode === "normal" && "Some gates are still open or one has slipped. This is where most days live."}
-              {mode === "hell" && "More than one gate is failing at once. Take the single most recoverable one — recovery is partial, never all-or-nothing."}
+              {score == null && "No gate is active yet today — set your structures and the score begins."}
+              {tier === "full" && "Every structure that matters is held. This is a full-structure day — nothing to perform for, just a read-out."}
+              {tier === "partial" && "Most of the day is held; some gates are still open or one slipped. Honest middle ground, not a clean day."}
+              {tier === "low" && "Several gates are down at once. Take the single most recoverable one — recovery is partial, never all-or-nothing."}
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {ordered.map((s) => (
-                <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 2px", borderTop: `1px solid ${BD}` }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: DOT[s.status] || T3, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12.5, color: T1 }}>{s.label}</span>
-                  <span style={{ marginLeft: "auto", fontSize: 10.5, color: DOT[s.status] || T3, textTransform: "uppercase", letterSpacing: 0.5 }}>{STATUS_WORD[s.status]}</span>
-                </div>
-              ))}
+              {ordered.map((s) => {
+                const cost = impacts[s.key] || 0;
+                const held = s.status === "pass";
+                return (
+                  <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 2px", borderTop: `1px solid ${BD}` }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: DOT[s.status] || T3, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12.5, color: T1 }}>{GATE_LABEL[s.key] || s.label}</span>
+                    <span style={{ marginLeft: "auto", fontSize: 10.5, color: DOT[s.status] || T3, textTransform: "uppercase", letterSpacing: 0.5 }}>{STATUS_WORD[s.status]}</span>
+                    <span style={{ fontSize: 11, fontFamily: "monospace", color: held ? GR : AM, minWidth: 42, textAlign: "right" }}>{held ? `+${cost}%` : `−${cost}%`}</span>
+                  </div>
+                );
+              })}
             </div>
 
-            {result?.ambiguous && (
-              <div style={{ marginTop: 11, fontSize: 10.5, color: T3, fontStyle: "italic", lineHeight: 1.5 }}>
-                This day sits exactly on the boundary — recorded as the plainer state, flagged for review.
-              </div>
-            )}
-
-            {mode !== "normal" && (
-              <button onClick={() => setTut(mode)} style={{ marginTop: 14, width: "100%", padding: "9px", borderRadius: 10, border: `1px solid ${tone.bd}`, background: tone.bg, color: tone.fg, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                What {meta.label} mode means
-              </button>
-            )}
+            <button onClick={() => setTut(true)} style={{ marginTop: 14, width: "100%", padding: "9px", borderRadius: 10, border: `1px solid ${AC2}44`, background: `${AC2}12`, color: AC2, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              What God Mode means
+            </button>
           </div>
         </div>
       )}
 
-      {tut && <ModeTutorial which={tut} onClose={() => setTut(null)} />}
+      {tut && <ModeTutorial onClose={() => setTut(false)} />}
     </>
   );
 }

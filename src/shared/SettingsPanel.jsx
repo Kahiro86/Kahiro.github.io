@@ -10,7 +10,6 @@ import { getSyncStatus, onSyncStatus, testConnection, pull, flush, onAuthChanged
 import { getSyncConfig, saveSyncConfig, signUp, signIn, signOut, resetPassword, updatePassword, getSession, onAuth } from "./supabase.js";
 import { getGcalConfig, setGcalConfig, getToken as getGcalToken } from "./gcal.js";
 import { hasLock, setPin, verifyPin, clearLock } from "./lock.js";
-import { useHell, HELL_MULT } from "./difficulty.js";
 import { useXp } from "./useXp.js";
 import { useStorageState } from "./useStorageState.js";
 import { CHECKIN_CFG_KEY, CADENCES, getCadence } from "./focusCheckin.js";
@@ -20,7 +19,7 @@ import { DEFAULT_PROFILE } from "../modules/athlete/nutrition.js";
 import { GodModeTutorial } from "../modules/athlete/GodModeTutorial.jsx";
 import { DEFAULT_GATES, sanitizeGates, proposeGateChange } from "./tradeGates.js";
 import { SEASON_TEMPLATES, sanitizeSeason, seasonActive, seasonDay, startSeason } from "./season.js";
-import { DEFAULT_MODE_CFG, sanitizeModeCfg } from "./modes.js";
+import { DEFAULT_MODE_CFG, sanitizeModeCfg, DEFAULT_GATE_WEIGHTS, GATE_LABEL } from "./modes.js";
 import { ModeTutorial } from "./ModeTutorial.jsx";
 import { getPushVapid, setPushVapid, pushStatus, subscribeToPush, unsubscribeFromPush, sendLocalTestNotification } from "./push.js";
 
@@ -54,9 +53,6 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const saveIdentity = () => { identity.save({ appName: idApp, ownerName: idOwner }); setIdApp(identity.appName); setIdMsg({ text: "Saved. Your name is now used across the app.", tone: GR }); };
   const resetIdentity = () => { identity.reset(); setIdApp(DEFAULT_APP_NAME); setIdOwner(""); setIdMsg({ text: "Reset to default.", tone: T2 }); };
 
-  const { hell, enable: enableHell, disable: disableHell } = useHell();
-  const liveXp = useXp();
-  const [armHell, setArmHell] = useState(false);
 
   // ── Nutrition God Mode state ───────────────────────────────────────
   const [rawHardCfg, setHardCfg] = useStorageState("nutrition_hard", DEFAULT_HARD);
@@ -109,10 +105,12 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
     setOhCfg({ ...ohCfg, checkpoints: next });
     setOhDraft(next.join(", "));
   };
-  // ── Modes (God/Normal/Hell thresholds) state ───────────────────────
+  // ── God Mode (score weights + thresholds) state ────────────────────
   const [rawModeCfg, setModeCfg] = useStorageState("mode_cfg", DEFAULT_MODE_CFG);
   const modeCfg = sanitizeModeCfg(rawModeCfg);
-  const [modeTut, setModeTut] = useState(null); // "god" | "hell"
+  const [modeTut, setModeTut] = useState(false);
+  const setWeight = (k, v) => setModeCfg({ ...modeCfg, weights: { ...modeCfg.weights, [k]: v } });
+  const weightSum = Object.values(modeCfg.weights).reduce((s, v) => s + (+v || 0), 0);
   // ── Season (fasting/blocks) state ───────────────────────────────────
   const [rawSeason, setSeason] = useStorageState("active_season", null);
   const season = sanitizeSeason(rawSeason);
@@ -402,40 +400,6 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
-        {/* ── Difficulty · Hell mode ─────────────────────────────────── */}
-        <div style={{ fontSize: 11, color: RE, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Difficulty · Hell mode</div>
-        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
-          A harder-than-hard mode for when you want the system to stop being kind. It never deletes anything you&apos;ve earned — it only changes the rules going forward, and turning it off restores them.
-        </div>
-        <ul style={{ margin: "0 0 12px", padding: "0 0 0 18px", fontSize: 12, color: T2, lineHeight: 1.7 }}>
-          <li>Levelling up costs {HELL_MULT}× more XP from here on.</li>
-          <li>One incomplete day resets your consistency streak — no grace.</li>
-          <li>A day only counts when everything scheduled is done (rest &amp; cheat days stay safe).</li>
-        </ul>
-        {hell.on ? (
-          <div style={{ background: `${RE}12`, border: `1px solid ${RE}44`, borderRadius: 10, padding: "11px 13px" }}>
-            <div style={{ fontSize: 12.5, color: RE, fontWeight: 700, letterSpacing: 0.5, marginBottom: 3 }}>🔥 HELL MODE ACTIVE</div>
-            <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.5, marginBottom: 10 }}>
-              Anchored at Level {hell.anchorLevel}{hell.since ? ` · since ${hell.since.slice(0, 10)}` : ""}. Everything up to that point is preserved.
-            </div>
-            <button onClick={() => { disableHell(); setArmHell(false); }} style={btn()}>Turn off Hell mode</button>
-          </div>
-        ) : armHell ? (
-          <div style={{ background: `${RE}12`, border: `1px solid ${RE}44`, borderRadius: 10, padding: "11px 13px" }}>
-            <div style={{ fontSize: 12, color: T1, lineHeight: 1.55, marginBottom: 10 }}>
-              Enable Hell mode? Your current Level {liveXp.level} and {liveXp.total.toLocaleString()} XP are kept as the anchor — only the climb ahead gets steeper.
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { enableHell(liveXp.total, liveXp.level); setArmHell(false); }} style={btn({ background: RE, border: "none", color: "#fff", fontWeight: 700 })}>Enter Hell mode</button>
-              <button onClick={() => setArmHell(false)} style={btn()}>Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <button onClick={() => setArmHell(true)} style={btn({ border: `1px solid ${RE}66`, color: RE, fontWeight: 700 })}>Enable Hell mode</button>
-        )}
-
-        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
-
         {/* ── Nutrition · God Mode ───────────────────────────────────── */}
         <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Nutrition · God Mode</div>
         <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
@@ -542,15 +506,34 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
-        {/* ── Modes (God / Normal / Hell) ────────────────────────────── */}
-        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Modes</div>
-        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
-          A read-out of the day, derived from your existing gates — not a manual switch. <b style={{ color: T2 }}>God</b> = every active gate clean. <b style={{ color: T2 }}>Hell</b> = this many gates failing at once. <b style={{ color: T2 }}>Normal</b> = everything between.
+        {/* ── God Mode (one weighted score) ──────────────────────────── */}
+        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>God Mode</div>
+        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
+          One continuous 0–100 score, read from your existing gates — not a manual switch. Each gate is met or not (no partial credit); gates are weighted so the ones that matter most count for more. Tune the weights below.
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 10 }}>
-          <label style={{ fontSize: 10, color: T3 }}>Hell threshold (gates)<br />
-            <input type="number" inputMode="numeric" min={2} max={6} value={modeCfg.hellThreshold}
-              onChange={(e) => setModeCfg({ ...modeCfg, hellThreshold: e.target.value })}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 6 }}>
+          {Object.keys(DEFAULT_GATE_WEIGHTS).map((k) => (
+            <div key={k} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ flex: 1, fontSize: 12.5, color: T1 }}>{GATE_LABEL[k]}</span>
+              <input type="number" inputMode="numeric" min={0} max={100} value={modeCfg.weights[k]}
+                onChange={(e) => setWeight(k, e.target.value)} aria-label={`${GATE_LABEL[k]} weight`}
+                style={{ ...idInput, width: 70, textAlign: "right" }} />
+              <span style={{ fontSize: 11, color: T3, width: 12 }}>%</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: weightSum === 100 ? T3 : AM, marginBottom: 12 }}>
+          Total: {weightSum}%{weightSum !== 100 ? " — weights are normalised to the active gates, so this need not sum to 100, but 100 keeps it readable." : ""}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
+          <label style={{ fontSize: 10, color: T3 }}>Strong day ≥ (%)<br />
+            <input type="number" inputMode="numeric" min={50} max={100} value={modeCfg.strongThreshold}
+              onChange={(e) => setModeCfg({ ...modeCfg, strongThreshold: e.target.value })}
+              style={{ ...idInput, width: 90, marginTop: 4 }} />
+          </label>
+          <label style={{ fontSize: 10, color: T3 }}>Acceptable ≥ (%)<br />
+            <input type="number" inputMode="numeric" min={1} max={99} value={modeCfg.okThreshold}
+              onChange={(e) => setModeCfg({ ...modeCfg, okThreshold: e.target.value })}
               style={{ ...idInput, width: 90, marginTop: 4 }} />
           </label>
           <label style={{ fontSize: 10, color: T3 }}>Checklist cutoff (hour)<br />
@@ -559,11 +542,8 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
               style={{ ...idInput, width: 110, marginTop: 4 }} />
           </label>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={() => setModeTut("god")} style={btn({ flex: "none", border: `1px solid ${AC2}55`, color: AC2 })}>Read: God Mode</button>
-          <button onClick={() => setModeTut("hell")} style={btn({ flex: "none", border: `1px solid ${BD}`, color: T2 })}>Read: Hell Mode</button>
-        </div>
-        {modeTut && <ModeTutorial which={modeTut} onClose={() => setModeTut(null)} />}
+        <button onClick={() => setModeTut(true)} style={btn({ flex: "none", border: `1px solid ${AC2}55`, color: AC2 })}>Read: God Mode</button>
+        {modeTut && <ModeTutorial onClose={() => setModeTut(false)} />}
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 

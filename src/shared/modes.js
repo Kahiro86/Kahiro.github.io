@@ -1,32 +1,60 @@
-// ── God / Normal / Hell — derived day-state ──────────────────────────
-// Not a manual toggle: a read-out of the existing rules engine. Every gate
-// already exposes a queryable status (trade cap/cooldown/sleep from
-// tradeGates, nutrition floors/ceiling from nutritionHard, the daily
-// checklist, recurring pings). This file only *reads* those — it never
-// re-implements gate logic — and collapses them into one of three states.
+// ── God Mode — one continuous 0–100 discipline score ────────────────
+// Not a manual toggle and not a two/three-state label: a single read-out of
+// the existing rules engine. Every gate already exposes a queryable status
+// (trade cap/cooldown/sleep, nutrition floors/ceiling, the daily checklist,
+// recurring pings, the weekly focus and monthly overhead structures). This
+// file only *reads* those — it never re-implements gate logic — and folds
+// them into one weighted score.
 //
-//   God    — every active gate clean, nothing pending.
-//   Hell   — `hellThreshold`+ gates failing at once (default 2).
-//   Normal — everything in between (most days).
-//
-// A gate that never had a chance to be evaluated today (e.g. the sleep gate
-// with no morning entry) is "incomplete": it keeps the day out of God, but
-// never counts toward Hell. Thresholds are configurable, never hardcoded.
+//   • Each gate is BINARY: met (its full weight) or not (zero). No partial
+//     credit, no soft rounding that inflates the number.
+//   • Gates are WEIGHTED, not equal (sleep/trading matter more than a ping).
+//   • The score is the weighted sum of passed gates over the weight of all
+//     active gates — so over-performing one category can never paper over a
+//     real miss in another (each gate is capped at its own weight).
+//   • An unset weekly-focus or monthly-overhead structure scores 0, not
+//     "not applicable" — silence is a missed structural step, not neutral.
 import { localDateStr } from "./dates.js";
 
-export const DEFAULT_MODE_CFG = { hellThreshold: 2, checklistCutoffHour: 21 };
+// Default gate weights (percent, sum 100). Editable in Settings.
+//   trading (cap+cooldown) 25 · sleep 20 · nutrition (floor+ceil) 20 ·
+//   checklist 15 · weekly focus 10 · monthly overhead 10 · pings 0
+export const DEFAULT_GATE_WEIGHTS = {
+  checklist: 15, sleep: 20, nutriFloor: 14, nutriCeil: 6,
+  cap: 13, cooldown: 12, weeklyFocus: 10, monthlyOverhead: 10, pings: 0,
+};
+export const GATE_LABEL = {
+  checklist: "Daily checklist", sleep: "Sleep gate", nutriFloor: "Nutrition floor",
+  nutriCeil: "Nutrition ceiling", cap: "Trade cap", cooldown: "Post-loss cooldown",
+  weeklyFocus: "Weekly focus", monthlyOverhead: "Monthly overhead", pings: "Recurring pings",
+};
+
+// Thresholds: what counts as a genuinely strong day vs merely acceptable.
+export const DEFAULT_MODE_CFG = {
+  checklistCutoffHour: 21,
+  weights: { ...DEFAULT_GATE_WEIGHTS },
+  strongThreshold: 90, // ≥ this = "full structure" (streak-worthy)
+  okThreshold: 70,     // ≥ this = "partial"; below = "low"
+};
 
 export function sanitizeModeCfg(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   const clamp = (v, d, lo, hi) => { const x = Math.round(+v); return Number.isFinite(x) && x >= lo && x <= hi ? x : d; };
+  const w = r.weights && typeof r.weights === "object" && !Array.isArray(r.weights) ? r.weights : {};
+  const weights = {};
+  for (const k of Object.keys(DEFAULT_GATE_WEIGHTS)) weights[k] = clamp(w[k], DEFAULT_GATE_WEIGHTS[k], 0, 100);
   return {
-    hellThreshold: clamp(r.hellThreshold, 2, 2, 6),
     checklistCutoffHour: clamp(r.checklistCutoffHour, 21, 0, 23),
+    weights,
+    strongThreshold: clamp(r.strongThreshold, 90, 50, 100),
+    okThreshold: clamp(r.okThreshold, 70, 1, 99),
   };
 }
 
 // ── Per-gate status helpers (pure) ───────────────────────────────────
 // Each returns "pass" | "fail" | "incomplete" | "off" (not applicable).
+// For the binary score, only "pass" earns weight — "incomplete" (still time)
+// and "fail" both earn nothing, so the number climbs as gates truly close.
 export const sleepStatus = (sflag, entered) => (!entered ? "incomplete" : sflag === "NO-TRADE" ? "fail" : "pass");
 export const cooldownStatus = (cooldownMs) => (cooldownMs > 0 ? "fail" : "pass");
 export const capStatus = (count, cap) => (count > cap ? "fail" : "pass");
@@ -49,94 +77,116 @@ export function nutritionCeilStatus(hardActive, underCeil) {
   return underCeil ? "pass" : "fail";          // exceeding the ceiling is immediate
 }
 
+// Weekly focus + monthly overhead are STRUCTURAL — always active. An unset
+// goal scores 0 (decay), never "off": leaving the structure blank is itself a
+// missed step. When set, they pass only when genuinely on track.
+export const weeklyFocusStatus = (isSet, checkedIn) => (!isSet ? "fail" : checkedIn ? "pass" : "incomplete");
+export const overheadStatus = (isSet, onPace) => (!isSet ? "fail" : onPace ? "pass" : "fail");
+
 export const cutoffPassed = (cutoffHour, now = new Date()) => now.getHours() >= cutoffHour;
 
-// ── Collapse the gate list into one state ────────────────────────────
-// `statuses` is [{ key, label, status }]. "off" gates are excluded entirely.
-export function evalMode(statuses, cfg) {
-  const c = sanitizeModeCfg(cfg);
+// ── The one score ────────────────────────────────────────────────────
+// `statuses` is [{ key, label, status }]. "off" gates are excluded entirely
+// (a feature you don't use neither helps nor hurts). Weighted binary: earned
+// weight over active weight, ×100. Returns null when nothing is active.
+export function godScore(statuses, cfg) {
+  const weights = sanitizeModeCfg(cfg).weights;
   const active = (Array.isArray(statuses) ? statuses : []).filter((s) => s && s.status !== "off");
-  const fails = active.filter((s) => s.status === "fail");
-  const incompletes = active.filter((s) => s.status === "incomplete");
-  const clean = active.filter((s) => s.status === "pass");
-
-  let mode = "normal";
-  if (fails.length >= c.hellThreshold) mode = "hell";
-  else if (fails.length === 0 && incompletes.length === 0 && clean.length > 0) mode = "god";
-
-  // Borderline: exactly at the Hell threshold with gates still pending. Flag
-  // it so the closing commit can prefer the plainer label instead of guessing.
-  const ambiguous = fails.length === c.hellThreshold && incompletes.length > 0;
-  return { mode, fails, incompletes, clean, ambiguous, threshold: c.hellThreshold };
+  let earned = 0, total = 0;
+  for (const s of active) {
+    const w = +weights[s.key] || 0;
+    total += w;
+    if (s.status === "pass") earned += w; // binary — pending/fail earn nothing
+  }
+  if (total <= 0) return null;
+  return Math.round((earned / total) * 100);
 }
 
-// Did the day see real engagement? Cap/cooldown/pings pass trivially on a day
-// the owner never touched the app, so they don't count — only an actual fail or
-// a completed actionable gate (sleep entered, checklist done, nutrition logged)
-// marks a day worth recording in history.
-const ACTIONABLE = new Set(["sleep", "checklist", "nutriFloor", "nutriCeil"]);
+// The score cost of each not-yet-passed gate — its weight as a share of the
+// active total, so the detail view can show "Sleep gate · −20%".
+export function gateImpacts(statuses, cfg) {
+  const weights = sanitizeModeCfg(cfg).weights;
+  const active = (Array.isArray(statuses) ? statuses : []).filter((s) => s && s.status !== "off");
+  const total = active.reduce((sum, s) => sum + (+weights[s.key] || 0), 0);
+  if (total <= 0) return {};
+  const out = {};
+  for (const s of active) out[s.key] = Math.round(((+weights[s.key] || 0) / total) * 100);
+  return out;
+}
+
+// Which band a score falls in — drives colour + honest "partial vs full"
+// language. Only "full" days count toward any streak-style framing.
+export function dayTier(score, cfg) {
+  if (score == null) return null;
+  const c = sanitizeModeCfg(cfg);
+  if (score >= c.strongThreshold) return "full";
+  if (score >= c.okThreshold) return "partial";
+  return "low";
+}
+export const TIER_META = {
+  full: { label: "Full structure", tone: "gold" },
+  partial: { label: "Partial", tone: "neutral" },
+  low: { label: "Low", tone: "heavy" },
+};
+// Gold intensity scales with the score (one colour logic, no separate states).
+export function scoreColor(score) {
+  if (score == null) return "#5b5048";
+  const t = Math.max(0, Math.min(1, score / 100));
+  // dim brown → full gold as the score climbs.
+  const lerp = (a, b) => Math.round(a + (b - a) * t);
+  const r = lerp(0x5b, 0xF0), g = lerp(0x50, 0xB4), b = lerp(0x48, 0x29);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ── Engagement + history ─────────────────────────────────────────────
+// Did the day see real engagement? Structural/trivial gates pass on a day the
+// owner never touched the app, so only an actual fail or a completed
+// actionable gate marks a day worth recording.
+const ACTIONABLE = new Set(["sleep", "checklist", "nutriFloor", "nutriCeil", "weeklyFocus", "monthlyOverhead"]);
 export function dayEngaged(statuses) {
   return (Array.isArray(statuses) ? statuses : []).some(
     (s) => s.status === "fail" || (ACTIONABLE.has(s.key) && s.status === "pass")
   );
 }
 
-// At day-close: prefer the plainer label on an ambiguous boundary, and record
-// the ambiguity for later review rather than silently resolving it.
-export function resolveClosingMode(result) {
-  if (!result) return { mode: "normal", ambiguous: false };
-  if (result.ambiguous) return { mode: "normal", ambiguous: true };
-  return { mode: result.mode, ambiguous: false };
-}
-
-// ── Single-spectrum God score (0–100) ───────────────────────────────
-// One continuous number instead of a two/three-state label: how clean the
-// day's active gates are. A pass is full credit, a still-pending gate half
-// (there's time), a failure none — so the score climbs through the day as
-// gates close. 100 = every active gate clean (God); low = gates failing.
-// Returns null when no gate is active (nothing to score yet).
-export function godScore(statuses) {
-  const active = (Array.isArray(statuses) ? statuses : []).filter((s) => s && s.status !== "off");
-  if (!active.length) return null;
-  const credit = active.reduce((s, g) => s + (g.status === "pass" ? 1 : g.status === "incomplete" ? 0.5 : 0), 0);
-  return Math.round((credit / active.length) * 100);
-}
-
-// The tone tier a score falls in — drives colour only; the veil/detail still
-// use the discrete `mode`. High = gold (near-God), low = heavy (near-Hell).
-export function scoreTier(score) {
-  if (score == null) return "normal";
-  if (score >= 85) return "god";
-  if (score >= 50) return "normal";
-  return "hell";
-}
-
-// ── Mode metadata for the UI (labels + restrained treatment) ─────────
-export const MODE_META = {
-  god: { label: "GOD", glyph: "◆", tone: "gold" },
-  normal: { label: "NORMAL", glyph: "◈", tone: "neutral" },
-  hell: { label: "HELL", glyph: "◇", tone: "heavy" },
-};
-
-// ── History (one final state per closed day) ─────────────────────────
+// History stores one final SCORE per closed day. Old three-state records are
+// backfilled to a representative score so past history isn't lost.
+const LEGACY_SCORE = { god: 100, normal: 60, hell: 20 };
 export function sanitizeModeHistory(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const out = {};
   for (const [k, v] of Object.entries(raw)) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !v || typeof v !== "object") continue;
-    const mode = ["god", "normal", "hell"].includes(v.mode) ? v.mode : "normal";
-    out[k] = { mode, ambiguous: !!v.ambiguous };
+    let score = Number.isFinite(+v.score) ? Math.max(0, Math.min(100, Math.round(+v.score))) : null;
+    if (score == null && typeof v.mode === "string" && LEGACY_SCORE[v.mode] != null) score = LEGACY_SCORE[v.mode];
+    if (score == null) continue;
+    out[k] = { score };
   }
   return out;
 }
 
-// Commit yesterday's (or any past day's) final state exactly once. Pure:
-// returns the next history map, or the same reference when nothing changed.
-export function commitClosedDay(history, ds, closingResult) {
+// Commit a past day's final score exactly once. Pure.
+export function commitClosedDay(history, ds, score) {
   const h = sanitizeModeHistory(history);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(ds) || h[ds]) return h; // already recorded / invalid
-  const { mode, ambiguous } = resolveClosingMode(closingResult);
-  return { ...h, [ds]: { mode, ambiguous } };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ds) || h[ds] || score == null) return h;
+  return { ...h, [ds]: { score: Math.max(0, Math.min(100, Math.round(score))) } };
+}
+
+// Rolling average of the last `days` days' scores (history + today's live
+// score substituted for today). This is what Journals shows by default, so a
+// single clean day never visually overwrites a shaky week.
+export function weekAverage(history, todayScore, ds = localDateStr(), days = 7) {
+  const h = sanitizeModeHistory(history);
+  const vals = [];
+  const base = new Date(`${ds}T12:00:00`);
+  for (let i = 0; i < days; i++) {
+    const d = new Date(base); d.setDate(base.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (i === 0 && todayScore != null) vals.push(todayScore);
+    else if (h[key]) vals.push(h[key].score);
+  }
+  if (!vals.length) return null;
+  return Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
 }
 
 export const todayStr = () => localDateStr();

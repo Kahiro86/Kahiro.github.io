@@ -269,13 +269,12 @@ export default function App() {
          no render-blocking @import, works fully offline. */
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body { max-width: 100%; overflow-x: hidden; background: #000000; }
-      /* Day-state treatment (God/Normal/Hell): a restrained, pointer-through
-         veil driven by the mode indicator. God adds a faint gold warmth; Hell
-         quietly darkens the palette; Normal shows nothing. Urgency stays with
-         individual locks — this is only a mood, never an alarm. */
+      /* God Mode treatment: a restrained, pointer-through veil driven by the
+         score tier. A full-structure day adds a faint gold warmth; everything
+         else shows nothing. One direction only — warmth for a strong day,
+         never a darkening or an alarm. */
       .mode-veil { position:fixed; inset:0; pointer-events:none; z-index:900; opacity:0; transition:opacity 0.7s ease, background 0.7s ease; }
-      :root[data-mode="god"] .mode-veil { opacity:1; background: radial-gradient(120% 80% at 50% 0%, rgba(240,180,41,0.05), transparent 68%); }
-      :root[data-mode="hell"] .mode-veil { opacity:1; background: rgba(6,7,9,0.17); }
+      :root[data-mode="full"] .mode-veil { opacity:1; background: radial-gradient(120% 80% at 50% 0%, rgba(240,180,41,0.06), transparent 68%); }
       body { font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
       /* tabular figures everywhere numbers matter — dashboards & finance line up */
       [style*="monospace"], input { font-variant-numeric: tabular-nums; }

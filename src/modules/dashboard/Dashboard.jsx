@@ -106,11 +106,11 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
   const ds = localDateStr();
   // Which days count toward the streak/rate — rest & cheat days always count
-  // (a planned day off is a day done), protected days count, and Hell mode
-  // demands a full day. One shared definition (see consistencyOpts).
+  // (a planned day off is a day done) and protected days count. One shared
+  // definition (see consistencyOpts).
   const csOpts = useMemo(
-    () => consistencyOpts({ hell: xp.hell?.on, habits: habitsV2, marks: dayMarks, freezes }),
-    [xp.hell?.on, habitsV2, dayMarks, freezes]
+    () => consistencyOpts({ habits: habitsV2, marks: dayMarks, freezes }),
+    [habitsV2, dayMarks, freezes]
   );
   const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, nowDs, csOpts), [xp.byDay, consistencyStart, nowDs, csOpts]);
   const totalAct = totalActivities(xp.stats);

@@ -17,7 +17,6 @@ import { sanitizeWants, savedOf, bestContribStreak } from "./wants.js";
 import { tiTradeStats } from "../modules/trading/intel/tradingIntel.js";
 import { sanitizePurity } from "../modules/life/purity.js";
 import { sanitizeReviews } from "../modules/trading/reviews.js";
-import { sanitizeHell, toEffectiveXp, toRealXp } from "./difficulty.js";
 import { sanitizeNutrition, dayTotals, nutritionScore, calcTargets } from "../modules/athlete/nutrition.js";
 
 // Internal value table — tune freely for balance; the UI never shows it.
@@ -461,13 +460,10 @@ export function computeXp(deps = {}) {
   // can read it.
   stats.consistencyDays = Object.values(byDay).filter((x) => x > 0).length;
 
-  // Hell mode steepens the curve above its anchor without erasing progress:
-  // the level engine sees compressed surplus XP, and the level thresholds
-  // are mapped back to real XP so "XP to next" stays in earned terms.
-  const hell = sanitizeHell(deps.hell);
-  const level = levelOfXp(toEffectiveXp(total, hell));
-  const prevLevelXp = toRealXp(xpForLevel(level), hell);
-  const nextLevelXp = toRealXp(xpForLevel(level + 1), hell);
+  // Level straight from earned XP on the normal curve.
+  const level = levelOfXp(total);
+  const prevLevelXp = xpForLevel(level);
+  const nextLevelXp = xpForLevel(level + 1);
   const sumSince = (since) => {
     let s = 0;
     for (const [d, xp] of Object.entries(byDay)) if (d >= since && d <= today) s += xp;
