@@ -21,6 +21,8 @@ import { DEFAULT_EXERCISES, uidT, lastValuesByExercise, overloadTrend } from "./
 import { LogWorkoutForm } from "./LogWorkoutForm.jsx";
 import { useDayMarks, hasRest, toggleMark } from "../../shared/dayMarks.js";
 import { WEEK_DAYS, DAY_LABEL, DEFAULT_SPLITS, sanitizeSplits, sanitizeWeek, weekdayKey } from "../../shared/workoutSplits.js";
+import { sessionMuscles } from "../../shared/workoutLog.js";
+import { BodyMap } from "../../shared/BodyMap.jsx";
 
 export function AthleteOS() {
   const [view, setView] = useState("week");
@@ -425,6 +427,12 @@ export function AthleteOS() {
                         <button onClick={() => deleteWorkout(w.id)} title="Delete" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "6px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
                       </div>
                     </div>
+                    {w.type === "strength" && sessionMuscles(w).length > 0 && (
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BD}` }}>
+                        <BodyMap muscles={sessionMuscles(w)} size={190}
+                          caption={`Worked: ${sessionMuscles(w).map((m) => m.replace("-", " ")).join(" · ")}`} />
+                      </div>
+                    )}
                   </Card>
                 ))}
               </div>

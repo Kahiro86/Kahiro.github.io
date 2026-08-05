@@ -86,3 +86,30 @@ export function commitSession(workouts, session) {
 export function dropSession(workouts, sessionId) {
   return (Array.isArray(workouts) ? workouts : []).filter((w) => w && w.id !== sessionId);
 }
+
+// Roll up muscle work across a date range [fromDs, toDs] inclusive: how many
+// times each group was hit, and how many days since it was last worked (null
+// = never in-range). Powers the weekly Journals view so gaps are visible.
+export const ALL_MUSCLES = ["chest", "back", "shoulders", "arms", "core", "legs", "glutes"];
+export function muscleRollup(workouts, fromDs, toDs, todayDs = toDs) {
+  const counts = {}, lastDs = {};
+  for (const m of ALL_MUSCLES) counts[m] = 0;
+  const inRange = (Array.isArray(workouts) ? workouts : [])
+    .filter((w) => w && w.date && w.date.slice(0, 10) >= fromDs && w.date.slice(0, 10) <= toDs);
+  for (const w of inRange) {
+    const d = w.date.slice(0, 10);
+    // full-body counts toward every group; otherwise the specific groups hit.
+    const groups = sessionMuscles(w);
+    const hit = groups.includes("full-body") ? ALL_MUSCLES : groups;
+    for (const m of hit) {
+      if (counts[m] == null) continue;
+      counts[m] += 1;
+      if (!lastDs[m] || d > lastDs[m]) lastDs[m] = d;
+    }
+  }
+  const daysSince = (ds) => {
+    if (!ds) return null;
+    return Math.round((Date.parse(`${todayDs}T00:00:00`) - Date.parse(`${ds}T00:00:00`)) / 86400000);
+  };
+  return ALL_MUSCLES.map((m) => ({ muscle: m, count: counts[m], daysSince: daysSince(lastDs[m]) }));
+}

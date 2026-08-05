@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { Pencil, Trash2, Download, FolderClosed, FolderOpen } from "lucide-react";
 import { T1, T2, T3, GL, BD, CY, AC } from "../../shared/designTokens.js";
 import { groupIntoFiles, fileToMarkdown, fileExportName, downloadText } from "../../shared/journals.js";
+import { WeeklyMuscleRollup } from "../../shared/WeeklyMuscleRollup.jsx";
 
 export function Journals({ entries, editingEntryId, onEdit, onDelete, relativeDateLabel, today, onExport }) {
   const files = useMemo(() => groupIntoFiles(entries), [entries]);
@@ -23,12 +24,14 @@ export function Journals({ entries, editingEntryId, onEdit, onDelete, relativeDa
     onExport && onExport(file);
   };
 
-  if (!files.length) {
-    return <div style={{ fontSize: 12, color: T3, padding: "6px 2px" }}>No reflections filed yet — save one above and it lands in this month's file.</div>;
-  }
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Weekly workout record — the body map + muscle coverage for the week,
+          filed alongside the written reflections. */}
+      <WeeklyMuscleRollup />
+      {!files.length && (
+        <div style={{ fontSize: 12, color: T3, padding: "6px 2px" }}>No reflections filed yet — save one above and it lands in this month's file.</div>
+      )}
       {files.map((file) => {
         const isOpen = open.has(file.key);
         return (
