@@ -14,6 +14,7 @@ import { WEEKLY_KEY, mondayOf, getPlan } from "./weeklyPlan.js";
 export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm, onAction }) {
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
+  const [showTools, setShowTools] = useState(false); // advanced tools collapsed by default
   const inputRef = useRef(null);
   const listRef = useRef(null);
   // Surfaced daily loop: last night's top-3 and this week's theme, so the
@@ -32,16 +33,23 @@ export function GlobalSearch({ onClose, onNavigate, onOpenWhoIAm, onAction }) {
     focus.forEach((f, i) => rows.push({ id: `focus:${i}`, icon: "◎", title: f, subtitle: "Today's focus", act: "shutdown", _group: "Today" }));
     if (theme) rows.push({ id: "weektheme", icon: "🗓", title: theme, subtitle: "This week's theme", act: "weekly", _group: "Today" });
     for (const r of recentItems({ limit: 5 })) rows.push({ ...r, _group: "Recent" });
-    for (const a of ACTIONS) rows.push({ ...a, _group: "Actions" });
+    // Keep the everyday palette minimal: only the core actions show by default.
+    // The rest live behind one "More tools" toggle — still fully searchable by name.
+    const core = ACTIONS.filter((a) => a.core);
+    const extra = ACTIONS.filter((a) => !a.core);
+    for (const a of core) rows.push({ ...a, _group: "Actions" });
+    if (extra.length) rows.push({ id: "more:tools", icon: "⋯", title: showTools ? "Fewer tools" : "More tools", subtitle: showTools ? "Hide advanced tools" : `${extra.length} more — or just type a name`, _toggle: true, _group: "Actions" });
+    if (showTools) for (const a of extra) rows.push({ ...a, _group: "Tools" });
     for (const p of PAGES) rows.push({ ...p, subtitle: p.subtitle || "Jump to", _group: "Jump to" });
     return rows;
-  }, [q, reviews, plans]);
+  }, [q, reviews, plans, showTools]);
 
   useEffect(() => { setActive(0); }, [q]);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   const go = (r) => {
     if (!r) return;
+    if (r._toggle) { setShowTools((v) => !v); return; } // reveal/hide advanced tools; keep palette open
     if (r.act) { onAction?.(r.act); onClose(); return; }
     if (r.nav === "__whoiam__") { onOpenWhoIAm?.(); onClose(); return; }
     if (r.focus) requestFocus(r.focus); // land on the record's own inner tab

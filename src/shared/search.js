@@ -20,10 +20,10 @@ export const PAGES = [
 // named intent the app routes (see App.jsx onAction). Keyword aliases widen
 // matching without cluttering the visible label.
 export const ACTIONS = [
-  { id: "act:quicklog", type: "Action", title: "Quick Log", subtitle: "Log the day's habits fast", act: "quicklog", icon: "⚡", keywords: "log habit tap tick check mark done quick complete" },
-  { id: "act:shutdown", type: "Action", title: "Evening Shutdown", subtitle: "Close the day + set tomorrow's top 3", act: "shutdown", icon: "🌙", keywords: "evening shutdown night review reflect rating win lesson tomorrow priorities close day" },
+  { id: "act:quicklog", type: "Action", core: true, title: "Quick Log", subtitle: "Log the day's habits fast", act: "quicklog", icon: "⚡", keywords: "log habit tap tick check mark done quick complete" },
+  { id: "act:shutdown", type: "Action", core: true, title: "Evening Shutdown", subtitle: "Close the day + set tomorrow's top 3", act: "shutdown", icon: "🌙", keywords: "evening shutdown night review reflect rating win lesson tomorrow priorities close day" },
   { id: "act:streak", type: "Action", title: "Streak Insurance", subtitle: "Protect a missed day with a token", act: "streak", icon: "🛡", keywords: "streak freeze token protect insurance missed day recovery grace shield consistency" },
-  { id: "act:focus", type: "Action", title: "Focus Session", subtitle: "Start a deep-work timer", act: "focus", icon: "🎯", keywords: "focus timer deep work pomodoro concentrate session 25 50 90 block" },
+  { id: "act:focus", type: "Action", core: true, title: "Focus Session", subtitle: "Start a deep-work timer", act: "focus", icon: "🎯", keywords: "focus timer deep work pomodoro concentrate session 25 50 90 block" },
   { id: "act:weekly", type: "Action", title: "Weekly Plan", subtitle: "Set the week's theme + top 3", act: "weekly", icon: "🗓", keywords: "weekly plan week theme priorities intentions planning monday review" },
   { id: "act:cascade", type: "Action", title: "Goal Cascade", subtitle: "Ladder goals from year to week", act: "cascade", icon: "🪜", keywords: "goal cascade ladder horizon year quarter month week parent rollup align" },
   { id: "act:habitintel", type: "Action", title: "Habit Intelligence", subtitle: "Your patterns by weekday", act: "habitintel", icon: "🧠", keywords: "habit intelligence pattern insight weekday best worst day rate analytics stats" },
@@ -31,7 +31,7 @@ export const ACTIONS = [
   { id: "act:overhead", type: "Action", title: "Overhead & Runway", subtitle: "Monthly burn + runway", act: "overhead", icon: "💸", keywords: "overhead runway burn expenses bills subscriptions monthly cost finance savings recurring" },
   { id: "act:prayer", type: "Action", title: "Prayer List", subtitle: "Requests + answered log", act: "prayer", icon: "🙏", keywords: "prayer list request pray answered faith intercession thanksgiving petition" },
   { id: "act:cards", type: "Action", title: "Flashcards", subtitle: "Spaced-repetition review", act: "cards", icon: "🃏", keywords: "flashcards spaced repetition review recall memory lessons study anki cards learn" },
-  { id: "act:reflect", type: "Action", title: "Reflect", subtitle: "Guided journal entry", act: "reflect", icon: "✍️", keywords: "reflect journal write prompt mood tags diary entry reflection today" },
+  { id: "act:reflect", type: "Action", core: true, title: "Reflect", subtitle: "Guided journal entry", act: "reflect", icon: "✍️", keywords: "reflect journal write prompt mood tags diary entry reflection today" },
   { id: "act:correlations", type: "Action", title: "Correlations", subtitle: "What moves together", act: "correlations", icon: "📈", keywords: "correlation correlations analytics relationship link pattern sleep performance compare signals stats insight" },
   { id: "act:review", type: "Action", title: "Week in Review", subtitle: "Reflect on your week", act: "review", icon: "◔", keywords: "weekly review reflect recap summary retrospective" },
   { id: "act:ai", type: "Action", title: "Ask the AI coach", subtitle: "Open the coach panel", act: "ai", icon: "✦", keywords: "ai coach assistant chat ask claude advice" },
