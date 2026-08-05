@@ -368,11 +368,19 @@ const SERVING_BY_NAME = {
 };
 for (const f of FOOD_DB) if (!f.serving && SERVING_BY_NAME[f.name]) f.serving = SERVING_BY_NAME[f.name];
 
+// Shift-based meal slots — the owner works shifts, so the day splits finer
+// than the classic three. breakfast/lunch/dinner/snack keep their original
+// ids for backward compatibility with already-logged entries; the three
+// shift slots are additive. SLOT_IDS (below) validates against this list, so
+// extending here is all it takes for the day log to group by these types.
 export const SLOTS = [
-  { id: "breakfast", l: "Breakfast", icon: "🌅" },
-  { id: "lunch",     l: "Lunch",     icon: "☀️" },
-  { id: "dinner",    l: "Dinner",    icon: "🌙" },
-  { id: "snack",     l: "Snacks",    icon: "🍎" },
+  { id: "breakfast",   l: "Breakfast",   icon: "🌅" },
+  { id: "mid_morning", l: "Mid-morning", icon: "🥪" },
+  { id: "lunch",       l: "Lunch",       icon: "☀️" },
+  { id: "mid_shift",   l: "Mid-shift",   icon: "🍵" },
+  { id: "post_shift",  l: "Post-shift",  icon: "🥤" },
+  { id: "dinner",      l: "Dinner",      icon: "🌙" },
+  { id: "snack",       l: "Snacks",      icon: "🍎" },
 ];
 
 // ── Goals & targets (Mifflin-St Jeor + goal presets) ─────────────────
@@ -607,9 +615,11 @@ export function frequentEntries(log, days = 30, limit = 6) {
 // Which meal slot "now" most likely belongs to — lets one-tap logging
 // skip the where question entirely.
 export function slotForNow(hour = new Date().getHours()) {
-  if (hour < 11) return "breakfast";
+  if (hour < 10) return "breakfast";
+  if (hour < 12) return "mid_morning";
   if (hour < 15) return "lunch";
-  if (hour < 18) return "snack";
+  if (hour < 18) return "mid_shift";
+  if (hour < 21) return "post_shift";
   return "dinner";
 }
 
