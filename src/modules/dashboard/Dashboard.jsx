@@ -89,6 +89,10 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [firmWithdrawals] = useStorageState("firm_withdrawals", []);
   const [logins] = useStorageState("xp_logins", {});
   const [freezes] = useStorageState("streak_freezes", { frozen: [] });
+  // Declutter: the bottom analytical stack (progression, streaks, finance,
+  // health) folds behind one toggle so the daily screen stays a glance. The
+  // preference persists — set it once. Everything is still one tap away.
+  const [moreOpen, setMoreOpen] = useStorageState("dash_show_more", false);
   const { start: consistencyStart } = useConsistencyStart(logins);
   // `xp`'s memo only recomputes when a watched store changes — with zero
   // interaction across a passive midnight the Day N counter would otherwise
@@ -472,6 +476,19 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         </div>
       )}
 
+      {/* ── ▾ THE FULL COCKPIT — folded by default so the daily view stays
+             a glance. Progression, streaks, finance/trading, and system
+             health all live one tap away here. ── */}
+      <button onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} aria-label={moreOpen ? "Hide the full cockpit" : "Show the full cockpit"}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "none", border: `1px dashed ${BD}`, borderRadius: 12, padding: "12px 0", color: T3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", transition: "border-color .2s ease, color .2s ease" }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${AC}66`; e.currentTarget.style.color = T2; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = BD; e.currentTarget.style.color = T3; }}>
+        <ChevronRight size={14} style={{ transform: moreOpen ? "rotate(90deg)" : "none", transition: "transform .2s ease" }} />
+        {moreOpen ? "Hide details" : "More — progression · streaks · finance · health"}
+      </button>
+
+      {moreOpen && (<>
+
       {/* ── 🏆 XP / PROGRESSION (Life Score now lives in The Man pillar) ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 14 }}>
         <StatCard onClick={() => onNavigate("journey")}>
@@ -565,6 +582,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
           ))}
         </div>
       </div>
+
+      </>)}
 
       {/* ── 📅 WEEK IN REVIEW — the reflective bookend ── */}
       {onOpenReview && (
