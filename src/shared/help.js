@@ -19,7 +19,7 @@ export const TOUR_OVERVIEW = {
     { target: "nav-faith", module: "dashboard", title: "Faith & Mind", body: "The inner build: scripture memory & devotion, reading momentum, and a decision journal." },
     { target: "nav-journey", module: "dashboard", title: "Journey", body: "Your goals, want list, and the Hall of Fame — level, XP and achievements earned from everything you do." },
     { target: "nav-analytics", module: "dashboard", title: "Analytics", body: "The mirror. Trends and patterns across every module, so the numbers tell you the truth." },
-    { target: "help-btn", module: "dashboard", title: "Help is always here", body: "Tap this anytime to open the Help Centre, turn on Help Mode, or replay this tour. You can never get lost." },
+    { target: "more-btn", module: "dashboard", title: "Help is always here", body: "The More (⋯) menu holds Search, Who I Am, and Help — open it anytime to reach the Help Centre, turn on Help Mode, or replay this tour. You can never get lost." },
     { title: "You're set", body: "That's the whole map. Don't try to master it all today — pick one habit, log it, and come back tomorrow. Momentum compounds." },
   ],
 };

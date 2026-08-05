@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { AC2, T1, T2, T3, GL, BD, B1, B2, GR, AM } from "./designTokens.js";
 import { useModeState } from "./useModeState.js";
-import { MODE_META } from "./modes.js";
+import { MODE_META, godScore, scoreTier } from "./modes.js";
 import { ModeTutorial } from "./ModeTutorial.jsx";
 
 const TONE = {
@@ -22,8 +22,12 @@ export function ModeIndicator() {
   const { mode, result, statuses } = useModeState();
   const [open, setOpen] = useState(false);
   const [tut, setTut] = useState(null); // "god" | "hell"
+  // Single-spectrum God score drives the badge; colour follows the score tier,
+  // while the veil/detail below still use the discrete `mode`.
+  const score = godScore(statuses);
+  const tier = scoreTier(score);
   const meta = MODE_META[mode] || MODE_META.normal;
-  const tone = TONE[mode] || TONE.normal;
+  const tone = TONE[tier] || TONE.normal;
 
   // Broadcast the state so the global stylesheet can apply the subtle veil.
   useEffect(() => {
@@ -42,11 +46,21 @@ export function ModeIndicator() {
     <>
       <button
         onClick={() => setOpen(true)}
-        aria-label={`Day state: ${meta.label}. View detail.`}
-        title={`${meta.label} — tap for detail`}
-        style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, border: `1px solid ${tone.bd}`, background: tone.bg, color: tone.fg, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 800, letterSpacing: 1 }}
+        aria-label={`God score ${score == null ? "not yet scored" : score + " percent"}. View detail.`}
+        title={`God score${score == null ? "" : ` ${score}%`} — tap for detail`}
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, border: `1px solid ${tone.bd}`, background: tone.bg, color: tone.fg, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 800, letterSpacing: 0.5 }}
       >
-        <span style={{ fontSize: 12, lineHeight: 1 }}>{meta.glyph}</span>{meta.label}
+        <span style={{ fontSize: 12, lineHeight: 1 }}>{MODE_META[tier]?.glyph || meta.glyph}</span>
+        {score == null ? (
+          <span style={{ letterSpacing: 1 }}>GOD —</span>
+        ) : (
+          <>
+            <span style={{ width: 30, height: 4, borderRadius: 2, background: `${tone.fg}22`, overflow: "hidden", flexShrink: 0 }}>
+              <span style={{ display: "block", height: "100%", width: `${score}%`, background: tone.fg }} />
+            </span>
+            <span style={{ fontFamily: "monospace" }}>{score}%</span>
+          </>
+        )}
       </button>
 
       {open && (
@@ -54,7 +68,7 @@ export function ModeIndicator() {
           <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 400, background: B1, border: `1px solid ${BD}`, borderRadius: 16, padding: "18px 18px 16px", boxShadow: "0 18px 50px rgba(0,0,0,0.6)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 4 }}>
               <span style={{ fontSize: 15, color: tone.fg }}>{meta.glyph}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: 1, color: tone.fg }}>{meta.label}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: 1, color: tone.fg }}>{meta.label}{score != null ? ` · ${score}%` : ""}</span>
               <button onClick={() => setOpen(false)} aria-label="Close" style={{ marginLeft: "auto", background: "none", border: "none", color: T3, fontSize: 18, cursor: "pointer", lineHeight: 1 }}>✕</button>
             </div>
             <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.55, marginBottom: 13 }}>

@@ -89,6 +89,28 @@ export function resolveClosingMode(result) {
   return { mode: result.mode, ambiguous: false };
 }
 
+// ── Single-spectrum God score (0–100) ───────────────────────────────
+// One continuous number instead of a two/three-state label: how clean the
+// day's active gates are. A pass is full credit, a still-pending gate half
+// (there's time), a failure none — so the score climbs through the day as
+// gates close. 100 = every active gate clean (God); low = gates failing.
+// Returns null when no gate is active (nothing to score yet).
+export function godScore(statuses) {
+  const active = (Array.isArray(statuses) ? statuses : []).filter((s) => s && s.status !== "off");
+  if (!active.length) return null;
+  const credit = active.reduce((s, g) => s + (g.status === "pass" ? 1 : g.status === "incomplete" ? 0.5 : 0), 0);
+  return Math.round((credit / active.length) * 100);
+}
+
+// The tone tier a score falls in — drives colour only; the veil/detail still
+// use the discrete `mode`. High = gold (near-God), low = heavy (near-Hell).
+export function scoreTier(score) {
+  if (score == null) return "normal";
+  if (score >= 85) return "god";
+  if (score >= 50) return "normal";
+  return "hell";
+}
+
 // ── Mode metadata for the UI (labels + restrained treatment) ─────────
 export const MODE_META = {
   god: { label: "GOD", glyph: "◆", tone: "gold" },
