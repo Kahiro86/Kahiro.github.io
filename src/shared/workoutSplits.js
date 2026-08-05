@@ -7,13 +7,19 @@
 const uid = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
 export const EX_TYPES = ["bodyweight", "weighted", "cardio", "mobility"];
+// Muscle groups an exercise trains — set once per exercise in the template,
+// carried onto every logged entry, and rolled up into the body map + Journals.
+export const MUSCLES = ["chest", "back", "shoulders", "arms", "core", "legs", "glutes", "full-body"];
 export const WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const DAY_LABEL = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
 
 const DEFAULT_NAMES = ["Upper + Core", "Lower + Core", "Rest", "Full Body", "Cardio", "Mobility", "Recovery"];
 
 export const newExercise = (patch = {}) => ({
-  id: uid("ex"), name: "", type: "weighted", sets: "", reps: "", duration: "", note: "", giantSetId: null, ...patch,
+  // `muscle`: which group it trains (for the body map). `weight`: an optional
+  // suggested starting load (kg) used to pre-fill the log when there's no
+  // history yet. Both are template-level, set once, never re-entered per log.
+  id: uid("ex"), name: "", type: "weighted", muscle: "", sets: "", reps: "", weight: "", duration: "", note: "", giantSetId: null, ...patch,
 });
 export const newSplit = (name = "New split") => ({ id: uid("sp"), name, exercises: [] });
 
@@ -29,8 +35,10 @@ export function sanitizeSplits(raw) {
       id: typeof e.id === "string" ? e.id : uid("ex"),
       name: typeof e.name === "string" ? e.name.slice(0, 60) : "",
       type: EX_TYPES.includes(e.type) ? e.type : "weighted",
+      muscle: MUSCLES.includes(e.muscle) ? e.muscle : "",
       sets: e.sets == null ? "" : String(e.sets).slice(0, 6),
       reps: e.reps == null ? "" : String(e.reps).slice(0, 12),
+      weight: e.weight == null ? "" : String(e.weight).slice(0, 6),
       duration: e.duration == null ? "" : String(e.duration).slice(0, 12),
       note: typeof e.note === "string" ? e.note.slice(0, 120) : "",
       giantSetId: typeof e.giantSetId === "string" ? e.giantSetId : null,

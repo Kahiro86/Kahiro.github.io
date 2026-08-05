@@ -22,6 +22,7 @@ import { useStorageState } from "./useStorageState.js";
 import { useToast } from "./toast.jsx";
 import { sanitizeNutrition, sanitizeFoods, dayEntries, newEntry, FOOD_DB, SLOTS } from "../modules/athlete/nutrition.js";
 import { sanitizeSplits } from "./workoutSplits.js";
+import { seedLoggedExercise, lastWeightFor, withVolume } from "./workoutLog.js";
 
 const nowTime = () => new Date().toTimeString().slice(0, 5);
 const rid = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`;
@@ -146,16 +147,6 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
   // athlete log only surfaces an exercises[] array for strength sessions. The
   // split's own name (Cardio, Mobility, …) keeps the session's identity, so
   // typing it strength never hides what was logged.
-  const sessionTypeFor = () => "strength";
-  const seedSets = (tplEx) => {
-    const count = Math.min(12, Math.max(1, parseInt(tplEx.sets, 10) || 1));
-    const reps = tplEx.reps != null ? String(tplEx.reps) : "";
-    return Array.from({ length: count }, () => ({ reps, weight: "" }));
-  };
-  const withVolume = (session) => ({
-    ...session,
-    totalVolume: (session.exercises || []).reduce((s, e) => s + (e.sets || []).reduce((ss, st) => ss + (+st.reps || 0) * (+st.weight || 0), 0), 0),
-  });
   const commitSession = (session) => {
     const next = withVolume(session);
     setWorkouts((prev) => {
@@ -167,12 +158,14 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
   };
   const addExercise = (tplEx) => {
     if (!selectedSplit) return;
-    const logged = { id: rid("le"), name: tplEx.name || "Exercise", exType: tplEx.type, sets: seedSets(tplEx) };
+    // Same shape the split checklist writes (tplId + muscle + weight pre-fill),
+    // so an exercise added here shows as done on the checklist and vice versa.
+    const logged = seedLoggedExercise(tplEx, lastWeightFor(workouts, tplEx.name));
     if (todaySession) {
       commitSession({ ...todaySession, exercises: [...(todaySession.exercises || []), logged] });
     } else {
       commitSession({
-        id: rid("w"), type: sessionTypeFor(selectedSplit), name: selectedSplit.name, splitId: selectedSplit.id,
+        id: rid("w"), type: "strength", name: selectedSplit.name, splitId: selectedSplit.id,
         date: ds, duration: 0, distance: 0, intensity: "Moderate", notes: "", createdAt: new Date().toISOString(),
         exercises: [logged], totalVolume: 0,
       });
