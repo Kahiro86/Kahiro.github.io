@@ -1,0 +1,1 @@
+import{r as s}from"./vendor-react-W1izUqcL.js";let e=null;const n=new Set;let o=null;function a(t){e=t?{...t,nonce:Date.now()}:null,n.forEach(u=>u(e)),clearTimeout(o),e&&(o=setTimeout(()=>{e=null},4e3))}function f(){const[t,u]=s.useState(e);return s.useEffect(()=>{const r=c=>u(c);return n.add(r),()=>n.delete(r)},[]),t}export{a as r,f as u};

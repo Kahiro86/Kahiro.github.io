@@ -10,10 +10,14 @@
 <link rel="manifest" href="./assets/manifest-CJne7GIr.webmanifest">
 <link rel="icon" type="image/png" href="./assets/icon-192-Cn1uWuTJ.png">
 <link rel="apple-touch-icon" href="./assets/icon-192-Cn1uWuTJ.png">
+<!-- Self-hosted, latin-subset fonts (offline-first, no CDN round-trip). Preload
+     only the faces on the first-paint critical path; the rest load on demand. -->
+<link rel="preload" as="font" type="font/woff2" href="./fonts/inter-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="./fonts/inter-700.woff2" crossorigin>
+<link rel="stylesheet" href="./fonts/fonts.css">
 <title>Kahiro — Kaizen OS</title>
-  <script type="module" crossorigin src="./assets/index.dev-CK1ugzWk.js"></script>
+  <script type="module" crossorigin src="./assets/index.dev-DBI9FqwP.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-react-W1izUqcL.js">
-  <link rel="modulepreload" crossorigin href="./assets/vendor-supabase-CipMJ7lf.js">
 </head>
 <body>
 <div id="root"></div>
