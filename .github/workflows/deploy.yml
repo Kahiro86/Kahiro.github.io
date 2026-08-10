@@ -1,11 +1,8 @@
 name: Build and Deploy to GitHub Pages
 
-# NOTE: Pages "Source" is currently "Deploy from a branch" (main /root), so the
-# app is served from the committed build at the repo root. This Actions deploy
-# would publish to a *different* Pages target and conflict with the branch
-# build, so its automatic push trigger is disabled. Re-enable it (and remove
-# the root build) once Pages Source is switched to "GitHub Actions".
 on:
+  push:
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
