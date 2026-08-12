@@ -42,6 +42,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const [routineDraft, setRoutineDraft] = useState(null);
   const [insightHabit, setInsightHabit] = useState(null);
   const [journal, setJournal] = useState("");
+  const [journalTitle, setJournalTitle] = useState("");
   const [journalDs, setJournalDs] = useState(() => today());
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [rawEntries, setEntries] = useStorageState("journal_entries", []);
@@ -147,26 +148,30 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   };
   const saveEntry = () => {
     if (!journal.trim()) return;
+    const title = journalTitle.trim();
     if (editingEntryId) {
       setEntries((prev) => (Array.isArray(prev) ? prev : []).map((e) =>
-        e?.id === editingEntryId ? { ...e, date: journalDs, text: journal, editedAt: new Date().toISOString() } : e));
+        e?.id === editingEntryId ? { ...e, date: journalDs, title, text: journal, editedAt: new Date().toISOString() } : e));
       toast("Reflection updated ✍️", { tone: "success", duration: 2500 });
     } else {
-      setEntries((prev) => [{ id: `j${Date.now()}`, date: journalDs, text: journal }, ...prev]);
+      setEntries((prev) => [{ id: `j${Date.now()}`, date: journalDs, title, text: journal }, ...prev]);
       toast("Reflection saved 🌱", { tone: "success", duration: 2500 });
     }
     setEditingEntryId(null);
     setJournalDs(today());
     setJournal("");
+    setJournalTitle("");
   };
   const startEditEntry = (e) => {
     setEditingEntryId(e.id);
+    setJournalTitle(e.title || "");
     setJournal(e.text || "");
     setJournalDs((e.date || today()).slice(0, 10));
   };
   const cancelEditEntry = () => {
     setEditingEntryId(null);
     setJournal("");
+    setJournalTitle("");
     setJournalDs(today());
   };
   const deleteEntry = (id) => {
@@ -698,6 +703,8 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
                   </button>
                 ))}
               </div>
+              <input value={journalTitle} onChange={(e) => setJournalTitle(e.target.value)} placeholder="Title (optional)"
+                style={{ width: "100%", background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "10px 13px", fontSize: 14, fontWeight: 700, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 8 }} />
               <textarea value={journal} onChange={(e) => setJournal(e.target.value)} placeholder="One honest sentence is enough. What improved today?"
                 style={{ width: "100%", minHeight: 110, background: GL, border: `1px solid ${BD}`, borderRadius: 10, padding: "11px 13px", fontSize: 13, color: T1, lineHeight: 1.7, resize: "none", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
               <div style={{ display: "flex", gap: 8, marginTop: 9 }}>

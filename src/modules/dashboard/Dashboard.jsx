@@ -109,8 +109,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   // (a planned day off is a day done) and protected days count. One shared
   // definition (see consistencyOpts).
   const csOpts = useMemo(
-    () => consistencyOpts({ habits: habitsV2, marks: dayMarks, freezes }),
-    [habitsV2, dayMarks, freezes]
+    () => consistencyOpts({ habits: habitsV2, marks: dayMarks, freezes, lifeDays: xp.lifeDays, fitnessDays: xp.fitnessDays }),
+    [habitsV2, dayMarks, freezes, xp.lifeDays, xp.fitnessDays]
   );
   const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, nowDs, csOpts), [xp.byDay, consistencyStart, nowDs, csOpts]);
   const totalAct = totalActivities(xp.stats);

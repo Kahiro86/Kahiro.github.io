@@ -55,6 +55,7 @@ export function Journals({ entries, editingEntryId, onEdit, onDelete, relativeDa
                         {relativeDateLabel((e.date || "").slice(0, 10) || today())}
                         {e.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}
                       </div>
+                      {e.title && <div style={{ fontSize: 14, fontWeight: 700, color: T1, marginBottom: 4, lineHeight: 1.35 }}>{e.title}</div>}
                       <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{e.text}</div>
                     </div>
                     <button onClick={() => onEdit(e)} title="Edit entry" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", alignSelf: "flex-start", padding: 2 }}><Pencil size={11} /></button>

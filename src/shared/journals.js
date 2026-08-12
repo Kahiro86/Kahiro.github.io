@@ -51,7 +51,9 @@ export function fileToMarkdown(file) {
   const lines = [`# Journal — ${file.label}`, ""];
   for (const e of file.entries) {
     const d = (e.date || "").slice(0, 10) || "undated";
-    lines.push(`## ${d}${e.editedAt ? " · (edited)" : ""}`, "", (e.text || "").trim(), "");
+    lines.push(`## ${d}${e.editedAt ? " · (edited)" : ""}`, "");
+    if (e.title) lines.push(`**${String(e.title).trim()}**`, "");
+    lines.push((e.text || "").trim(), "");
   }
   return lines.join("\n");
 }

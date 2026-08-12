@@ -203,8 +203,8 @@ function HallOfFame({ xp }) {
   // Same definition of "a day that counts" as the Command Center — rest/cheat
   // and protected days count.
   const csOpts = useMemo(
-    () => consistencyOpts({ habits: migrateHabits(rawHabits), marks: dayMarks, freezes }),
-    [rawHabits, dayMarks, freezes]
+    () => consistencyOpts({ habits: migrateHabits(rawHabits), marks: dayMarks, freezes, lifeDays: xp.lifeDays, fitnessDays: xp.fitnessDays }),
+    [rawHabits, dayMarks, freezes, xp.lifeDays, xp.fitnessDays]
   );
   const cs = useMemo(() => consistencyStats(xp.byDay || {}, consistencyStart, undefined, csOpts), [xp.byDay, consistencyStart, csOpts]);
   const totalAct = totalActivities(xp.stats);

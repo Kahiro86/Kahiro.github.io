@@ -264,8 +264,10 @@ export function computeXp(deps = {}) {
     if (m.done && d && V.mission[m.level]) push(d, V.mission[m.level], "life");
   }
 
-  // Life — daily check-in (auto-stamped once per app-open day).
-  for (const d of Object.keys(sanitizeLogins(deps.logins))) push(d, V.login, "life");
+  // Life — daily check-in (auto-stamped once per app-open day). Flagged
+  // `login:true` so it still earns its XP, but the Year of Consistency engine
+  // can exclude a bare app-open from counting as real activity.
+  for (const d of Object.keys(sanitizeLogins(deps.logins))) events.push({ d, xp: V.login, c: "life", login: true });
 
   // Trading — logged trades (capped/day) + process quality + reviews.
   const perDayTrades = {};
@@ -448,17 +450,24 @@ export function computeXp(deps = {}) {
   // ── Aggregate ───────────────────────────────────────────────────────
   let total = 0, streakXp = 0;
   const byDay = {}, byCat = {}, todayByCat = {};
+  // Per-day real-activity sets by domain (login excluded). "Life" = habits,
+  // journal, purity, missions, projects; "fitness" = workouts, nutrition,
+  // measurements. The Year of Consistency engine reads these to require a
+  // genuine action — not a bare app-open — in both domains.
+  const lifeDays = new Set(), fitnessDays = new Set();
   for (const e of events) {
     total += e.xp;
     byDay[e.d] = (byDay[e.d] || 0) + e.xp;
     byCat[e.c] = (byCat[e.c] || 0) + e.xp;
     if (e.d === today) todayByCat[e.c] = (todayByCat[e.c] || 0) + e.xp;
     if (e.s) streakXp += e.xp;
+    if (e.c === "life" && !e.login) lifeDays.add(e.d);
+    else if (e.c === "fitness") fitnessDays.add(e.d);
   }
-  // A "consistency day" = any day that earned XP anywhere (the same definition
-  // the Year of Consistency engine uses). Set after aggregation so the journey
-  // can read it.
-  stats.consistencyDays = Object.values(byDay).filter((x) => x > 0).length;
+  // A "consistency day" = real activity in BOTH Life and Athlete that day
+  // (a bare app-open no longer qualifies). Set after aggregation so the
+  // journey milestone matches what the consistency card shows.
+  stats.consistencyDays = [...lifeDays].filter((d) => fitnessDays.has(d)).length;
 
   // Level straight from earned XP on the normal curve.
   const level = levelOfXp(total);
@@ -507,7 +516,7 @@ export function computeXp(deps = {}) {
     stats, journeys,
     total, level, title: titleOf(level), prevLevelXp, nextLevelXp,
     pctToNext: Math.min(100, Math.round(((total - prevLevelXp) / Math.max(1, nextLevelXp - prevLevelXp)) * 100)),
-    byCat, byDay, todayByCat, streakXp, weekly, achievements, newly,
+    byCat, byDay, todayByCat, streakXp, weekly, achievements, newly, lifeDays, fitnessDays,
     today: byDay[today] || 0,
     week: sumSince(daysAgoStr(6)),
     month: sumSince(`${today.slice(0, 7)}-01`),
