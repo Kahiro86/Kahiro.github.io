@@ -1,1 +1,0 @@
-import{f as c}from"./consistency-CwOw3-xE.js";function s({habits:f=[],marks:t={},freezes:n=null}={}){const o=new Set([...(t==null?void 0:t.rest)||[],...(t==null?void 0:t.cheat)||[]]),u=c(n);return{isFull:e=>{if(o.has(e)||u.has(e))return!0}}}export{s as c};
