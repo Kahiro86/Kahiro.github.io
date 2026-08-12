@@ -15,7 +15,7 @@ export function HabitEditor({ habit, categories, onSave, onCancel }) {
   const toggleDay = (i) => set("days", d.days.includes(i) ? d.days.filter((x) => x !== i) : [...d.days, i].sort());
   const daily = d.days.length === 7;
   const weekly = d.freq === "weekly";
-  const PILLARS = [{ v: null, l: "None" }, { v: "wellness", l: "🌿 Wellness" }, { v: "nonneg", l: "🎯 Non-negotiable" }];
+  const PILLARS = [{ v: null, l: "None" }, { v: "wellness", l: "🌿 Wellness" }, { v: "nonneg", l: "🎯 Non-neg" }, { v: "onepct", l: "💎 1%" }];
 
   const inp = { width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "9px 11px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
   const lbl = { fontSize: 10, color: T3, letterSpacing: 0.5, textTransform: "uppercase", display: "block", marginBottom: 5 };

@@ -28,7 +28,7 @@ export const newHabit = (patch = {}) => ({
   weeklyTarget: 3,             // completions per week when freq === "weekly"
   target: 1,                   // completions/quantity per day (1 = simple check)
   unit: "",                    // e.g. "L", "pages", "steps" — for target > 1
-  pillar: null,                // null | "wellness" | "nonneg" — surfaces specially in Life OS
+  pillar: null,                // null | "wellness" | "nonneg" | "onepct" — surfaces as its own tier in Life OS
   notes: "",
   paused: false,
   archived: false,
@@ -50,8 +50,17 @@ const WELLNESS_PRESETS = [
   { name: "Hydration", icon: "💧", color: CY, category: "Health", target: 2, unit: "L" },
   { name: "Prayer & Bible study", icon: "📖", color: GR, category: "Spiritual", target: 15, unit: "min", wellnessMin: 15 },
 ];
+// The 1% tier — habits only the disciplined few actually commit to. Tracked
+// quant + qual (a graph each), same as the other elite tiers.
+const ONEPCT_PRESETS = [
+  { name: "Cold exposure", icon: "🧊", color: CY, category: "Health" },
+  { name: "5 AM wake-up", icon: "☀️", color: AM, category: "Morning Routine" },
+  { name: "Deep work", icon: "🎯", color: PU, category: "Productivity", target: 90, unit: "min" },
+  { name: "Read", icon: "📖", color: GR, category: "Learning", target: 20, unit: "pages" },
+];
 export const makeNonNeg = () => NONNEG_PRESETS.map((p) => newHabit({ ...p, pillar: "nonneg" }));
 export const makeWellness = () => WELLNESS_PRESETS.map((p) => newHabit({ ...p, pillar: "wellness" }));
+export const makeOnePct = () => ONEPCT_PRESETS.map((p) => newHabit({ ...p, pillar: "onepct" }));
 
 // ── Migration: v1 habits had { name, icon, history:[dates], done, streak } ──
 // Defensive: silently drops null / non-object / nameless entries so one
@@ -204,6 +213,7 @@ export function weeklyStreak(h) {
 
 export const isWellness = (h) => h.pillar === "wellness";
 export const isNonNeg = (h) => h.pillar === "nonneg";
+export const isOnePct = (h) => h.pillar === "onepct";
 
 // A perfect day: every active habit scheduled that day was completed.
 export function perfectDays(habits, daysBack = 365) {

@@ -20,11 +20,10 @@ import {
   newHabit, newRoutine, isScheduled, isDone, isSkipped, valueOn, tapHabit, toggleSkip, setHabitValue,
   currentStreak, longestStreak, rangeStats, totalCompletions, perfectDays,
   xpOf, levelOf, xpForLevel, badges, completeRoutine, routineProgress,
-  isWeekly, weekProgress, weeklyStreak, isWellness, isNonNeg, makeNonNeg, makeWellness,
+  isWeekly, weekProgress, weeklyStreak, isWellness, isNonNeg, isOnePct, makeNonNeg, makeWellness, makeOnePct,
 } from "../../shared/habitEngine.js";
 import { HabitEditor } from "./HabitEditor.jsx";
-import { WellnessPanel } from "./WellnessPanel.jsx";
-import { NonNegotiables } from "./NonNegotiables.jsx";
+import { TierPanel } from "./TierPanel.jsx";
 import { PurityTab } from "./PurityTab.jsx";
 import { Journals } from "./Journals.jsx";
 import { ModeHistoryStrip } from "../../shared/ModeHistoryStrip.jsx";
@@ -79,14 +78,15 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   // the real today), which the Routines/Insights tabs still use as-is.
   const [viewDs, setViewDs] = useState(() => today());
 
-  // Pillar groupings — surfaced in dedicated sections, not the category list.
-  const wellnessHabits = active.filter(isWellness);
+  // Pillar groupings — surfaced in dedicated graphed sections, not the list.
+  const wellnessHabits = active.filter((h) => isWellness(h) && !isWeekly(h));
   const nonNegHabits = active.filter((h) => isNonNeg(h) && !isWeekly(h));
+  const onePctHabits = active.filter((h) => isOnePct(h) && !isWeekly(h));
   const weeklyHabits = active.filter(isWeekly);
 
   // Today's schedule (all daily habits feed the ring; pillars render separately)
   const scheduledToday = active.filter((h) => isScheduled(h, viewDs));
-  const catHabitsToday = scheduledToday.filter((h) => !isWellness(h) && !isNonNeg(h));
+  const catHabitsToday = scheduledToday.filter((h) => !isWellness(h) && !isNonNeg(h) && !isOnePct(h));
   const categories = [...new Set(catHabitsToday.map((h) => h.category))];
   const doneToday = scheduledToday.filter((h) => isDone(h, viewDs));
   const skippedToday = scheduledToday.filter((h) => isSkipped(h, viewDs) && !isDone(h, viewDs));
@@ -113,11 +113,16 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const skip = (h) => setHabits((prev) => toggleSkip(prev, h.id, viewDs));
   const setValue = (id, v) => setHabits((prev) => setHabitValue(prev, id, v, viewDs));
   const tapId = (id) => setHabits((prev) => tapHabit(prev, id, viewDs));
+  const PACKS = {
+    nonneg: { is: isNonNeg, make: makeNonNeg, label: "Non-Negotiables" },
+    wellness: { is: isWellness, make: makeWellness, label: "Wellness trackers" },
+    onepct: { is: isOnePct, make: makeOnePct, label: "The 1%" },
+  };
   const addStarterPack = (kind) => {
-    const has = habits.some((h) => (kind === "nonneg" ? isNonNeg(h) : isWellness(h)) && !h.archived);
-    if (has) { toast(`${kind === "nonneg" ? "Non-Negotiables" : "Wellness"} already set up`, { tone: "info" }); return; }
-    setHabits((prev) => [...prev, ...(kind === "nonneg" ? makeNonNeg() : makeWellness())]);
-    toast(`${kind === "nonneg" ? "Non-Negotiables" : "Wellness trackers"} added 🌿`, { tone: "success" });
+    const p = PACKS[kind]; if (!p) return;
+    if (habits.some((h) => p.is(h) && !h.archived)) { toast(`${p.label} already set up`, { tone: "info" }); return; }
+    setHabits((prev) => [...prev, ...p.make()]);
+    toast(`${p.label} added`, { tone: "success" });
   };
   const saveHabit = (h) => {
     const isEdit = habits.some((x) => x.id === h.id);
@@ -338,8 +343,9 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               </Collapse>
             )}
 
-            {nonNegHabits.length > 0 && <NonNegotiables habits={nonNegHabits} onTap={tapId} ds={viewDs} />}
-            {wellnessHabits.length > 0 && <WellnessPanel habits={wellnessHabits} onSetValue={setValue} ds={viewDs} />}
+            {nonNegHabits.length > 0 && <TierPanel habits={nonNegHabits} title="Non-Negotiables" sub="The lines you don't cross — no exceptions" accent={RE} onTap={tapId} onSetValue={setValue} ds={viewDs} />}
+            {onePctHabits.length > 0 && <TierPanel habits={onePctHabits} title="The 1%" sub="The habits only the 1% commit to" accent={AC} onTap={tapId} onSetValue={setValue} ds={viewDs} />}
+            {wellnessHabits.length > 0 && <TierPanel habits={wellnessHabits} title="Wellness" sub="Sleep · hydration · recovery" accent={PU} onTap={tapId} onSetValue={setValue} ds={viewDs} />}
 
             {weeklyHabits.length > 0 && (
               <Collapse id="life_weekly" title="Weekly" sub="resets Sunday"
@@ -454,10 +460,13 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               </Card>
             )}
 
-            {!editing && (nonNegHabits.length === 0 || wellnessHabits.length === 0) && (
+            {!editing && (nonNegHabits.length === 0 || wellnessHabits.length === 0 || onePctHabits.length === 0) && (
               <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
                 {nonNegHabits.length === 0 && (
                   <button onClick={() => addStarterPack("nonneg")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${RE}12`, border: `1px dashed ${RE}44`, borderRadius: 10, color: RE, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add Non-Negotiables pack</button>
+                )}
+                {onePctHabits.length === 0 && (
+                  <button onClick={() => addStarterPack("onepct")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${AC}12`, border: `1px dashed ${AC}44`, borderRadius: 10, color: AC, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add The 1% pack</button>
                 )}
                 {wellnessHabits.length === 0 && (
                   <button onClick={() => addStarterPack("wellness")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: `${CY}12`, border: `1px dashed ${CY}44`, borderRadius: 10, color: CY, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}><Plus size={13} />Add Wellness trackers</button>
