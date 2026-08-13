@@ -8,6 +8,7 @@ export const PAGES = [
   { id: "page:dashboard", type: "Page", title: "Home", subtitle: "Command Center — your daily cockpit", nav: "dashboard", icon: "◎", keywords: "home command center dashboard cockpit today" },
   { id: "page:life", type: "Page", title: "Life", subtitle: "Habits · Nutrition · Journal · Today", nav: "life", icon: "◍", keywords: "life os habits nutrition journal purity today" },
   { id: "page:firm", type: "Page", title: "The Firm", subtitle: "Trading · Wealth · HQ", nav: "firm", icon: "▲" },
+  { id: "page:gym", type: "Page", title: "Gym", subtitle: "Log workouts · sets · PRs", nav: "gym", icon: "🏋", keywords: "gym workout lift training exercise sets reps sessions strength muscle iron" },
   { id: "page:faith", type: "Page", title: "Faith & Mind", subtitle: "Scripture · Reading · Decisions", nav: "faith", icon: "✦" },
   { id: "page:calendar", type: "Page", title: "Calendar", nav: "calendar", icon: "▦" },
   { id: "page:journey", type: "Page", title: "Journey", subtitle: "Hall of Fame · Want List · Goals", nav: "journey", icon: "◆" },

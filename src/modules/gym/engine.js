@@ -41,9 +41,11 @@ export {
   xpRequiredForLevel,
   levelFromTotalXp,
   rankForMuscleXp,
-  // PRs
+  // PRs + history recording (replayed to rebuild PR context from sessions)
   detectPrs,
   detectBodyweightPrs,
+  recordSetIntoHistory,
+  recordBodyweightIntoHistory,
   // compound (user-defined multi-movement exercises)
   createCompoundExercise,
   getCompoundExercise,

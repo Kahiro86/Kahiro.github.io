@@ -1,4 +1,4 @@
-import { Layers, Target, Church, BarChart3, Trophy, Building2, CalendarDays } from "lucide-react";
+import { Layers, Target, Church, BarChart3, Trophy, Building2, CalendarDays, Dumbbell } from "lucide-react";
 
 // ONE workspace, many lenses. The app used to fan out into seven separate
 // top-level modules; it is now a single system ("Kaizen OS") you look at
@@ -17,6 +17,7 @@ export const NAV = [
   { id: "dashboard", label: "Home",         icon: Layers,      section: "Home" },
   { id: "firm",      label: "The Firm",     icon: Building2,   section: "Facets" },
   { id: "life",      label: "Life",         icon: Target,      section: "Facets" },
+  { id: "gym",       label: "Gym",          icon: Dumbbell,    section: "Facets" },
   { id: "faith",     label: "Faith & Mind", icon: Church,      section: "Facets" },
   { id: "calendar",  label: "Calendar",     icon: CalendarDays, section: "Facets" },
   { id: "journey",   label: "Journey",      icon: Trophy,      section: "Facets" },

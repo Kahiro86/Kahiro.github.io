@@ -31,6 +31,7 @@ const AnalyticsOS = lazy(() => import("./modules/analytics/AnalyticsOS.jsx").the
 const JourneyModule = lazy(() => import("./modules/journey/JourneyModule.jsx").then((m) => ({ default: m.JourneyModule })));
 const FirmOS = lazy(() => import("./modules/firm/FirmOS.jsx").then((m) => ({ default: m.FirmOS })));
 const CalendarModule = lazy(() => import("./modules/calendar/CalendarModule.jsx").then((m) => ({ default: m.CalendarModule })));
+const GymOS = lazy(() => import("./modules/gym/GymOS.jsx").then((m) => ({ default: m.GymOS })));
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
 const AIPanel = lazy(() => import("./shared/AIPanel.jsx").then((m) => ({ default: m.AIPanel })));
@@ -256,6 +257,7 @@ export default function App() {
       case "firm": return <FirmOS navHint={navHint?.module === "firm" ? navHint : null} />;
       case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} navHint={navHint?.module === "life" ? navHint : null} />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} navHint={navHint?.module === "faith" ? navHint : null} />;
+      case "gym": return <GymOS navHint={navHint?.module === "gym" ? navHint : null} />;
       case "calendar": return <CalendarModule habits={habitsV2} onNavigate={navTo} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
       case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={navTo} />;
@@ -378,7 +380,7 @@ export default function App() {
             <Suspense fallback={null}><AIPanel mobile onClose={() => setAiOpen(false)} onOpenSettings={() => { setShowSettings(true); setAiOpen(false); }} ctx={aiCtx} habits={habits} /></Suspense>
           </div>
         )}
-        <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || aiOpen || mobileNavOpen} offsetRight={16} openSignal={quickSignal} />
+        <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || module === "gym" || aiOpen || mobileNavOpen} offsetRight={16} openSignal={quickSignal} />
         <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
@@ -426,7 +428,7 @@ export default function App() {
       </div>
 
       {aiOpen && <Suspense fallback={null}><AIPanel onClose={() => setAiOpen(false)} onOpenSettings={() => setShowSettings(true)} ctx={aiCtx} habits={habits} /></Suspense>}
-      <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life"} offsetRight={aiOpen ? 364 : 24} openSignal={quickSignal} />
+      <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || module === "gym"} offsetRight={aiOpen ? 364 : 24} openSignal={quickSignal} />
       <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />

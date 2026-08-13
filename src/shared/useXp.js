@@ -5,6 +5,7 @@
 import { useMemo } from "react";
 import { useStorageState } from "./useStorageState.js";
 import { computeXp } from "./xpEngine.js";
+import { gymSessionsToWorkouts } from "../modules/gym/gymSessions.js";
 
 export function useXp() {
   const [habits, , l1] = useStorageState("habits", []);
@@ -12,6 +13,7 @@ export function useXp() {
   const [trades] = useStorageState("ict_trades", []);
   const [reviews] = useStorageState("ict_reviews", []);
   const [workouts] = useStorageState("athlete_workouts", []);
+  const [gymSessions] = useStorageState("gym_sessions", []);
   const [measurements] = useStorageState("athlete_measurements", []);
   const [nutrition] = useStorageState("nutrition_log", {});
   const [nutritionProfile] = useStorageState("nutrition_profile", null);
@@ -32,13 +34,21 @@ export function useXp() {
   const [tiTrades] = useStorageState("ti_trades", []);
   const [photos] = useStorageState("athlete_photos", []);
 
+  // Gym-facet sessions feed the same fitness pipeline by mapping to the legacy
+  // `workouts` shape, so a logged workout moves the shared level, the Iron Body
+  // journey and the consistency engine's fitness-day — no XP-engine changes.
+  const allWorkouts = useMemo(
+    () => [...(Array.isArray(workouts) ? workouts : []), ...gymSessionsToWorkouts(gymSessions)],
+    [workouts, gymSessions]
+  );
+
   const xp = useMemo(
     () => computeXp({
-      habits, purity, trades, reviews, workouts, measurements, finance,
+      habits, purity, trades, reviews, workouts: allWorkouts, measurements, finance,
       entries, missions, church, verses, faithNotes, library, mindNotes,
       decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos,
     }),
-    [habits, purity, trades, reviews, workouts, measurements, finance,
+    [habits, purity, trades, reviews, allWorkouts, measurements, finance,
      entries, missions, church, verses, faithNotes, library, mindNotes,
      decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos]
   );
