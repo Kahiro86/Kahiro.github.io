@@ -42,6 +42,22 @@ function safeParse(raw, initialValue) {
   return Array.isArray(parsed) ? parsed.filter((x) => x != null) : parsed;
 }
 
+// Synchronous read of the current localStorage record. localStorage is
+// synchronous, so a returning user's real data can be present on the very
+// first render — no async round-trip, no "loaded=false for a tick" flash, and
+// no hydration re-render (which used to re-run the whole XP engine ~once per
+// store as each trickled in). Returns loaded:false only when localStorage is
+// unavailable (SSR / disabled), in which case the async adapter path is used.
+function readSync(key, initialValue) {
+  try {
+    const raw = localStorage.getItem(PREFIX + key);
+    const parsed = safeParse(raw, initialValue);
+    return { value: parsed !== undefined ? parsed : initialValue, loaded: true };
+  } catch {
+    return { value: initialValue, loaded: false };
+  }
+}
+
 // Applied by the sync engine when a newer remote record arrives: persist it,
 // keep the remote timestamp, and broadcast so mounted hooks update live.
 export function applyExternal(key, raw, updatedAtIso) {
@@ -51,14 +67,24 @@ export function applyExternal(key, raw, updatedAtIso) {
 }
 
 export function useStorageState(key, initialValue) {
-  const [value, setValue] = useState(initialValue);
-  const [loaded, setLoaded] = useState(false);
   const idRef = useRef(++instanceSeq);
   const initRef = useRef(initialValue); // stable default for guards/listeners
+  // Synchronous first read — real data on the first render (see readSync).
+  const [value, setValue] = useState(() => readSync(key, initRef.current).value);
+  const [loaded, setLoaded] = useState(() => readSync(key, initRef.current).loaded);
+  const keyRef = useRef(key);
 
-  // Initial load — read-only; never writes back (see header note).
+  // On mount the lazy initialisers above already loaded synchronously, so this
+  // effect does nothing then (no redundant re-render). It only acts on an
+  // actual key change, or when the synchronous read was unavailable (SSR /
+  // disabled storage) — falling back to the async adapter path in that case.
   useEffect(() => {
+    const changed = keyRef.current !== key;
+    keyRef.current = key;
+    if (!changed && loaded) return;
     let cancelled = false;
+    const sync = readSync(key, initRef.current);
+    if (sync.loaded) { setValue(sync.value); setLoaded(true); return () => { cancelled = true; }; }
     (async () => {
       try {
         const raw = await storage.get(key);
@@ -70,7 +96,7 @@ export function useStorageState(key, initialValue) {
       }
     })();
     return () => { cancelled = true; };
-  }, [key]);
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Live updates from other hook instances, other tabs, and the cloud.
   useEffect(() => {
