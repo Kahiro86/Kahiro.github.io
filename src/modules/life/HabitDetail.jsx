@@ -1,43 +1,59 @@
-// ── Screen 2 · Habit Detail (spec §4) — STAGED BUILD ─────────────────────
-// This response builds ONLY Card A (header + meta + management) so the list →
-// detail navigation works and habit editing/deleting (which moved off the list
-// cards) is preserved. Cards B–D (Overview ring, Score trend, History) are
-// intentionally left as labelled placeholders and will be built at the Screen 2
-// review gate. Nothing here fabricates a score.
+// ── Screen 2 · Habit Detail (spec §4) ────────────────────────────────────
+// Four stacked cards: header, Overview (ring + deltas), Score trend (line),
+// History (bars). A Stats | Calendar toggle reaches Screen 3. Every number is
+// read live from habitEngine.rangeStats / isScheduled / isDone / valueOn —
+// God Mode is a whole-day score and is never used per-habit. No mock data.
 import { useState } from "react";
 import { ChevronLeft, Pencil, MoreVertical, Flame, Trophy, Copy, Pause, Play, Archive, ArchiveRestore, Trash2 } from "lucide-react";
-import { currentStreak, longestStreak } from "../../shared/habitEngine.js";
-import { HT, frequencyLabel } from "./habitTheme.js";
+import { currentStreak, longestStreak, isScheduled, isDone, valueOn, totalCompletions } from "../../shared/habitEngine.js";
+import { daysAgoStr, localDateStr } from "../../shared/dates.js";
+import { HT, getScoreColor, frequencyLabel, fmtCellValue } from "./habitTheme.js";
+import { HabitCalendar } from "./HabitCalendar.jsx";
+
+// Period toggles persist per habit per session (spec §4) — a plain module map,
+// intentionally not written to storage (resets on reload, which the spec allows).
+const PERIOD_MEM = new Map();
+const memGet = (habitId, card, dflt) => PERIOD_MEM.get(`${habitId}:${card}`) ?? dflt;
+const memSet = (habitId, card, v) => PERIOD_MEM.set(`${habitId}:${card}`, v);
+
+const PERIOD_LEN = { week: 7, month: 30, year: 365 };
+const numeric = (h) => (h.target || 1) > 1;
+
+// Completion over a trailing window [fromDaysAgo, fromDaysAgo+len). Days before
+// the habit existed and unscheduled days are excluded by isScheduled itself.
+function windowStat(h, fromDaysAgo, len) {
+  let sched = 0, done = 0;
+  for (let i = fromDaysAgo; i < fromDaysAgo + len; i++) {
+    const ds = daysAgoStr(i);
+    if (!isScheduled(h, ds)) continue;
+    sched++;
+    if (isDone(h, ds)) done++;
+  }
+  return { sched, done, pct: sched ? Math.round((done / sched) * 100) : 0 };
+}
 
 function subtitleOf(h) {
   const note = (h.notes || "").trim();
-  if (note) return note;
-  return `${h.name} · ${frequencyLabel(h)}`;
+  return note || `${h.name} · ${frequencyLabel(h)}`;
 }
 
 export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause, onToggleArchive, onDelete }) {
   const [menu, setMenu] = useState(false);
+  const [view, setView] = useState("stats"); // stats | calendar
   const cur = currentStreak(habit);
   const best = longestStreak(habit);
 
-  const Placeholder = ({ label }) => (
-    <div style={{ background: HT.bgCard, border: `1px solid ${HT.border}`, borderRadius: 12, padding: "18px 16px" }}>
-      <div style={{ fontSize: 12, color: HT.textSecondary, textTransform: "lowercase", letterSpacing: 0.5, marginBottom: 10 }}>{label}</div>
-      <div style={{ fontSize: 12, color: HT.textSecondary, opacity: 0.7 }}>Coming in the next step.</div>
-    </div>
-  );
-
   return (
-    <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 12, maxWidth: 640, margin: "0 auto" }}>
+    <div style={{ padding: "16px 16px 44px", display: "flex", flexDirection: "column", gap: 12, maxWidth: 640, margin: "0 auto" }}>
       {/* Card A — header */}
-      <div style={{ background: HT.bgCard, border: `1px solid ${HT.border}`, borderRadius: 12, padding: "14px 16px" }}>
+      <Panel>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={onBack} aria-label="Back" style={{ background: "transparent", border: "none", color: HT.textSecondary, cursor: "pointer", display: "flex", padding: 2 }}><ChevronLeft size={20} /></button>
+          <button onClick={onBack} aria-label="Back" style={iconBtn}><ChevronLeft size={20} /></button>
           <div style={{ width: 30, height: 30, borderRadius: 8, background: `${HT.gold}1A`, border: `1px solid ${HT.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{habit.icon}</div>
           <div style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, color: HT.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{habit.name}</div>
-          <button onClick={() => onEdit(habit)} aria-label="Edit" style={{ background: "transparent", border: "none", color: HT.textSecondary, cursor: "pointer", display: "flex", padding: 4 }}><Pencil size={16} /></button>
+          <button onClick={() => onEdit(habit)} aria-label="Edit" style={iconBtn}><Pencil size={16} /></button>
           <div style={{ position: "relative" }}>
-            <button onClick={() => setMenu((o) => !o)} aria-label="More" style={{ background: "transparent", border: "none", color: HT.textSecondary, cursor: "pointer", display: "flex", padding: 4 }}><MoreVertical size={17} /></button>
+            <button onClick={() => setMenu((o) => !o)} aria-label="More" style={iconBtn}><MoreVertical size={17} /></button>
             {menu && (
               <>
                 <div onClick={() => setMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
@@ -61,17 +77,226 @@ export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause,
 
         <div style={{ fontSize: 12.5, color: HT.textSecondary, lineHeight: 1.5, margin: "10px 0 12px", paddingLeft: 2 }}>{subtitleOf(habit)}</div>
 
-        <div style={{ display: "flex", gap: 18, paddingLeft: 2, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 18, paddingLeft: 2, flexWrap: "wrap", alignItems: "center" }}>
           <Meta label={frequencyLabel(habit)} />
           <Meta icon={<Flame size={13} color={HT.gold} />} value={`${cur}d`} label="streak" />
           <Meta icon={<Trophy size={13} color={HT.gold} />} value={`${best}d`} label="best" />
+          <div style={{ flex: 1 }} />
+          <Segment options={[["stats", "Stats"], ["calendar", "Calendar"]]} value={view} onChange={setView} />
+        </div>
+      </Panel>
+
+      {view === "stats" ? (
+        <>
+          <OverviewCard habit={habit} />
+          <TrendCard habit={habit} />
+          <HistoryCard habit={habit} />
+        </>
+      ) : (
+        <HabitCalendar habit={habit} />
+      )}
+    </div>
+  );
+}
+
+// ── Card B — Overview ────────────────────────────────────────────────────────
+function OverviewCard({ habit }) {
+  const [period, setPeriod] = useState(() => memGet(habit.id, "overview", "month"));
+  const set = (p) => { memSet(habit.id, "overview", p); setPeriod(p); };
+  const score = windowStat(habit, 0, PERIOD_LEN[period]).pct;
+  const color = getScoreColor(score);
+
+  const monthDelta = windowStat(habit, 0, 30).pct - windowStat(habit, 30, 30).pct;
+  const yearDelta = windowStat(habit, 0, 365).pct - windowStat(habit, 365, 365).pct;
+  const allTime = totalCompletions(habit);
+
+  return (
+    <Panel>
+      <CardHead label="overview" period={period} onPeriod={set} periods={["week", "month", "year"]} />
+      <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 6 }}>
+        <ScoreRing pct={score} color={color} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+          <Delta label="this month" value={monthDelta} suffix="%" />
+          <Delta label="this year" value={yearDelta} suffix="%" />
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 11.5, color: HT.textSecondary }}>all-time</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: HT.textPrimary, fontFamily: "monospace" }}>{allTime.toLocaleString()}</span>
+          </div>
         </div>
       </div>
+    </Panel>
+  );
+}
 
-      {/* Cards B–D — placeholders until the Screen 2 gate */}
-      <Placeholder label="overview" />
-      <Placeholder label="score trend" />
-      <Placeholder label="history" />
+// ── Card C — Score trend ─────────────────────────────────────────────────────
+function TrendCard({ habit }) {
+  const [period, setPeriod] = useState(() => memGet(habit.id, "trend", "month"));
+  const set = (p) => { memSet(habit.id, "trend", p); setPeriod(p); };
+  const points = trendBuckets(habit, period);
+  const withData = points.filter((p) => p.has);
+
+  return (
+    <Panel>
+      <CardHead label="score trend" period={period} onPeriod={set} periods={["week", "month", "year"]} />
+      {withData.length < 2 ? (
+        <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: HT.textSecondary, fontSize: 12.5 }}>not enough data yet</div>
+      ) : (
+        <TrendLine points={points} />
+      )}
+    </Panel>
+  );
+}
+
+function trendBuckets(habit, period) {
+  if (period === "week") {
+    // last 7 days, each a rolling 7-day completion rate → a smooth line
+    return Array.from({ length: 7 }, (_, k) => {
+      const i = 6 - k;
+      const w = windowStat(habit, i, 7);
+      return { label: weekdayLabel(daysAgoStr(i)), pct: w.pct, has: w.sched > 0 };
+    });
+  }
+  if (period === "month") {
+    // last 5 weeks, each that week's rate
+    return Array.from({ length: 5 }, (_, k) => {
+      const w = 4 - k;
+      const s = windowStat(habit, w * 7, 7);
+      return { label: w === 0 ? "now" : `-${w}w`, pct: s.pct, has: s.sched > 0 };
+    });
+  }
+  // year: last 12 months, each ~30-day rate
+  return Array.from({ length: 12 }, (_, k) => {
+    const m = 11 - k;
+    const s = windowStat(habit, m * 30, 30);
+    return { label: `${m}`, pct: s.pct, has: s.sched > 0 };
+  });
+}
+
+function TrendLine({ points }) {
+  const n = points.length;
+  const W = 100, H = 100;
+  const x = (i) => (n === 1 ? W / 2 : (i / (n - 1)) * W);
+  const y = (pct) => H - (pct / 100) * H;
+  const path = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(2)},${y(p.pct).toFixed(2)}`).join(" ");
+  const last = points[n - 1];
+  return (
+    <div style={{ marginTop: 6 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 120, overflow: "visible" }}>
+        <path d={path} fill="none" stroke={HT.gold} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={x(n - 1)} cy={y(last.pct)} r={3} fill={HT.gold} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        <span style={{ fontSize: 9.5, color: HT.textSecondary }}>{points[0].label}</span>
+        <span style={{ fontSize: 9.5, color: HT.textSecondary }}>{last.label}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Card D — History ─────────────────────────────────────────────────────────
+function HistoryCard({ habit }) {
+  const [period, setPeriod] = useState(() => memGet(habit.id, "history", "week"));
+  const set = (p) => { memSet(habit.id, "history", p); setPeriod(p); };
+  const bars = historyBars(habit, period);
+  const any = bars.some((b) => b.height > 0);
+
+  return (
+    <Panel>
+      <CardHead label="history" period={period} onPeriod={set} periods={["week", "month"]} />
+      {!any ? (
+        <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", color: HT.textSecondary, fontSize: 12.5 }}>nothing logged yet</div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 118, marginTop: 8 }}>
+          {bars.map((b, i) => (
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 4, height: "100%" }}>
+              {b.label && <span style={{ fontSize: 9, color: HT.gold, fontFamily: "monospace" }}>{b.label}</span>}
+              <div style={{ width: "100%", maxWidth: 26, height: `${Math.max(3, b.height)}%`, background: b.met ? HT.gold : HT.cellEmpty, borderRadius: 4 }} />
+              <span style={{ fontSize: 9, color: HT.textSecondary }}>{b.axis}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function historyBars(habit, period) {
+  if (period === "week") {
+    return Array.from({ length: 7 }, (_, k) => {
+      const i = 6 - k;
+      const ds = daysAgoStr(i);
+      const scheduled = isScheduled(habit, ds);
+      const met = isDone(habit, ds);
+      const v = valueOn(habit, ds);
+      return {
+        met,
+        height: met ? 100 : scheduled ? 22 : 0,
+        label: met ? (numeric(habit) ? fmtCellValue(v, habit.unit) : "✓") : "",
+        axis: weekdayLabel(ds)[0],
+      };
+    });
+  }
+  // month: last 5 weeks as weekly completion bars
+  return Array.from({ length: 5 }, (_, k) => {
+    const w = 4 - k;
+    const s = windowStat(habit, w * 7, 7);
+    return { met: s.pct >= 70, height: s.sched ? s.pct : 0, label: s.sched ? `${s.pct}%` : "", axis: w === 0 ? "now" : `-${w}w` };
+  });
+}
+
+// ── shared bits ──────────────────────────────────────────────────────────────
+const iconBtn = { background: "transparent", border: "none", color: HT.textSecondary, cursor: "pointer", display: "flex", padding: 4 };
+const Panel = ({ children }) => (
+  <div style={{ background: HT.bgCard, border: `1px solid ${HT.border}`, borderRadius: 12, padding: "14px 16px" }}>{children}</div>
+);
+
+function CardHead({ label, period, onPeriod, periods }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <span style={{ fontSize: 12, color: HT.textSecondary, letterSpacing: 0.5 }}>{label}</span>
+      <Segment options={periods.map((p) => [p, p[0].toUpperCase() + p.slice(1)])} value={period} onChange={onPeriod} />
+    </div>
+  );
+}
+
+function Segment({ options, value, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 2, background: HT.bgPage, border: `1px solid ${HT.border}`, borderRadius: 8, padding: 2 }}>
+      {options.map(([v, l]) => (
+        <button key={v} onClick={() => onChange(v)}
+          style={{ padding: "4px 9px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: value === v ? 700 : 500,
+            background: value === v ? `${HT.gold}22` : "transparent", color: value === v ? HT.gold : HT.textSecondary }}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
+function ScoreRing({ pct, color }) {
+  const size = 78, stroke = 7, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const off = c * (1 - Math.max(0, Math.min(100, pct)) / 100);
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={HT.border} strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={off} transform={`rotate(-90 ${size / 2} ${size / 2})`} style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: 17, fontWeight: 500, color: HT.textPrimary, fontFamily: "monospace" }}>{pct}%</span>
+        <span style={{ fontSize: 9, color: HT.textSecondary }}>score</span>
+      </div>
+    </div>
+  );
+}
+
+function Delta({ label, value, suffix = "" }) {
+  const pos = value > 0, neg = value < 0;
+  const color = pos ? HT.green : neg ? HT.red : HT.textSecondary;
+  const sign = pos ? "+" : "";
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+      <span style={{ fontSize: 11.5, color: HT.textSecondary }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: 700, color, fontFamily: "monospace" }}>{sign}{value}{suffix}</span>
     </div>
   );
 }
@@ -84,4 +309,8 @@ function Meta({ icon, value, label }) {
       <span style={{ fontSize: 11.5, color: HT.textSecondary }}>{label}</span>
     </div>
   );
+}
+
+function weekdayLabel(ds) {
+  return new Date(`${ds}T12:00:00`).toLocaleDateString("en-US", { weekday: "short" });
 }
