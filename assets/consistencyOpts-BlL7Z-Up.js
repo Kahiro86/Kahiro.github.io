@@ -1,1 +1,0 @@
-import{f as l}from"./consistency-zJMK0Dq1.js";function S({habits:s=[],marks:n={},freezes:u=null,lifeDays:e=null,fitnessDays:o=null}={}){const c=new Set([...(n==null?void 0:n.rest)||[],...(n==null?void 0:n.cheat)||[]]),i=l(u),f=e instanceof Set&&o instanceof Set;return{isFull:t=>{if(c.has(t)||i.has(t))return!0;if(f)return e.has(t)&&o.has(t)}}}export{S as c};
