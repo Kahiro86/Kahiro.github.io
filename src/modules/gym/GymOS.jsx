@@ -18,6 +18,8 @@ import { localDateStr } from "../../shared/dates.js";
 import { searchExercises, getExercise, MUSCLE_NAME, gymLevel, GROUPS, MUSCLES, rankForMuscleXp, groupRollup } from "./engine.js";
 import { sanitizeSessions, sortedByDate, weeklyStreak, newSetFrom } from "./gymSessions.js";
 import { computeAllSummaries } from "./gymStore.js";
+import { RoutineQuickList, RoutineManager, sanitizeRoutines } from "./GymRoutines.jsx";
+import { MuscleRadar } from "./BodyMap.jsx";
 
 const today = () => localDateStr();
 const uid = () => `gs${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -40,6 +42,8 @@ export function GymOS({ navHint } = {}) {
   const [profile, setProfile] = useStorageState("gym_profile", { bodyweightKg: 75 });
   const [summaryId, setSummaryId] = useState(null); // session id whose summary modal is open
   const [searchOpen, setSearchOpen] = useState(false);
+  const [rawRoutines, setRoutines] = useStorageState("gym_routines", []);
+  const [mgrOpen, setMgrOpen] = useState(false);
   const toast = useToast();
 
   useEffect(() => { if (navHint?.group === "history") setTab("history"); }, [navHint?.nonce]); // eslint-disable-line
@@ -47,6 +51,7 @@ export function GymOS({ navHint } = {}) {
   const sessions = useMemo(() => sanitizeSessions(rawSessions), [rawSessions]);
   const derived = useMemo(() => computeAllSummaries(sessions), [sessions]);
   const ordered = useMemo(() => sortedByDate(sessions).reverse(), [sessions]); // newest first
+  const routines = useMemo(() => sanitizeRoutines(rawRoutines), [rawRoutines]);
 
   const bw = Number(profile?.bodyweightKg) || 75;
   const streak = useMemo(() => weeklyStreak(sessions), [sessions]);
@@ -59,6 +64,13 @@ export function GymOS({ navHint } = {}) {
 
   // ── active-session mutations ───────────────────────────────────────────
   const start = () => setActive({ startedAt: Date.now(), bodyweightKg: bw, entries: [] });
+  const startFromRoutine = (r) => {
+    setActive({
+      startedAt: Date.now(), bodyweightKg: bw,
+      entries: r.exerciseIds.map((id) => { const ex = getExercise(id); return { exerciseId: id, name: ex?.name || id, sets: [newSetFrom(null, bw)] }; }),
+    });
+    toast(`${r.icon} ${r.name} loaded`, { tone: "success", duration: 2000 });
+  };
   const cancel = () => { setActive(null); toast("Workout discarded", { tone: "info" }); };
   const addExercise = (ex) => {
     setActive((a) => a && ({ ...a, entries: [...a.entries, { exerciseId: ex.id, name: ex.name, sets: [newSetFrom(null, a.bodyweightKg)] }] }));
@@ -110,7 +122,8 @@ export function GymOS({ navHint } = {}) {
 
         {loaded && tab === "workout" && !active && (
           <StartScreen onStart={start} last={ordered[0]} lastSummary={ordered[0] && derived.byId[ordered[0].id]}
-            thisWeek={thisWeek} streak={streak} total={sessions.length} onOpenLast={() => ordered[0] && setSummaryId(ordered[0].id)} />
+            thisWeek={thisWeek} streak={streak} total={sessions.length} onOpenLast={() => ordered[0] && setSummaryId(ordered[0].id)}
+            routines={routines} onStartRoutine={startFromRoutine} onManageRoutines={() => setMgrOpen(true)} />
         )}
 
         {loaded && tab === "workout" && active && (
@@ -133,12 +146,13 @@ export function GymOS({ navHint } = {}) {
         const s = sessions.find((x) => x.id === summaryId);
         return s ? <SummaryModal session={s} summary={derived.byId[s.id]} onClose={() => setSummaryId(null)} /> : null;
       })()}
+      {mgrOpen && <RoutineManager routines={routines} onSave={setRoutines} onClose={() => setMgrOpen(false)} />}
     </div>
   );
 }
 
 // ── Start ──────────────────────────────────────────────────────────────────
-function StartScreen({ onStart, last, lastSummary, thisWeek, streak, total, onOpenLast }) {
+function StartScreen({ onStart, last, lastSummary, thisWeek, streak, total, onOpenLast, routines, onStartRoutine, onManageRoutines }) {
   return (
     <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 18, maxWidth: 620, margin: "0 auto" }}>
       <Card style={{ padding: "26px 22px", textAlign: "center", background: `linear-gradient(180deg,${AC}0E,transparent)` }}>
@@ -149,6 +163,8 @@ function StartScreen({ onStart, last, lastSummary, thisWeek, streak, total, onOp
           <Dumbbell size={17} />Start Workout
         </button>
       </Card>
+
+      <RoutineQuickList routines={routines} onStart={onStartRoutine} onManage={onManageRoutines} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 11 }}>
         {[
@@ -311,6 +327,11 @@ function ProgressScreen({ sessions, byId, muscleTotals, lifetimeXp }) {
   return (
     <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 680, margin: "0 auto" }}>
       <div style={{ fontSize: 11.5, color: T3 }}>{lifetimeXp.toLocaleString()} lifetime gym XP · muscles ranked F→S by work done</div>
+
+      <Card style={{ padding: "16px" }}>
+        <SH title="Muscle radar" sub="Rank reach across the six groups" />
+        <MuscleRadar muscleTotals={muscleTotals} />
+      </Card>
 
       {GROUPS.map((g) => {
         const gr = byGroupId[g.id] || { xp: 0, rank: "unranked" };
