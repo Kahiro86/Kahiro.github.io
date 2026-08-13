@@ -8,6 +8,7 @@
     "build": "vite build && node scripts/postbuild.mjs",
     "preview": "vite preview",
     "test": "node tests/qa.mjs",
+    "test:gym": "node tests/gym/run.mjs",
     "test:ci": "npm run build && node tests/qa.mjs"
   },
   "dependencies": {
