@@ -6,7 +6,7 @@
 // `workouts` mapping in useXp (see gymStore.gymSessionsToWorkouts).
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
-  Dumbbell, Plus, Check, X, Search, Trash2, Trophy, Clock, TrendingUp,
+  Dumbbell, Plus, Check, X, Search, Trash2, Trophy, Clock, TrendingUp, Activity,
 } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, AC, AC2, GR, RE, AM, PU } from "../../shared/designTokens.js";
 import { Card, SH, Meter, Empty } from "../../shared/ui.jsx";
@@ -15,7 +15,7 @@ import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
-import { searchExercises, getExercise, MUSCLE_NAME, gymLevel } from "./engine.js";
+import { searchExercises, getExercise, MUSCLE_NAME, gymLevel, GROUPS, MUSCLES, rankForMuscleXp, groupRollup } from "./engine.js";
 import { sanitizeSessions, sortedByDate, weeklyStreak, newSetFrom } from "./gymSessions.js";
 import { computeAllSummaries } from "./gymStore.js";
 
@@ -95,7 +95,7 @@ export function GymOS({ navHint } = {}) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tabs={[{ id: "workout", l: "Workout", i: Dumbbell }, { id: "history", l: "History", i: Clock }]}
+      <ModuleTabs tabs={[{ id: "workout", l: "Workout", i: Dumbbell }, { id: "progress", l: "Progress", i: Activity }, { id: "history", l: "History", i: Clock }]}
         active={tab} onSelect={setTab} activeBg={`linear-gradient(135deg,${AC}22,${AC}14)`} activeColor={AC}>
         <div style={{ flex: 1 }} />
         <div title="Lifetime gym level" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: `${AC}11`, border: `1px solid ${AC}22`, borderRadius: 9 }}>
@@ -117,6 +117,10 @@ export function GymOS({ navHint } = {}) {
           <ActiveScreen active={active} setActive={setActive} onAddExercise={() => setSearchOpen(true)}
             patchSet={patchSet} addSet={addSet} removeSet={removeSet} removeExercise={removeExercise}
             onFinish={finish} onCancel={cancel} canFinish={hasWork} onBw={(v) => setActive((a) => ({ ...a, bodyweightKg: v }))} />
+        )}
+
+        {loaded && tab === "progress" && (
+          <ProgressScreen sessions={ordered} byId={derived.byId} muscleTotals={derived.muscleTotals} lifetimeXp={derived.lifetimeXp} />
         )}
 
         {loaded && tab === "history" && (
@@ -274,6 +278,87 @@ function HistoryScreen({ sessions, byId, onOpen, lifetimeXp }) {
           </Card>
         );
       })}
+    </div>
+  );
+}
+
+// ── Progress — muscle ranks + PRs ────────────────────────────────────────────
+const RANK_COLOR = { unranked: "#5A5348", F: "#6B6456", E: "#8A8378", D: "#A67D1F", C: "#C9962B", B: AC, A: AC2, S: GR };
+const rankColor = (r) => RANK_COLOR[r] || "#5A5348";
+
+function RankBadge({ rank, size = 26 }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: 7, background: `${rankColor(rank)}22`, border: `1px solid ${rankColor(rank)}66`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <span style={{ fontSize: size * 0.5, fontWeight: 900, color: rankColor(rank), fontFamily: "monospace" }}>{rank === "unranked" ? "–" : rank}</span>
+    </div>
+  );
+}
+
+function ProgressScreen({ sessions, byId, muscleTotals, lifetimeXp }) {
+  if (!sessions.length) {
+    return <div style={{ padding: 24 }}><Empty icon="🗺️" title="No muscle map yet" sub="Log a workout and your muscles start ranking up here." /></div>;
+  }
+  const groups = groupRollup(muscleTotals);
+  const byGroupId = Object.fromEntries(groups.map((g) => [g.id, g]));
+  const maxMuscle = Math.max(1, ...MUSCLES.map((m) => muscleTotals[m.id] || 0));
+
+  const prs = [];
+  for (const s of sessions) {
+    const sum = byId[s.id];
+    if (sum?.prs?.length) for (const pr of sum.prs) prs.push({ ...pr, date: s.date });
+  }
+
+  return (
+    <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 680, margin: "0 auto" }}>
+      <div style={{ fontSize: 11.5, color: T3 }}>{lifetimeXp.toLocaleString()} lifetime gym XP · muscles ranked F→S by work done</div>
+
+      {GROUPS.map((g) => {
+        const gr = byGroupId[g.id] || { xp: 0, rank: "unranked" };
+        const muscles = MUSCLES.filter((m) => m.groupId === g.id);
+        return (
+          <Card key={g.id} style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <RankBadge rank={gr.rank} size={30} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T1 }}>{g.displayName}</div>
+                <div style={{ fontSize: 10.5, color: T3 }}>{Math.round(gr.xp).toLocaleString()} muscle XP</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {muscles.map((m) => {
+                const xp = muscleTotals[m.id] || 0;
+                const rank = rankForMuscleXp(xp);
+                return (
+                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <span style={{ width: 92, fontSize: 11, color: T2, flexShrink: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.displayName}</span>
+                    <div style={{ flex: 1, height: 6, borderRadius: 3, background: BD, overflow: "hidden" }}>
+                      <div style={{ width: `${Math.max(2, (xp / maxMuscle) * 100)}%`, height: "100%", background: rankColor(rank), borderRadius: 3 }} />
+                    </div>
+                    <span style={{ width: 16, textAlign: "center", fontSize: 10.5, fontWeight: 800, color: rankColor(rank), fontFamily: "monospace", flexShrink: 0 }}>{rank === "unranked" ? "–" : rank}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        );
+      })}
+
+      <Card style={{ padding: "14px 16px" }}>
+        <SH title="Personal records" sub={prs.length ? `${prs.length} all-time` : "none yet"} action={<Trophy size={13} color={AM} />} />
+        {prs.length === 0 ? (
+          <div style={{ fontSize: 12, color: T3, padding: "6px 0" }}>Beat a past best — heavier, more reps, or more volume — to set your first PR.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 4 }}>
+            {prs.slice(0, 15).map((pr, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 0", borderBottom: i < Math.min(prs.length, 15) - 1 ? `1px solid ${BD}` : "none" }}>
+                <Trophy size={12} color={AM} style={{ flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 12, color: T1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{prLabel(pr)}</span>
+                <span style={{ fontSize: 10.5, color: T3, flexShrink: 0 }}>{dateLabel(pr.date)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
