@@ -23,6 +23,8 @@ import { useDayMarks, hasRest, toggleMark } from "../../shared/dayMarks.js";
 import { WEEK_DAYS, DAY_LABEL, DEFAULT_SPLITS, sanitizeSplits, sanitizeWeek, weekdayKey } from "../../shared/workoutSplits.js";
 import { sessionMuscles } from "../../shared/workoutLog.js";
 import { BodyMap } from "../../shared/BodyMap.jsx";
+import { computeXp } from "./xp.js";
+import { MuscleRadar } from "./MuscleRadar.jsx";
 
 export function AthleteOS() {
   const [view, setView] = useState("week");
@@ -207,6 +209,7 @@ export function AthleteOS() {
     });
   });
   const prList = Object.entries(exercisePRs).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.weight - a.weight);
+  const xp = useMemo(() => computeXp(workouts), [workouts]);
 
   if (view === "log") return <LogWorkoutForm onSave={saveWorkout} onCancel={() => { setLogInitial(null); setView("week"); }}
     exerciseLib={exerciseLib} setExerciseLib={setExerciseLib} templates={templates} onSaveTemplate={saveTemplate}
@@ -446,6 +449,36 @@ export function AthleteOS() {
               <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Progress</div>
               <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Last 8 weeks</div>
             </div>
+
+            {/* ── Training Report — Level/XP + streak/PRs/volume at a glance ── */}
+            <Card style={{ padding: "20px" }}>
+              <SH title="Training Report" sub={`Level ${xp.level} · ${xp.title}`} />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 11, marginTop: 4 }}>
+                <div>
+                  <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>Streak</div>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: PU, fontFamily: "monospace" }}>{streak}<span style={{ fontSize: 11, color: T3 }}> day{streak === 1 ? "" : "s"}</span></div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>PRs</div>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: PU, fontFamily: "monospace" }}>{prList.length}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>This week</div>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: PU, fontFamily: "monospace" }}>{last8Weeks[last8Weeks.length - 1]?.count || 0}<span style={{ fontSize: 11, color: T3 }}> sessions</span></div>
+                </div>
+              </div>
+              <div style={{ marginTop: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: T3, marginBottom: 5 }}>
+                  <span>{xp.xpIntoLevel} XP</span>
+                  <span>{xp.xpForNext ? `${xp.xpForNext - xp.xpIntoLevel} to next level` : "Max level"}</span>
+                </div>
+                <div style={{ height: 8, borderRadius: 6, background: GL, overflow: "hidden" }}>
+                  <div style={{ width: `${xp.pct}%`, height: "100%", background: `linear-gradient(90deg,${PU},${CY})` }} />
+                </div>
+              </div>
+            </Card>
+
+            <MuscleRadar workouts={workouts} />
 
             {/* ── Progress Photos — on-device, compressed ── */}
             <Card style={{ padding: "20px" }}>
