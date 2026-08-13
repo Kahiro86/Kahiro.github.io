@@ -1,7 +1,7 @@
 // Minimal offline shell: network-first for page loads with cache fallback,
 // so deploys land immediately but the app still opens with no connection.
 // All user data lives in localStorage, untouched by this cache.
-const CACHE = "kahiro-v5";
+const CACHE = "kahiro-v6";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -45,14 +45,22 @@ self.addEventListener("fetch", (e) => {
     return;
   }
   if (e.request.mode !== "navigate" && e.request.destination !== "document") return;
+  // Stale-while-revalidate: serve the cached shell immediately (instant launch
+  // for returning users — no network round-trip blocks first paint), then
+  // refresh the cache in the background. Deploys still land promptly because
+  // the shell references hashed, immutable chunks and this SW skipWaiting()s;
+  // worst case one launch shows the prior shell, which updates for the next.
   e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
-        return res;
-      })
-      .catch(() => caches.match(e.request).then((hit) => hit || caches.match("./index.html")))
+    caches.match(e.request).then((hit) => {
+      const network = fetch(e.request)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+          return res;
+        })
+        .catch(() => hit || caches.match("./index.html"));
+      return hit || network;
+    })
   );
 });
 
