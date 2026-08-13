@@ -14,7 +14,7 @@ export const TOUR_OVERVIEW = {
   steps: [
     { title: "Welcome to Kahiro", body: "Your personal operating system for continuous improvement. The rule here is simple: consistency over perfection. Let's take 30 seconds to see the map." },
     { target: "nav-dashboard", module: "dashboard", title: "Command Center", body: "Your daily cockpit — today's focus, streaks, and one clear next action. Start here every morning." },
-    { target: "nav-life", module: "dashboard", title: "Life OS", body: "Habits & routines, your journal, projects and purity — plus Athlete OS: workouts, nutrition and body measurements." },
+    { target: "nav-life", module: "dashboard", title: "Life", body: "Habits & routines, your journal, nutrition and purity — the daily inner build, all in one place." },
     { target: "nav-firm", module: "dashboard", title: "The Firm", body: "The Machine: your trading journal and reviews, income, budget, net worth and the wealth engine that funds your freedom." },
     { target: "nav-faith", module: "dashboard", title: "Faith & Mind", body: "The inner build: scripture memory & devotion, reading momentum, and a decision journal." },
     { target: "nav-journey", module: "dashboard", title: "Journey", body: "Your goals, want list, and the Hall of Fame — level, XP and achievements earned from everything you do." },
@@ -89,12 +89,12 @@ export const HELP_ARTICLES = [
     ],
   },
   {
-    id: "m-life", cat: "modules", title: "Life OS (Habits, Journal, Athlete)",
-    tags: "life os habits routines journal projects purity athlete workout nutrition body rest cheat streak",
+    id: "m-life", cat: "modules", title: "Life (Habits, Journal, Nutrition, Purity)",
+    tags: "life habits routines journal purity nutrition food meals macros rest cheat streak",
     body: [
-      P("Purpose: the engine of the daily you — habits & routines, journaling, and Athlete OS (training, nutrition and body composition)."),
-      H("Key features"), L(["Habits with schedules, streaks and routines that complete several at once", "Journal with backdating", "Athlete: workouts, weekly split, nutrition logging and body measurements", "Rest days and cheat days that keep streaks safe"]),
-      H("Best practices"), L(["Bundle a morning routine so one tap logs several habits.", "Log workouts and meals the same day — trends beat precision.", "Mark a genuine rest or cheat day rather than breaking the chain."]),
+      P("Purpose: the engine of the daily you — habits & routines, journaling, nutrition and purity — the inner build in one place."),
+      H("Key features"), L(["Habits with schedules, streaks and routines that complete several at once", "Journal with backdating and titles", "Nutrition: meal logging by shift slot with macros", "Rest days and cheat days that keep streaks safe"]),
+      H("Best practices"), L(["Bundle a morning routine so one tap logs several habits.", "Log meals the same day — trends beat precision.", "Mark a genuine rest or cheat day rather than breaking the chain."]),
       H("Avoid"), L(["Adding 20 habits at once. Start with 1–3 non-negotiables."]),
       H("Connects to"), P("Feeds streaks and XP to the Command Center, Journey and Analytics."),
     ],

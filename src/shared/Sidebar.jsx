@@ -20,7 +20,7 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
         {!isCollapsed && (
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 900, color: T1, letterSpacing: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{appName.toUpperCase()}</div>
-            <div style={{ fontSize: 8.5, color: T3, letterSpacing: 2 }}>KAIZEN OS v3</div>
+            <div style={{ fontSize: 8.5, color: T3, letterSpacing: 2 }}>ONE WORKSPACE</div>
           </div>
         )}
         {overlay && (
@@ -35,7 +35,10 @@ export function Sidebar({ active, onNavigate, collapsed, onToggle, onOpenSetting
           if (!items.length) return null;
           return (
             <div key={section} style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 4 }}>
-              {!isCollapsed && (
+              {/* Home is the pinned anchor — no header over a single item. Every
+                  other area sits under one "Facets" heading, reading as lenses
+                  of one workspace rather than separate top-level apps. */}
+              {!isCollapsed && section !== "Home" && (
                 <div style={{ fontSize: 8.5, color: T3, letterSpacing: 2, padding: "10px 11px 4px", textTransform: "uppercase" }}>{section}</div>
               )}
               {isCollapsed && section !== NAV_SECTIONS[0] && (

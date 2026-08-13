@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Sun, ListChecks, Layers, TrendingUp, BookOpen, Plus, Check, Flame, SkipForward,
-  Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, FolderKanban, ShieldCheck,
+  Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, ShieldCheck,
 } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter, Empty } from "../../shared/ui.jsx";
@@ -45,8 +45,6 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const [journalDs, setJournalDs] = useState(() => today());
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [rawEntries, setEntries] = useStorageState("journal_entries", []);
-  const [rawProjects, setProjects] = useStorageState("life_projects", []);
-  const [projectDraft, setProjectDraft] = useState("");
   const toast = useToast();
 
   // Stored records can be corrupt (null entries, habitIds missing) — sanitise
@@ -66,11 +64,6 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
       .sort((a, b) => ((b.date || "").slice(0, 10)).localeCompare((a.date || "").slice(0, 10))),
     [rawEntries]
   );
-  const projects = useMemo(
-    () => (Array.isArray(rawProjects) ? rawProjects : []).filter((p) => p && typeof p === "object" && p.id),
-    [rawProjects]
-  );
-
   const active = habits.filter((h) => !h.archived);
   const ds = today();
   // The Today tab is backdatable — `viewDs` is the day being viewed/logged
@@ -185,20 +178,6 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
     setEntries((prev) => prev.filter((e) => e.id !== id));
     toast("Entry deleted", { action: "Undo", onAction: () => setEntries((prev) => [entry, ...prev]), tone: "danger" });
   };
-  const addProject = () => {
-    const name = projectDraft.trim();
-    if (!name) return;
-    setProjects((prev) => [{ id: `p${Date.now().toString(36)}`, name, status: "active", next: "", createdAt: today() }, ...(Array.isArray(prev) ? prev : [])]);
-    setProjectDraft("");
-    toast("Project added 🚀", { tone: "success", duration: 2200 });
-  };
-  const patchProject = (id, patch) =>
-    setProjects((prev) => (Array.isArray(prev) ? prev : []).map((p) => (p?.id === id ? { ...p, ...patch } : p)));
-  const deleteProject = (p) => {
-    setProjects((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x?.id !== p.id));
-    toast(`"${p.name}" deleted`, { action: "Undo", onAction: () => setProjects((prev2) => [p, ...(Array.isArray(prev2) ? prev2 : [])]), tone: "danger" });
-  };
-
   // ── Shared habit row (Today + quick contexts) ──────────────────────
   const HabitRow = ({ h }) => {
     const v = valueOn(h, viewDs), done = isDone(h, viewDs), skipped = isSkipped(h, viewDs) && !done;
@@ -272,7 +251,6 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
     { id: "habits",   l: "Habits",   i: ListChecks },
     { id: "insights", l: "Insights", i: TrendingUp },
     { id: "journal",  l: "Journal",  i: BookOpen },
-    { id: "projects", l: "Projects", i: FolderKanban },
     { id: "purity",   l: "Purity",   i: ShieldCheck },
   ];
 
@@ -738,51 +716,6 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               onExport={(f) => toast(`Exported ${f.label}`, { tone: "success" })}
             />
             <ModeHistoryStrip />
-          </div>
-        )}
-
-        {/* ══ PROJECTS ══ */}
-        {loaded && tab === "projects" && (
-          <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 760 }}>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: T1 }}>Personal Projects</div>
-              <div style={{ fontSize: 12.5, color: T3, marginTop: 2 }}>Each project only ever needs one thing: its next step.</div>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input value={projectDraft} onChange={(e) => setProjectDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addProject()}
-                placeholder="New project name…"
-                style={{ flex: 1, background: B2, border: `1px solid ${BD}`, borderRadius: 10, padding: "10px 13px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit" }} />
-              <button onClick={addProject} disabled={!projectDraft.trim()} aria-label="Add project"
-                style={{ padding: "0 16px", borderRadius: 10, border: "none", background: projectDraft.trim() ? `linear-gradient(135deg,${GR},${CY})` : GL, color: projectDraft.trim() ? "#000" : T3, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
-                <Plus size={14} />Add
-              </button>
-            </div>
-            {projects.length === 0 && (
-              <Empty icon="🚀" pad={34} title="No projects yet. The side hustle, the room makeover, the certification — name it and define its next step." />
-            )}
-            {[...projects].sort((a, b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0)).map((p) => (
-              <Card key={p.id} style={{ padding: "14px 16px", opacity: p.status === "done" ? 0.7 : p.status === "paused" ? 0.85 : 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 9 }}>
-                  <span style={{ fontSize: 14 }}>{p.status === "done" ? "✅" : p.status === "paused" ? "⏸️" : "🚀"}</span>
-                  <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T1, minWidth: 140, textDecoration: p.status === "done" ? "line-through" : "none" }}>{p.name}</span>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {["active", "paused", "done"].map((s) => (
-                      <button key={s} onClick={() => patchProject(p.id, { status: s })}
-                        style={{ padding: "4px 10px", borderRadius: 8, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, cursor: "pointer", fontFamily: "inherit", border: `1px solid ${p.status === s ? (s === "done" ? GR : s === "paused" ? AM : CY) + "55" : BD}`, background: p.status === s ? `${s === "done" ? GR : s === "paused" ? AM : CY}18` : GL, color: p.status === s ? (s === "done" ? GR : s === "paused" ? AM : CY) : T3 }}>
-                        {s}
-                      </button>
-                    ))}
-                    <button onClick={() => deleteProject(p)} aria-label={`Delete ${p.name}`} style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 8, padding: "4px 7px", cursor: "pointer", color: RE, display: "flex", alignItems: "center" }}><Trash2 size={11} /></button>
-                  </div>
-                </div>
-                {p.status !== "done" && (
-                  <input value={p.next || ""} onChange={(e) => patchProject(p.id, { next: e.target.value })}
-                    placeholder="Next step — small enough to do this week"
-                    aria-label={`Next step for ${p.name}`}
-                    style={{ width: "100%", background: GL, border: `1px dashed ${BD2}`, borderRadius: 9, padding: "8px 11px", fontSize: 12, color: T2, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
-                )}
-              </Card>
-            ))}
           </div>
         )}
 

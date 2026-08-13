@@ -5,8 +5,8 @@
 
 // Static destinations — jumping around the app itself.
 export const PAGES = [
-  { id: "page:dashboard", type: "Page", title: "Command Center", nav: "dashboard", icon: "◎" },
-  { id: "page:life", type: "Page", title: "Life OS", subtitle: "Habits · Nutrition · Journal · Today", nav: "life", icon: "◍" },
+  { id: "page:dashboard", type: "Page", title: "Home", subtitle: "Command Center — your daily cockpit", nav: "dashboard", icon: "◎", keywords: "home command center dashboard cockpit today" },
+  { id: "page:life", type: "Page", title: "Life", subtitle: "Habits · Nutrition · Journal · Today", nav: "life", icon: "◍", keywords: "life os habits nutrition journal purity today" },
   { id: "page:firm", type: "Page", title: "The Firm", subtitle: "Trading · Wealth · HQ", nav: "firm", icon: "▲" },
   { id: "page:faith", type: "Page", title: "Faith & Mind", subtitle: "Scripture · Reading · Decisions", nav: "faith", icon: "✦" },
   { id: "page:calendar", type: "Page", title: "Calendar", nav: "calendar", icon: "▦" },
@@ -58,7 +58,6 @@ export const DESTINATIONS = [
 export const SOURCES = [
   { key: "journal_entries", type: "Journal", icon: "✎", nav: "life", fields: ["text"], date: "date", deep: { nav: "life:life", module: "life", tab: "journal" } },
   { key: "habits", type: "Habit", icon: "◍", nav: "life", fields: ["name"] },
-  { key: "life_projects", type: "Project", icon: "◒", nav: "life", fields: ["name", "next"], deep: { nav: "life:life", module: "life", tab: "projects" } },
   { key: "nutrition_foods", type: "Food", icon: "🍽", nav: "life", fields: ["name"] },
   { key: "wants", type: "Want", icon: "✦", nav: "journey", fields: ["name", "note"], deep: { nav: "journey", module: "journey", tab: "wants" } },
   { key: "goals", type: "Goal", icon: "◆", nav: "journey", fields: ["title", "name", "text"], deep: { nav: "journey", module: "journey", tab: "goals" } },
