@@ -23,6 +23,8 @@ import {
   isWeekly, weekProgress, weeklyStreak, isWellness, isNonNeg, isOnePct, makeNonNeg, makeWellness, makeOnePct,
 } from "../../shared/habitEngine.js";
 import { HabitEditor } from "./HabitEditor.jsx";
+import { HabitListCard } from "./HabitListCard.jsx";
+import { HabitDetail } from "./HabitDetail.jsx";
 import { TierPanel } from "./TierPanel.jsx";
 import { PurityTab } from "./PurityTab.jsx";
 import { Journals } from "./Journals.jsx";
@@ -40,6 +42,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const [rawRoutines, setRoutines] = useStorageState("routines", []);
   const [routineDraft, setRoutineDraft] = useState(null);
   const [insightHabit, setInsightHabit] = useState(null);
+  const [detailId, setDetailId] = useState(null); // Screen 1 → Screen 2 drill-down
   const [journal, setJournal] = useState("");
   const [journalTitle, setJournalTitle] = useState("");
   const [journalDs, setJournalDs] = useState(() => today());
@@ -106,6 +109,16 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const skip = (h) => setHabits((prev) => toggleSkip(prev, h.id, viewDs));
   const setValue = (id, v) => setHabits((prev) => setHabitValue(prev, id, v, viewDs));
   const tapId = (id) => setHabits((prev) => tapHabit(prev, id, viewDs));
+  // Screen-1 (Habit List) cell mutations — date-explicit, so a given day's
+  // cell edits exactly that day rather than always "today".
+  const cellToggle = (id, ds) => setHabits((prev) => tapHabit(prev, id, ds));
+  const cellSet = (id, ds, v) => setHabits((prev) => setHabitValue(prev, id, v, ds));
+  const cellSkip = (id, ds) => setHabits((prev) => toggleSkip(prev, id, ds));
+  const cellClear = (id, ds) => setHabits((prev) => setHabitValue(prev, id, 0, ds));
+  const listCard = (h) => (
+    <HabitListCard key={h.id} habit={h} onOpenDetail={(hh) => setDetailId(hh.id)}
+      onToggle={cellToggle} onSetValue={cellSet} onSkip={cellSkip} onClear={cellClear} />
+  );
   const PACKS = {
     nonneg: { is: isNonNeg, make: makeNonNeg, label: "Non-Negotiables" },
     wellness: { is: isWellness, make: makeWellness, label: "Wellness trackers" },
@@ -391,6 +404,15 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
           const grouped = new Set(routines.flatMap((r) => r.habitIds));
           const otherActive = active.filter((h) => !grouped.has(h.id));
           const archivedList = habits.filter((h) => h.archived);
+          const detailHabit = detailId ? habits.find((h) => h.id === detailId) : null;
+          if (detailHabit) return (
+            <HabitDetail habit={detailHabit} onBack={() => setDetailId(null)}
+              onEdit={(h) => { setDetailId(null); setEditing({ ...h }); }}
+              onDuplicate={duplicateHabit}
+              onTogglePause={(h) => patchHabit(h.id, { paused: !h.paused })}
+              onToggleArchive={(h) => patchHabit(h.id, { archived: !h.archived })}
+              onDelete={deleteHabit} />
+          );
           return (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
@@ -472,7 +494,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
                     <button onClick={() => deleteRoutine(r)} title="Delete routine" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 14, marginLeft: 7, borderLeft: `2px solid ${CY}22` }}>
-                    {members.length ? members.map(habitCard) : (
+                    {members.length ? members.map(listCard) : (
                       <div style={{ fontSize: 11.5, color: T3, padding: "6px 2px" }}>No habits in this routine yet — edit it to add some.</div>
                     )}
                   </div>
@@ -484,7 +506,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
             {routines.length > 0 && otherActive.length > 0 && (
               <div style={{ fontSize: 11, color: T3, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginTop: 4 }}>Other habits</div>
             )}
-            {otherActive.map(habitCard)}
+            {otherActive.map(listCard)}
 
             {active.length === 0 && routines.length === 0 && !editing && !routineDraft && (
               <Empty icon="🌱" title="No habits yet" sub="Add your first habit, then bundle habits into routines you can finish in one tap." />
