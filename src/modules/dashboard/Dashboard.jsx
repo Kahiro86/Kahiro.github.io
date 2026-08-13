@@ -129,14 +129,11 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     const sched = active.filter((h) => isScheduled(h, ds));
     const hDone = sched.filter((h) => isDone(h, ds)).length;
     const kcal = Math.round(dayTotals(dayEntries(nutrition, ds)).kcal || 0);
-    const workedOut = workouts.some((w) => w.date === ds);
-    const isRest = restS.has(ds); // planned day off — a rest day is a day done
     const journaled = entriesSafe.some((e) => (e.date || "").slice(0, 10) === ds);
     const due = billsDueSoon(finance.bills, ds).length;
     return [
       sched.length > 0 && { key: "habits", icon: "✅", label: "Habits", detail: `${hDone}/${sched.length} done`, state: hDone >= sched.length ? "done" : hDone > 0 ? "due" : "empty", nav: "life" },
       { key: "meals", icon: "🍽️", label: "Nutrition", detail: kcal > 0 ? `${kcal.toLocaleString()} kcal` : "Nothing logged", state: kcal > 0 ? "done" : "empty", nav: "life" },
-      { key: "workout", icon: "🏋️", label: "Workout", detail: workedOut ? "Logged" : isRest ? "Rest day" : "None today", state: workedOut || isRest ? "done" : "empty", nav: "life" },
       { key: "journal", icon: "📝", label: "Journal", detail: journaled ? "Written" : "Not yet", state: journaled ? "done" : "empty", nav: "life" },
       due > 0 && { key: "bills", icon: "💸", label: "Bills due", detail: `${due} within 7 days`, state: "due", nav: "firm" },
     ].filter(Boolean);
@@ -167,7 +164,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     const parts = [];
     const sched = active.filter((h) => isScheduled(h, d));
     if (sched.length) parts.push(sched.filter((h) => isDone(h, d)).length / sched.length);
-    parts.push(workoutOn(d) || isRestDay(d, restDays) ? 1 : 0);
     parts.push(mealsOn(d) > 0 ? 1 : 0);
     parts.push(journaledOn(d) ? 1 : 0);
     return parts.length ? Math.round((parts.reduce((s, x) => s + x, 0) / parts.length) * 100) : 0;
@@ -196,10 +192,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     const out = active
       .map((h) => ({ icon: h.icon || "✅", label: h.name, days: currentStreak(h) }))
       .filter((s) => s.days >= 2);
-    // Workout streak (today pending never breaks it).
-    let wo = 0;
-    for (let i = 0; i < 400; i++) { const d = daysAgoStr(i); if (workoutOn(d)) wo++; else if (restS.has(d)) continue; else if (i > 0) break; }
-    if (wo >= 2) out.push({ icon: "🏋️", label: "Workouts", days: wo });
     // Clean-eating streak.
     const hs = healthyStreaks(nutrition, nTargets, ds, cheatDays).current;
     if (hs >= 2) out.push({ icon: "🥗", label: "Nutrition", days: hs });

@@ -6,14 +6,16 @@
 // "life:group" nav ids) lets a deep link — e.g. workout-pace — land on the
 // Athlete group instead of always this shell's own default.
 import { useEffect, useState } from "react";
-import { Target, Dumbbell } from "lucide-react";
+import { Target, Utensils } from "lucide-react";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { LifeOSCore } from "./LifeOSCore.jsx";
-import { AthleteOS } from "../athlete/AthleteOS.jsx";
+import { NutritionTab } from "../athlete/NutritionTab.jsx";
 
+// The Athlete module is retired — only Nutrition remains. The group keeps the
+// "athlete" id so existing deep links (life:athlete) still land here.
 const GROUPS = [
   { id: "life", l: "Life", i: Target },
-  { id: "athlete", l: "Athlete", i: Dumbbell },
+  { id: "athlete", l: "Nutrition", i: Utensils },
 ];
 
 export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpInfo, navHint } = {}) {
@@ -31,7 +33,7 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
 
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {group === "life" && <LifeOSCore habits={habits} setHabits={setHabits} loaded={loaded} onNavigate={onNavigate} xpInfo={xpInfo} />}
-        {group === "athlete" && <AthleteOS />}
+        {group === "athlete" && <div style={{ flex: 1, overflowY: "auto" }}><NutritionTab /></div>}
       </div>
     </div>
   );

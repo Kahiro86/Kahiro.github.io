@@ -47,7 +47,7 @@ export const DESTINATIONS = [
   { id: "dest:firm:trading", type: "Section", title: "Trading Journal", nav: "firm:trading", icon: "▲", keywords: "trade trades journal ict setups lessons intel entries" },
   { id: "dest:firm:wealth", type: "Section", title: "Wealth", nav: "firm:wealth", icon: "◈", keywords: "finance money income net worth bills cashflow vault withdrawals savings debt" },
   { id: "dest:firm:doctrine", type: "Section", title: "The Firm — HQ", nav: "firm:doctrine", icon: "▲", keywords: "doctrine firm campaign gate covenant contingency mission" },
-  { id: "dest:life:athlete", type: "Section", title: "Athlete", nav: "life:athlete", icon: "🏋", keywords: "workout gym lifting running measurements recovery mobility pr splits" },
+  { id: "dest:life:athlete", type: "Section", title: "Nutrition", nav: "life:athlete", icon: "🍽", keywords: "nutrition food meals calories macros protein carbs fat diet eating log" },
   { id: "dest:life:life", type: "Section", title: "Habits & Journal", nav: "life:life", icon: "◍", keywords: "habits routines journal insights purity today nutrition meals food" },
   { id: "dest:faith:faith", type: "Section", title: "Faith", nav: "faith:faith", icon: "✝", keywords: "scripture verses devotional church attendance walk recall prayer" },
   { id: "dest:faith:mind", type: "Section", title: "Mind", nav: "faith:mind", icon: "📖", keywords: "reading books library decisions notes author momentum" },

@@ -1,40 +1,21 @@
-// Floating quick-log: log the day's real work from anywhere — habits, a meal,
-// or a workout. The button itself is a live progress ring for the day's habits.
+// Floating quick-log: log the day's habits and meals from anywhere. The button
+// itself is a live progress ring for the day's habits.
 //
-// Meals and workouts use a two-step "select-then-add" flow:
-//   • pick a MEAL TYPE, then add foods (ordered by what you usually eat in
-//     that slot, full library searchable underneath); entries land under that
-//     meal type so the day's log groups by type, not one flat list.
-//   • pick a SPLIT TYPE, then add that split's exercises (their template sets/
-//     reps seed each entry, editable per set); entries land in today's session
-//     for that split.
-// Both selects default to UNSELECTED — a wrong default silently mislogs, so
-// the add stays disabled until a type is chosen. Everything writes straight
-// into the same stores (nutrition_log / athlete_workouts) with an Undo, so XP,
-// streaks and every module pick them up exactly as if logged from inside the
-// Athlete tab.
+// Meals use a two-step "select-then-add" flow: pick a MEAL TYPE, then add foods
+// (ordered by what you usually eat in that slot, the full library searchable
+// underneath); entries land under that meal type so the day's log groups by
+// type. The meal-type select defaults to UNSELECTED so nothing is mislogged.
 import { useState, useMemo, useEffect } from "react";
-import { Zap, Check, X, Utensils, Dumbbell, Copy, Search, Plus, Trash2 } from "lucide-react";
-import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, GR, AM } from "./designTokens.js";
+import { Zap, Check, X, Utensils, Copy, Search, Trash2 } from "lucide-react";
+import { B1, B2, BD, BD2, T1, T3, GL, CY, GR, AM } from "./designTokens.js";
 import { localDateStr, daysAgoStr } from "./dates.js";
 import { isScheduled, isDone, isSkipped, valueOn } from "./habitEngine.js";
 import { useStorageState } from "./useStorageState.js";
 import { useToast } from "./toast.jsx";
 import { sanitizeNutrition, sanitizeFoods, dayEntries, newEntry, FOOD_DB, SLOTS } from "../modules/athlete/nutrition.js";
-import { sanitizeSplits } from "./workoutSplits.js";
-import { seedLoggedExercise, lastWeightFor, withVolume } from "./workoutLog.js";
 
 const nowTime = () => new Date().toTimeString().slice(0, 5);
 const rid = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`;
-
-// Small tag for an exercise's kind — bodyweight vs weighted (and cardio/
-// mobility) share one list, distinguished by a chip, never split into two.
-const EX_TAG = {
-  bodyweight: { l: "BW", color: GR, title: "Bodyweight" },
-  weighted:   { l: "WT", color: AM, title: "Weighted" },
-  cardio:     { l: "CA", color: CY, title: "Cardio" },
-  mobility:   { l: "MO", color: T2, title: "Mobility" },
-};
 
 // The user's most-logged foods in a given slot over the last N days — the
 // "relevant first" ordering is grounded in real behaviour, not guessed tags.
@@ -59,7 +40,6 @@ const SectionHead = ({ icon, children }) => (
 );
 
 const selStyle = { width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "9px 11px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit", cursor: "pointer", boxSizing: "border-box" };
-const numInp = { width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 6, padding: "5px 6px", fontSize: 11.5, color: T1, outline: "none", fontFamily: "monospace", boxSizing: "border-box", textAlign: "center" };
 
 export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal = 0 }) {
   const [open, setOpen] = useState(false);
@@ -67,22 +47,15 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
   const toast = useToast();
 
   const [rawLog, setLog] = useStorageState("nutrition_log", {});
-  const [rawWorkouts, setWorkouts] = useStorageState("athlete_workouts", []);
   const [rawFoods] = useStorageState("nutrition_foods", []);
-  const [rawSplits] = useStorageState("workout_splits", []);
   const log = useMemo(() => sanitizeNutrition(rawLog), [rawLog]);
-  const workouts = Array.isArray(rawWorkouts) ? rawWorkouts : [];
   const customFoods = useMemo(() => sanitizeFoods(rawFoods), [rawFoods]);
-  const splits = useMemo(() => sanitizeSplits(rawSplits), [rawSplits]);
 
-  // Two-step selections — both default UNSELECTED so nothing is mislogged.
   const [mealSlot, setMealSlot] = useState("");
-  const [splitId, setSplitId] = useState("");
   const [foodQ, setFoodQ] = useState("");
 
   // Full searchable food library — quick-add bumps ordered first, then the
-  // rest. Kept up here (before any early return) so hook order is stable; the
-  // user's slot regulars sit above this list separately, computed below.
+  // rest. Kept above any early return so hook order stays stable.
   const library = useMemo(() => [...customFoods, ...FOOD_DB], [customFoods]);
   const foodMatches = useMemo(() => {
     const q = foodQ.trim().toLowerCase();
@@ -98,8 +71,6 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
 
   const scheduled = habits.filter((h) => !h.archived && !h.paused && isScheduled(h, ds));
-  // Nothing scheduled → nothing to quick-log. Otherwise keep the FAB hidden
-  // where it should be, but still let a command-opened sheet show through.
   // NOTE: every hook must run above this line — no hooks after an early return.
   if (!scheduled.length) return null;
   if (hidden && !open) return null;
@@ -127,64 +98,6 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
     const ids = new Set(clones.map((cl) => cl.id));
     setLog((prev) => { const p = sanitizeNutrition(prev); return { ...p, [ds]: [...(p[ds] || []), ...clones] }; });
     toast(`Copied ${clones.length} item${clones.length > 1 ? "s" : ""} from yesterday`, { tone: "success", action: "Undo", onAction: () => setLog((prev) => { const p = sanitizeNutrition(prev); return { ...p, [ds]: (p[ds] || []).filter((e) => !ids.has(e.id)) }; }) });
-  };
-
-  // ── Workouts ───────────────────────────────────────────────────────
-  const selectedSplit = splits.find((s) => s.id === splitId) || null;
-  // Today's session for this split — matched by stamped splitId, or by name
-  // for sessions created before the stamp (or by the split editor).
-  const sessionIdx = workouts.findIndex((w) => w && w.date === ds && (w.splitId === splitId || (selectedSplit && w.name === selectedSplit.name)));
-  const rawSession = sessionIdx >= 0 ? workouts[sessionIdx] : null;
-  // Normalize on read: a session created by the full Log-Workout form has
-  // exercises without ids — backfill deterministically so the inline set
-  // editor's keys and per-set edits target the right rows, and the ids
-  // persist on the next commit.
-  const todaySession = rawSession
-    ? { ...rawSession, exercises: (Array.isArray(rawSession.exercises) ? rawSession.exercises : []).map((e, i) => (e && e.id ? e : { ...e, id: `le${i}_${rawSession.id || "s"}` })) }
-    : null;
-
-  // Always "strength" — this flow logs named exercises with sets/reps, and the
-  // athlete log only surfaces an exercises[] array for strength sessions. The
-  // split's own name (Cardio, Mobility, …) keeps the session's identity, so
-  // typing it strength never hides what was logged.
-  const commitSession = (session) => {
-    const next = withVolume(session);
-    setWorkouts((prev) => {
-      const arr = Array.isArray(prev) ? [...prev] : [];
-      const i = arr.findIndex((w) => w && w.id === next.id);
-      if (i >= 0) arr[i] = next; else arr.unshift(next);
-      return arr;
-    });
-  };
-  const addExercise = (tplEx) => {
-    if (!selectedSplit) return;
-    // Same shape the split checklist writes (tplId + muscle + weight pre-fill),
-    // so an exercise added here shows as done on the checklist and vice versa.
-    const logged = seedLoggedExercise(tplEx, lastWeightFor(workouts, tplEx.name));
-    if (todaySession) {
-      commitSession({ ...todaySession, exercises: [...(todaySession.exercises || []), logged] });
-    } else {
-      commitSession({
-        id: rid("w"), type: "strength", name: selectedSplit.name, splitId: selectedSplit.id,
-        date: ds, duration: 0, distance: 0, intensity: "Moderate", notes: "", createdAt: new Date().toISOString(),
-        exercises: [logged], totalVolume: 0,
-      });
-    }
-    toast(`${logged.name} → ${selectedSplit.name}`, { tone: "success" });
-  };
-  const setSetVal = (exId, idx, key, v) => {
-    if (!todaySession) return;
-    commitSession({ ...todaySession, exercises: todaySession.exercises.map((e) => (e.id === exId ? { ...e, sets: e.sets.map((s, i) => (i === idx ? { ...s, [key]: v } : s)) } : e)) });
-  };
-  const addSet = (exId) => {
-    if (!todaySession) return;
-    commitSession({ ...todaySession, exercises: todaySession.exercises.map((e) => (e.id === exId ? { ...e, sets: [...e.sets, { ...(e.sets[e.sets.length - 1] || { reps: "", weight: "" }) }] } : e)) });
-  };
-  const removeExercise = (exId) => {
-    if (!todaySession) return;
-    const rest = todaySession.exercises.filter((e) => e.id !== exId);
-    if (rest.length === 0) { setWorkouts((prev) => (Array.isArray(prev) ? prev : []).filter((w) => w.id !== todaySession.id)); return; }
-    commitSession({ ...todaySession, exercises: rest });
   };
 
   const size = 52, stroke = 3.5, r = (size - stroke) / 2, c = 2 * Math.PI * r;
@@ -249,11 +162,11 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
               {regulars.length > 0 && !foodQ.trim() && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
                   <span style={{ fontSize: 9, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>Your {slotLabel.toLowerCase()} regulars</span>
-                  {regulars.map((r) => (
-                    <button key={`${r.name}|${r.grams}`} onClick={() => addRegular(r)} aria-label={`Log ${r.name}`} style={row}>
+                  {regulars.map((r2) => (
+                    <button key={`${r2.name}|${r2.grams}`} onClick={() => addRegular(r2)} aria-label={`Log ${r2.name}`} style={row}>
                       <span style={{ fontSize: 14 }}>🍽️</span>
-                      <span style={{ flex: 1, fontSize: 12.5, color: T1 }}>{r.name}</span>
-                      <span style={{ fontSize: 10.5, color: T3, fontFamily: "monospace" }}>{r.grams}g · +</span>
+                      <span style={{ flex: 1, fontSize: 12.5, color: T1 }}>{r2.name}</span>
+                      <span style={{ fontSize: 10.5, color: T3, fontFamily: "monospace" }}>{r2.grams}g · +</span>
                     </button>
                   ))}
                 </div>
@@ -284,64 +197,6 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
               )}
             </div>
           )}
-
-          {/* ── WORKOUT · select split type, then add its exercises ── */}
-          <SectionHead icon={<Dumbbell size={11} color={AM} />}>Workout</SectionHead>
-          <select value={splitId} onChange={(e) => setSplitId(e.target.value)} aria-label="Split type" style={selStyle}>
-            <option value="">Select split type…</option>
-            {splits.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-
-          {!splitId ? (
-            <div style={{ fontSize: 11.5, color: T3, margin: "8px 2px 0", lineHeight: 1.5 }}>Pick a split type to log its exercises.</div>
-          ) : (selectedSplit && selectedSplit.exercises.length === 0) ? (
-            <div style={{ fontSize: 11.5, color: T3, margin: "9px 2px 0", lineHeight: 1.6, padding: "10px 12px", background: `${AM}0a`, border: `1px solid ${AM}22`, borderRadius: 9 }}>
-              No exercises in <b style={{ color: T2 }}>{selectedSplit.name}</b> yet. Add them in <b style={{ color: T2 }}>Athlete → Splits</b>, then they'll appear here to log.
-            </div>
-          ) : (
-            <div style={{ marginTop: 9 }}>
-              {/* template exercises — tap to add to today's session */}
-              <span style={{ fontSize: 9, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>Tap to add to today</span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5, margin: "6px 0 4px" }}>
-                {selectedSplit.exercises.map((ex) => {
-                  const tag = EX_TAG[ex.type] || EX_TAG.weighted;
-                  const spec = ex.type === "cardio" || ex.type === "mobility" ? (ex.duration || "") : [ex.sets && `${ex.sets}×`, ex.reps].filter(Boolean).join("");
-                  return (
-                    <button key={ex.id} onClick={() => addExercise(ex)} aria-label={`Add ${ex.name || "exercise"}`} style={{ ...row, padding: "8px 11px" }}>
-                      <span title={tag.title} style={{ fontSize: 8.5, fontWeight: 700, color: tag.color, border: `1px solid ${tag.color}66`, borderRadius: 5, padding: "1px 4px", flexShrink: 0 }}>{tag.l}</span>
-                      <span style={{ flex: 1, fontSize: 12.5, color: T1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ex.name || "Unnamed"}</span>
-                      {spec && <span style={{ fontSize: 10.5, color: T3, fontFamily: "monospace" }}>{spec}</span>}
-                      <Plus size={13} color={AM} />
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* today's logged session for this split — editable per set */}
-              {todaySession && todaySession.exercises?.length > 0 && (
-                <div style={{ marginTop: 8, padding: "9px 10px", background: `${AM}0a`, border: `1px solid ${AM}22`, borderRadius: 9, display: "flex", flexDirection: "column", gap: 9 }}>
-                  <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{selectedSplit.name} today · {todaySession.exercises.length} ex</span>
-                  {todaySession.exercises.map((e) => (
-                    <div key={e.id}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
-                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: T1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.name}</span>
-                        <button onClick={() => addSet(e.id)} style={{ fontSize: 10, color: T2, background: GL, border: `1px solid ${BD}`, borderRadius: 6, padding: "2px 7px", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3 }}><Plus size={10} /> set</button>
-                        <button onClick={() => removeExercise(e.id)} aria-label={`Remove ${e.name}`} style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><Trash2 size={11} /></button>
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "16px 1fr 1fr", gap: 5, alignItems: "center" }}>
-                        <span style={{ fontSize: 8.5, color: T3, letterSpacing: 0.5 }} />
-                        <span style={{ fontSize: 8.5, color: T3, letterSpacing: 1, textTransform: "uppercase", textAlign: "center" }}>reps</span>
-                        <span style={{ fontSize: 8.5, color: T3, letterSpacing: 1, textTransform: "uppercase", textAlign: "center" }}>kg</span>
-                        {e.sets.map((s, i) => (
-                          <FragmentSet key={i} n={i + 1} s={s} onReps={(v) => setSetVal(e.id, i, "reps", v)} onWeight={(v) => setSetVal(e.id, i, "weight", v)} />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 
@@ -354,17 +209,6 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
         </svg>
         {pct === 100 ? <Check size={20} color={GR} /> : <Zap size={18} color={CY} />}
       </button>
-    </>
-  );
-}
-
-// One set row inside the today's-session editor: index + reps + weight.
-function FragmentSet({ n, s, onReps, onWeight }) {
-  return (
-    <>
-      <span style={{ fontSize: 10, color: T3, textAlign: "center" }}>{n}</span>
-      <input type="number" inputMode="decimal" value={s.reps} onChange={(e) => onReps(e.target.value)} placeholder="reps" style={numInp} />
-      <input type="number" inputMode="decimal" value={s.weight} onChange={(e) => onWeight(e.target.value)} placeholder="kg" style={numInp} />
     </>
   );
 }

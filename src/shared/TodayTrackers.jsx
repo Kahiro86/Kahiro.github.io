@@ -14,7 +14,6 @@ import {
   sanitizePings, DEFAULT_PINGS, newPing, pingDue,
 } from "./today.js";
 import { sanitizeSeason, seasonActive, seasonDay } from "./season.js";
-import { sanitizeSplits, sanitizeWeek, splitForDay } from "./workoutSplits.js";
 import { ModeIndicator } from "./ModeIndicator.jsx";
 
 const kes0 = (n) => Math.round(+n || 0).toLocaleString();
@@ -76,10 +75,6 @@ export function TodayTrackers({ overheadActual = null }) {
   const [rawSeason] = useStorageState("active_season", null);
   const season = sanitizeSeason(rawSeason);
   const seasonOn = seasonActive(rawSeason, ds);
-  // Today's assigned workout split.
-  const [rawSplits] = useStorageState("workout_splits", []);
-  const [rawWeek] = useStorageState("workout_week", {});
-  const todaySplit = useMemo(() => { const sp = sanitizeSplits(rawSplits); return splitForDay(sanitizeWeek(rawWeek, sp), sp, new Date()); }, [rawSplits, rawWeek]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -91,12 +86,6 @@ export function TodayTrackers({ overheadActual = null }) {
         <Card style={{ padding: "12px 15px", display: "flex", alignItems: "center", gap: 10, borderColor: `${AC2}55`, background: `${AC2}0a` }}>
           <span style={{ fontSize: 13, fontWeight: 800, color: AC2 }}>🕊️ {season.name}</span>
           <span style={{ fontSize: 12.5, color: T2, fontFamily: "monospace", marginLeft: "auto" }}>Day {seasonDay(rawSeason, ds)} of {season.days}</span>
-        </Card>
-      )}
-      {todaySplit && (
-        <Card style={{ padding: "12px 15px", display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 10.5, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, color: T3 }}>Today&apos;s split</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: T1, marginLeft: "auto" }}>🏋️ {todaySplit.name}</span>
         </Card>
       )}
       {/* Life pings — dismissible, no lock */}
