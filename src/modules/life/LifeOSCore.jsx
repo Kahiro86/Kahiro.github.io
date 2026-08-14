@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import {
   Sun, ListChecks, Layers, TrendingUp, BookOpen, Plus, Check, Flame, SkipForward,
   Pencil, Copy, Archive, ArchiveRestore, Trash2, Pause, Play, Star, Trophy, ShieldCheck,
+  ChevronDown, ChevronRight,
 } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Hydrating, Meter, Empty } from "../../shared/ui.jsx";
@@ -43,6 +44,8 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const [routineDraft, setRoutineDraft] = useState(null);
   const [insightHabit, setInsightHabit] = useState(null);
   const [detailId, setDetailId] = useState(null); // Screen 1 → Screen 2 drill-down
+  const [collapsedRoutines, setCollapsedRoutines] = useState(() => new Set());
+  const toggleRoutine = (id) => setCollapsedRoutines((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [journal, setJournal] = useState("");
   const [journalTitle, setJournalTitle] = useState("");
   const [journalDs, setJournalDs] = useState(() => today());
@@ -115,8 +118,8 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
   const cellSet = (id, ds, v) => setHabits((prev) => setHabitValue(prev, id, v, ds));
   const cellSkip = (id, ds) => setHabits((prev) => toggleSkip(prev, id, ds));
   const cellClear = (id, ds) => setHabits((prev) => setHabitValue(prev, id, 0, ds));
-  const listCard = (h) => (
-    <HabitListCard key={h.id} habit={h} onOpenDetail={(hh) => setDetailId(hh.id)}
+  const listCard = (h, indent = false) => (
+    <HabitListCard key={h.id} habit={h} indent={indent} onOpenDetail={(hh) => setDetailId(hh.id)}
       onToggle={cellToggle} onSetValue={cellSet} onSkip={cellSkip} onClear={cellClear} />
   );
   const PACKS = {
@@ -474,41 +477,39 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               </div>
             )}
 
-            {active.length > 0 && <HabitListHeader />}
-
-            {/* Routine groups — each routine is a header band over its member habit cards */}
-            {routines.map((r) => {
-              const p = routineProgress(habits, r);
-              const members = active.filter((h) => r.habitIds.includes(h.id));
-              return (
-                <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "11px 15px", borderRadius: 12, background: `${CY}0e`, border: `1px solid ${CY}33` }}>
-                    <span style={{ fontSize: 20 }}>{r.icon}</span>
-                    <div style={{ flex: 1, minWidth: 120 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 800, color: T1 }}>{r.name}</div>
-                      <div style={{ fontSize: 10.5, color: T3, marginTop: 1 }}>{members.length} habit{members.length !== 1 ? "s" : ""} · routine</div>
+            {/* Loop flat table: shared date header, then routine group-header
+                rows (collapsible) with indented member rows, then standalone
+                habits — no cards, thin rows, divider between them. */}
+            {active.length > 0 && (
+              <div style={{ borderTop: `1px solid ${BD}` }}>
+                <HabitListHeader />
+                {routines.map((r) => {
+                  const p = routineProgress(habits, r);
+                  const members = active.filter((h) => r.habitIds.includes(h.id));
+                  const collapsed = collapsedRoutines.has(r.id);
+                  return (
+                    <div key={r.id}>
+                      <div onClick={() => toggleRoutine(r.id)} style={{ display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 12px", cursor: "pointer", background: `${CY}08` }}>
+                        {collapsed ? <ChevronRight size={15} color={T3} /> : <ChevronDown size={15} color={T3} />}
+                        <span style={{ fontSize: 15 }}>{r.icon}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: T1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</span>
+                        <span style={{ fontSize: 11, color: p.pct === 100 ? GR : T3, fontFamily: "monospace" }}>{p.done}/{p.total}</span>
+                        {p.pct < 100 && p.total > 0 && (
+                          <button onClick={(e) => { e.stopPropagation(); runRoutine(r); }} title={`Complete all ${p.total}`} style={{ padding: "4px 9px", background: `${GR}14`, border: `1px solid ${GR}44`, borderRadius: 8, color: GR, fontSize: 10.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>All →</button>
+                        )}
+                        <button onClick={(e) => { e.stopPropagation(); setRoutineDraft({ ...r }); }} title="Edit routine" style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: T3, display: "flex" }}><Pencil size={13} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); deleteRoutine(r); }} title="Delete routine" style={{ background: "none", border: "none", padding: 4, cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={13} /></button>
+                      </div>
+                      <div style={{ height: 1, background: BD }} />
+                      {!collapsed && (members.length
+                        ? members.map((h) => listCard(h, true))
+                        : <div style={{ fontSize: 11.5, color: T3, padding: "8px 0 8px 30px" }}>No habits in this routine yet — edit it to add some.</div>)}
                     </div>
-                    <span style={{ fontSize: 11.5, color: p.pct === 100 ? GR : T3, fontFamily: "monospace" }}>{p.done}/{p.total} today</span>
-                    {p.pct < 100 && p.total > 0 && (
-                      <button onClick={() => runRoutine(r)} title={`Complete all ${p.total} habits`} style={{ padding: "6px 12px", background: `${GR}14`, border: `1px solid ${GR}44`, borderRadius: 9, color: GR, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Complete all →</button>
-                    )}
-                    <button onClick={() => setRoutineDraft({ ...r })} title="Edit routine" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: T2, display: "flex" }}><Pencil size={12} /></button>
-                    <button onClick={() => deleteRoutine(r)} title="Delete routine" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", paddingLeft: 14, marginLeft: 7, borderLeft: `2px solid ${CY}22` }}>
-                    {members.length ? members.map(listCard) : (
-                      <div style={{ fontSize: 11.5, color: T3, padding: "6px 2px" }}>No habits in this routine yet — edit it to add some.</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Ungrouped habits */}
-            {routines.length > 0 && otherActive.length > 0 && (
-              <div style={{ fontSize: 11, color: T3, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginTop: 4 }}>Other habits</div>
+                  );
+                })}
+                {otherActive.map((h) => listCard(h))}
+              </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column" }}>{otherActive.map(listCard)}</div>
 
             {active.length === 0 && routines.length === 0 && !editing && !routineDraft && (
               <Empty icon="🌱" title="No habits yet" sub="Add your first habit, then bundle habits into routines you can finish in one tap." />
