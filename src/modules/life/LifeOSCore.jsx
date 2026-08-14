@@ -414,7 +414,8 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               onDuplicate={duplicateHabit}
               onTogglePause={(h) => patchHabit(h.id, { paused: !h.paused })}
               onToggleArchive={(h) => patchHabit(h.id, { archived: !h.archived })}
-              onDelete={deleteHabit} />
+              onDelete={deleteHabit}
+              onSetValue={cellSet} onClear={cellClear} onSkip={cellSkip} />
           );
           return (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>

@@ -35,7 +35,7 @@ function windowStat(h, fromDaysAgo, len) {
 
 const subtitleOf = (h) => (h.notes || "").trim() || `${h.name} · ${frequencyLabel(h)}`;
 
-export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause, onToggleArchive, onDelete }) {
+export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause, onToggleArchive, onDelete, onSetValue, onClear, onSkip }) {
   const [menu, setMenu] = useState(false);
   const cur = currentStreak(habit);
   const best = longestStreak(habit);
@@ -85,7 +85,7 @@ export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause,
       <OverviewCard habit={habit} />
       <TrendCard habit={habit} />
       <HistoryCard habit={habit} />
-      <HabitCalendar habit={habit} />
+      <HabitCalendar habit={habit} onSetValue={onSetValue} onClear={onClear} onSkip={onSkip} />
     </div>
   );
 }
