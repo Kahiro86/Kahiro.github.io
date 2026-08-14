@@ -23,7 +23,7 @@ import {
   isWeekly, weekProgress, weeklyStreak, isWellness, isNonNeg, isOnePct, makeNonNeg, makeWellness, makeOnePct,
 } from "../../shared/habitEngine.js";
 import { HabitEditor } from "./HabitEditor.jsx";
-import { HabitListCard } from "./HabitListCard.jsx";
+import { HabitListCard, HabitListHeader } from "./HabitListCard.jsx";
 import { HabitDetail } from "./HabitDetail.jsx";
 import { TierPanel } from "./TierPanel.jsx";
 import { PurityTab } from "./PurityTab.jsx";
@@ -474,6 +474,8 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
               </div>
             )}
 
+            {active.length > 0 && <HabitListHeader />}
+
             {/* Routine groups — each routine is a header band over its member habit cards */}
             {routines.map((r) => {
               const p = routineProgress(habits, r);
@@ -493,7 +495,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
                     <button onClick={() => setRoutineDraft({ ...r })} title="Edit routine" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: T2, display: "flex" }}><Pencil size={12} /></button>
                     <button onClick={() => deleteRoutine(r)} title="Delete routine" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: RE, display: "flex" }}><Trash2 size={12} /></button>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 14, marginLeft: 7, borderLeft: `2px solid ${CY}22` }}>
+                  <div style={{ display: "flex", flexDirection: "column", paddingLeft: 14, marginLeft: 7, borderLeft: `2px solid ${CY}22` }}>
                     {members.length ? members.map(listCard) : (
                       <div style={{ fontSize: 11.5, color: T3, padding: "6px 2px" }}>No habits in this routine yet — edit it to add some.</div>
                     )}
@@ -506,7 +508,7 @@ export function LifeOSCore({ habits, setHabits, loaded = true, onNavigate, xpInf
             {routines.length > 0 && otherActive.length > 0 && (
               <div style={{ fontSize: 11, color: T3, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginTop: 4 }}>Other habits</div>
             )}
-            {otherActive.map(listCard)}
+            <div style={{ display: "flex", flexDirection: "column" }}>{otherActive.map(listCard)}</div>
 
             {active.length === 0 && routines.length === 0 && !editing && !routineDraft && (
               <Empty icon="🌱" title="No habits yet" sub="Add your first habit, then bundle habits into routines you can finish in one tap." />

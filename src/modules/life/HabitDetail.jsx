@@ -7,7 +7,7 @@ import { useState } from "react";
 import { ChevronLeft, Pencil, MoreVertical, Flame, Trophy, Copy, Pause, Play, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { currentStreak, longestStreak, isScheduled, isDone, valueOn, totalCompletions } from "../../shared/habitEngine.js";
 import { daysAgoStr, localDateStr } from "../../shared/dates.js";
-import { HT, getScoreColor, frequencyLabel, fmtCellValue } from "./habitTheme.js";
+import { HT, frequencyLabel, fmtCellValue } from "./habitTheme.js";
 import { HabitCalendar } from "./HabitCalendar.jsx";
 
 // Period toggles persist per habit per session (spec §4) — a plain module map,
@@ -42,6 +42,7 @@ export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause,
   const [view, setView] = useState("stats"); // stats | calendar
   const cur = currentStreak(habit);
   const best = longestStreak(habit);
+  const accent = habit.color || HT.gold; // Loop tints a habit's whole detail in its own colour
 
   return (
     <div style={{ padding: "16px 16px 44px", display: "flex", flexDirection: "column", gap: 12, maxWidth: 640, margin: "0 auto" }}>
@@ -49,7 +50,7 @@ export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause,
       <Panel>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={onBack} aria-label="Back" style={iconBtn}><ChevronLeft size={20} /></button>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: `${HT.gold}1A`, border: `1px solid ${HT.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{habit.icon}</div>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: `${accent}1A`, border: `1px solid ${accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{habit.icon}</div>
           <div style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, color: HT.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{habit.name}</div>
           <button onClick={() => onEdit(habit)} aria-label="Edit" style={iconBtn}><Pencil size={16} /></button>
           <div style={{ position: "relative" }}>
@@ -79,18 +80,18 @@ export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause,
 
         <div style={{ display: "flex", gap: 18, paddingLeft: 2, flexWrap: "wrap", alignItems: "center" }}>
           <Meta label={frequencyLabel(habit)} />
-          <Meta icon={<Flame size={13} color={HT.gold} />} value={`${cur}d`} label="streak" />
-          <Meta icon={<Trophy size={13} color={HT.gold} />} value={`${best}d`} label="best" />
+          <Meta icon={<Flame size={13} color={accent} />} value={`${cur}d`} label="streak" />
+          <Meta icon={<Trophy size={13} color={accent} />} value={`${best}d`} label="best" />
           <div style={{ flex: 1 }} />
-          <Segment options={[["stats", "Stats"], ["calendar", "Calendar"]]} value={view} onChange={setView} />
+          <Segment options={[["stats", "Stats"], ["calendar", "Calendar"]]} value={view} onChange={setView} accent={accent} />
         </div>
       </Panel>
 
       {view === "stats" ? (
         <>
-          <OverviewCard habit={habit} />
-          <TrendCard habit={habit} />
-          <HistoryCard habit={habit} />
+          <OverviewCard habit={habit} accent={accent} />
+          <TrendCard habit={habit} accent={accent} />
+          <HistoryCard habit={habit} accent={accent} />
         </>
       ) : (
         <HabitCalendar habit={habit} />
@@ -100,11 +101,10 @@ export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause,
 }
 
 // ── Card B — Overview ────────────────────────────────────────────────────────
-function OverviewCard({ habit }) {
+function OverviewCard({ habit, accent }) {
   const [period, setPeriod] = useState(() => memGet(habit.id, "overview", "month"));
   const set = (p) => { memSet(habit.id, "overview", p); setPeriod(p); };
   const score = windowStat(habit, 0, PERIOD_LEN[period]).pct;
-  const color = getScoreColor(score);
 
   const monthDelta = windowStat(habit, 0, 30).pct - windowStat(habit, 30, 30).pct;
   const yearDelta = windowStat(habit, 0, 365).pct - windowStat(habit, 365, 365).pct;
@@ -112,9 +112,9 @@ function OverviewCard({ habit }) {
 
   return (
     <Panel>
-      <CardHead label="overview" period={period} onPeriod={set} periods={["week", "month", "year"]} />
+      <CardHead label="overview" period={period} onPeriod={set} periods={["week", "month", "year"]} accent={accent} />
       <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 6 }}>
-        <ScoreRing pct={score} color={color} />
+        <ScoreRing pct={score} color={accent} />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
           <Delta label="this month" value={monthDelta} suffix="%" />
           <Delta label="this year" value={yearDelta} suffix="%" />
@@ -129,7 +129,7 @@ function OverviewCard({ habit }) {
 }
 
 // ── Card C — Score trend ─────────────────────────────────────────────────────
-function TrendCard({ habit }) {
+function TrendCard({ habit, accent }) {
   const [period, setPeriod] = useState(() => memGet(habit.id, "trend", "month"));
   const set = (p) => { memSet(habit.id, "trend", p); setPeriod(p); };
   const points = trendBuckets(habit, period);
@@ -137,11 +137,11 @@ function TrendCard({ habit }) {
 
   return (
     <Panel>
-      <CardHead label="score trend" period={period} onPeriod={set} periods={["week", "month", "year"]} />
+      <CardHead label="score trend" period={period} onPeriod={set} periods={["week", "month", "year"]} accent={accent} />
       {withData.length < 2 ? (
         <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: HT.textSecondary, fontSize: 12.5 }}>not enough data yet</div>
       ) : (
-        <TrendLine points={points} />
+        <TrendLine points={points} accent={accent} />
       )}
     </Panel>
   );
@@ -172,7 +172,7 @@ function trendBuckets(habit, period) {
   });
 }
 
-function TrendLine({ points }) {
+function TrendLine({ points, accent }) {
   const n = points.length;
   const W = 100, H = 100;
   const x = (i) => (n === 1 ? W / 2 : (i / (n - 1)) * W);
@@ -182,8 +182,8 @@ function TrendLine({ points }) {
   return (
     <div style={{ marginTop: 6 }}>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 120, overflow: "visible" }}>
-        <path d={path} fill="none" stroke={HT.gold} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-        <circle cx={x(n - 1)} cy={y(last.pct)} r={3} fill={HT.gold} vectorEffect="non-scaling-stroke" />
+        <path d={path} fill="none" stroke={accent} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={x(n - 1)} cy={y(last.pct)} r={3} fill={accent} vectorEffect="non-scaling-stroke" />
       </svg>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
         <span style={{ fontSize: 9.5, color: HT.textSecondary }}>{points[0].label}</span>
@@ -194,7 +194,7 @@ function TrendLine({ points }) {
 }
 
 // ── Card D — History ─────────────────────────────────────────────────────────
-function HistoryCard({ habit }) {
+function HistoryCard({ habit, accent }) {
   const [period, setPeriod] = useState(() => memGet(habit.id, "history", "week"));
   const set = (p) => { memSet(habit.id, "history", p); setPeriod(p); };
   const bars = historyBars(habit, period);
@@ -202,15 +202,15 @@ function HistoryCard({ habit }) {
 
   return (
     <Panel>
-      <CardHead label="history" period={period} onPeriod={set} periods={["week", "month"]} />
+      <CardHead label="history" period={period} onPeriod={set} periods={["week", "month"]} accent={accent} />
       {!any ? (
         <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", color: HT.textSecondary, fontSize: 12.5 }}>nothing logged yet</div>
       ) : (
         <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 118, marginTop: 8 }}>
           {bars.map((b, i) => (
             <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 4, height: "100%" }}>
-              {b.label && <span style={{ fontSize: 9, color: HT.gold, fontFamily: "monospace" }}>{b.label}</span>}
-              <div style={{ width: "100%", maxWidth: 26, height: `${Math.max(3, b.height)}%`, background: b.met ? HT.gold : HT.cellEmpty, borderRadius: 4 }} />
+              {b.label && <span style={{ fontSize: 9, color: accent, fontFamily: "monospace" }}>{b.label}</span>}
+              <div style={{ width: "100%", maxWidth: 26, height: `${Math.max(3, b.height)}%`, background: b.met ? accent : HT.cellEmpty, borderRadius: 4 }} />
               <span style={{ fontSize: 9, color: HT.textSecondary }}>{b.axis}</span>
             </div>
           ))}
@@ -250,22 +250,22 @@ const Panel = ({ children }) => (
   <div style={{ background: HT.bgCard, border: `1px solid ${HT.border}`, borderRadius: 12, padding: "14px 16px" }}>{children}</div>
 );
 
-function CardHead({ label, period, onPeriod, periods }) {
+function CardHead({ label, period, onPeriod, periods, accent }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <span style={{ fontSize: 12, color: HT.textSecondary, letterSpacing: 0.5 }}>{label}</span>
-      <Segment options={periods.map((p) => [p, p[0].toUpperCase() + p.slice(1)])} value={period} onChange={onPeriod} />
+      <Segment options={periods.map((p) => [p, p[0].toUpperCase() + p.slice(1)])} value={period} onChange={onPeriod} accent={accent} />
     </div>
   );
 }
 
-function Segment({ options, value, onChange }) {
+function Segment({ options, value, onChange, accent = HT.gold }) {
   return (
     <div style={{ display: "flex", gap: 2, background: HT.bgPage, border: `1px solid ${HT.border}`, borderRadius: 8, padding: 2 }}>
       {options.map(([v, l]) => (
         <button key={v} onClick={() => onChange(v)}
           style={{ padding: "4px 9px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: value === v ? 700 : 500,
-            background: value === v ? `${HT.gold}22` : "transparent", color: value === v ? HT.gold : HT.textSecondary }}>{l}</button>
+            background: value === v ? `${accent}22` : "transparent", color: value === v ? accent : HT.textSecondary }}>{l}</button>
       ))}
     </div>
   );

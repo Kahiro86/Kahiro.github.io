@@ -19,8 +19,16 @@ export const HT = {
   cellEmpty: "#241F18",    // unlogged / missed day cells
 };
 
-// Calendar-only heatmap ramp, light→dark logged intensity (5 steps).
+// Calendar-only heatmap ramp, light→dark logged intensity (5 steps). Kept for
+// any generic use; per-habit screens use habitRamp() below instead.
 export const HEATMAP_RAMP = ["#1A1611", "#3D3116", "#6B4F1A", "#A67D1F", "#D4A843"];
+
+// Loop tints every one of a habit's surfaces in the habit's OWN colour. This
+// derives a 5-step intensity ramp from that colour via increasing alpha over
+// the near-black page, which reads as faint→saturated shades of the colour.
+export function habitRamp(color) {
+  return [`${color}12`, `${color}33`, `${color}66`, `${color}AA`, color];
+}
 
 // The single source of truth for the score→color rule (spec §2). A % anywhere
 // in the Habits screens must colour through this function.
