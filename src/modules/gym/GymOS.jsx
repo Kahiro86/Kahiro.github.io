@@ -6,7 +6,7 @@
 // `workouts` mapping in useXp (see gymStore.gymSessionsToWorkouts).
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
-  Dumbbell, Plus, Check, X, Search, Trash2, Trophy, Clock, TrendingUp, Activity,
+  Dumbbell, Plus, Check, X, Search, Trash2, Trophy, Clock, TrendingUp, Activity, Timer,
 } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, AC, AC2, GR, RE, AM, PU } from "../../shared/designTokens.js";
 import { Card, SH, Meter, Empty } from "../../shared/ui.jsx";
@@ -20,6 +20,7 @@ import { sanitizeSessions, sortedByDate, weeklyStreak, newSetFrom, lastPerforman
 import { computeAllSummaries } from "./gymStore.js";
 import { RoutineQuickList, RoutineManager, sanitizeRoutines } from "./GymRoutines.jsx";
 import { MuscleRadar } from "./BodyMap.jsx";
+import { RestTimer } from "./RestTimer.jsx";
 
 const today = () => localDateStr();
 const uid = () => `gs${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -198,6 +199,7 @@ function StartScreen({ onStart, last, lastSummary, thisWeek, streak, total, onOp
 // ── Active session ───────────────────────────────────────────────────────────
 function ActiveScreen({ active, sessions, onAddExercise, patchSet, addSet, removeSet, removeExercise, onFinish, onCancel, canFinish, onBw }) {
   const elapsed = useElapsed(active.startedAt);
+  const [restOpen, setRestOpen] = useState(false);
   return (
     <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 680, margin: "0 auto" }}>
       <Card style={{ padding: "13px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", position: "sticky", top: 0, zIndex: 5 }}>
@@ -212,6 +214,7 @@ function ActiveScreen({ active, sessions, onAddExercise, patchSet, addSet, remov
           <span style={{ fontSize: 11, color: T3 }}>kg</span>
         </div>
         <div style={{ flex: 1 }} />
+        <button onClick={() => setRestOpen((o) => !o)} title="Rest timer" aria-label="Rest timer" style={{ width: 32, height: 32, borderRadius: 9, border: `1px solid ${restOpen ? AC + "66" : BD}`, background: restOpen ? `${AC}18` : GL, color: restOpen ? AC : T2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Timer size={15} /></button>
         <button onClick={onCancel} style={{ padding: "7px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 9, color: T3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>Discard</button>
         <button onClick={onFinish} disabled={!canFinish} style={{ padding: "7px 16px", background: canFinish ? `linear-gradient(135deg,${GR},${AC2})` : GL, border: "none", borderRadius: 9, color: canFinish ? "#000" : T3, fontSize: 12.5, fontWeight: 800, cursor: canFinish ? "pointer" : "default", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}><Check size={14} />Finish</button>
       </Card>
@@ -227,6 +230,8 @@ function ActiveScreen({ active, sessions, onAddExercise, patchSet, addSet, remov
       <button onClick={onAddExercise} style={{ padding: "12px", background: GL, border: `1px dashed ${AC}55`, borderRadius: 12, color: AC, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
         <Plus size={15} />Add Exercise
       </button>
+
+      {restOpen && <RestTimer onClose={() => setRestOpen(false)} />}
     </div>
   );
 }
