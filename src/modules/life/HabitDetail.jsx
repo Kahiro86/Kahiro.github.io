@@ -1,26 +1,27 @@
-// ── Screen 2 · Habit Detail (spec §4) ────────────────────────────────────
-// Four stacked cards: header, Overview (ring + deltas), Score trend (line),
-// History (bars). A Stats | Calendar toggle reaches Screen 3. Every number is
-// read live from habitEngine.rangeStats / isScheduled / isDone / valueOn —
-// God Mode is a whole-day score and is never used per-habit. No mock data.
+// ── Screen 2 · Habit Detail (Loop layout, gold tokens) ───────────────────
+// One vertical scroll, no tabs/accordion — Loop stacks every card visible:
+// Header, Overview, Score trend, History (this file), then Calendar, Best
+// streaks, Frequency (HabitCalendar). Score colours run through the shared
+// getScoreColor rule; the trend line and history bars are accent-gold. Every
+// number is live from habitEngine — God Mode is a whole-day score, never
+// per-habit, so per-habit stats come from rangeStats-style windows here.
 import { useState } from "react";
 import { ChevronLeft, Pencil, MoreVertical, Flame, Trophy, Copy, Pause, Play, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { currentStreak, longestStreak, isScheduled, isDone, valueOn, totalCompletions } from "../../shared/habitEngine.js";
 import { daysAgoStr, localDateStr } from "../../shared/dates.js";
-import { HT, frequencyLabel, fmtCellValue } from "./habitTheme.js";
+import { HT, getScoreColor, frequencyLabel, fmtCellValue } from "./habitTheme.js";
 import { HabitCalendar } from "./HabitCalendar.jsx";
 
-// Period toggles persist per habit per session (spec §4) — a plain module map,
-// intentionally not written to storage (resets on reload, which the spec allows).
+// Period toggles persist per habit per session (spec §4) — a plain module map.
 const PERIOD_MEM = new Map();
-const memGet = (habitId, card, dflt) => PERIOD_MEM.get(`${habitId}:${card}`) ?? dflt;
-const memSet = (habitId, card, v) => PERIOD_MEM.set(`${habitId}:${card}`, v);
+const memGet = (id, card, d) => PERIOD_MEM.get(`${id}:${card}`) ?? d;
+const memSet = (id, card, v) => PERIOD_MEM.set(`${id}:${card}`, v);
 
 const PERIOD_LEN = { week: 7, month: 30, year: 365 };
 const numeric = (h) => (h.target || 1) > 1;
 
-// Completion over a trailing window [fromDaysAgo, fromDaysAgo+len). Days before
-// the habit existed and unscheduled days are excluded by isScheduled itself.
+// Completion over a trailing window; isScheduled excludes pre-creation and
+// unscheduled days.
 function windowStat(h, fromDaysAgo, len) {
   let sched = 0, done = 0;
   for (let i = fromDaysAgo; i < fromDaysAgo + len; i++) {
@@ -32,17 +33,12 @@ function windowStat(h, fromDaysAgo, len) {
   return { sched, done, pct: sched ? Math.round((done / sched) * 100) : 0 };
 }
 
-function subtitleOf(h) {
-  const note = (h.notes || "").trim();
-  return note || `${h.name} · ${frequencyLabel(h)}`;
-}
+const subtitleOf = (h) => (h.notes || "").trim() || `${h.name} · ${frequencyLabel(h)}`;
 
 export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause, onToggleArchive, onDelete }) {
   const [menu, setMenu] = useState(false);
-  const [view, setView] = useState("stats"); // stats | calendar
   const cur = currentStreak(habit);
   const best = longestStreak(habit);
-  const accent = habit.color || HT.gold; // Loop tints a habit's whole detail in its own colour
 
   return (
     <div style={{ padding: "16px 16px 44px", display: "flex", flexDirection: "column", gap: 12, maxWidth: 640, margin: "0 auto" }}>
@@ -50,7 +46,7 @@ export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause,
       <Panel>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={onBack} aria-label="Back" style={iconBtn}><ChevronLeft size={20} /></button>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: `${accent}1A`, border: `1px solid ${accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{habit.icon}</div>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: `${HT.gold}1A`, border: `1px solid ${HT.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{habit.icon}</div>
           <div style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, color: HT.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{habit.name}</div>
           <button onClick={() => onEdit(habit)} aria-label="Edit" style={iconBtn}><Pencil size={16} /></button>
           <div style={{ position: "relative" }}>
@@ -80,31 +76,26 @@ export function HabitDetail({ habit, onBack, onEdit, onDuplicate, onTogglePause,
 
         <div style={{ display: "flex", gap: 18, paddingLeft: 2, flexWrap: "wrap", alignItems: "center" }}>
           <Meta label={frequencyLabel(habit)} />
-          <Meta icon={<Flame size={13} color={accent} />} value={`${cur}d`} label="streak" />
-          <Meta icon={<Trophy size={13} color={accent} />} value={`${best}d`} label="best" />
-          <div style={{ flex: 1 }} />
-          <Segment options={[["stats", "Stats"], ["calendar", "Calendar"]]} value={view} onChange={setView} accent={accent} />
+          <Meta icon={<Flame size={13} color={HT.gold} />} value={`${cur}d`} label="streak" />
+          <Meta icon={<Trophy size={13} color={HT.gold} />} value={`${best}d`} label="best" />
         </div>
       </Panel>
 
-      {view === "stats" ? (
-        <>
-          <OverviewCard habit={habit} accent={accent} />
-          <TrendCard habit={habit} accent={accent} />
-          <HistoryCard habit={habit} accent={accent} />
-        </>
-      ) : (
-        <HabitCalendar habit={habit} />
-      )}
+      {/* Cards B–D, then Screen 3 (calendar/streaks/frequency) — one scroll */}
+      <OverviewCard habit={habit} />
+      <TrendCard habit={habit} />
+      <HistoryCard habit={habit} />
+      <HabitCalendar habit={habit} />
     </div>
   );
 }
 
 // ── Card B — Overview ────────────────────────────────────────────────────────
-function OverviewCard({ habit, accent }) {
+function OverviewCard({ habit }) {
   const [period, setPeriod] = useState(() => memGet(habit.id, "overview", "month"));
   const set = (p) => { memSet(habit.id, "overview", p); setPeriod(p); };
   const score = windowStat(habit, 0, PERIOD_LEN[period]).pct;
+  const color = getScoreColor(score);
 
   const monthDelta = windowStat(habit, 0, 30).pct - windowStat(habit, 30, 30).pct;
   const yearDelta = windowStat(habit, 0, 365).pct - windowStat(habit, 365, 365).pct;
@@ -112,9 +103,9 @@ function OverviewCard({ habit, accent }) {
 
   return (
     <Panel>
-      <CardHead label="overview" period={period} onPeriod={set} periods={["week", "month", "year"]} accent={accent} />
+      <CardHead label="overview" period={period} onPeriod={set} periods={["week", "month", "year"]} />
       <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 6 }}>
-        <ScoreRing pct={score} color={accent} />
+        <ScoreRing pct={score} color={color} />
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
           <Delta label="this month" value={monthDelta} suffix="%" />
           <Delta label="this year" value={yearDelta} suffix="%" />
@@ -129,7 +120,7 @@ function OverviewCard({ habit, accent }) {
 }
 
 // ── Card C — Score trend ─────────────────────────────────────────────────────
-function TrendCard({ habit, accent }) {
+function TrendCard({ habit }) {
   const [period, setPeriod] = useState(() => memGet(habit.id, "trend", "month"));
   const set = (p) => { memSet(habit.id, "trend", p); setPeriod(p); };
   const points = trendBuckets(habit, period);
@@ -137,11 +128,11 @@ function TrendCard({ habit, accent }) {
 
   return (
     <Panel>
-      <CardHead label="score trend" period={period} onPeriod={set} periods={["week", "month", "year"]} accent={accent} />
+      <CardHead label="score trend" period={period} onPeriod={set} periods={["week", "month", "year"]} />
       {withData.length < 2 ? (
         <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: HT.textSecondary, fontSize: 12.5 }}>not enough data yet</div>
       ) : (
-        <TrendLine points={points} accent={accent} />
+        <TrendLine points={points} />
       )}
     </Panel>
   );
@@ -149,7 +140,6 @@ function TrendCard({ habit, accent }) {
 
 function trendBuckets(habit, period) {
   if (period === "week") {
-    // last 7 days, each a rolling 7-day completion rate → a smooth line
     return Array.from({ length: 7 }, (_, k) => {
       const i = 6 - k;
       const w = windowStat(habit, i, 7);
@@ -157,14 +147,12 @@ function trendBuckets(habit, period) {
     });
   }
   if (period === "month") {
-    // last 5 weeks, each that week's rate
     return Array.from({ length: 5 }, (_, k) => {
       const w = 4 - k;
       const s = windowStat(habit, w * 7, 7);
       return { label: w === 0 ? "now" : `-${w}w`, pct: s.pct, has: s.sched > 0 };
     });
   }
-  // year: last 12 months, each ~30-day rate
   return Array.from({ length: 12 }, (_, k) => {
     const m = 11 - k;
     const s = windowStat(habit, m * 30, 30);
@@ -172,7 +160,7 @@ function trendBuckets(habit, period) {
   });
 }
 
-function TrendLine({ points, accent }) {
+function TrendLine({ points }) {
   const n = points.length;
   const W = 100, H = 100;
   const x = (i) => (n === 1 ? W / 2 : (i / (n - 1)) * W);
@@ -182,8 +170,8 @@ function TrendLine({ points, accent }) {
   return (
     <div style={{ marginTop: 6 }}>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 120, overflow: "visible" }}>
-        <path d={path} fill="none" stroke={accent} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-        <circle cx={x(n - 1)} cy={y(last.pct)} r={3} fill={accent} vectorEffect="non-scaling-stroke" />
+        <path d={path} fill="none" stroke={HT.gold} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={x(n - 1)} cy={y(last.pct)} r={3} fill={HT.gold} vectorEffect="non-scaling-stroke" />
       </svg>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
         <span style={{ fontSize: 9.5, color: HT.textSecondary }}>{points[0].label}</span>
@@ -194,7 +182,7 @@ function TrendLine({ points, accent }) {
 }
 
 // ── Card D — History ─────────────────────────────────────────────────────────
-function HistoryCard({ habit, accent }) {
+function HistoryCard({ habit }) {
   const [period, setPeriod] = useState(() => memGet(habit.id, "history", "week"));
   const set = (p) => { memSet(habit.id, "history", p); setPeriod(p); };
   const bars = historyBars(habit, period);
@@ -202,15 +190,15 @@ function HistoryCard({ habit, accent }) {
 
   return (
     <Panel>
-      <CardHead label="history" period={period} onPeriod={set} periods={["week", "month"]} accent={accent} />
+      <CardHead label="history" period={period} onPeriod={set} periods={["week", "month"]} />
       {!any ? (
         <div style={{ height: 110, display: "flex", alignItems: "center", justifyContent: "center", color: HT.textSecondary, fontSize: 12.5 }}>nothing logged yet</div>
       ) : (
         <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 118, marginTop: 8 }}>
           {bars.map((b, i) => (
             <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 4, height: "100%" }}>
-              {b.label && <span style={{ fontSize: 9, color: accent, fontFamily: "monospace" }}>{b.label}</span>}
-              <div style={{ width: "100%", maxWidth: 26, height: `${Math.max(3, b.height)}%`, background: b.met ? accent : HT.cellEmpty, borderRadius: 4 }} />
+              {b.label && <span style={{ fontSize: 9, color: HT.gold, fontFamily: "monospace" }}>{b.label}</span>}
+              <div style={{ width: "100%", maxWidth: 26, height: `${Math.max(3, b.height)}%`, background: b.met ? HT.gold : HT.cellEmpty, borderRadius: 4 }} />
               <span style={{ fontSize: 9, color: HT.textSecondary }}>{b.axis}</span>
             </div>
           ))}
@@ -228,15 +216,9 @@ function historyBars(habit, period) {
       const scheduled = isScheduled(habit, ds);
       const met = isDone(habit, ds);
       const v = valueOn(habit, ds);
-      return {
-        met,
-        height: met ? 100 : scheduled ? 22 : 0,
-        label: met ? (numeric(habit) ? fmtCellValue(v, habit.unit) : "✓") : "",
-        axis: weekdayLabel(ds)[0],
-      };
+      return { met, height: met ? 100 : scheduled ? 22 : 0, label: met ? (numeric(habit) ? fmtCellValue(v, habit.unit) : "✓") : "", axis: weekdayLabel(ds)[0] };
     });
   }
-  // month: last 5 weeks as weekly completion bars
   return Array.from({ length: 5 }, (_, k) => {
     const w = 4 - k;
     const s = windowStat(habit, w * 7, 7);
@@ -250,22 +232,22 @@ const Panel = ({ children }) => (
   <div style={{ background: HT.bgCard, border: `1px solid ${HT.border}`, borderRadius: 12, padding: "14px 16px" }}>{children}</div>
 );
 
-function CardHead({ label, period, onPeriod, periods, accent }) {
+function CardHead({ label, period, onPeriod, periods }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <span style={{ fontSize: 12, color: HT.textSecondary, letterSpacing: 0.5 }}>{label}</span>
-      <Segment options={periods.map((p) => [p, p[0].toUpperCase() + p.slice(1)])} value={period} onChange={onPeriod} accent={accent} />
+      <Segment options={periods.map((p) => [p, p[0].toUpperCase() + p.slice(1)])} value={period} onChange={onPeriod} />
     </div>
   );
 }
 
-function Segment({ options, value, onChange, accent = HT.gold }) {
+function Segment({ options, value, onChange }) {
   return (
     <div style={{ display: "flex", gap: 2, background: HT.bgPage, border: `1px solid ${HT.border}`, borderRadius: 8, padding: 2 }}>
       {options.map(([v, l]) => (
         <button key={v} onClick={() => onChange(v)}
           style={{ padding: "4px 9px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: value === v ? 700 : 500,
-            background: value === v ? `${accent}22` : "transparent", color: value === v ? accent : HT.textSecondary }}>{l}</button>
+            background: value === v ? `${HT.gold}22` : "transparent", color: value === v ? HT.gold : HT.textSecondary }}>{l}</button>
       ))}
     </div>
   );
@@ -290,9 +272,8 @@ function ScoreRing({ pct, color }) {
 }
 
 function Delta({ label, value, suffix = "" }) {
-  const pos = value > 0, neg = value < 0;
-  const color = pos ? HT.green : neg ? HT.red : HT.textSecondary;
-  const sign = pos ? "+" : "";
+  const color = value > 0 ? HT.green : value < 0 ? HT.red : HT.textSecondary;
+  const sign = value > 0 ? "+" : "";
   return (
     <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
       <span style={{ fontSize: 11.5, color: HT.textSecondary }}>{label}</span>
