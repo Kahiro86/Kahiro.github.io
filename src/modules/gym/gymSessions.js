@@ -86,6 +86,17 @@ export function weeklyStreak(sessions, today = localDateStr()) {
   return streak;
 }
 
+// The most recent prior session that trained `exerciseId`, with its sets —
+// the "last time" reference shown while logging so you know what to beat.
+export function lastPerformance(sessions, exerciseId) {
+  const sorted = sortedByDate(sanitizeSessions(sessions));
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const entry = (sorted[i].entries || []).find((e) => e.exerciseId === exerciseId);
+    if (entry && entry.sets.length) return { date: sorted[i].date, sets: entry.sets };
+  }
+  return null;
+}
+
 export function newSetFrom(prevSet, bodyweightKg) {
   return {
     weightKg: prevSet?.weightKg ?? undefined,

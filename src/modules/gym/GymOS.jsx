@@ -16,7 +16,7 @@ import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
 import { searchExercises, getExercise, MUSCLE_NAME, gymLevel, GROUPS, MUSCLES, rankForMuscleXp, groupRollup } from "./engine.js";
-import { sanitizeSessions, sortedByDate, weeklyStreak, newSetFrom } from "./gymSessions.js";
+import { sanitizeSessions, sortedByDate, weeklyStreak, newSetFrom, lastPerformance } from "./gymSessions.js";
 import { computeAllSummaries } from "./gymStore.js";
 import { RoutineQuickList, RoutineManager, sanitizeRoutines } from "./GymRoutines.jsx";
 import { MuscleRadar } from "./BodyMap.jsx";
@@ -127,7 +127,7 @@ export function GymOS({ navHint } = {}) {
         )}
 
         {loaded && tab === "workout" && active && (
-          <ActiveScreen active={active} setActive={setActive} onAddExercise={() => setSearchOpen(true)}
+          <ActiveScreen active={active} setActive={setActive} sessions={sessions} onAddExercise={() => setSearchOpen(true)}
             patchSet={patchSet} addSet={addSet} removeSet={removeSet} removeExercise={removeExercise}
             onFinish={finish} onCancel={cancel} canFinish={hasWork} onBw={(v) => setActive((a) => ({ ...a, bodyweightKg: v }))} />
         )}
@@ -196,7 +196,7 @@ function StartScreen({ onStart, last, lastSummary, thisWeek, streak, total, onOp
 }
 
 // ── Active session ───────────────────────────────────────────────────────────
-function ActiveScreen({ active, onAddExercise, patchSet, addSet, removeSet, removeExercise, onFinish, onCancel, canFinish, onBw }) {
+function ActiveScreen({ active, sessions, onAddExercise, patchSet, addSet, removeSet, removeExercise, onFinish, onCancel, canFinish, onBw }) {
   const elapsed = useElapsed(active.startedAt);
   return (
     <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 680, margin: "0 auto" }}>
@@ -221,7 +221,7 @@ function ActiveScreen({ active, onAddExercise, patchSet, addSet, removeSet, remo
       )}
 
       {active.entries.map((e, ei) => (
-        <ExerciseCard key={ei} entry={e} ei={ei} patchSet={patchSet} addSet={addSet} removeSet={removeSet} removeExercise={removeExercise} />
+        <ExerciseCard key={ei} entry={e} ei={ei} sessions={sessions} patchSet={patchSet} addSet={addSet} removeSet={removeSet} removeExercise={removeExercise} />
       ))}
 
       <button onClick={onAddExercise} style={{ padding: "12px", background: GL, border: `1px dashed ${AC}55`, borderRadius: 12, color: AC, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
@@ -231,15 +231,21 @@ function ActiveScreen({ active, onAddExercise, patchSet, addSet, removeSet, remo
   );
 }
 
-function ExerciseCard({ entry, ei, patchSet, addSet, removeSet, removeExercise }) {
+function ExerciseCard({ entry, ei, sessions, patchSet, addSet, removeSet, removeExercise }) {
   const f = setFields(entry.exerciseId);
+  const last = useMemo(() => lastPerformance(sessions, entry.exerciseId), [sessions, entry.exerciseId]);
   return (
     <Card style={{ padding: "14px 16px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: last ? 4 : 10 }}>
         <Dumbbell size={15} color={AC} />
         <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: T1 }}>{entry.name}</span>
         <button onClick={() => removeExercise(ei)} aria-label="Remove exercise" style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex", padding: 4 }}><Trash2 size={13} /></button>
       </div>
+      {last && (
+        <div style={{ fontSize: 10.5, color: T3, marginBottom: 10, paddingLeft: 23, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          Last · {dateLabel(last.date)}: {last.sets.slice(0, 4).map((s) => fmtSetShort(s, entry.exerciseId)).join("  ")}
+        </div>
+      )}
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {entry.sets.map((s, si) => (
           <div key={si} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -500,6 +506,16 @@ function dateLabel(ds) {
   if (ds === today()) return "Today";
   const d = new Date(`${ds}T12:00:00`);
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+// Compact one-token summary of a logged set, by the exercise's load type.
+function fmtSetShort(s, exerciseId) {
+  const f = setFields(exerciseId);
+  if (f.duration) return `${s.durationSec ?? 0}s`;
+  if (f.distance) return `${s.distanceM ?? 0}m`;
+  const reps = s.reps ?? 0;
+  if ((f.weight || f.addedWeight) && s.weightKg) return `${s.weightKg}×${reps}`;
+  return `${reps}`;
 }
 
 function prLabel(pr) {
