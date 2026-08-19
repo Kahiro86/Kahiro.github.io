@@ -1,0 +1,469 @@
+/* Screen 1 — Loop's flat table. Deliberately NOT cards: no per-row
+   background, no gaps, no rounded row corners. The only separation
+   between habits is a hairline divider. */
+
+.screen {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 14px 16px 40px;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px 12px;
+}
+
+.topbar__title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 40px so the add control is comfortably tappable on a phone. */
+.topbar__action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  color: var(--accent-gold);
+}
+
+/* A filter is on: the icon says so, since the list itself cannot
+   distinguish "hidden by a filter" from "you have no habits". */
+.topbar__action--on::after {
+  content: "";
+  position: absolute;
+  margin: 18px 0 0 16px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+}
+
+/* ── Column header ───────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(var(--day-count, 5), 0.62fr);
+  align-items: center;
+}
+
+.colheader {
+  align-items: end;
+  padding: 0 2px 6px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.colheader__day {
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  color: var(--text-secondary);
+}
+
+.colheader__date {
+  display: block;
+  font-size: 10px;
+  color: var(--text-primary);
+}
+
+/* Today's column label carries the accent so the tappable column is
+   identifiable without adding a background fill. */
+.colheader__day--today .colheader__date { color: var(--accent-gold); }
+
+/* ── Routine group headers ───────────────────────────────────────── */
+.group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 9px 2px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  text-align: left;
+}
+
+.group--loose { color: var(--text-secondary); }
+
+/* ── Habit rows ──────────────────────────────────────────────────── */
+/* 38px, inside Loop's 36-40px band. */
+.row {
+  min-height: 38px;
+  padding: 6px 2px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.row:last-child { border-bottom: none; }
+
+/* Only visible when the filter opts them in. Dimmed so a retired habit
+   is not mistaken for an active one. */
+.row--archived { opacity: 0.5; }
+
+.row__archived {
+  flex: none;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.row__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: left;
+  padding: 2px 0;
+}
+
+.row__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Cells: icons and text only. No fills, no tiles. ─────────────── */
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  width: 100%;
+}
+
+.cell--complete { color: var(--accent-gold); }
+.cell--missed { color: var(--text-secondary); }
+
+.cell__ring {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent-gold);
+}
+
+/* A scheduled day that ended with nothing logged. A dash reads as
+   "closed, not done" — distinct from the x, which the user chose, and
+   from a day off, which shows nothing at all. */
+.cell__dash {
+  width: 9px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.cell__value {
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.cell__unit {
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+/* A day the habit is not due. Dimmed rather than removed, so the grid
+   still reads as a grid. */
+.cell--off { opacity: 0.25; }
+
+/* ── Skeleton, empty and error states ────────────────────────────── */
+.skeleton__bar {
+  height: 9px;
+  border-radius: 3px;
+  background: var(--cell-empty);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.notice {
+  margin-top: 8px;
+  padding: 22px 18px;
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  text-align: center;
+}
+
+.notice__title {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.notice__body {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.notice--error { border-color: var(--danger-red); }
+.notice--error .notice__title { color: var(--danger-red); }
+
+.notice__detail {
+  margin-top: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  text-align: left;
+  word-break: break-word;
+}
+
+.notice__retry {
+  margin-top: 12px;
+  padding: 7px 14px;
+  border: 0.5px solid var(--accent-gold);
+  border-radius: 8px;
+  color: var(--accent-gold);
+  font-size: 12px;
+}
+
+/* ── Top-bar sheets (filter, more) ───────────────────────────────── */
+.sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+.sheet {
+  position: relative;
+  z-index: 2;
+  margin: -6px 0 10px;
+  padding: 12px 14px;
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+}
+
+.sheet__title {
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.sheet__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 0;
+  text-align: left;
+}
+
+/* A fixed box whether or not it holds a tick, so the labels do not
+   shift sideways as options are turned on and off. */
+.sheet__check {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 0.5px solid var(--border);
+  border-radius: 5px;
+  color: var(--accent-gold);
+}
+
+.sheet__row[aria-pressed="true"] .sheet__check { border-color: var(--accent-gold); }
+
+.sheet__label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.sheet__hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.sheet__section {
+  padding: 10px 0;
+  border-top: 0.5px solid var(--border);
+}
+
+.sheet__section:first-of-type { border-top: none; padding-top: 2px; }
+
+.sheet__inline { display: flex; gap: 8px; margin-top: 6px; }
+
+.sheet__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.sheet__inline .sheet__input { margin-top: 0; }
+.sheet__input::placeholder { color: var(--text-secondary); }
+.sheet__input:focus { border-color: var(--accent-gold); outline: none; }
+
+.sheet__button {
+  flex: none;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 0.5px solid var(--accent-gold);
+  border-radius: 9px;
+  color: var(--accent-gold);
+  font-size: 13px;
+}
+
+.sheet__button:disabled { opacity: 0.4; border-color: var(--border); color: var(--text-secondary); }
+
+.sheet__error {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--danger-red);
+}
+
+/* ── Amount entry for a measurable habit ─────────────────────────── */
+.amount {
+  position: relative;
+  z-index: 2;
+  margin: 8px 0;
+  padding: 12px 14px;
+  border: 0.5px solid var(--accent-gold);
+  border-radius: 14px;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.amount__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.amount__name { font-size: 13px; color: var(--text-primary); }
+.amount__date { font-size: 11px; color: var(--text-secondary); }
+
+.amount__unit {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.amount__row { display: flex; gap: 8px; align-items: center; }
+
+/* Its own controls rather than the habit editor's: reusing those would
+   couple two screens through a stylesheet, which is how the habit grid
+   collapsed once already. */
+.amount__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 15px;
+}
+
+.amount__input:focus { border-color: var(--accent-gold); outline: none; }
+.amount__input::placeholder { color: var(--text-secondary); }
+
+.amount__save {
+  flex: none;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0.5px solid var(--accent-gold);
+  border-radius: 10px;
+  color: var(--accent-gold);
+  font-size: 13px;
+}
+
+.amount__action {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.amount__save:disabled,
+.amount__action:disabled { opacity: 0.4; border-color: var(--border); color: var(--text-secondary); }
+
+/* ── Backup ───────────────────────────────────────────────────────── */
+/* A file input styled as a button: the native control cannot be made
+   to match, so it is hidden behind one that can. */
+.sheet__button--file { position: relative; overflow: hidden; display: inline-flex; align-items: center; }
+
+.sheet__button--file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.backup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 0.5px solid var(--accent-gold);
+  border-radius: 12px;
+  background: var(--bg-page);
+}
+
+.backup__errors {
+  padding: 8px 10px;
+  border: 0.5px solid var(--danger-red);
+  border-radius: 9px;
+}
+
+.backup__problem {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--danger-red);
+  word-break: break-word;
+}
+
+/* Replace destroys data, so its confirm button says so in the one
+   colour the palette reserves for that. */
+.backup__danger {
+  flex: none;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 0.5px solid var(--danger-red);
+  border-radius: 9px;
+  color: var(--danger-red);
+  font-size: 13px;
+}

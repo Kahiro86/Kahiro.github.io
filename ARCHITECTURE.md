@@ -1,8 +1,12 @@
 # Kahiro — Kaizen OS · Architecture
 
-Single-page React app (Vite, single-file build) deployed to GitHub Pages.
-Every byte ships in one `index.html`; there is no server — cloud sync is
-Supabase (per-user rows, RLS) driven entirely from the client.
+Single-page React app (Vite, code-split build) deployed to GitHub Pages.
+There is no server — cloud sync is Supabase (per-user rows, RLS) driven
+entirely from the client.
+
+The build emits two pages from one graph: `index.html` (the app) and
+`habits.html` (the Habits module on its own, for its browser test
+suites). Everything else is a lazy chunk.
 
 ## Modules (`src/modules/`)
 
@@ -11,6 +15,7 @@ Supabase (per-user rows, RLS) driven entirely from the client.
 | Command Center | `dashboard/` | graphite | Today screen: welcome-back, time-aware greeting, weekly-focus review, ring, needs-attention, done-today, this-week strip, missions, agenda; trends folded |
 | The Firm | `firm/` | crimson | The One-Man-Firm doctrine: Fleet (real Account #1 + locked gated slots), Vault (MMF sum + editable Fleet Formula + withdrawal ledger), Gate (scaling proof, breach-resets), Campaign (the 5-year, 20-quarter map — mission + gate per quarter, current position settable, live gate where known), Contingency (Part X's pre-decided responses to fleet + life breakage), Covenant (Ten Laws, signed). Reads across trading + finance; single-account for now |
 | Life OS | `life/` | green | Habits v2, routines, wellness, non-negotiables, journal, projects, purity |
+| Habits | `habits/` | gold | Standalone habit tracker: SQLite-in-WASM on OPFS in a Web Worker (Layer 1), a pure logic core (Layer 2), three screens (Layer 3). Owns its own storage and shares nothing with Life OS — the two run in parallel until the Kahiro habit data is migrated across. TypeScript; also served on its own at `/habits.html`, which is what its acceptance suites drive. See `docs/HABITS.md` |
 | Trading OS | `trading/` | cyan/red | Journal, checklist gate, analytics, risk, playbook, reviews |
 | Athlete OS | `athlete/` | blue | Workouts, templates, PRs, measurements, running progression |
 | Finance OS | `finance/` | green/gold | Net worth, budgets, income, debts, goals, bills, reports |
@@ -24,7 +29,7 @@ they never import from each other except through `src/shared/`.
 
 The sidebar groups these into the firm's doctrine (`NAV_SECTIONS` in `nav.js`):
 **Command** (Command Center), **The Machine** (Stark — Firm, Trading, Finance),
-**The Man** (Batman — Life, Athlete, Faith, Mind), **Insight** (Journey,
+**The Man** (Batman — Life, Athlete, Faith, Mind, Habits), **Insight** (Journey,
 Analytics). The Command Center leads with the freedom mission (`freedom.js`:
 `freedomMath` — passive income vs the freedom number, capital vs the ~KSh 15M
 line, and a month-by-month years-to-freedom projection) and two pillars, The

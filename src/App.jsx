@@ -27,6 +27,10 @@ import { HABITS_DEF } from "./modules/dashboard/domains.js";
 const Dashboard = lazy(() => import("./modules/dashboard/Dashboard.jsx").then((m) => ({ default: m.Dashboard })));
 const LifeOSModule = lazy(() => import("./modules/life/LifeOSModule.jsx").then((m) => ({ default: m.LifeOSModule })));
 const FaithOS = lazy(() => import("./modules/faith/FaithOS.jsx").then((m) => ({ default: m.FaithOS })));
+// The habit tracker is its own three-layer app (SQLite in a Worker, a pure
+// logic core, three screens). Lazy like every other module, which also
+// keeps its WASM off the first-paint path for anyone who never opens it.
+const HabitTracker = lazy(() => import("./modules/habits/HabitTracker.tsx").then((m) => ({ default: m.HabitTracker })));
 const AnalyticsOS = lazy(() => import("./modules/analytics/AnalyticsOS.jsx").then((m) => ({ default: m.AnalyticsOS })));
 const JourneyModule = lazy(() => import("./modules/journey/JourneyModule.jsx").then((m) => ({ default: m.JourneyModule })));
 const FirmOS = lazy(() => import("./modules/firm/FirmOS.jsx").then((m) => ({ default: m.FirmOS })));
@@ -256,6 +260,9 @@ export default function App() {
       case "firm": return <FirmOS navHint={navHint?.module === "firm" ? navHint : null} />;
       case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} navHint={navHint?.module === "life" ? navHint : null} />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} navHint={navHint?.module === "faith" ? navHint : null} />;
+      // Takes no props: it owns its own storage and never reads Kahiro's
+      // habit state. The two run side by side until the migration lands.
+      case "habits": return <HabitTracker />;
       case "calendar": return <CalendarModule habits={habitsV2} onNavigate={navTo} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
       case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={navTo} />;

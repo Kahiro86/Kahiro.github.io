@@ -15,9 +15,26 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   base: "./",
+  // The habit module's database runs in a Web Worker built as an ES
+  // module, and @sqlite.org/sqlite-wasm must not be pre-bundled — esbuild
+  // rewrites the import.meta.url the package uses to locate its .wasm.
+  //
+  // No COOP/COEP headers, deliberately: the database uses the OPFS
+  // access-handle pool VFS, which needs neither SharedArrayBuffer nor
+  // cross-origin isolation. Adding them in dev would give the dev server
+  // a capability GitHub Pages cannot grant, hiding a regression until it
+  // reached the host.
+  optimizeDeps: { exclude: ["@sqlite.org/sqlite-wasm"] },
+  worker: { format: "es" },
   build: {
     rollupOptions: {
-      input: resolve(__dirname, "index.dev.html"),
+      // Two pages from one build. habits.html is the habit tracker on its
+      // own — the same component the Kahiro tab mounts, with a root
+      // around it — and it is what the habit acceptance suites drive.
+      input: {
+        app: resolve(__dirname, "index.dev.html"),
+        habits: resolve(__dirname, "habits.html"),
+      },
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;

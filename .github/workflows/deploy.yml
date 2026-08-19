@@ -26,8 +26,19 @@ jobs:
           node-version: "20"
       - name: Install dependencies
         run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Typecheck the habit module
+        run: npm run typecheck
+      - name: Habit unit tests
+        run: npm run test:unit
       - name: Build
         run: npm run build
+      # Nothing ships until the habit module's data layer has been proven
+      # against the artefact that is about to be uploaded.
+      - name: Habit acceptance suites
+        timeout-minutes: 25
+        run: npm run test:habits
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

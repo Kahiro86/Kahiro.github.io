@@ -1,0 +1,16 @@
+/* Page-level rules for the standalone entry only.
+ *
+ * tokens.css deliberately stops at `.habitapp` so the module cannot
+ * restyle the rest of Kahiro. On its own page there is no rest of Kahiro,
+ * and the page still needs a height and a background behind the wrapper —
+ * without them the app renders in a short white box.
+ *
+ * The colour is repeated here rather than referenced, because `--bg-page`
+ * is declared on `.habitapp` and html/body sit above it. It is the one
+ * duplicated literal in the codebase and it is duplicated on purpose. */
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: #0A0908;
+}

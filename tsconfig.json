@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  // The habit module only. Kahiro's own source is JSX with no types, and
+  // pulling it in would turn `npm run typecheck` into thousands of
+  // implicit-any errors that say nothing about either codebase.
+  //
+  // The tests are excluded for the same reason they were in the app this
+  // moved from: they are Node-side and would need @types/node plus
+  // annotations on every callback. Vitest typechecks nothing at runtime,
+  // and their real proof is that they run and pass.
+  "include": ["src/modules/habits"]
+}
