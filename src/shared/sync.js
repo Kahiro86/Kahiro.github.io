@@ -49,6 +49,26 @@ async function ready() {
   return session;
 }
 
+// ── One-time purge of removed features' cloud rows ───────────────────
+// The habit tracker was deleted; delete its rows from the per-user kv table so
+// a pull can never re-hydrate them locally. Runs once (flag set only on
+// success, so it retries next launch if signed-out/offline). Also clears the
+// keys from the dirty queue and local storage so nothing re-pushes them.
+const PURGE_KEYS = ["habits", "routines"];
+const PURGE_FLAG = "kahiro_habits_cloud_purged";
+async function purgeRemovedKeys() {
+  try { if (localStorage.getItem(PURGE_FLAG)) return; } catch { return; }
+  const session = await ready();
+  if (!session) return; // not configured / signed-out / offline — retry later
+  try {
+    const { error } = await supabase().from("kv").delete().eq("user_id", session.user.id).in("key", PURGE_KEYS);
+    if (error) throw new Error(error.message);
+    const d = getDirty(); for (const k of PURGE_KEYS) d.delete(k); saveDirty(d);
+    for (const k of PURGE_KEYS) { try { localStorage.removeItem("architect:" + k); } catch { /* ignore */ } }
+    localStorage.setItem(PURGE_FLAG, "1");
+  } catch { /* leave the flag unset so it retries next launch */ }
+}
+
 // ── Push: upsert all dirty keys in one batch ─────────────────────────
 let pushTimer = null;
 function schedulePush(delay = 1200) {
@@ -178,7 +198,7 @@ export async function testConnection(cfg) {
 // Called by Settings after sign-in/out to (re)start or stop syncing.
 export async function onAuthChanged(signedIn) {
   stopRealtime();
-  if (signedIn) { await pull(); await flush(); startRealtime(); }
+  if (signedIn) { await purgeRemovedKeys(); await pull(); await flush(); startRealtime(); }
   else setStatus(getSyncConfig() ? "auth" : "off");
 }
 
