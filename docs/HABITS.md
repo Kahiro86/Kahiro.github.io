@@ -41,6 +41,19 @@ were touched (both noted below).
 | Acceptance suites | `tests/habits/acceptance/` — `npm run test:habits` |
 | Typecheck | `npm run typecheck` (the habit module only) |
 
+**The existing data comes with it, for free.** OPFS is scoped to the
+origin, not the path, and the pool VFS uses its default directory. The old
+deployment at `kahiro86.github.io/Gym-/` and this one at
+`kahiro86.github.io/` are the same origin, so they open the same database
+file — anything already logged in the Gym- build is already here, with no
+import step. Verified by writing a habit at one path and reading it back
+at the other in the same browser profile.
+
+The corollary is that the two must not be open at the same time. Layer 1b
+takes a Web Lock and refuses a second writer with an explanation rather
+than risking corruption, so whichever page loads second shows that notice.
+Once the old deployment is retired the question disappears.
+
 Everything below is the tracker as it stood in its own repository.
 
 ---
