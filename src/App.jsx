@@ -4,6 +4,7 @@ import { storage } from "./shared/storage.js";
 import { useStorageState } from "./shared/useStorageState.js";
 import { useIsMobile } from "./shared/useIsMobile.js";
 import { migrateHabits, toLegacy, tapHabit } from "./shared/habitEngine.js";
+import { htToLegacyHabits } from "./modules/habits/legacyAdapter.js";
 import { useXp } from "./shared/useXp.js";
 import { XPCelebration } from "./shared/XPCelebration.jsx";
 import { NotifTicker } from "./shared/NotifTicker.jsx";
@@ -150,6 +151,16 @@ export default function App() {
   );
   // Legacy shape ({name, icon, done, streak}) for Dashboard / AI / kaizen.
   const habits = useMemo(() => toLegacy(habitsV2), [habitsV2]);
+  // The new habit tracker (ht_* stores), mapped into the legacy habit shape so
+  // the shared analytical views (Analytics, Calendar, Correlations, Reviews)
+  // count new-tracker habits alongside any old spiritual ones. FaithCore and
+  // Life keep the untouched habitsV2 — they still own the old key.
+  const [htHabits] = useStorageState("ht_habits", []);
+  const [htEntries] = useStorageState("ht_entries", []);
+  const habitsAll = useMemo(
+    () => [...habitsV2, ...htToLegacyHabits(htHabits, htEntries)],
+    [habitsV2, htHabits, htEntries]
+  );
   // Getting-started checklist — derived from real data, nothing extra tracked.
   const [goals] = useStorageState("goals", []);
   const checklist = useMemo(() => computeChecklist({ onboard, habits: habitsV2, goals }), [onboard, habitsV2, goals]);
@@ -259,9 +270,9 @@ export default function App() {
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} navHint={navHint?.module === "faith" ? navHint : null} />;
       case "gym": return <GymOS navHint={navHint?.module === "gym" ? navHint : null} />;
       case "habits": return <HabitsOS />;
-      case "calendar": return <CalendarModule habits={habitsV2} onNavigate={navTo} />;
+      case "calendar": return <CalendarModule habits={habitsAll} onNavigate={navTo} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
-      case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={navTo} />;
+      case "analytics": return <AnalyticsOS habits={habitsAll} onNavigate={navTo} />;
       default: return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
     }
   };
@@ -384,7 +395,7 @@ export default function App() {
         <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
-        <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
+        <WeeklyReviewGate habits={habitsAll} openSignal={reviewSignal} />
         <Suspense fallback={null}>
         {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
         {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
@@ -392,7 +403,7 @@ export default function App() {
         {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
         {whoVisible && <WhoIAm autoShow={whoAuto && !whoOpen} todayLine={whoTodayLine} onClose={closeWho} />}
         {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} onNavigate={navTo} onOpenWhoIAm={() => setWhoOpen(true)} onAction={onSearchAction} />}
-        {eveningOpen && <EveningReview onClose={() => setEveningOpen(false)} habits={habitsV2} />}
+        {eveningOpen && <EveningReview onClose={() => setEveningOpen(false)} habits={habitsAll} />}
         {streakOpen && <StreakInsurance onClose={() => setStreakOpen(false)} byDay={xpInfo.byDay} />}
         {focusOpen && <FocusTimer onClose={() => setFocusOpen(false)} />}
         {weeklyOpen && <WeeklyPlan onClose={() => setWeeklyOpen(false)} />}
@@ -403,7 +414,7 @@ export default function App() {
         {prayerOpen && <PrayerList onClose={() => setPrayerOpen(false)} />}
         {cardsOpen && <Flashcards onClose={() => setCardsOpen(false)} />}
         {reflectOpen && <QuickJournal onClose={() => setReflectOpen(false)} />}
-        {corrOpen && <Correlations onClose={() => setCorrOpen(false)} byDay={xpInfo.byDay} habits={habitsV2} />}
+        {corrOpen && <Correlations onClose={() => setCorrOpen(false)} byDay={xpInfo.byDay} habits={habitsAll} />}
         </Suspense>
         {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
       </div>
@@ -431,7 +442,7 @@ export default function App() {
       <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
-        <WeeklyReviewGate habits={habitsV2} openSignal={reviewSignal} />
+        <WeeklyReviewGate habits={habitsAll} openSignal={reviewSignal} />
       <Suspense fallback={null}>
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}
       {helpOpen && <HelpCenter onClose={() => setHelpOpen(false)} onStartTour={startTour} helpMode={helpMode} setHelpMode={setHelpMode} checklist={checklist} />}
@@ -439,7 +450,7 @@ export default function App() {
       {tourOn && <GuidedTour steps={TOUR_OVERVIEW.steps} onNavigate={(m) => setModule(m)} onClose={endTour} onFinish={endTour} />}
       {whoVisible && <WhoIAm autoShow={whoAuto && !whoOpen} todayLine={whoTodayLine} onClose={closeWho} />}
         {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} onNavigate={navTo} onOpenWhoIAm={() => setWhoOpen(true)} onAction={onSearchAction} />}
-        {eveningOpen && <EveningReview onClose={() => setEveningOpen(false)} habits={habitsV2} />}
+        {eveningOpen && <EveningReview onClose={() => setEveningOpen(false)} habits={habitsAll} />}
         {streakOpen && <StreakInsurance onClose={() => setStreakOpen(false)} byDay={xpInfo.byDay} />}
         {focusOpen && <FocusTimer onClose={() => setFocusOpen(false)} />}
         {weeklyOpen && <WeeklyPlan onClose={() => setWeeklyOpen(false)} />}
@@ -450,7 +461,7 @@ export default function App() {
         {prayerOpen && <PrayerList onClose={() => setPrayerOpen(false)} />}
         {cardsOpen && <Flashcards onClose={() => setCardsOpen(false)} />}
         {reflectOpen && <QuickJournal onClose={() => setReflectOpen(false)} />}
-        {corrOpen && <Correlations onClose={() => setCorrOpen(false)} byDay={xpInfo.byDay} habits={habitsV2} />}
+        {corrOpen && <Correlations onClose={() => setCorrOpen(false)} byDay={xpInfo.byDay} habits={habitsAll} />}
       </Suspense>
       {showNaming && <NameYourSystem onDone={(vals) => identity.save(vals || {})} />}
     </div>
