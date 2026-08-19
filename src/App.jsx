@@ -362,7 +362,7 @@ export default function App() {
         <div className="mode-veil" aria-hidden="true" />
         <AmbientBackground module={module} animate={!isMobile} />
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} isMobile onMenu={() => setMobileNavOpen(true)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} onOpenWhoIAm={() => setWhoOpen(true)} onOpenSearch={() => setSearchOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} />
-        <div key={module} style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
+        <div key={module} data-module-content style={{ flex: 1, overflowY: "auto", overflowX: "auto", WebkitOverflowScrolling: "touch", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}><Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T1, opacity: 0.3, fontSize: 13 }}>…</div>}>{renderModule()}</Suspense></ErrorBoundary>
         </div>
 
@@ -427,7 +427,7 @@ export default function App() {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} onOpenWhoIAm={() => setWhoOpen(true)} onOpenSearch={() => setSearchOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />
-        <div key={module} style={{ flex: 1, overflowY: module === "firm" ? "hidden" : "auto", overflow: module === "firm" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
+        <div key={module} data-module-content style={{ flex: 1, overflowY: module === "firm" ? "hidden" : "auto", overflow: module === "firm" ? "hidden" : "auto", animation: "moduleIn 0.5s cubic-bezier(0.4,0,0.2,1)" }}>
           <ErrorBoundary key={module}><Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: T1, opacity: 0.3, fontSize: 13 }}>…</div>}>{renderModule()}</Suspense></ErrorBoundary>
         </div>
       </div>

@@ -13,7 +13,7 @@ if (!existsSync(join(DIST, "index.html"))) {
   console.error(`Build not found at ${DIST}/index.html — run "npm run build" first.`);
   process.exit(1);
 }
-const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
+const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon", ".wasm": "application/wasm" };
 const server = createServer((req, res) => {
   let p = decodeURIComponent((req.url || "/").split("?")[0]);
   if (p === "/") p = "/index.html";
@@ -34,6 +34,14 @@ const MODULES = [
   ["dashboard", "Command Center"], ["firm", "The Firm"], ["life", "Life OS"],
   ["faith", "Faith & Mind"], ["calendar", "Calendar"], ["journey", "Journey"], ["analytics", "Analytics"],
 ];
+
+// "habits" is deliberately absent. This harness seeds corrupt localStorage
+// and asserts nothing renders blank within ~180ms of a click; the habit
+// module reads none of that storage, and its first paint waits on a Web
+// Worker opening a SQLite database on OPFS, which takes far longer than
+// the harness gives it. Adding it here would buy no new signal about
+// corrupt Kahiro data and would report its loading skeleton as a blank
+// page. It has its own 141 browser tests — `npm run test:habits`.
 
 // Per-module sub-tab labels to click through. A merged module (firm/life/
 // faith) uses a grouped shape — click the outer group pill first, then each
@@ -56,6 +64,16 @@ const SUBTABS_MAP = {
   analytics: ["Trends", "Progression", "Reports"],
   journey: ["Hall of Fame", "Want List", "Goals"],
 };
+
+/**
+ * Sub-tab clicks are scoped to the module's own content, never the whole
+ * page. The sidebar and a module's tab strip can carry the same word —
+ * adding a "Habits" nav entry made `button:has-text("Habits")` resolve to
+ * the sidebar instead of Life OS's tab, so the harness navigated away and
+ * went on "testing" the wrong module for the rest of that group. It still
+ * reported ALL PASS, because what it landed on was not blank.
+ */
+const content = (page) => page.locator("[data-module-content]");
 
 // Data scenarios: each seeds localStorage BEFORE the app boots.
 const SCENARIOS = {
@@ -344,7 +362,9 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
         await page.waitForTimeout(80);
       }
       try {
-        await page.locator(`button:has-text("${label}")`).first().click({ timeout: 1500 });
+        // By nav id, not by label text: two sidebar entries can share a
+        // word, and `has-text` matches substrings.
+        await page.locator(`[data-tour="nav-${mod}"]`).first().click({ timeout: 1500 });
       } catch { /* leave module as-is; the len check still reports blank */ }
       await page.waitForTimeout(180);
 
@@ -369,18 +389,18 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
       const grouped = entry.length > 0 && typeof entry[0] === "object";
       if (grouped) {
         for (const { group, subtabs } of entry) {
-          try { await page.locator(`button:has-text("${group}")`).first().click({ timeout: 900 }); } catch { continue; }
+          try { await content(page).locator(`button:has-text("${group}")`).first().click({ timeout: 900 }); } catch { continue; }
           await page.waitForTimeout(120);
           await check(`${mod}/${group}`);
           for (const st of subtabs) {
-            try { await page.locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }
+            try { await content(page).locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }
             await page.waitForTimeout(120);
             await check(`${mod}/${group}/${st}`);
           }
         }
       } else {
         for (const st of entry) {
-          try { await page.locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }
+          try { await content(page).locator(`button:has-text("${st}")`).first().click({ timeout: 900 }); } catch { continue; }
           await page.waitForTimeout(120);
           await check(`${mod}/${st}`);
         }
