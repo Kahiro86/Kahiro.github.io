@@ -9,6 +9,7 @@ export const PAGES = [
   { id: "page:life", type: "Page", title: "Life", subtitle: "Journal · Purity · Nutrition", nav: "life", icon: "◍", keywords: "life journal reflection purity nutrition meals" },
   { id: "page:firm", type: "Page", title: "The Firm", subtitle: "Trading · Wealth · HQ", nav: "firm", icon: "▲" },
   { id: "page:gym", type: "Page", title: "Gym", subtitle: "Log workouts · sets · PRs", nav: "gym", icon: "🏋", keywords: "gym workout lift training exercise sets reps sessions strength muscle iron" },
+  { id: "page:habits", type: "Page", title: "Habits", subtitle: "Track daily · streaks · scores", nav: "habits", icon: "✓", keywords: "habits habit tracker daily streak score routine consistency check log calendar heatmap" },
   { id: "page:faith", type: "Page", title: "Faith & Mind", subtitle: "Scripture · Reading · Decisions", nav: "faith", icon: "✦" },
   { id: "page:calendar", type: "Page", title: "Calendar", nav: "calendar", icon: "▦" },
   { id: "page:journey", type: "Page", title: "Journey", subtitle: "Hall of Fame · Want List · Goals", nav: "journey", icon: "◆" },

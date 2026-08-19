@@ -31,6 +31,7 @@ const JourneyModule = lazy(() => import("./modules/journey/JourneyModule.jsx").t
 const FirmOS = lazy(() => import("./modules/firm/FirmOS.jsx").then((m) => ({ default: m.FirmOS })));
 const CalendarModule = lazy(() => import("./modules/calendar/CalendarModule.jsx").then((m) => ({ default: m.CalendarModule })));
 const GymOS = lazy(() => import("./modules/gym/GymOS.jsx").then((m) => ({ default: m.GymOS })));
+const HabitsOS = lazy(() => import("./modules/habits/HabitTracker.tsx").then((m) => ({ default: m.HabitTracker })));
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
 const AIPanel = lazy(() => import("./shared/AIPanel.jsx").then((m) => ({ default: m.AIPanel })));
@@ -257,6 +258,7 @@ export default function App() {
       case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} navHint={navHint?.module === "life" ? navHint : null} />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} navHint={navHint?.module === "faith" ? navHint : null} />;
       case "gym": return <GymOS navHint={navHint?.module === "gym" ? navHint : null} />;
+      case "habits": return <HabitsOS />;
       case "calendar": return <CalendarModule habits={habitsV2} onNavigate={navTo} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
       case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={navTo} />;

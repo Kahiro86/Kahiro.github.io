@@ -591,3 +591,24 @@ export class LocalDb {
 
 // One process-wide instance — the whole app shares a single localStorage.
 export const db = new LocalDb();
+
+// ── Sync-pull notification (Layer 2b §6 wiring) ──────────────────────
+// A cloud pull can rewrite ht_* rows for habits whose in-memory write counter
+// never moved, so Layer 2's memo cache must be dropped when one lands. Kaizen's
+// sync engine applies remote rows through applyExternal(), which dispatches an
+// `architect:kv` event with origin "remote". We forward exactly those (for our
+// keys) to subscribers; local writes (origin "writeStore") already reload.
+const HT_KEYS = new Set([K_HABITS, K_ENTRIES, K_ROUTINES, K_META]);
+const pullSubs = new Set();
+export function onSyncPull(fn) {
+  pullSubs.add(fn);
+  return () => pullSubs.delete(fn);
+}
+if (typeof window !== "undefined" && window.addEventListener) {
+  window.addEventListener("architect:kv", (e) => {
+    const d = e.detail;
+    if (!d || d.origin !== "remote" || !HT_KEYS.has(d.key)) return;
+    db._counters = {}; // a remote row for any habit invalidates every memo
+    pullSubs.forEach((fn) => { try { fn(); } catch { /* subscriber error is not ours */ } });
+  });
+}

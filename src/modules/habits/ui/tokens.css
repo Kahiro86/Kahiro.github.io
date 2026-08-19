@@ -1,0 +1,73 @@
+/* The complete palette (spec §2). Non-negotiable #8: no colour may be
+   introduced anywhere outside this file. Every rule elsewhere refers to
+   one of these variables — never a literal hex.
+
+   Everything here is scoped to `.habitapp`, the single wrapper the habit
+   UI mounts inside. The habit tracker used to own the whole page and set
+   its resets on `*`, `body` and `button`; inside Kahiro it is one module
+   among a dozen, and a global `* { margin: 0 }` or a `body` background
+   would silently restyle every other one.
+
+   The scoping is written with `:where()`, which matches normally but
+   contributes NOTHING to specificity. That is not a stylistic choice.
+   A plain `.habitapp *` scores 0,1,0 — the same as `.screen` — so
+   `padding: 0` from the reset started tying with, and beating on source
+   order, every padding the screens set on themselves. The list rendered
+   with its header collapsed on top of its first row. `:where()` keeps
+   each rule at exactly the specificity it had as a bare `*`, `button` or
+   `:focus-visible` selector, so the screens win as they always did. */
+.habitapp {
+  --bg-page: #0A0908;
+  --bg-card: #141110;
+  --border: #2A251D;
+  --accent-gold: #D4A843;
+  --text-primary: #F0EBE0;
+  --text-secondary: #8A8378;
+  --success-green: #7BC862;
+  --danger-red: #E05252;
+  --cell-empty: #241F18;
+
+  /* Heatmap ramp, calendar only. */
+  --heat-0: #1A1611;
+  --heat-1: #3D3116;
+  --heat-2: #6B4F1A;
+  --heat-3: #A67D1F;
+  --heat-4: #D4A843;
+
+  /* What `body` used to carry. */
+  min-height: 100%;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Was `* { … }` — specificity 0,0,0, and still is. */
+:where(.habitapp, .habitapp *, .habitapp *::before, .habitapp *::after) {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Was `button { … }` — specificity 0,0,1, and still is. */
+:where(.habitapp) button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* A single visible focus treatment for keyboard users, in gold so it
+   introduces no new colour. Was `:focus-visible` — 0,1,0, and still is. */
+:where(.habitapp) :focus-visible {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.habitapp, .habitapp *, .habitapp *::before, .habitapp *::after) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
