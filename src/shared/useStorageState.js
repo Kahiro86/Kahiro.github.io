@@ -58,6 +58,19 @@ function readSync(key, initialValue) {
   }
 }
 
+// Write-through a plain value from outside React (non-hook modules, e.g. the
+// habits localStorage Db). Same path as a useStorageState setter's commit:
+// disk → meta timestamp → in-tab broadcast → sync push. The broadcast origin is
+// a string so it never collides with a hook's numeric id — every mounted hook
+// on this key treats it as an external change and updates live.
+export function writeStore(key, value) {
+  const raw = JSON.stringify(value);
+  storage.set(key, raw);
+  stampMeta(key);
+  window.dispatchEvent(new CustomEvent("architect:kv", { detail: { key, raw, origin: "writeStore" } }));
+  syncNotify?.(key, raw);
+}
+
 // Applied by the sync engine when a newer remote record arrives: persist it,
 // keep the remote timestamp, and broadcast so mounted hooks update live.
 export function applyExternal(key, raw, updatedAtIso) {
