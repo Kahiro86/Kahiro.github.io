@@ -33,6 +33,11 @@ export function useXp() {
   const [wants] = useStorageState("wants", []);
   const [tiTrades] = useStorageState("ti_trades", []);
   const [photos] = useStorageState("athlete_photos", []);
+  // New habit tracker's stores — a logged habit moves the shared level, the
+  // Habit Mastery / Perfect Days / Streak journeys and the consistency
+  // engine's life-day, all through the same derive-only pipeline.
+  const [htHabits] = useStorageState("ht_habits", []);
+  const [htEntries] = useStorageState("ht_entries", []);
 
   // Gym-facet sessions feed the same fitness pipeline by mapping to the legacy
   // `workouts` shape, so a logged workout moves the shared level, the Iron Body
@@ -47,10 +52,12 @@ export function useXp() {
       habits, purity, trades, reviews, workouts: allWorkouts, measurements, finance,
       entries, missions, church, verses, faithNotes, library, mindNotes,
       decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos,
+      htHabits, htEntries,
     }),
     [habits, purity, trades, reviews, allWorkouts, measurements, finance,
      entries, missions, church, verses, faithNotes, library, mindNotes,
-     decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos]
+     decisions, unlocked, logins, nutrition, nutritionProfile, notifLog, goals, wants, tiTrades, photos,
+     htHabits, htEntries]
   );
 
   return { ...xp, loaded: l1 && l2 && l3 && l4, setUnlocked, setLogins };

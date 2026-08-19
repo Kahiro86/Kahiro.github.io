@@ -17,6 +17,7 @@ import { tiTradeStats } from "../modules/trading/intel/tradingIntel.js";
 import { sanitizePurity } from "../modules/life/purity.js";
 import { sanitizeReviews } from "../modules/trading/reviews.js";
 import { sanitizeNutrition, dayTotals, nutritionScore, calcTargets } from "../modules/athlete/nutrition.js";
+import { habitFeed } from "../modules/habits/xpFeed.js";
 
 // Internal value table — tune freely for balance; the UI never shows it.
 const V = {
@@ -90,8 +91,12 @@ function extendTiers(base) {
 }
 
 const BASE_JOURNEYS = [
+  { key: "habits",   name: "Habit Mastery",  icon: "🔁", stat: "habitCompletions", unit: "completions",
+    tiers: [[1, 50], [25, 100], [100, 250], [250, 400], [500, 600], [1000, 1000], [2500, 1500], [5000, 2500]] },
   { key: "streak",   name: "The Streak",     icon: "🔥", stat: "bestStreak", unit: "days in a row",
     tiers: [[3, 25], [7, 75], [14, 150], [30, 500], [60, 700], [90, 1000], [180, 1500], [365, 2000], [730, 3000]] },
+  { key: "perfect",  name: "Perfect Days",   icon: "⭐", stat: "perfectCount", unit: "perfect days",
+    tiers: [[1, 50], [7, 250], [30, 500], [90, 800], [180, 1200], [365, 2000]] },
   { key: "journal",  name: "Written Mind",   icon: "📓", stat: "journalDays", unit: "days journaled",
     tiers: [[1, 50], [7, 100], [30, 250], [100, 500], [250, 800], [500, 1200], [1000, 2000]] },
   { key: "workouts", name: "Iron Body",      icon: "💪", stat: "workoutCount", unit: "sessions",
@@ -200,8 +205,18 @@ export function computeXp(deps = {}) {
     incomeLogs: 0, measureDays: 0, photoCount: 0,
   };
 
-  // Habits removed: the habit tracker no longer contributes XP, perfect days
-  // or streaks. Life-domain XP now derives from journal, purity and missions.
+  // Life — habits (the new tracker's ht_* stores): every completed habit-day,
+  // perfect days, and the per-habit streak ladder — the same signals the old
+  // habit engine fed, now derived through the tracker's own schedule +
+  // completion rules. Category "life", so a habit done is also a real
+  // life-domain action for the Year of Consistency engine below.
+  {
+    const hf = habitFeed(deps.htHabits, deps.htEntries, today);
+    for (const d of hf.completions) { push(d, V.habitDone, "life"); stats.habitCompletions++; }
+    for (const d of hf.perfectDays) { push(d, V.perfectDay, "life"); stats.perfectCount++; }
+    for (const { d, run } of hf.streakHits) if (STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "life", true);
+    if (hf.bestStreak > stats.bestStreak) stats.bestStreak = hf.bestStreak;
+  }
 
   // Life — purity: clean days, honest relapse logging, its own streak ladder.
   const purity = sanitizePurity(deps.purity);

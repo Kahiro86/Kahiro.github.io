@@ -17,14 +17,15 @@ import { Ring } from "../../shared/charts.jsx";
 
 const GOLD = "#F0B429"; // reserved for the perfect-day hero only
 import { useStorageState } from "../../shared/useStorageState.js";
+import { habitSummary } from "../habits/summary.js";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { sanitizeTrades as sanitizeTiTrades, sanitizeAccounts as sanitizeTiAccounts, netPnl as tiNetPnl, accountMetrics as tiAccountMetrics } from "../trading/intel/tradingIntel.js";
 import { financeSummary } from "../finance/summary.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
-import {
-  isScheduled, isDone, isNonNeg, isWellness, isWeekly, valueOn, currentStreak,
-} from "../../shared/habitEngine.js";
+// Habit facts now come from the new tracker via habitSummary (imported below);
+// only the legacy wellness helpers (sleep/water numeric habits) remain here.
+import { isWellness, valueOn } from "../../shared/habitEngine.js";
 import { buildNudges } from "../../shared/insights.js";
 import { buildDirective, isRestDay } from "../../shared/directive.js";
 import { useDayMarks } from "../../shared/dayMarks.js";
@@ -89,6 +90,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [firmWithdrawals] = useStorageState("firm_withdrawals", []);
   const [logins] = useStorageState("xp_logins", {});
   const [freezes] = useStorageState("streak_freezes", { frozen: [] });
+  const [htHabits] = useStorageState("ht_habits", []);
+  const [htEntries] = useStorageState("ht_entries", []);
   // Declutter: the bottom analytical stack (progression, streaks, finance,
   // health) folds behind one toggle so the daily screen stays a glance. The
   // preference persists — set it once. Everything is still one tap away.
@@ -120,24 +123,26 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     ? `${cs.currentStreak} days and counting — this is your longest run yet.`
     : "Progress continues. Recovery matters more than perfection.";
   const active = useMemo(() => habitsV2.filter((h) => !h.archived && !h.paused), [habitsV2]);
+  // The new habit tracker (ht_* stores), summarised through its own logic so
+  // the dashboard's streaks and today's-habits counts match its detail screens.
+  const hsum = useMemo(() => habitSummary(htHabits, htEntries, ds), [htHabits, htEntries, ds]);
   const entriesSafe = useMemo(() => (Array.isArray(entries) ? entries : []).filter((e) => e && e.id), [entries]);
   const nutrition = useMemo(() => sanitizeNutrition(nutritionLog), [nutritionLog]);
   const nTargets = useMemo(() => calcTargets(nutritionProfile), [nutritionProfile]);
 
   // Unified day agenda — one honest line per daily domain, tap to jump in.
   const agendaItems = useMemo(() => {
-    const sched = active.filter((h) => isScheduled(h, ds));
-    const hDone = sched.filter((h) => isDone(h, ds)).length;
+    const hSched = hsum.todayScheduled, hDone = hsum.todayDone;
     const kcal = Math.round(dayTotals(dayEntries(nutrition, ds)).kcal || 0);
     const journaled = entriesSafe.some((e) => (e.date || "").slice(0, 10) === ds);
     const due = billsDueSoon(finance.bills, ds).length;
     return [
-      sched.length > 0 && { key: "habits", icon: "✅", label: "Habits", detail: `${hDone}/${sched.length} done`, state: hDone >= sched.length ? "done" : hDone > 0 ? "due" : "empty", nav: "life" },
+      hSched > 0 && { key: "habits", icon: "✅", label: "Habits", detail: `${hDone}/${hSched} done`, state: hDone >= hSched ? "done" : hDone > 0 ? "due" : "empty", nav: "habits" },
       { key: "meals", icon: "🍽️", label: "Nutrition", detail: kcal > 0 ? `${kcal.toLocaleString()} kcal` : "Nothing logged", state: kcal > 0 ? "done" : "empty", nav: "life" },
       { key: "journal", icon: "📝", label: "Journal", detail: journaled ? "Written" : "Not yet", state: journaled ? "done" : "empty", nav: "life" },
       due > 0 && { key: "bills", icon: "💸", label: "Bills due", detail: `${due} within 7 days`, state: "due", nav: "firm" },
     ].filter(Boolean);
-  }, [active, nutrition, ds, workouts, entriesSafe, finance.bills, restDays]);
+  }, [hsum, nutrition, ds, workouts, entriesSafe, finance.bills, restDays]);
 
   const agendaWeek = useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const dd = daysAgoStr(6 - i);
@@ -149,27 +154,24 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
   // ── 🎯 PRIMARY FOCUS: today's non-negotiables (fall back to all habits) ──
   const mission = useMemo(() => {
-    const nn = active.filter((h) => isNonNeg(h) && !isWeekly(h) && isScheduled(h, ds));
-    const src = nn.length ? nn : active.filter((h) => isScheduled(h, ds));
-    const done = src.filter((h) => isDone(h, ds)).length;
-    const total = src.length;
+    const done = hsum.todayDone, total = hsum.todayScheduled;
     const pct = total ? Math.floor((done / total) * 100) : 0;
-    return { label: nn.length ? "Non-Negotiables" : "Today's Habits", done, total, pct, left: total - done };
-  }, [active, ds]);
+    return { label: "Today's Habits", done, total, pct, left: total - done };
+  }, [hsum]);
   const xpToNext = xp ? Math.max(0, xp.nextLevelXp - xp.total) : 0;
   const estMin = mission.left * 12; // gentle estimate: ~12 min per remaining commitment
 
   // ── 📈 DAILY SCORE (Life Score): one composite %, vs yesterday ──
   const dayScore = (d) => {
     const parts = [];
-    const sched = active.filter((h) => isScheduled(h, d));
-    if (sched.length) parts.push(sched.filter((h) => isDone(h, d)).length / sched.length);
+    const hr = hsum.ratioOn(d);
+    if (hr != null) parts.push(hr);
     parts.push(mealsOn(d) > 0 ? 1 : 0);
     parts.push(journaledOn(d) ? 1 : 0);
     return parts.length ? Math.round((parts.reduce((s, x) => s + x, 0) / parts.length) * 100) : 0;
   };
-  const lifeScore = useMemo(() => dayScore(ds), [active, workouts, nutrition, entriesSafe, ds]);
-  const yestScore = useMemo(() => dayScore(daysAgoStr(1)), [active, workouts, nutrition, entriesSafe, ds]);
+  const lifeScore = useMemo(() => dayScore(ds), [hsum, workouts, nutrition, entriesSafe, ds]);
+  const yestScore = useMemo(() => dayScore(daysAgoStr(1)), [hsum, workouts, nutrition, entriesSafe, ds]);
   const scoreDelta = lifeScore - yestScore;
 
   // ── 🧭 THE DIRECTIVE: the single most important thing to do now, ranked
@@ -189,8 +191,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
   // ── 🔥 STREAKS: strongest four, across habits + derived domains ──
   const streaks = useMemo(() => {
-    const out = active
-      .map((h) => ({ icon: h.icon || "✅", label: h.name, days: currentStreak(h) }))
+    const out = hsum.streaks
+      .map((s) => ({ icon: s.icon, label: s.label, days: s.days }))
       .filter((s) => s.days >= 2);
     // Clean-eating streak.
     const hs = healthyStreaks(nutrition, nTargets, ds, cheatDays).current;
@@ -201,7 +203,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     for (let i = 0; i < 800; i++) { const d = daysAgoStr(i); if (pl[d]?.s === "pure") cl++; else if (i > 0 || pl[d]) break; }
     if (cl >= 2) out.push({ icon: "🌿", label: "Purity", days: cl });
     return out.sort((a, b) => b.days - a.days).slice(0, 4);
-  }, [active, workouts, nutrition, nTargets, purity, ds]);
+  }, [hsum, workouts, nutrition, nTargets, purity, ds]);
 
   // ── 🏆 XP: level, progress, next reward (nearest journey milestone) ──
   const nextReward = useMemo(() => {
