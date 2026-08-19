@@ -15,7 +15,6 @@ import { LockScreen } from "./shared/LockScreen.jsx";
 import { localDateStr } from "./shared/dates.js";
 import { ToastProvider } from "./shared/toast.jsx";
 import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
-import { QuickLog } from "./shared/QuickLog.jsx";
 import { AmbientBackground } from "./shared/AmbientBackground.jsx";
 import { getStats } from "./modules/trading/helpers.js";
 import { financeSummary } from "./modules/finance/summary.js";
@@ -380,7 +379,6 @@ export default function App() {
             <Suspense fallback={null}><AIPanel mobile onClose={() => setAiOpen(false)} onOpenSettings={() => { setShowSettings(true); setAiOpen(false); }} ctx={aiCtx} habits={habits} /></Suspense>
           </div>
         )}
-        <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || module === "gym" || aiOpen || mobileNavOpen} offsetRight={16} openSignal={quickSignal} />
         <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
@@ -428,7 +426,6 @@ export default function App() {
       </div>
 
       {aiOpen && <Suspense fallback={null}><AIPanel onClose={() => setAiOpen(false)} onOpenSettings={() => setShowSettings(true)} ctx={aiCtx} habits={habits} /></Suspense>}
-      <QuickLog habits={habitsV2} onTap={(id) => setHabitsV2((p) => tapHabit(p, id))} hidden={module === "life" || module === "gym"} offsetRight={aiOpen ? 364 : 24} openSignal={quickSignal} />
       <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />

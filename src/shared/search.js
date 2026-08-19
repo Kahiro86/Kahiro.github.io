@@ -6,7 +6,7 @@
 // Static destinations — jumping around the app itself.
 export const PAGES = [
   { id: "page:dashboard", type: "Page", title: "Home", subtitle: "Command Center — your daily cockpit", nav: "dashboard", icon: "◎", keywords: "home command center dashboard cockpit today" },
-  { id: "page:life", type: "Page", title: "Life", subtitle: "Habits · Nutrition · Journal · Today", nav: "life", icon: "◍", keywords: "life os habits nutrition journal purity today" },
+  { id: "page:life", type: "Page", title: "Life", subtitle: "Journal · Purity · Nutrition", nav: "life", icon: "◍", keywords: "life journal reflection purity nutrition meals" },
   { id: "page:firm", type: "Page", title: "The Firm", subtitle: "Trading · Wealth · HQ", nav: "firm", icon: "▲" },
   { id: "page:gym", type: "Page", title: "Gym", subtitle: "Log workouts · sets · PRs", nav: "gym", icon: "🏋", keywords: "gym workout lift training exercise sets reps sessions strength muscle iron" },
   { id: "page:faith", type: "Page", title: "Faith & Mind", subtitle: "Scripture · Reading · Decisions", nav: "faith", icon: "✦" },
@@ -21,13 +21,11 @@ export const PAGES = [
 // named intent the app routes (see App.jsx onAction). Keyword aliases widen
 // matching without cluttering the visible label.
 export const ACTIONS = [
-  { id: "act:quicklog", type: "Action", core: true, title: "Quick Log", subtitle: "Log the day's habits fast", act: "quicklog", icon: "⚡", keywords: "log habit tap tick check mark done quick complete" },
   { id: "act:shutdown", type: "Action", core: true, title: "Evening Shutdown", subtitle: "Close the day + set tomorrow's top 3", act: "shutdown", icon: "🌙", keywords: "evening shutdown night review reflect rating win lesson tomorrow priorities close day" },
   { id: "act:streak", type: "Action", title: "Streak Insurance", subtitle: "Protect a missed day with a token", act: "streak", icon: "🛡", keywords: "streak freeze token protect insurance missed day recovery grace shield consistency" },
   { id: "act:focus", type: "Action", core: true, title: "Focus Session", subtitle: "Start a deep-work timer", act: "focus", icon: "🎯", keywords: "focus timer deep work pomodoro concentrate session 25 50 90 block" },
   { id: "act:weekly", type: "Action", title: "Weekly Plan", subtitle: "Set the week's theme + top 3", act: "weekly", icon: "🗓", keywords: "weekly plan week theme priorities intentions planning monday review" },
   { id: "act:cascade", type: "Action", title: "Goal Cascade", subtitle: "Ladder goals from year to week", act: "cascade", icon: "🪜", keywords: "goal cascade ladder horizon year quarter month week parent rollup align" },
-  { id: "act:habitintel", type: "Action", title: "Habit Intelligence", subtitle: "Your patterns by weekday", act: "habitintel", icon: "🧠", keywords: "habit intelligence pattern insight weekday best worst day rate analytics stats" },
   { id: "act:risk", type: "Action", title: "Risk Calculator", subtitle: "Position size from % risk", act: "risk", icon: "🧮", keywords: "risk calculator position size lot stop reward r multiple trade money management sizing" },
   { id: "act:overhead", type: "Action", title: "Overhead & Runway", subtitle: "Monthly burn + runway", act: "overhead", icon: "💸", keywords: "overhead runway burn expenses bills subscriptions monthly cost finance savings recurring" },
   { id: "act:prayer", type: "Action", title: "Prayer List", subtitle: "Requests + answered log", act: "prayer", icon: "🙏", keywords: "prayer list request pray answered faith intercession thanksgiving petition" },
@@ -49,7 +47,7 @@ export const DESTINATIONS = [
   { id: "dest:firm:wealth", type: "Section", title: "Wealth", nav: "firm:wealth", icon: "◈", keywords: "finance money income net worth bills cashflow vault withdrawals savings debt" },
   { id: "dest:firm:doctrine", type: "Section", title: "The Firm — HQ", nav: "firm:doctrine", icon: "▲", keywords: "doctrine firm campaign gate covenant contingency mission" },
   { id: "dest:life:athlete", type: "Section", title: "Nutrition", nav: "life:athlete", icon: "🍽", keywords: "nutrition food meals calories macros protein carbs fat diet eating log" },
-  { id: "dest:life:life", type: "Section", title: "Habits & Journal", nav: "life:life", icon: "◍", keywords: "habits routines journal insights purity today nutrition meals food" },
+  { id: "dest:life:life", type: "Section", title: "Journal & Purity", nav: "life:life", icon: "◍", keywords: "journal reflection diary purity clean" },
   { id: "dest:faith:faith", type: "Section", title: "Faith", nav: "faith:faith", icon: "✝", keywords: "scripture verses devotional church attendance walk recall prayer" },
   { id: "dest:faith:mind", type: "Section", title: "Mind", nav: "faith:mind", icon: "📖", keywords: "reading books library decisions notes author momentum" },
 ];
@@ -58,7 +56,6 @@ export const DESTINATIONS = [
 // worth reading. Extraction is defensive — any field may be missing.
 export const SOURCES = [
   { key: "journal_entries", type: "Journal", icon: "✎", nav: "life", fields: ["text"], date: "date", deep: { nav: "life:life", module: "life", tab: "journal" } },
-  { key: "habits", type: "Habit", icon: "◍", nav: "life", fields: ["name"] },
   { key: "nutrition_foods", type: "Food", icon: "🍽", nav: "life", fields: ["name"] },
   { key: "wants", type: "Want", icon: "✦", nav: "journey", fields: ["name", "note"], deep: { nav: "journey", module: "journey", tab: "wants" } },
   { key: "goals", type: "Goal", icon: "◆", nav: "journey", fields: ["title", "name", "text"], deep: { nav: "journey", module: "journey", tab: "goals" } },

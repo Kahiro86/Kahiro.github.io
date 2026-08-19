@@ -389,7 +389,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
             </span>
           </div>
           <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
-            {mission.done}/{mission.total} {mission.label.toLowerCase()} · {topStreakDays > 0 ? `${topStreakDays}-day top streak` : "no streak yet"}
+            {topStreakDays > 0 ? `${topStreakDays}-day top streak` : "Journal · purity · nutrition"}
           </div>
         </StatCard>
         <StatCard onClick={() => onNavigate("firm:doctrine")}>
@@ -427,29 +427,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         </div>
         <ChevronRight size={16} color={T3} style={{ flexShrink: 0 }} />
       </button>
-
-      {/* ── 🎯 PRIMARY FOCUS ── */}
-      <Card className={perfect ? "ember" : ""} style={{ padding: "20px 24px", background: "#121212", display: "flex", alignItems: "center", gap: 26, flexWrap: "wrap", borderColor: perfect ? `${GOLD}55` : BD, animation: perfect ? "emberPulse 3.4s ease-in-out infinite" : undefined }}>
-        <Ring pct={mission.pct} size={116} stroke={10} color={perfect ? GOLD : AC} glow={perfect}>
-          <div style={{ fontSize: 24, ...big, color: perfect ? GOLD : T1 }}>{cuPct}%</div>
-        </Ring>
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <div style={{ fontSize: 10, letterSpacing: 2.5, textTransform: "uppercase", color: perfect ? GOLD : AC, fontWeight: 700 }}>Today's Mission</div>
-          <div style={{ fontSize: 25, fontWeight: 800, color: T1, marginTop: 4 }}>
-            {perfect ? "Mission complete." : `Complete ${mission.done}/${mission.total} ${mission.label}`}
-          </div>
-          {perfect && <div style={{ fontSize: 13, color: GOLD, marginTop: 4, fontWeight: 600 }}>Nothing left today. Dominate tomorrow. 🔥</div>}
-          <div style={{ display: "flex", gap: 26, marginTop: 14, flexWrap: "wrap" }}>
-            <div><div style={{ fontSize: 17, ...big, color: AC }}>{xpToNext.toLocaleString()}</div><div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>XP to next level</div></div>
-            <div><div style={{ fontSize: 17, ...big }}>{mission.left}</div><div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>Remaining</div></div>
-            <div><div style={{ fontSize: 17, ...big }}>{mission.left === 0 ? "—" : `~${estMin}m`}</div><div style={{ fontSize: 9.5, color: T3, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>Est. time left</div></div>
-          </div>
-        </div>
-        <button onClick={() => onNavigate("life")} aria-label="Open Life OS"
-          style={{ background: "none", border: `1px solid ${BD}`, borderRadius: 10, padding: "9px 12px", color: T2, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit", fontSize: 12 }}>
-          Open <ChevronRight size={13} />
-        </button>
-      </Card>
 
       {/* ── ⚠️ PRIORITY ALERTS (hidden when clear) ── */}
       {alerts.length > 0 && (

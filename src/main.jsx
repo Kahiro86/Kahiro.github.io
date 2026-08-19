@@ -5,6 +5,17 @@ import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
 import { IdentityProvider } from "./shared/identity.jsx";
 import { initSync } from "./shared/sync.js";
 
+// One-time cleanup: the habit tracker was removed, so wipe its stored data.
+// Runs once per browser; nothing in the app reads habits/routines any more, so
+// any cloud-synced copies are inert even if they re-appear.
+try {
+  if (!localStorage.getItem("kahiro_habits_removed")) {
+    localStorage.removeItem("architect:habits");
+    localStorage.removeItem("architect:routines");
+    localStorage.setItem("kahiro_habits_removed", "1");
+  }
+} catch { /* storage best-effort */ }
+
 // Cloud sync engine: no-op until the user connects a Supabase project in
 // Settings → Cloud Sync; from then on every device converges on the same data.
 initSync();

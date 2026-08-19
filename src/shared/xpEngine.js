@@ -11,7 +11,6 @@
 // The only stored pieces are xp_achievements ({id: unlockDate}) and
 // xp_logins ({date: 1}) — both auto-stamped, never user-editable.
 import { localDateStr, daysAgoStr, daysBetween } from "./dates.js";
-import { migrateHabits, isScheduled, isDone, isSkipped, perfectDays } from "./habitEngine.js";
 import { sanitizeGoals, CHECKPOINTS } from "./goals.js";
 import { sanitizeWants, savedOf, bestContribStreak } from "./wants.js";
 import { tiTradeStats } from "../modules/trading/intel/tradingIntel.js";
@@ -91,12 +90,8 @@ function extendTiers(base) {
 }
 
 const BASE_JOURNEYS = [
-  { key: "habits",   name: "Habit Mastery",  icon: "🔁", stat: "habitCompletions", unit: "completions",
-    tiers: [[1, 50], [25, 100], [100, 250], [250, 400], [500, 600], [1000, 1000], [2500, 1500], [5000, 2500]] },
   { key: "streak",   name: "The Streak",     icon: "🔥", stat: "bestStreak", unit: "days in a row",
     tiers: [[3, 25], [7, 75], [14, 150], [30, 500], [60, 700], [90, 1000], [180, 1500], [365, 2000], [730, 3000]] },
-  { key: "perfect",  name: "Perfect Days",   icon: "⭐", stat: "perfectCount", unit: "perfect days",
-    tiers: [[1, 50], [7, 250], [30, 500], [90, 800], [180, 1200], [365, 2000]] },
   { key: "journal",  name: "Written Mind",   icon: "📓", stat: "journalDays", unit: "days journaled",
     tiers: [[1, 50], [7, 100], [30, 250], [100, 500], [250, 800], [500, 1200], [1000, 2000]] },
   { key: "workouts", name: "Iron Body",      icon: "💪", stat: "workoutCount", unit: "sessions",
@@ -205,30 +200,8 @@ export function computeXp(deps = {}) {
     incomeLogs: 0, measureDays: 0, photoCount: 0,
   };
 
-  // Life — habits: every completed habit-day, perfect days, streak ladder.
-  const habits = migrateHabits(deps.habits).filter((h) => h && !h.paused);
-  for (const h of habits) {
-    const target = h.target || 1;
-    for (const [d, e] of Object.entries(h.log || {})) {
-      if (DATE_RE.test(d) && (e?.v || 0) >= target) { push(d, V.habitDone, "life"); stats.habitCompletions++; }
-    }
-  }
-  for (const d of perfectDays(habits, 365)) { push(d, V.perfectDay, "life"); stats.perfectCount++; }
-  // Streak milestones: walk the last 2 years chronologically per habit. Days a
-  // habit isn't scheduled (or was skipped) leave the run untouched — only a
-  // scheduled, unlogged day breaks it, same rule the streak display uses.
-  for (const h of habits) {
-    let run = 0;
-    for (let i = 729; i >= 0; i--) {
-      const ds = daysAgoStr(i);
-      if (!isScheduled(h, ds)) continue;
-      if (isDone(h, ds)) {
-        run++;
-        if (STREAK_LADDER[run]) push(ds, STREAK_LADDER[run], "life", true);
-        if (run > stats.bestStreak) stats.bestStreak = run;
-      } else if (!isSkipped(h, ds) && ds !== today) run = 0; // pending today never breaks
-    }
-  }
+  // Habits removed: the habit tracker no longer contributes XP, perfect days
+  // or streaks. Life-domain XP now derives from journal, purity and missions.
 
   // Life — purity: clean days, honest relapse logging, its own streak ladder.
   const purity = sanitizePurity(deps.purity);
