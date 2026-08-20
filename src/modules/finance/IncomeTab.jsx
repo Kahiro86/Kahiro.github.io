@@ -234,9 +234,33 @@ export function IncomeTab({ income, setIncome, fmtKES, gross, setGross, g, paye,
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 10, fontSize: 11, color: T3 }}>
-                  Tip: add your take-home as a <strong style={{ color: T2 }}>Salary</strong> income entry above so it counts toward your monthly totals and trends.
-                </div>
+                {(() => {
+                  // Close the loop: the calculator already knows take-home; one
+                  // tap writes it to the ledger as a recurring monthly salary so
+                  // every report and trend stops reading $0 income. Guarded
+                  // against a duplicate for the current month.
+                  const thisMonth = localDateStr().slice(0, 7);
+                  const already = (income || []).some((e) => e && e.recurring && /salary/i.test(e.source || "") && (e.date || "").slice(0, 7) === thisMonth);
+                  const logSalary = () => {
+                    if (already) return;
+                    setIncome((prev) => [{
+                      id: `inc${Date.now().toString(36)}`, amount: netPay, date: localDateStr(),
+                      source: "Salary", category: "Active", recurring: true,
+                      notes: `Take-home from KES ${g.toLocaleString()} gross (PAYE·NSSF·SHIF·AHL)`,
+                    }, ...(Array.isArray(prev) ? prev : [])]);
+                    toast(`Logged KES ${netPay.toLocaleString()} salary — recurring monthly`, { tone: "success", duration: 3500 });
+                  };
+                  return (
+                    <div style={{ marginTop: 14 }}>
+                      <button onClick={logSalary} disabled={already}
+                        style={{ width: "100%", padding: "12px", borderRadius: 11, border: "none", cursor: already ? "default" : "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 800,
+                          background: already ? GL : `linear-gradient(95deg,#3B8F52,${GR})`, color: already ? T3 : "#04130a", border: already ? `1px solid ${BD}` : "none" }}>
+                        {already ? <><Check size={13} style={{ verticalAlign: -2, marginRight: 6 }} />Salary already logged this month</> : <><Plus size={13} style={{ verticalAlign: -2, marginRight: 6 }} />Log KES {netPay.toLocaleString()} as salary income</>}
+                      </button>
+                      <div style={{ textAlign: "center", fontSize: 10, color: T3, marginTop: 7 }}>Recurring monthly · category Active · counts toward totals &amp; trends</div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
