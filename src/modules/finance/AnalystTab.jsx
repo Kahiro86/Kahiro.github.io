@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { Cpu, Activity, Compass, Check, AlertCircle, ArrowRight } from "lucide-react";
-import { BD, GL, T1, T2, T3, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
+import { useState, useMemo } from "react";
+import { Cpu, Activity, Compass, Check, AlertCircle, ArrowRight, MoonStar, TrendingDown, ShieldCheck, Sparkles, FileText } from "lucide-react";
+import { B2, BD, GL, T1, T2, T3, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useIdentity, ownerRef } from "../../shared/identity.jsx";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
+import { useStorageState } from "../../shared/useStorageState.js";
+import { DEFAULT_FINANCE_STATE } from "./constants.js";
+import { crossModulePatterns } from "./patterns.js";
 import { callClaude } from "../../shared/anthropic.js";
 import { KAIZEN_COACH_PREAMBLE } from "../../shared/kaizen.js";
 import { SUBSCORE_META } from "./financeHealth.js";
@@ -15,6 +18,18 @@ export function AnalystTab({ health, fmtKES, bySource, budgets, monthlyPassive, 
   const { appName, ownerName } = useIdentity();
   const owner = ownerRef(ownerName);
   const coach = financeNarrative(health, trajStats, doctrine, freedom, fmtKES, budgets);
+  // Cross-module signals live in other stores; read them here for the pattern engine.
+  const [purity] = useStorageState("purity_log", {});
+  const [sleep] = useStorageState("trade_sleep", {});
+  const [snapshots] = useStorageState("finance_snapshots", []);
+  const [tiTrades] = useStorageState("ti_trades", []);
+  const [tiAccounts] = useStorageState("ti_accounts", []);
+  const [firmConfig] = useStorageState("firm_config", null);
+  const [financeState] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
+  const patterns = useMemo(
+    () => crossModulePatterns({ purity, sleep, snapshots, tiTrades, tiAccounts, income: financeState?.income, firmConfig }),
+    [purity, sleep, snapshots, tiTrades, tiAccounts, financeState, firmConfig]
+  );
   const [analysis, setAnalysis] = useState("");
   const [loading, setLoading] = useState(false);
   const col = scoreColor(health.overall);
@@ -55,6 +70,56 @@ Sub-scores: ${SUBSCORE_META.map((m) => `${m.label} ${Math.round(health.sub[m.key
         <div style={{ fontSize: 22, fontWeight: 800, color: T1 }}>Financial Analyst</div>
         <div style={{ fontSize: 13, color: T3, marginTop: 3 }}>Continuous analysis of your whole financial picture · Kaizen recommendations</div>
       </div>
+
+      {/* ── PATTERNS — cross-module correlations, each citing a Law ── */}
+      {patterns.length > 0 && (() => {
+        const TONE = { bad: RE, warn: AM, good: GR };
+        const ICON = { sleep_breach: MoonStar, savings_trend: TrendingDown, fleet_risk: ShieldCheck, more_data: FileText };
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <SH title="Patterns" sub="Cross-module correlations — the thing no single tab can see" action={<Sparkles size={13} color={AM} />} />
+            {patterns.map((p) => {
+              const c = TONE[p.tone] || AM;
+              const Icon = ICON[p.id] || Activity;
+              if (p.isGate) {
+                return (
+                  <Card key={p.id} style={{ padding: "14px 16px", borderColor: `${AM}33` }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T1, marginBottom: 4 }}>{p.title}</div>
+                    <div style={{ fontSize: 11.5, color: T2, lineHeight: 1.6 }}>{p.detail}</div>
+                  </Card>
+                );
+              }
+              return (
+                <div key={p.id} style={{ position: "relative", overflow: "hidden", background: B2, border: `1px solid ${BD}`, borderRadius: 13, padding: "13px 15px 13px 17px" }}>
+                  <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: c }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                    <Icon size={15} color={c} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: T1, flex: 1 }}>{p.title}</span>
+                    <span style={{ fontSize: 8, letterSpacing: 0.5, textTransform: "uppercase", color: T3, border: `1px solid ${BD}`, padding: "2px 6px", borderRadius: 5 }}>{p.tag}</span>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: T2, lineHeight: 1.6 }}>{p.detail}</div>
+                  {p.bars && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+                      {p.bars.map((b, i) => (
+                        <div key={i} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 9, alignItems: "center" }}>
+                          <span style={{ fontSize: 10.5, color: T3, minWidth: 42 }}>{b.l}</span>
+                          <Meter pct={b.v} height={14} color={i === 0 ? AM : `${AM}88`} />
+                          <span style={{ fontSize: 10.5, color: T2, fontFamily: "monospace" }}>~{b.v}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {p.law && (
+                    <div style={{ fontSize: 10, color: AM, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${GL}`, display: "flex", alignItems: "center", gap: 5 }}>
+                      <FileText size={11} />{p.law}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ── YOUR COACH — always-on, reads your trajectory + principles ── */}
       <Card style={{ padding: "20px 22px", borderColor: `${col}33`, background: `linear-gradient(120deg,${col}0C,transparent)` }}>
