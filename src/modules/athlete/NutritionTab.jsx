@@ -19,7 +19,7 @@ import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 import { migrateHabits, isWellness, valueOn } from "../../shared/habitEngine.js";
 import { callClaude, getApiKey } from "../../shared/anthropic.js";
 import {
-  FOOD_DB, SLOTS, GOALS, ACTIVITY, NUTRIENTS, MICROS, DEFAULT_PROFILE,
+  FOOD_DB, SLOTS, SHIFT_SLOTS, GOALS, ACTIVITY, NUTRIENTS, MICROS, DEFAULT_PROFILE,
   sanitizeNutrition, sanitizeFoods, sanitizeProfile, calcTargets,
   newEntry, scaleNutrients, dayTotals, dayEntries, coverage,
   nutritionScore, qualitySuggestions, nutritionSeries, healthyStreaks, nutritionReport,
@@ -63,6 +63,7 @@ export function NutritionTab() {
   const [rawHard] = useStorageState("nutrition_hard", DEFAULT_HARD);
   const [days, setDays] = useStorageState("nutrition_days", {}); // { ds: { completedAt, clean } }
   const [gymSessions] = useStorageState("gym_sessions", []);
+  const [measurements] = useStorageState("athlete_measurements", []);
   const toast = useToast();
   const today = localDateStr();
   // The log is backdatable — `logDs` is the day being viewed/logged (defaults
@@ -343,8 +344,37 @@ export function NutritionTab() {
     </div>
   );
 
+  // ── Mock-shaped Today derivations ──────────────────────────────────
+  const goalLabel = GOALS.find((g) => g.id === profile.goal)?.l || "maintain";
+  const dateLabel = new Date(`${logDs}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
+  // The four shift slots always show; any legacy slot with items is appended.
+  const shownSlots = [
+    ...SHIFT_SLOTS,
+    ...SLOTS.slice(SHIFT_SLOTS.length).filter((s) => entries.some((e) => e.slot === s.id)),
+  ];
+  const slotTot = (id) => { const t = dayTotals(entries.filter((e) => e.slot === id)); return { kcal: Math.round(t.kcal || 0), p: Math.round(t.p || 0), n: entries.filter((e) => e.slot === id).length }; };
+  const emptyShiftSlots = SHIFT_SLOTS.filter((s) => !entries.some((e) => e.slot === s.id)).length;
+  // Logging gap over the trailing 30 days.
+  let loggedDays30 = 0, kcalSum30 = 0;
+  for (let i = 0; i < 30; i++) { const it = dayEntries(log, daysAgoStr(i)); if (it.length) { loggedDays30++; kcalSum30 += dayTotals(it).kcal || 0; } }
+  const avgKcal30 = loggedDays30 ? Math.round(kcalSum30 / loggedDays30) : 0;
+  // Composition — latest weight/waist from measurements, with a 2-week delta.
+  const measArr = (Array.isArray(measurements) ? measurements : []).filter((m) => m && m.date).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const latestMeas = measArr[measArr.length - 1] || null;
+  const twoWeekAgo = daysAgoStr(14);
+  const priorMeas = [...measArr].reverse().find((m) => (m.date || "") <= twoWeekAgo) || measArr[0] || null;
+  const curWeight = latestMeas && Number.isFinite(+latestMeas.weightKg) ? +latestMeas.weightKg : (Number.isFinite(+profile.weightKg) ? +profile.weightKg : null);
+  const wDelta = latestMeas && priorMeas && latestMeas !== priorMeas && Number.isFinite(+latestMeas.weightKg) && Number.isFinite(+priorMeas.weightKg) ? +(latestMeas.weightKg - priorMeas.weightKg).toFixed(1) : null;
+  const curWaist = latestMeas && Number.isFinite(+latestMeas.waistCm) ? +latestMeas.waistCm : null;
+  const waistDelta = latestMeas && priorMeas && Number.isFinite(+latestMeas.waistCm) && Number.isFinite(+priorMeas.waistCm) ? +(latestMeas.waistCm - priorMeas.waistCm).toFixed(1) : null;
+  const targetWeight = Number.isFinite(+profile.targetWeightKg) ? +profile.targetWeightKg : null;
+
   return (
-    <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 900 }}>
+    <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14, maxWidth: 900 }}>
+      {/* ── subtitle: date · goal · targets (mock header line) ── */}
+      <div style={{ fontSize: 11.5, color: T2 }}>
+        {dateLabel} · <span style={{ color: AC2 }}>{goalLabel.toLowerCase()}</span> · {targets.kcal.toLocaleString()} kcal · {targets.p}g P
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 220 }}><DatePicker value={logDs} onChange={setLogDs} /></div>
         <button onClick={() => toggleMark(setDayMarks, "cheat", logDs)}
@@ -424,35 +454,35 @@ export function NutritionTab() {
         );
       })()}
       <MotivePush context={["meal", "protein", "water"]} accent={GR} compact />
-      {/* ── Daily dashboard ── */}
-      <Card style={{ padding: "20px 22px", background: `linear-gradient(180deg,${GR}08,transparent)` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
-          <Ring pct={pctKcal} glow color={pctKcal > 115 ? AM : GR} size={116}>
-            <div style={{ fontSize: 21, fontWeight: 900, color: T1, fontFamily: "'JetBrains Mono',monospace" }}>{Math.round(totals.kcal)}</div>
-            <div style={{ fontSize: 8.5, color: T3, letterSpacing: 1 }}>/ {targets.kcal} KCAL</div>
+      {/* ── Daily dashboard — ring + macro bars, then water/sodium/score ── */}
+      <Card style={{ padding: "18px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+          <Ring pct={pctKcal} glow color={pctKcal > 115 ? AM : GR} size={104}>
+            <div style={{ fontSize: 19, fontWeight: 900, color: T1, fontFamily: "'JetBrains Mono',monospace" }}>{Math.round(totals.kcal).toLocaleString()}</div>
+            <div style={{ fontSize: 8, color: T3, letterSpacing: 1 }}>/ {targets.kcal.toLocaleString()} KCAL</div>
           </Ring>
-          <div style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", gap: 9 }}>
-            {[["Protein", totals.p, targets.p, GR], ["Carbs", totals.c, targets.c, CY], ["Fat", totals.f, targets.f, AM], ["Fiber", totals.fib, targets.fib, PU]].map(([l, v, t, c]) => (
+          <div style={{ flex: 1, minWidth: 240, display: "flex", flexDirection: "column", gap: 8 }}>
+            {[["Protein", totals.p, targets.p, AC2], ["Carbs", totals.c, targets.c, `${AC2}99`], ["Fat", totals.f, targets.f, `${AC2}99`], ["Fibre", totals.fib, targets.fib, `${AC2}99`]].map(([l, v, t, c]) => (
               <div key={l}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                  <span style={{ fontSize: 10.5, color: T3, letterSpacing: 1, textTransform: "uppercase" }}>{l}</span>
-                  <span style={{ fontSize: 11, color: T2, fontFamily: "monospace" }}>{Math.round(v)} / {t}g</span>
+                  <span style={{ fontSize: 11, color: T2 }}>{l}</span>
+                  <span style={{ fontSize: 11, color: l === "Protein" ? AC2 : T2, fontFamily: "monospace" }}>{Math.round(v)} / {t} g</span>
                 </div>
-                <Meter pct={(v / t) * 100} height={4} color={c} />
+                <Meter pct={(v / t) * 100} height={5} color={c} />
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11.5, color: T2, minWidth: 150 }}>
-            <span>Remaining: <b style={{ color: GR, fontFamily: "monospace" }}>{remaining} kcal</b> · <b style={{ color: GR, fontFamily: "monospace" }}>{remainingP}g P</b></span>
-            <span>Score: <b style={{ color: score == null ? T3 : score >= 70 ? GR : score >= 50 ? AM : RE, fontFamily: "monospace" }}>{score == null ? "—" : `${score}/100`}</b></span>
-            <span>Macro split: <b style={{ fontFamily: "monospace", color: T1 }}>{Math.round((totals.p * 4 / macroKcal) * 100)}/{Math.round((totals.c * 4 / macroKcal) * 100)}/{Math.round((totals.f * 9 / macroKcal) * 100)}</b> <span style={{ color: T3 }}>P/C/F</span></span>
-            <span>{entries.length} meal item{entries.length === 1 ? "" : "s"}{entries.length ? ` · avg ${Math.round(totals.kcal / entries.length)} kcal` : ""}{times.length ? ` · ${times[0]}–${times[times.length - 1]}` : ""}</span>
-            {water && <span>Water: <b style={{ color: CY, fontFamily: "monospace" }}>{water.done}/{water.target}{water.unit}</b> <span style={{ color: T3 }}>(Life OS)</span></span>}
-            <span>Fluids logged: <b style={{ color: CY, fontFamily: "monospace" }}>{totals.fluidMl || 0} ml</b> <span style={{ color: T3 }}>/ {targets.waterMl}ml</span></span>
-            <span>Sodium: <b style={{ color: totals.na > 2300 ? AM : T1, fontFamily: "monospace" }}>{Math.round(totals.na || 0)} mg</b></span>
-            <span style={{ display: "flex", alignItems: "center", gap: 4, color: AM }}><Flame size={11} />{streaks.current}d healthy streak · best {streaks.best}d</span>
-          </div>
         </div>
+        <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: T2, flexWrap: "wrap" }}>
+          <span>Water <b style={{ color: T1 }}>{((totals.fluidMl || 0) / 1000).toFixed(1)}</b>/{(targets.waterMl / 1000).toFixed(1)} L</span>
+          <span>Sodium <b style={{ color: totals.na > 2300 ? AM : T1 }}>{Math.round(totals.na || 0).toLocaleString()}</b> mg</span>
+          <span style={{ marginLeft: "auto", color: score == null ? T3 : score >= 70 ? GR : score >= 50 ? AM : RE }}>Score {score == null ? "—" : score}</span>
+        </div>
+        {remainingP > 0 && (
+          <div style={{ marginTop: 10, padding: "9px 11px", borderRadius: 9, background: `${AC2}0C`, border: `1px solid ${AC2}33`, fontSize: 11, color: T2, lineHeight: 1.5 }}>
+            <b style={{ color: AC2 }}>{remainingP}g protein short</b>{emptyShiftSlots > 0 ? ` with ${emptyShiftSlots} meal${emptyShiftSlots === 1 ? "" : "s"} left` : ""}. {`${Math.max(1, Math.round(remainingP / 20))}× a palm of chicken/fish (~35g each), or ${Math.max(1, Math.round(remainingP / 6))} eggs + yoghurt, closes it.`}
+          </div>
+        )}
       </Card>
 
       {/* ── One-tap logging: frequent meals + copy yesterday ── */}
@@ -496,15 +526,16 @@ export function NutritionTab() {
           </button>
         ))}
       </div>
-      {SLOTS.map((slot) => {
+      {shownSlots.map((slot) => {
         const list = entries.filter((e) => e.slot === slot.id);
         const slotKcal = Math.round(list.reduce((s, e) => s + (+e.n.kcal || 0), 0));
+        const slotP = Math.round(list.reduce((s, e) => s + (+e.n.p || 0), 0));
         return (
-          <Card key={slot.id} style={{ padding: "13px 16px" }}>
+          <Card key={slot.id} style={{ padding: "12px 15px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: list.length || adding === slot.id ? 10 : 0 }}>
               <span style={{ fontSize: 15 }}>{slot.icon}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: T1, flex: 1 }}>{slot.l}</span>
-              {slotKcal > 0 && <span style={{ fontSize: 11.5, color: T3, fontFamily: "monospace" }}>{slotKcal} kcal</span>}
+              <span style={{ fontSize: 13, fontWeight: 700, color: list.length ? T1 : T3, flex: 1 }}>{slot.l}</span>
+              {slotKcal > 0 && <span style={{ fontSize: 11.5, color: T2, fontFamily: "monospace" }}>{slotKcal.toLocaleString()} · {slotP}P</span>}
               <button onClick={() => (adding === slot.id ? closeAdd() : (closeAdd(), setAdding(slot.id)))} aria-label={`Add to ${slot.l}`}
                 style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 11px", background: adding === slot.id ? `${GR}18` : GL, border: `1px solid ${adding === slot.id ? GR + "55" : BD}`, borderRadius: 8, color: adding === slot.id ? GR : T2, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                 {adding === slot.id ? <ChevronUp size={12} /> : <Plus size={12} />}{adding === slot.id ? "Close" : "Add"}
@@ -791,6 +822,33 @@ export function NutritionTab() {
         );
       })()}
 
+      {/* ── Composition ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+        {[
+          { l: "Weight", v: curWeight == null ? "—" : curWeight.toFixed(1), u: "", d: wDelta == null ? null : `${wDelta <= 0 ? "" : "+"}${wDelta} / 2wk`, good: wDelta != null && (profile.goal === "cut" || profile.goal === "fatloss" ? wDelta < 0 : wDelta >= 0) },
+          { l: "Waist", v: curWaist == null ? "—" : curWaist, u: "cm", d: waistDelta == null ? null : `${waistDelta <= 0 ? "" : "+"}${waistDelta} cm`, good: waistDelta != null && waistDelta < 0 },
+          { l: "Target", v: targetWeight == null ? "—" : targetWeight, u: "kg", d: null },
+        ].map((m) => (
+          <div key={m.l} style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 12, padding: "11px 13px" }}>
+            <div style={{ fontSize: 9, color: T3, letterSpacing: 0.9, textTransform: "uppercase", marginBottom: 6 }}>{m.l}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T1, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1 }}>{m.v}{m.u && <span style={{ fontSize: 11, color: T3 }}>{m.u}</span>}</div>
+            {m.d && <div style={{ fontSize: 9.5, color: m.good ? GR : T3, marginTop: 5 }}>{m.good ? "▼ " : ""}{m.d}</div>}
+          </div>
+        ))}
+      </div>
+
+      {report30.deficiencies.length > 0 && (
+        <div style={{ padding: "10px 12px", borderRadius: 10, background: `${AM}0C`, border: `1px solid ${AM}33`, fontSize: 11, color: T2, lineHeight: 1.6 }}>
+          <b style={{ color: AM }}>Running low (30d):</b> {report30.deficiencies.slice(0, 4).map((d) => `${d.l} ${d.cov}%`).join(" · ")}
+        </div>
+      )}
+
+      {loggedDays30 < 28 && (
+        <div style={{ padding: "10px 12px", borderRadius: 10, background: `${RE}0A`, border: `1px solid ${RE}33`, fontSize: 11, color: T2, lineHeight: 1.6 }}>
+          <b style={{ color: RE }}>Logging gap:</b> {loggedDays30} of 30 days logged{avgKcal30 ? `, averaging ${avgKcal30.toLocaleString()} kcal` : ""}. Either intake is well under target or days are going unlogged — the two need opposite fixes.
+        </div>
+      )}
+
       {/* ── Micronutrients ── */}
       {entries.length > 0 && (
         <Collapse id="nutri_micros" title="Micronutrients" sub="today's coverage of daily targets">
@@ -832,7 +890,7 @@ export function NutritionTab() {
           ))}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
-          {[["age", "Age"], ["heightCm", "Height cm"], ["weightKg", "Weight kg"]].map(([k, l]) => (
+          {[["age", "Age"], ["heightCm", "Height cm"], ["weightKg", "Weight kg"], ["targetWeightKg", "Target kg"]].map(([k, l]) => (
             <NumField key={k} label={l} value={profile[k]}
               onCommit={(v) => setProfile((prev) => ({ ...sanitizeProfile(prev), [k]: v }))} />
           ))}

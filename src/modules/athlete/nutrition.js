@@ -374,14 +374,20 @@ for (const f of FOOD_DB) if (!f.serving && SERVING_BY_NAME[f.name]) f.serving = 
 // shift slots are additive. SLOT_IDS (below) validates against this list, so
 // extending here is all it takes for the day log to group by these types.
 export const SLOTS = [
-  { id: "breakfast",   l: "Breakfast",   icon: "🌅" },
+  // The four shift slots the day is built around (shown first, always).
+  { id: "pre_shift",   l: "Pre-shift",   icon: "🌅" },
+  { id: "mid_shift",   l: "Mid-shift",   icon: "☀️" },
+  { id: "tasting",     l: "Tasting",     icon: "🍵" },
+  { id: "post_shift",  l: "Post-shift",  icon: "🌙" },
+  // Legacy ids kept so already-logged entries still group and display.
+  { id: "breakfast",   l: "Breakfast",   icon: "🍳" },
   { id: "mid_morning", l: "Mid-morning", icon: "🥪" },
-  { id: "lunch",       l: "Lunch",       icon: "☀️" },
-  { id: "mid_shift",   l: "Mid-shift",   icon: "🍵" },
-  { id: "post_shift",  l: "Post-shift",  icon: "🥤" },
-  { id: "dinner",      l: "Dinner",      icon: "🌙" },
+  { id: "lunch",       l: "Lunch",       icon: "🥗" },
+  { id: "dinner",      l: "Dinner",      icon: "🍽️" },
   { id: "snack",       l: "Snacks",      icon: "🍎" },
 ];
+// The shift-shaped meals shown on the Today screen (the mock's four slots).
+export const SHIFT_SLOTS = SLOTS.slice(0, 4);
 
 // ── Goals & targets (Mifflin-St Jeor + goal presets) ─────────────────
 export const ACTIVITY = [
@@ -415,6 +421,7 @@ export function sanitizeProfile(raw) {
     sex: p.sex === "female" ? "female" : "male",
     heightCm: num(p.heightCm, 175, 100, 250),
     weightKg: num(p.weightKg, 70, 30, 250),
+    targetWeightKg: Number.isFinite(+p.targetWeightKg) && +p.targetWeightKg >= 30 && +p.targetWeightKg <= 250 ? +p.targetWeightKg : null,
     activity: ACTIVITY.some((a) => a.id === +p.activity) ? +p.activity : 1.55,
     goal: GOALS.some((g) => g.id === p.goal) ? p.goal : "maintain",
     favs: Array.isArray(p.favs) ? p.favs.filter((x) => typeof x === "string") : [],
@@ -615,12 +622,10 @@ export function frequentEntries(log, days = 30, limit = 6) {
 // Which meal slot "now" most likely belongs to — lets one-tap logging
 // skip the where question entirely.
 export function slotForNow(hour = new Date().getHours()) {
-  if (hour < 10) return "breakfast";
-  if (hour < 12) return "mid_morning";
-  if (hour < 15) return "lunch";
-  if (hour < 18) return "mid_shift";
-  if (hour < 21) return "post_shift";
-  return "dinner";
+  if (hour < 11) return "pre_shift";
+  if (hour < 16) return "mid_shift";
+  if (hour < 19) return "tasting";
+  return "post_shift";
 }
 
 export function nutritionSeries(log, targets, days = 14) {
