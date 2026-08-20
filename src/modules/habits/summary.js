@@ -36,17 +36,22 @@ export function habitSummary(htHabits, htEntries, today) {
   });
   streaks.sort((a, b) => b.days - a.days || a.label.localeCompare(b.label));
 
-  // done/scheduled for any date, or null when nothing is scheduled that day —
-  // the shape the dashboard's Life Score expects.
-  const ratioOn = (d) => {
-    let sched = 0, done = 0;
+  // Scheduled/done counts for any date.
+  const countsOn = (d) => {
+    let scheduled = 0, done = 0;
     for (const { h, map } of rows) {
       if (!isScheduled(h, d)) continue;
-      sched++;
+      scheduled++;
       if (isCompleted(h, map.get(d))) done++;
     }
-    return sched ? done / sched : null;
+    return { scheduled, done };
+  };
+  // done/scheduled ratio for any date, or null when nothing is scheduled that
+  // day — the shape the dashboard's Life Score expects.
+  const ratioOn = (d) => {
+    const { scheduled, done } = countsOn(d);
+    return scheduled ? done / scheduled : null;
   };
 
-  return { activeCount: habits.length, streaks, todayScheduled, todayDone, ratioOn };
+  return { activeCount: habits.length, streaks, todayScheduled, todayDone, ratioOn, countsOn };
 }
