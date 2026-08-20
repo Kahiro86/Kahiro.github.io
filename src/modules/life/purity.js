@@ -130,6 +130,51 @@ export function relapseInsights(log, today = localDateStr()) {
   return { total: relapses.length, last30, topTrigger, topWeekday, byTrigger };
 }
 
+// Recovery speed — how fast you return to clean after a slip. A "run" is a
+// stretch of consecutive relapse days; its length is how long recovery took.
+// Shorter is better, and a shrinking recent average means you're bouncing
+// back faster than you used to. Honest with sparse data: isolated single-day
+// relapses simply average 1.0.
+export function recoveryStats(log, today = localDateStr()) {
+  const dates = Object.keys(log);
+  if (dates.length < 2) return { avg: null, priorAvg: null, trend: 0, count: 0 };
+  const earliest = dates.sort()[0];
+  const span = Math.min(daysBetween(earliest, today), 1460); // cap at ~4y
+  const runs = [];
+  let run = 0;
+  for (let i = span; i >= 0; i--) { // earliest → today
+    if (statusOn(log, daysAgoStr(i)) === "relapse") run++;
+    else if (run > 0) { runs.push(run); run = 0; }
+  }
+  if (run > 0) runs.push(run);
+  if (!runs.length) return { avg: null, priorAvg: null, trend: 0, count: 0 };
+  const mean = (a) => a.reduce((s, g) => s + g, 0) / a.length;
+  const mid = Math.floor(runs.length / 2);
+  const prior = runs.slice(0, mid), recent = runs.slice(mid);
+  const priorAvg = prior.length ? mean(prior) : null;
+  const trend = prior.length && recent.length ? mean(recent) - priorAvg : 0;
+  return { avg: Math.round(mean(runs) * 10) / 10, priorAvg: priorAvg == null ? null : Math.round(priorAvg * 10) / 10, trend, count: runs.length };
+}
+
+// Time-of-day risk — which three-hour window relapses cluster in. Reads the
+// optional `t` (hour 0–23) stamped when a relapse is logged; days without a
+// time are simply not counted, so the window fills in as timed data arrives.
+export const RISK_BUCKETS = ["6a", "9a", "12p", "3p", "6p", "9p", "12a", "3a"];
+const bucketRange = (i) => { const start = (6 + i * 3) % 24; const end = (start + 3) % 24; const f = (h) => String(h).padStart(2, "0") + ":00"; return `${f(start)}–${f(end)}`; };
+export function timeOfDayRisk(log) {
+  const buckets = new Array(8).fill(0);
+  let total = 0;
+  for (const v of Object.values(log)) {
+    if (v.s !== "relapse" || !Number.isFinite(v.t)) continue;
+    const h = ((v.t % 24) + 24) % 24;
+    buckets[Math.floor(((h - 6 + 24) % 24) / 3)]++;
+    total++;
+  }
+  const max = Math.max(0, ...buckets);
+  const peakIdx = total ? buckets.indexOf(max) : -1;
+  return { buckets, total, max, peakIdx, peakLabel: peakIdx >= 0 ? bucketRange(peakIdx) : null };
+}
+
 // Weekly consistency for the trend chart: % pure of logged days, per week.
 export function weeklyPurity(log, weeks = 12, today = localDateStr()) {
   const out = [];
