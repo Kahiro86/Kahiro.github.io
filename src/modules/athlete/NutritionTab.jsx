@@ -4,7 +4,7 @@
 // wellness habit — one hydration tracker across the whole app.
 import { useMemo, useState, useEffect } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Plus, Trash2, Star, Search, Copy, ChevronUp, Flame } from "lucide-react";
+import { Plus, Trash2, Star, Search, Copy, ChevronUp, Flame, Dumbbell, Link2, Check, CircleDashed } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC2 } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter, Empty } from "../../shared/ui.jsx";
 import { DatePicker } from "../../shared/DatePicker.jsx";
@@ -31,6 +31,7 @@ import {
   isSugaredBev, LOW_APPETITE_OPTIONS,
 } from "./nutritionHard.js";
 import { sanitizeSeason, seasonActive, seasonDay, seasonTemplate, seasonFloorAdjust } from "../../shared/season.js";
+import { gymLink } from "./gymSync.js";
 import { Lock } from "lucide-react";
 
 const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
@@ -61,6 +62,7 @@ export function NutritionTab() {
   const [rawHabits] = useStorageState("habits", []);
   const [rawHard] = useStorageState("nutrition_hard", DEFAULT_HARD);
   const [days, setDays] = useStorageState("nutrition_days", {}); // { ds: { completedAt, clean } }
+  const [gymSessions] = useStorageState("gym_sessions", []);
   const toast = useToast();
   const today = localDateStr();
   // The log is backdatable — `logDs` is the day being viewed/logged (defaults
@@ -75,6 +77,7 @@ export function NutritionTab() {
   const customFoods = useMemo(() => sanitizeFoods(rawFoods), [rawFoods]);
   const profile = useMemo(() => sanitizeProfile(rawProfile), [rawProfile]);
   const targets = useMemo(() => calcTargets(profile), [profile]);
+  const gym = useMemo(() => gymLink(gymSessions, logDs), [gymSessions, logDs]);
 
   const entries = dayEntries(log, logDs);
   const totals = useMemo(() => dayTotals(entries), [entries]);
@@ -713,6 +716,80 @@ export function NutritionTab() {
           </div>
         </Card>
       )}
+
+      {/* ── Training link (Gym facet) ── */}
+      {(() => {
+        const rowIcon = (on) => on ? <Check size={13} color={GR} /> : <CircleDashed size={13} color={T3} />;
+        const proteinTarget = targets.p + gym.proteinBump;
+        return (
+          <Card style={{ padding: "13px 16px", border: `1px solid ${gym.connected ? (gym.trainedToday ? GR + "44" : AC2 + "33") : BD}`, background: gym.trainedToday ? `${GR}08` : "transparent" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
+              {gym.connected ? <Link2 size={14} color={gym.trainedToday ? GR : AC2} /> : <Dumbbell size={14} color={T3} />}
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: T1, flex: 1 }}>Training link</span>
+              <span style={{ fontSize: 8, letterSpacing: 0.5, textTransform: "uppercase", padding: "2px 7px", borderRadius: 5, border: `1px solid ${gym.connected ? (gym.trainedToday ? GR + "55" : AC2 + "44") : BD}`, color: gym.connected ? (gym.trainedToday ? GR : AC2) : T3 }}>
+                {gym.connected ? (gym.trainedToday ? "Trained today" : "Connected") : "Not connected"}
+              </span>
+            </div>
+            {gym.connected ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: T2 }}>
+                  {rowIcon(gym.trainedToday)}<span style={{ flex: 1 }}>Training-day calorie allowance</span>
+                  <span style={{ color: gym.trainedToday ? GR : T3, fontFamily: "monospace" }}>{gym.trainedToday ? `+${gym.kcalShift} · ${(targets.kcal + gym.kcalShift).toLocaleString()}` : `+${300} when active`}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: T2 }}>
+                  {rowIcon(gym.trainedToday)}<span style={{ flex: 1 }}>Protein target on a session day</span>
+                  <span style={{ color: gym.trainedToday ? GR : T3, fontFamily: "monospace" }}>{gym.trainedToday ? `${proteinTarget} g` : "awaiting"}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: T2 }}>
+                  {rowIcon(gym.trainedToday)}<span style={{ flex: 1 }}>Post-session fuel window</span>
+                  <span style={{ color: gym.trainedToday ? GR : T3, fontFamily: "monospace" }}>{gym.trainedToday ? "next 2 h" : "awaiting"}</span>
+                </div>
+                {!gym.trainedToday && gym.lastDate && (
+                  <div style={{ fontSize: 10, color: T3, marginTop: 2 }}>No session logged for this day · last was {gym.lastDate}. Fuel adjusts automatically when you train.</div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: T3, lineHeight: 1.5 }}>Log a workout in the Gym facet and Fuel connects automatically — training days get a calorie allowance and a protein bump.</div>
+            )}
+          </Card>
+        );
+      })()}
+
+      {/* ── XP earned today (nutrition) ── */}
+      {entries.length > 0 && (() => {
+        // Mirrors the XP engine's value table (display only): meal day 10,
+        // protein hit 10, healthy day 15, a logged gym session 30.
+        const proteinHit = totals.p >= targets.p;
+        const healthy = score != null && score >= 70;
+        const rows = [
+          { on: entries.length > 0, label: "Logged meals", xp: 10 },
+          { on: proteinHit, label: "Protein target hit", xp: 10 },
+          { on: healthy, label: "Within calorie band", xp: 15 },
+          { on: gym.trainedToday, label: "Gym session", xp: 30, needsGym: !gym.trainedToday },
+        ];
+        const earned = rows.filter((r) => r.on).reduce((s, r) => s + r.xp, 0);
+        const total = rows.reduce((s, r) => s + r.xp, 0);
+        return (
+          <Card style={{ padding: "13px 16px" }}>
+            <SH title="XP earned today" sub="Fuel's contribution to the day's score" action={<Flame size={13} color={AC2} />} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 7, marginTop: 4 }}>
+              {rows.map((r) => (
+                <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5 }}>
+                  {r.on ? <Check size={13} color={GR} /> : r.needsGym ? <Lock size={12} color={T3} /> : <CircleDashed size={13} color={T3} />}
+                  <span style={{ flex: 1, color: r.on ? T1 : T2 }}>{r.label}</span>
+                  <span style={{ fontFamily: "monospace", color: r.on ? AC2 : r.needsGym ? T3 : T3, fontSize: 11 }}>{r.needsGym ? "locked · needs gym" : `+${r.xp}`}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
+              <div style={{ flex: 1, height: 4, background: "#241F18", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ height: 4, width: `${Math.round((earned / total) * 100)}%`, background: AC2, borderRadius: 2 }} />
+              </div>
+              <span style={{ fontSize: 10, color: T2, fontFamily: "monospace" }}>{earned} / {total} XP</span>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* ── Micronutrients ── */}
       {entries.length > 0 && (
