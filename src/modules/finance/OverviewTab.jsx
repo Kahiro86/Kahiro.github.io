@@ -44,6 +44,61 @@ export function OverviewTab({
           </div>
         </Card>
       )}
+
+      {/* ── FREEDOM MATH — one target, the arithmetic shown ── */}
+      {freedom && freedom.capitalRequired != null && (() => {
+        const usd = Math.round(freedom.freedomNumber / (freedom.xRate || 130));
+        const yieldPct = (freedom.annualYield * 100).toFixed(1);
+        const wrPct = freedom.impliedWithdrawalRate != null ? (freedom.impliedWithdrawalRate * 100).toFixed(1) : null;
+        const mismatch = freedom.capitalRequired > 0 && Math.abs(freedom.target - freedom.capitalRequired) / freedom.capitalRequired > 0.1;
+        const row = (k, v, c) => (
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${BD}` }}>
+            <span style={{ fontSize: 12, color: T2 }}>{k}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: c || T1, fontFamily: "monospace" }}>{v}</span>
+          </div>
+        );
+        return (
+          <Card style={{ padding: "18px 20px" }}>
+            <SH title="Freedom Math" sub="One source of truth — the arithmetic shown, not asserted" />
+            <div style={{ fontSize: 22, fontWeight: 800, color: T1, marginTop: 4, letterSpacing: -0.3 }}>
+              {fmtKES(freedom.freedomNumber)}<span style={{ fontSize: 13, color: T3, fontWeight: 500 }}>/mo</span>
+            </div>
+            <div style={{ fontSize: 11, color: T3, marginTop: 3, marginBottom: 12 }}>= ${usd.toLocaleString()}/mo at {freedom.xRate} · the single target</div>
+            <div>
+              {row("Frozen life (Law 8)", `${fmtKES(freedom.lifeCost)}/mo`)}
+              {row("Freedom target", `${fmtKES(freedom.freedomNumber)}/mo`, AM)}
+              {row("Blended yield assumed", `${yieldPct}% p.a.`)}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "11px 0 0" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: T1 }}>Capital required</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: AM, fontFamily: "monospace" }}>{fmtKES(freedom.capitalRequired)}</span>
+              </div>
+            </div>
+            {mismatch && wrPct && (
+              <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 10, background: `${AM}0C`, border: `1px solid ${AM}33`, fontSize: 11, color: T2, lineHeight: 1.6 }}>
+                Your vault line is <b style={{ color: T1 }}>{fmtKES(freedom.target)}</b> — a <b style={{ color: AM }}>{wrPct}%</b> withdrawal rate. At the blended <b style={{ color: T1 }}>{yieldPct}%</b> yield the same income needs <b style={{ color: AM }}>{fmtKES(freedom.capitalRequired)}</b> — {freedom.target > freedom.capitalRequired ? "the larger line is the conservative one" : "the larger line is the ambitious one"}. Both are defensible; choose deliberately.
+              </div>
+            )}
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 11 }}>
+              <div style={{ fontSize: 9.5, letterSpacing: 1, textTransform: "uppercase", color: T3 }}>Milestones before freedom</div>
+              {freedom.milestones.map((m) => (
+                <div key={m.key}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 11.5, color: T1 }}>{m.label} <span style={{ color: T3 }}>· {kShort(m.monthly)}/mo → {m.cap == null ? "—" : fmtKES(m.cap)}</span></span>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: m.key === "survival" ? AM : T2, fontFamily: "monospace" }}>{m.pct}%</span>
+                  </div>
+                  <Meter pct={m.pct} height={5} color={m.key === "survival" ? AM : `${AM}88`} />
+                </div>
+              ))}
+              {freedom.milestones[0] && freedom.milestones[0].cap != null && (
+                <div style={{ fontSize: 11, color: T2, background: `${GR}0A`, border: `1px solid ${GR}22`, borderRadius: 9, padding: "9px 11px", lineHeight: 1.55, marginTop: 2 }}>
+                  <b style={{ color: GR }}>Survival needs {fmtKES(freedom.milestones[0].cap)}</b> at {yieldPct}% — the number that buys the option to walk, reachable years before the full line.
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })()}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         {[
           { l: "Net Worth",       v: fmtKES(netWorthKES),   c: netWorthKES >= 0 ? GR : RE, note: "Personal assets − debt (excl. trading)" },

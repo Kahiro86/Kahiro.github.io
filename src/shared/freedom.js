@@ -40,10 +40,29 @@ export function freedomMath(finance, config) {
 
   const yearsOut = projectYears(capital, target, annualYield, cfg.monthlyVaultKsh);
 
+  // ── Reconciled arithmetic (one source of truth) ────────────────────
+  // The freedom NUMBER (income) is the axiom; the capital LINE is derived
+  // from it and the blended yield, not stored separately. capitalRequired =
+  // annual income ÷ yield. The stored vault line then implies a withdrawal
+  // rate, surfaced so a mismatch is a deliberate choice, never a silent one.
+  const xRate = Number.isFinite(+finance?.xRate) && +finance.xRate > 0 ? +finance.xRate : 130;
+  const capitalRequired = annualYield > 0 ? Math.round((freedomNumber * 12) / annualYield) : null;
+  const impliedWithdrawalRate = target > 0 ? (freedomNumber * 12) / target : null; // fraction
+  const milestone = (key, label, monthly) => {
+    const cap = annualYield > 0 ? Math.round((monthly * 12) / annualYield) : null;
+    return { key, label, monthly, cap, pct: cap ? Math.min(100, Math.round((capital / cap) * 100)) : 0 };
+  };
+  const milestones = [
+    milestone("survival", "Survival", cfg.lifeCostKsh),
+    milestone("half", "Half free", freedomNumber / 2),
+    milestone("freedom", "Freedom", freedomNumber),
+  ];
+
   return {
     freedomNumber, passiveMonthly, freedomPct,
     capital, target, capitalPct,
     lifeCost: cfg.lifeCostKsh, surplusToFreedom: Math.max(0, freedomNumber - passiveMonthly),
     annualYield, monthlyDeposit: cfg.monthlyVaultKsh, yearsOut,
+    xRate, capitalRequired, impliedWithdrawalRate, milestones,
   };
 }
