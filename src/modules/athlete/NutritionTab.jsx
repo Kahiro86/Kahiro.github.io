@@ -375,19 +375,12 @@ export function NutritionTab() {
       <div style={{ fontSize: 11.5, color: T2 }}>
         {dateLabel} · <span style={{ color: AC2 }}>{goalLabel.toLowerCase()}</span> · {targets.kcal.toLocaleString()} kcal · {targets.p}g P
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 220 }}><DatePicker value={logDs} onChange={setLogDs} /></div>
-        <button onClick={() => toggleMark(setDayMarks, "cheat", logDs)}
-          title={cheatToday ? "This day is a cheat day — your streak is protected" : "Mark this day as a planned cheat day (streak-safe)"}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 700,
-            background: cheatToday ? `${AM}1c` : GL, border: `1px solid ${cheatToday ? AM + "66" : BD}`, color: cheatToday ? AM : T2 }}>
-          🍔 {cheatToday ? "Cheat day ✓" : "Cheat day"}
-        </button>
-      </div>
+      {/* The date is the only chrome above the day's numbers — cheat day and
+          supplements fold into "Day options" below the meals, so this screen
+          reads as the mock does: date → totals → meals. */}
+      <DatePicker value={logDs} onChange={setLogDs} />
       {cheatToday && (
-        <div style={{ padding: "10px 15px", background: `${AM}0e`, border: `1px solid ${AM}33`, borderRadius: 11, fontSize: 12, color: T2, lineHeight: 1.5 }}>
-          🍔 Cheat day — eat freely. This day won't count against your healthy streak, and the streak carries straight across it.
-        </div>
+        <div style={{ fontSize: 11, color: AM }}>🍔 Cheat day — eat freely; the healthy streak carries across it.</div>
       )}
       {seasonOn && season && seasonTpl && (
         <Card style={{ padding: "14px 16px", border: `1px solid ${AC2}55`, background: `${AC2}0a` }}>
@@ -515,17 +508,6 @@ export function NutritionTab() {
           ))}
         </div>
       )}
-      {/* Supplement adherence — checkmarks, not calories */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase" }}>Supplements</span>
-        {[["creatine", "Creatine 5g"], ["magnesium", "Magnesium"]].map(([id, label]) => (
-          <button key={id} onClick={() => toggleSupp(id)} aria-pressed={!!suppsToday[id]}
-            style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 12px", background: suppsToday[id] ? `${GR}12` : GL, border: `1px solid ${suppsToday[id] ? GR + "55" : BD}`, borderRadius: 9, color: suppsToday[id] ? GR : T2, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" }}>
-            <span style={{ width: 15, height: 15, borderRadius: 4, border: `1.5px solid ${suppsToday[id] ? GR : T3}`, background: suppsToday[id] ? GR : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>{suppsToday[id] && <span style={{ color: "#04130a", fontSize: 10 }}>✓</span>}</span>
-            {label}
-          </button>
-        ))}
-      </div>
       {shownSlots.map((slot) => {
         const list = entries.filter((e) => e.slot === slot.id);
         const slotKcal = Math.round(list.reduce((s, e) => s + (+e.n.kcal || 0), 0));
@@ -733,6 +715,29 @@ export function NutritionTab() {
           </Card>
         );
       })}
+
+      {/* ── Day options — the day-scoped switches the mock doesn't surface,
+             folded so meals follow the totals directly. ── */}
+      <Collapse id="nutri_day_options" title="Day options" sub="cheat day · supplements" defaultOpen={false}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <button onClick={() => toggleMark(setDayMarks, "cheat", logDs)}
+            title={cheatToday ? "This day is a cheat day — your streak is protected" : "Mark this day as a planned cheat day (streak-safe)"}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontSize: 11.5,
+              background: cheatToday ? `${AM}1c` : GL, border: `1px solid ${cheatToday ? AM + "66" : BD}`, color: cheatToday ? AM : T2 }}>
+            🍔 {cheatToday ? "Cheat day ✓" : "Cheat day"}
+          </button>
+          {[["creatine", "Creatine 5g"], ["magnesium", "Magnesium"]].map(([id, label]) => (
+            <button key={id} onClick={() => toggleSupp(id)} aria-pressed={!!suppsToday[id]}
+              style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 12px", background: suppsToday[id] ? `${GR}12` : GL, border: `1px solid ${suppsToday[id] ? GR + "55" : BD}`, borderRadius: 9, color: suppsToday[id] ? GR : T2, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit" }}>
+              <span style={{ width: 15, height: 15, borderRadius: 4, border: `1.5px solid ${suppsToday[id] ? GR : T3}`, background: suppsToday[id] ? GR : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>{suppsToday[id] && <span style={{ color: "#04130a", fontSize: 10 }}>✓</span>}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 10.5, color: T3, marginTop: 8, lineHeight: 1.5 }}>
+          A cheat day is planned, not a failure — it keeps the healthy streak intact. Supplements are a daily checkmark, never calories.
+        </div>
+      </Collapse>
 
       {/* ── Today's quality analysis ── */}
       {entries.length > 0 && (
