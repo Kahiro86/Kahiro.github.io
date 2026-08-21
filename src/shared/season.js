@@ -1,6 +1,6 @@
 // ── Seasons — time-boxed modes (fasts, blocks) over the nutrition engine
 // A reusable pattern: a Season has a template, a start date, and a duration.
-// While active it reframes nutrition and adjusts the God Mode floors; it ends
+// While active it reframes nutrition and adjusts the nutrition floors; it ends
 // automatically at the day count and reverts. First template: the Daniel Fast.
 // Future fasts/blocks add a template here — no new component needed.
 import { localDateStr, daysBetween } from "./dates.js";
@@ -50,7 +50,7 @@ export function seasonDay(season, ds = localDateStr()) {
 }
 export const seasonTemplate = (season) => { const s = sanitizeSeason(season); return s ? templateById(s.template) : null; };
 
-// God Mode floor multipliers for an active season (identity when inactive).
+// Nutrition floor multipliers for an active season (identity when inactive).
 export function seasonFloorAdjust(season, ds = localDateStr()) {
   if (!seasonActive(season, ds)) return { proteinFloorMult: 1, kcalFloorMult: 1 };
   const tpl = seasonTemplate(season);

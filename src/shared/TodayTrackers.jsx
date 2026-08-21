@@ -14,7 +14,6 @@ import {
   sanitizePings, DEFAULT_PINGS, newPing, pingDue,
 } from "./today.js";
 import { sanitizeSeason, seasonActive, seasonDay } from "./season.js";
-import { ModeIndicator } from "./ModeIndicator.jsx";
 
 const kes0 = (n) => Math.round(+n || 0).toLocaleString();
 const inp = { width: "100%", background: B2, border: `1px solid ${BD}`, borderRadius: 8, padding: "8px 11px", fontSize: 13, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
@@ -80,7 +79,6 @@ export function TodayTrackers({ overheadActual = null }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 10.5, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, color: T3 }}>Today</span>
-        <div style={{ marginLeft: "auto" }}><ModeIndicator /></div>
       </div>
       {seasonOn && season && (
         <Card style={{ padding: "12px 15px", display: "flex", alignItems: "center", gap: 10, borderColor: `${AC2}55`, background: `${AC2}0a` }}>

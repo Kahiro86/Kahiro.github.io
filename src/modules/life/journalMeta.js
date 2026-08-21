@@ -30,7 +30,7 @@ export function writingStats(entries, today = localDateStr()) {
   return { monthCount, streak, totalDays: days.size };
 }
 
-// Mood → average God-Mode score, hard-day writing skew, and the longest gap
+// Mood → average day score, hard-day writing skew, and the longest gap
 // between entries now vs earlier (did the pen come back faster?).
 export function journalPatterns(entries, today = localDateStr()) {
   const list = arr(entries);

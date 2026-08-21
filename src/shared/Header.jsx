@@ -6,7 +6,6 @@ import { NAV } from "./nav.js";
 import { Meter } from "./ui.jsx";
 import { CAT_LABEL } from "./xpEngine.js";
 import { NotificationCenter } from "./NotificationCenter.jsx";
-import { ModeIndicator } from "./ModeIndicator.jsx";
 import { useIdentity } from "./identity.jsx";
 
 const CAT_COLOR = { life: GR, trading: CY, fitness: PU, finance: AM, faith: "#9C9C9C", mind: "#B8B8B8", awards: AM };
@@ -137,8 +136,6 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
           <span style={{ fontSize: 12.5, fontWeight: 700, color: T1, fontFamily: "monospace" }}>{streak}</span>
         </div>
       )}
-      <Divider />
-      <ModeIndicator />
     </div>
   );
 
@@ -152,7 +149,6 @@ export function Header({ module, aiOpen, onAIToggle, isMobile, onMenu, onNavigat
           <div style={{ fontSize: 14, fontWeight: 700, color: T1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
           <div style={{ fontSize: 9.5, color: T3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{kz.label.split("(")[0].trim()} · {eatTime} EAT</div>
         </div>
-        <ModeIndicator />
         <NotificationCenter onNavigate={onNavigate} />
         {onOpenSettings && (
           <button onClick={onOpenSettings} aria-label="Settings" style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${BD}`, cursor: "pointer", background: GL, color: T2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

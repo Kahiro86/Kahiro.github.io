@@ -14,13 +14,9 @@ import { useXp } from "./useXp.js";
 import { useStorageState } from "./useStorageState.js";
 import { CHECKIN_CFG_KEY, CADENCES, getCadence } from "./focusCheckin.js";
 import { OVERHEAD_CFG_KEY, getCheckpoints, DEFAULT_CHECKPOINTS } from "./overheadPriority.js";
-import { DEFAULT_HARD, sanitizeHard, hardActiveOn, enableHard, disableHard, proposeFloors, evalDay } from "../modules/athlete/nutritionHard.js";
 import { DEFAULT_PROFILE } from "../modules/athlete/nutrition.js";
-import { GodModeTutorial } from "../modules/athlete/GodModeTutorial.jsx";
 import { DEFAULT_GATES, sanitizeGates, proposeGateChange } from "./tradeGates.js";
 import { SEASON_TEMPLATES, sanitizeSeason, seasonActive, seasonDay, startSeason } from "./season.js";
-import { DEFAULT_MODE_CFG, sanitizeModeCfg, DEFAULT_GATE_WEIGHTS, GATE_LABEL } from "./modes.js";
-import { ModeTutorial } from "./ModeTutorial.jsx";
 import { getPushVapid, setPushVapid, pushStatus, subscribeToPush, unsubscribeFromPush, sendLocalTestNotification } from "./push.js";
 
 const SETUP_SQL = `create table if not exists kv (
@@ -54,25 +50,6 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const resetIdentity = () => { identity.reset(); setIdApp(DEFAULT_APP_NAME); setIdOwner(""); setIdMsg({ text: "Reset to default.", tone: T2 }); };
 
 
-  // ── Nutrition God Mode state ───────────────────────────────────────
-  const [rawHardCfg, setHardCfg] = useStorageState("nutrition_hard", DEFAULT_HARD);
-  const [hardLog] = useStorageState("nutrition_log", {});
-  const [hardProfile] = useStorageState("nutrition_profile", DEFAULT_PROFILE);
-  const hardCfg = sanitizeHard(rawHardCfg);
-  const hardIsOn = hardActiveOn(hardCfg);
-  const [hardTut, setHardTut] = useState(null); // "activate" | "read" | null
-  const [pFloor, setPFloor] = useState(String(hardCfg.proteinFloor || ""));
-  const [kFloor, setKFloor] = useState(String(hardCfg.kcalFloor || ""));
-  const [kCeil, setKCeil] = useState(String(hardCfg.kcalCeil || ""));
-  const [hardMsg, setHardMsg] = useState(null);
-  const todayEval = () => evalDay(hardLog?.[localDateStr()] || [], hardCfg, hardProfile, localDateStr());
-  const confirmEnableHard = () => { setHardCfg((c) => ({ ...enableHard(sanitizeHard(c)), tutorialSeen: true })); setHardTut(null); setHardMsg({ text: "God Mode is on.", tone: GR }); };
-  const doDisableHard = () => { setHardCfg((c) => disableHard(sanitizeHard(c))); setHardMsg({ text: "God Mode turns off tomorrow — today still counts.", tone: T2 }); };
-  const saveFloors = () => {
-    const res = proposeFloors(hardCfg, { proteinFloor: +pFloor || 0, kcalFloor: +kFloor || 0, kcalCeil: +kCeil || 0 }, todayEval());
-    if (!res.ok) { setHardMsg({ text: res.reason, tone: RE }); return; }
-    setHardCfg(res.cfg); setHardMsg({ text: `Saved — new thresholds apply from ${res.from}.`, tone: GR });
-  };
 
   // ── Trading enforcement (gates) state ──────────────────────────────
   const [rawGatesCfg, setGatesCfg] = useStorageState("trade_gates", DEFAULT_GATES);
@@ -105,12 +82,6 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
     setOhCfg({ ...ohCfg, checkpoints: next });
     setOhDraft(next.join(", "));
   };
-  // ── God Mode (score weights + thresholds) state ────────────────────
-  const [rawModeCfg, setModeCfg] = useStorageState("mode_cfg", DEFAULT_MODE_CFG);
-  const modeCfg = sanitizeModeCfg(rawModeCfg);
-  const [modeTut, setModeTut] = useState(false);
-  const setWeight = (k, v) => setModeCfg({ ...modeCfg, weights: { ...modeCfg.weights, [k]: v } });
-  const weightSum = Object.values(modeCfg.weights).reduce((s, v) => s + (+v || 0), 0);
   // ── Season (fasting/blocks) state ───────────────────────────────────
   const [rawSeason, setSeason] = useStorageState("active_season", null);
   const season = sanitizeSeason(rawSeason);
@@ -400,36 +371,6 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
-        {/* ── Nutrition · God Mode ───────────────────────────────────── */}
-        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Nutrition · God Mode</div>
-        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 10 }}>
-          A strict mode for the nutrition tracker: floors are enforced as hard as ceilings, items must be logged within 20 minutes, closed days lock, and the escapes are delayed to tomorrow. Nothing you&apos;ve logged is ever changed.
-        </div>
-        {hardIsOn ? (
-          <div style={{ background: `${AC2}12`, border: `1px solid ${AC2}44`, borderRadius: 10, padding: "12px 14px" }}>
-            <div style={{ fontSize: 12.5, color: AC2, fontWeight: 800, letterSpacing: 0.5, marginBottom: 10 }}>● GOD MODE ACTIVE</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-              <label style={{ fontSize: 10, color: T3 }}>Protein floor (g)<br /><input value={pFloor} onChange={(e) => setPFloor(e.target.value)} type="number" inputMode="numeric" placeholder="auto" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
-              <label style={{ fontSize: 10, color: T3 }}>Calorie floor<br /><input value={kFloor} onChange={(e) => setKFloor(e.target.value)} type="number" inputMode="numeric" placeholder="auto" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
-              <label style={{ fontSize: 10, color: T3 }}>Calorie ceiling<br /><input value={kCeil} onChange={(e) => setKCeil(e.target.value)} type="number" inputMode="numeric" placeholder="auto" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
-            </div>
-            <div style={{ fontSize: 10.5, color: T3, marginBottom: 10 }}>Threshold changes take effect tomorrow. A floor can&apos;t be lowered on a day you ran a surplus.</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={saveFloors} style={btn({ flex: "none" })}>Save thresholds</button>
-              <button onClick={() => setHardTut("read")} style={btn({ flex: "none" })}>Read the walkthrough</button>
-              <button onClick={doDisableHard} style={btn({ flex: "none", border: `1px solid ${RE}44`, color: RE })}>Turn off (tomorrow)</button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={() => setHardTut("activate")} style={btn({ flex: "none", border: `1px solid ${AC2}66`, color: AC2, fontWeight: 700 })}>Enable God Mode</button>
-            <button onClick={() => setHardTut("read")} style={btn({ flex: "none" })}>Read the walkthrough</button>
-          </div>
-        )}
-        {hardMsg && <div style={{ fontSize: 12, color: hardMsg.tone, marginTop: 8, lineHeight: 1.5 }}>{hardMsg.text}</div>}
-        {hardTut && <GodModeTutorial mode={hardTut} onClose={() => setHardTut(null)} onConfirm={confirmEnableHard} />}
-
-        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
         {/* ── Trading · Enforcement ──────────────────────────────────── */}
         <div style={{ fontSize: 11, color: RE, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Trading · Enforcement</div>
@@ -506,46 +447,6 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
 
         <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
-        {/* ── God Mode (one weighted score) ──────────────────────────── */}
-        <div style={{ fontSize: 11, color: AC2, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>God Mode</div>
-        <div style={{ fontSize: 12, color: T3, lineHeight: 1.6, marginBottom: 12 }}>
-          One continuous 0–100 score, read from your existing gates — not a manual switch. Each gate is met or not (no partial credit); gates are weighted so the ones that matter most count for more. Tune the weights below.
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 6 }}>
-          {Object.keys(DEFAULT_GATE_WEIGHTS).map((k) => (
-            <div key={k} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ flex: 1, fontSize: 12.5, color: T1 }}>{GATE_LABEL[k]}</span>
-              <input type="number" inputMode="numeric" min={0} max={100} value={modeCfg.weights[k]}
-                onChange={(e) => setWeight(k, e.target.value)} aria-label={`${GATE_LABEL[k]} weight`}
-                style={{ ...idInput, width: 70, textAlign: "right" }} />
-              <span style={{ fontSize: 11, color: T3, width: 12 }}>%</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ fontSize: 11, color: weightSum === 100 ? T3 : AM, marginBottom: 12 }}>
-          Total: {weightSum}%{weightSum !== 100 ? " — weights are normalised to the active gates, so this need not sum to 100, but 100 keeps it readable." : ""}
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 12 }}>
-          <label style={{ fontSize: 10, color: T3 }}>Strong day ≥ (%)<br />
-            <input type="number" inputMode="numeric" min={50} max={100} value={modeCfg.strongThreshold}
-              onChange={(e) => setModeCfg({ ...modeCfg, strongThreshold: e.target.value })}
-              style={{ ...idInput, width: 90, marginTop: 4 }} />
-          </label>
-          <label style={{ fontSize: 10, color: T3 }}>Acceptable ≥ (%)<br />
-            <input type="number" inputMode="numeric" min={1} max={99} value={modeCfg.okThreshold}
-              onChange={(e) => setModeCfg({ ...modeCfg, okThreshold: e.target.value })}
-              style={{ ...idInput, width: 90, marginTop: 4 }} />
-          </label>
-          <label style={{ fontSize: 10, color: T3 }}>Checklist cutoff (hour)<br />
-            <input type="number" inputMode="numeric" min={0} max={23} value={modeCfg.checklistCutoffHour}
-              onChange={(e) => setModeCfg({ ...modeCfg, checklistCutoffHour: e.target.value })}
-              style={{ ...idInput, width: 110, marginTop: 4 }} />
-          </label>
-        </div>
-        <button onClick={() => setModeTut(true)} style={btn({ flex: "none", border: `1px solid ${AC2}55`, color: AC2 })}>Read: God Mode</button>
-        {modeTut && <ModeTutorial onClose={() => setModeTut(false)} />}
-
-        <div style={{ height: 1, background: BD, margin: "16px 0" }} />
 
         {(onStartTour || onOpenHelp) && (
           <>

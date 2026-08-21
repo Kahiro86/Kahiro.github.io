@@ -1,7 +1,7 @@
 // ── Command Centre — the executive cockpit ──────────────────────────
 // One screen, glanceable in 3–5 seconds. The layout follows the "Command
 // Centre" design: a campaign strip (Day N of 365), the level, this week's
-// focus, a God-Mode hero with a nine-day sparkline, and a tight grid of
+// focus, a day-score hero with a nine-day sparkline, and a tight grid of
 // domain cards — each answering ONE question, each carrying a left accent
 // stripe that reads its state at a glance. The doctrine depth (freedom
 // mission, the two pillars, finance/trading, system health) folds away so
@@ -132,16 +132,16 @@ function LevelCard({ level, title, xp, nextXp, pct, toNext, onClick }) {
   );
 }
 
-// God Mode — today's composite discipline score, its delta vs the running
+// Day Score — today's composite discipline score, its delta vs the running
 // nine-day average, and a sparkline of those days.
-function GodMode({ pct, delta, spark, xpToday, onClick }) {
+function DayScore({ pct, delta, spark, xpToday, onClick }) {
   const w = 190, h = 46, n = spark.length;
   const pts = spark.map((v, i) => `${(i / Math.max(1, n - 1)) * w},${h - (Math.max(0, Math.min(100, v)) / 100) * (h - 6) - 3}`).join(" ");
   const last = pts.split(" ").pop().split(",");
   return (
     <Panel onClick={onClick} style={{ padding: 14, display: "flex", alignItems: "center", gap: 14, background: "linear-gradient(150deg,#1A1610,#121110 65%)" }}>
       <div style={{ flexShrink: 0 }}>
-        <div style={{ ...UP, fontSize: 9, color: T3 }}>God Mode</div>
+        <div style={{ ...UP, fontSize: 9, color: T3 }}>Day Score</div>
         <div style={{ fontSize: 26, fontWeight: 800, color: pct >= 80 ? GR : pct >= 50 ? AC : T1, lineHeight: 1.1, fontFamily: MONO }}>
           {pct}<span style={{ fontSize: 14, color: T3, fontWeight: 500 }}>%</span>
         </div>
@@ -279,8 +279,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const yestScore = useMemo(() => dayScore(daysAgoStr(1)), [hsum, workouts, nutrition, entriesSafe, ds]);
   const scoreDelta = lifeScore - yestScore;
   const spark = useMemo(() => Array.from({ length: 9 }, (_, i) => dayScore(daysAgoStr(8 - i))), [hsum, nutrition, entriesSafe, ds]);
-  const godAvg = spark.length ? Math.round(spark.reduce((s, x) => s + x, 0) / spark.length) : 0;
-  const godDelta = lifeScore - godAvg;
+  const dayAvg = spark.length ? Math.round(spark.reduce((s, x) => s + x, 0) / spark.length) : 0;
+  const dayDelta = lifeScore - dayAvg;
 
   // ── 🧭 THE DIRECTIVE — the single most important thing to do now ──
   const directive = useMemo(
@@ -490,8 +490,8 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       {/* ── this week's focus (self-hides when none set) ── */}
       <FocusToday />
 
-      {/* ── god mode hero ── */}
-      <GodMode pct={lifeScore} delta={godDelta} spark={spark} xpToday={xpToday} onClick={() => onNavigate("life")} />
+      {/* ── day-score hero ── */}
+      <DayScore pct={lifeScore} delta={dayDelta} spark={spark} xpToday={xpToday} onClick={() => onNavigate("life")} />
 
       <MotivePush context={["day-start", "legendary"].filter((c) => c !== "legendary" || cs.currentStreak >= 100)}
         state={{ streak: cs.currentStreak, missedYesterday: cs.currentStreak === 0, legendary: cs.longestStreak >= 100 && cs.currentStreak === cs.longestStreak }} accent={AC} />

@@ -10,7 +10,6 @@ import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { REFLECTION_PROMPTS } from "../../shared/kaizen.js";
 import { PurityTab } from "./PurityTab.jsx";
 import { Journals } from "./Journals.jsx";
-import { ModeHistoryStrip } from "../../shared/ModeHistoryStrip.jsx";
 import { useFocusRequest } from "../../shared/searchFocus.js";
 import { habitSummary } from "../habits/summary.js";
 import { sanitizeNutrition, dayEntries } from "../athlete/nutrition.js";
@@ -51,7 +50,7 @@ export function LifeOSCore() {
   const ws = useMemo(() => writingStats(entries, today()), [entries]);
   const patterns = useMemo(() => journalPatterns(entries, today()), [entries]);
 
-  // The day's state, stamped onto an entry so mood becomes correlatable. GM is
+  // The day's state, stamped onto an entry so mood becomes correlatable. The score is
   // the same daily composite the dashboard shows (habits · meals · journaled),
   // computed with journaled forced true because this very entry is the proof.
   const snapshot = (ds) => {
@@ -181,7 +180,7 @@ export function LifeOSCore() {
                   )}
                 </div>
                 <div style={{ textAlign: "center", fontSize: 10, color: T3, marginTop: 8 }}>
-                  Auto-stamps GM {snap.gm}{snap.streak ? ` · streak ${snap.streak}` : ""}{snap.habits ? ` · ${snap.habits} habits` : ""}
+                  Auto-stamps day score {snap.gm}{snap.streak ? ` · streak ${snap.streak}` : ""}{snap.habits ? ` · ${snap.habits} habits` : ""}
                 </div>
               </Card>
             )}
@@ -190,7 +189,6 @@ export function LifeOSCore() {
               <>
                 <Journals entries={entries} editingEntryId={editingEntryId} onEdit={startEditEntry} onDelete={deleteEntry}
                   relativeDateLabel={relativeDateLabel} today={today} onExport={(f) => toast(`Exported ${f.label}`, { tone: "success" })} />
-                <ModeHistoryStrip />
               </>
             )}
 
@@ -198,13 +196,13 @@ export function LifeOSCore() {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {patterns.withMood < 2 ? (
                   <Card style={{ padding: "16px 18px" }}>
-                    <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.6 }}>Tag a few entries' mood as you write and the patterns fill in — how each mood tracks your God-Mode score, and whether the pen comes back faster after a gap.</div>
+                    <div style={{ fontSize: 12.5, color: T2, lineHeight: 1.6 }}>Tag a few entries' mood as you write and the patterns fill in — how each mood tracks your day score, and whether the pen comes back faster after a gap.</div>
                   </Card>
                 ) : (
                   <>
                     {Number.isFinite(patterns.moodAvg.drained) && Number.isFinite(patterns.moodAvg.sharp) && (
                       <InsightCard tone={RE} title="Mood tracks the day, not the other way around"
-                        body={<><b>Drained days average GM {patterns.moodAvg.drained}</b> · Sharp days average {patterns.moodAvg.sharp}. The gap is real — the low-mood days really were the low-score days.</>} />
+                        body={<><b>Drained days average {patterns.moodAvg.drained}</b> · Sharp days average {patterns.moodAvg.sharp}. The gap is real — the low-mood days really were the low-score days.</>} />
                     )}
                     {patterns.withMood >= 3 && patterns.hard / Math.max(1, patterns.withMood) >= 0.5 && (
                       <InsightCard tone={AM} title="You write most on hard days"
@@ -217,7 +215,7 @@ export function LifeOSCore() {
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
                       {MOODS.filter((m) => Number.isFinite(patterns.moodAvg[m.id])).map((m) => (
                         <span key={m.id} style={{ fontSize: 11, padding: "6px 11px", borderRadius: 12, background: GL, border: `1px solid ${BD}`, color: T2 }}>
-                          {m.label} <b style={{ color: AC }}>GM {patterns.moodAvg[m.id]}</b>
+                          {m.label} <b style={{ color: AC }}>{patterns.moodAvg[m.id]}</b>
                         </span>
                       ))}
                     </div>

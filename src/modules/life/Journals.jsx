@@ -50,7 +50,7 @@ export function Journals({ entries, editingEntryId, onEdit, onDelete, relativeDa
                       <div style={{ fontSize: 10, color: T3, marginBottom: 4, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
                         <span>{relativeDateLabel((e.date || "").slice(0, 10) || today())}{e.editedAt && <span style={{ opacity: 0.7 }}> · edited</span>}</span>
                         {e.mood && <span style={{ fontSize: 8, padding: "1.5px 6px", borderRadius: 5, textTransform: "capitalize", background: e.mood === "sharp" ? "rgba(74,222,128,.12)" : e.mood === "drained" ? "rgba(224,82,82,.1)" : GL, color: e.mood === "sharp" ? "#7BC862" : e.mood === "drained" ? "#E05252" : T2 }}>{e.mood}</span>}
-                        {Number.isFinite(e.gm) && <span style={{ fontSize: 8, color: AC }}>GM {e.gm}</span>}
+                        {Number.isFinite(e.gm) && <span style={{ fontSize: 8, color: AC }}>{e.gm}</span>}
                         {Array.isArray(e.tags) && e.tags.slice(0, 3).map((t) => <span key={t} style={{ fontSize: 8, color: T3 }}>#{t}</span>)}
                       </div>
                       {e.title && <div style={{ fontSize: 14, fontWeight: 700, color: T1, marginBottom: 4, lineHeight: 1.35 }}>{e.title}</div>}
