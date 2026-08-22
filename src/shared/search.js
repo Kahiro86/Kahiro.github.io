@@ -6,7 +6,7 @@
 // Static destinations — jumping around the app itself.
 export const PAGES = [
   { id: "page:dashboard", type: "Page", title: "Home", subtitle: "Command Center — your daily cockpit", nav: "dashboard", icon: "◎", keywords: "home command center dashboard cockpit today" },
-  { id: "page:life", type: "Page", title: "Life", subtitle: "Journal · Purity · Nutrition", nav: "life", icon: "◍", keywords: "life journal reflection purity nutrition meals" },
+  { id: "page:life", type: "Page", title: "Life", subtitle: "Nutrition", nav: "life", icon: "◍", keywords: "life nutrition meals fuel food" },
   { id: "page:firm", type: "Page", title: "The Firm", subtitle: "Trading · Wealth · HQ", nav: "firm", icon: "▲" },
   { id: "page:gym", type: "Page", title: "Gym", subtitle: "Log workouts · sets · PRs", nav: "gym", icon: "🏋", keywords: "gym workout lift training exercise sets reps sessions strength muscle iron" },
   { id: "page:habits", type: "Page", title: "Habits", subtitle: "Track daily · streaks · scores", nav: "habits", icon: "✓", keywords: "habits habit tracker daily streak score routine consistency check log calendar heatmap" },
@@ -48,7 +48,7 @@ export const DESTINATIONS = [
   { id: "dest:firm:wealth", type: "Section", title: "Wealth", nav: "firm:wealth", icon: "◈", keywords: "finance money income net worth bills cashflow vault withdrawals savings debt" },
   { id: "dest:firm:doctrine", type: "Section", title: "The Firm — HQ", nav: "firm:doctrine", icon: "▲", keywords: "doctrine firm campaign gate covenant contingency mission" },
   { id: "dest:life:athlete", type: "Section", title: "Nutrition", nav: "life:athlete", icon: "🍽", keywords: "nutrition food meals calories macros protein carbs fat diet eating log" },
-  { id: "dest:life:life", type: "Section", title: "Journal & Purity", nav: "life:life", icon: "◍", keywords: "journal reflection diary purity clean" },
+  { id: "dest:habits:discipline", type: "Section", title: "Journal & Purity", nav: "habits", icon: "✓", keywords: "journal reflection diary purity clean abstinence discipline streak" },
   { id: "dest:faith:faith", type: "Section", title: "Faith", nav: "faith:faith", icon: "✝", keywords: "scripture verses devotional church attendance walk recall prayer" },
   { id: "dest:faith:mind", type: "Section", title: "Mind", nav: "faith:mind", icon: "📖", keywords: "reading books library decisions notes author momentum" },
 ];
@@ -56,7 +56,7 @@ export const DESTINATIONS = [
 // Data sources: which store, how to label it, where it lives, and the fields
 // worth reading. Extraction is defensive — any field may be missing.
 export const SOURCES = [
-  { key: "journal_entries", type: "Journal", icon: "✎", nav: "life", fields: ["text"], date: "date", deep: { nav: "life:life", module: "life", tab: "journal" } },
+  { key: "journal_entries", type: "Journal", icon: "✎", nav: "habits", fields: ["text"], date: "date", deep: { nav: "habits", module: "habits" } },
   { key: "nutrition_foods", type: "Food", icon: "🍽", nav: "life", fields: ["name"] },
   { key: "wants", type: "Want", icon: "✦", nav: "journey", fields: ["name", "note"], deep: { nav: "journey", module: "journey", tab: "wants" } },
   { key: "goals", type: "Goal", icon: "◆", nav: "journey", fields: ["title", "name", "text"], deep: { nav: "journey", module: "journey", tab: "goals" } },

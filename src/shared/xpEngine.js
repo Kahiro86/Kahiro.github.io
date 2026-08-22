@@ -212,11 +212,22 @@ export function computeXp(deps = {}) {
   // life-domain action for the Year of Consistency engine below.
   {
     const hf = habitFeed(deps.htHabits, deps.htEntries, today);
-    for (const d of hf.completions) { push(d, V.habitDone, "life"); stats.habitCompletions++; }
+    for (const c of hf.completions) { push(c.d, c.xp, "life"); stats.habitCompletions++; }
     for (const d of hf.perfectDays) { push(d, V.perfectDay, "life"); stats.perfectCount++; }
     for (const { d, run } of hf.streakHits) if (STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "life", true);
     if (hf.bestStreak > stats.bestStreak) stats.bestStreak = hf.bestStreak;
   }
+
+  // Gate 1 — after the Discipline merge, purity and journal are habit
+  // subtypes and the habit path above already paid for their completions.
+  // These blocks then keep COUNTING (the journeys and stats need the numbers)
+  // but stop PAYING, so one real action is never worth twice. Detection is by
+  // the system habit's presence, so a user mid-migration is never charged or
+  // double-paid either way.
+  const migratedIds = new Set((Array.isArray(deps.htHabits) ? deps.htHabits : [])
+    .filter(Boolean).map((h) => h.id));
+  const purityMerged = migratedIds.has("sys_purity");
+  const journalMerged = migratedIds.has("sys_journal");
 
   // Life — purity: clean days, honest relapse logging, its own streak ladder.
   const purity = sanitizePurity(deps.purity);
@@ -226,11 +237,11 @@ export function computeXp(deps = {}) {
     for (const d of dates) {
       const e = purity[d];
       if (e.s === "pure") {
-        push(d, V.purityClean, "life");
+        if (!purityMerged) push(d, V.purityClean, "life");
         stats.cleanDays++;
         const gap = prev ? daysBetween(prev, d) : null;
         run = prev && gap === 1 ? run + 1 : 1;
-        if (STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "life", true);
+        if (!purityMerged && STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "life", true);
         if (run > stats.bestStreak) stats.bestStreak = run;
         prev = d;
       } else {
@@ -243,7 +254,7 @@ export function computeXp(deps = {}) {
 
   // Life — journal: once per journaled day.
   const jDays = new Set(arr(deps.entries).map((e) => dOf(e.date)).filter(Boolean));
-  for (const d of jDays) push(d, V.journalDay, "life");
+  if (!journalMerged) for (const d of jDays) push(d, V.journalDay, "life");
   stats.journalDays = jDays.size;
 
   // Life — missions completed (day → year weighting).

@@ -2,6 +2,17 @@
 // only on what is declared here — never on SQL, the Worker, or sqlite3.
 
 export type HabitType = "boolean" | "numeric";
+/**
+ * What kind of habit this is. Scheduling, scoring, streaks and the calendar
+ * run through the SAME engine for every subtype — only the logging
+ * affordance and the detail view differ (spec §3.2).
+ *   standard    — an ordinary boolean/numeric habit
+ *   abstinence  — streak-forward; a "miss" is a relapse event that can carry
+ *                 trigger tags, and recovery speed is tracked alongside streak
+ *   journal     — completion requires attached text; carries mood + context
+ *                 tags and an auto-stamped day snapshot
+ */
+export type HabitSubtype = "standard" | "abstinence" | "journal";
 export type TargetDirection = "at_least" | "at_most";
 export type FrequencyType = "daily" | "specific_days" | "times_per_week" | "times_per_month";
 
@@ -18,6 +29,7 @@ export interface Routine {
 export interface Habit {
   id: string;
   name: string;
+  subtype: HabitSubtype;
   icon: string | null;
   question: string | null;
   type: HabitType;
@@ -122,6 +134,7 @@ export type UpdateRoutinePatch = Partial<Pick<Routine, "name" | "icon" | "sortOr
 
 export interface CreateHabitInput {
   name: string;
+  subtype?: HabitSubtype;
   icon?: string | null;
   question?: string | null;
   type: HabitType;

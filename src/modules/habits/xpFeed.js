@@ -19,6 +19,11 @@ const arr = (x) => (Array.isArray(x) ? x.filter(Boolean) : []);
 // enough that every ladder milestone up to 365 can still be reached.
 const LOOKBACK = 730;
 
+// Per-subtype completion value. Kept at or above what each source paid before
+// the Discipline merge so no day's XP can decrease (non-negotiable 6):
+// purity was 10, journal 15, standard habits 10.
+export const SUBTYPE_XP = { standard: 10, abstinence: 15, journal: 15 };
+
 /**
  * Returns the raw signals for the XP engine to price with its own value
  * table (so tuning stays in one place):
@@ -31,7 +36,7 @@ const LOOKBACK = 730;
  */
 export function habitFeed(htHabits, htEntries, today) {
   const habits = arr(htHabits).filter((h) => h && h.id && !h.archivedAt);
-  const completions = [];
+  const completions = [];   // { d, xp } — value depends on the habit's subtype
   const perfectDays = [];
   const streakHits = [];
   let bestStreak = 0;
@@ -51,8 +56,9 @@ export function habitFeed(htHabits, htEntries, today) {
   // Completed habit-days — counted wherever a completing entry exists,
   // regardless of schedule, exactly as the old engine counted logs.
   for (const h of habits) {
+    const worth = SUBTYPE_XP[h.subtype] || SUBTYPE_XP.standard;
     for (const [d, entry] of mapOf.get(h.id)) {
-      if (isCompleted(h, entry)) completions.push(d);
+      if (isCompleted(h, entry)) completions.push({ d, xp: worth });
     }
   }
 

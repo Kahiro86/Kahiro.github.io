@@ -4,6 +4,8 @@ import App from "./App.jsx";
 import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
 import { IdentityProvider } from "./shared/identity.jsx";
 import { initSync } from "./shared/sync.js";
+import { runDisciplineMigration } from "./modules/habits/migrateDiscipline.js";
+import { writeStore } from "./shared/useStorageState.js";
 
 // One-time cleanup: the habit tracker was removed, so wipe its stored data.
 // Runs once per browser; nothing in the app reads habits/routines any more, so
@@ -15,6 +17,12 @@ try {
     localStorage.setItem("kahiro_habits_removed", "1");
   }
 } catch { /* storage best-effort */ }
+
+// Gate 1 — Discipline merge. Purity days and journal entries become entries on
+// an abstinence / journal habit, on their original dates. Idempotent: it plans
+// against what's already there and writes only what's missing, so this is safe
+// on every launch. The source stores are left untouched.
+try { runDisciplineMigration(writeStore); } catch { /* never block boot on a migration */ }
 
 // Cloud sync engine: no-op until the user connects a Supabase project in
 // Settings → Cloud Sync; from then on every device converges on the same data.

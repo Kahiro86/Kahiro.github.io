@@ -9,6 +9,7 @@ import { useStorageState } from "./useStorageState.js";
 import { localDateStr } from "./dates.js";
 import { useToast } from "./toast.jsx";
 import { PROMPTS, MOODS, promptOfDay, parseTags } from "./journalPrompts.js";
+import { markJournalDay } from "../modules/habits/disciplineWriters.js";
 
 export function QuickJournal({ onClose }) {
   const ds = localDateStr();
@@ -27,6 +28,9 @@ export function QuickJournal({ onClose }) {
     if (!body) return;
     const entry = { id: `j${Date.now()}`, date: ds, text: body, prompt, mood: mood || "", tags, editedAt: null };
     setEntries((prev) => [entry, ...(Array.isArray(prev) ? prev : [])]);
+    // Journal is a pinned habit now: the day has to tick on the Discipline
+    // list the moment it is written, not on the next boot's backfill.
+    markJournalDay(ds);
     toast("Reflection saved ✍️", { tone: "success" });
     onClose();
   };

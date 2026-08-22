@@ -4,7 +4,7 @@
 // getListView, and every tap goes back out through Layer 2's
 // toggleEntry. Nothing here computes a score, a streak, or a cell's
 // meaning, and nothing here talks to the database.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { db } from "../localDb";
 import {
   getListView, toggleEntry, setEntry, deleteEntry, createRoutine,
@@ -17,6 +17,7 @@ import type {
 import type { EvictionReport } from "../logic/dbTypes";
 import type { Habit } from "../logic/dbTypes";
 import { useAsync } from "./useAsync";
+import { saveJournalEntry, journalFor, mirrorPurityDay, togglePurityTrigger } from "../disciplineWriters.js";
 import { CheckIcon, XIcon, PlusIcon, FilterIcon, MoreIcon, ChevronDownIcon, ChevronRightIcon } from "./icons";
 import "./ListScreen.css";
 
@@ -153,16 +154,104 @@ function AmountEntry({ habit, date, current, onSave, onClear, onCancel }: {
   );
 }
 
-function HabitRow({ row, onToggle, onOpen, onEnterAmount }: {
+const MOODS = [
+  { id: "drained", label: "Drained" }, { id: "flat", label: "Flat" },
+  { id: "steady", label: "Steady" }, { id: "sharp", label: "Sharp" },
+];
+const TAGS = ["Kitchen", "Trading", "Training", "Faith", "Money", "Health"];
+const PROMPTS = [
+  "What improved today, even a little?",
+  "What was hard — and what did it teach?",
+  "One 1% adjustment for tomorrow",
+];
+
+/**
+ * Inline journal composer. The text IS the completion for a journal habit, so
+ * saving writes the entry to journal_entries (content) and ticks the habit
+ * entry (completion) in one action, without changing screens.
+ */
+function JournalComposer({ habit, date, onSave, onCancel }: {
+  habit: Habit; date: string;
+  onSave: (payload: { text: string; title: string; mood: string | null; tags: string[] }) => void;
+  onCancel: () => void;
+}) {
+  const existing = journalFor(date);
+  const [text, setText] = useState(existing?.text ?? "");
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [mood, setMood] = useState<string | null>(existing?.mood ?? null);
+  const [tags, setTags] = useState<string[]>(Array.isArray(existing?.tags) ? existing!.tags : []);
+  const valid = text.trim().length > 0;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  return (
+    <>
+      <div className="sheet__backdrop" onClick={onCancel} aria-hidden />
+      <div className="composer" role="dialog" aria-label={`${habit.name} — ${date}`}>
+        <div className="amount__head">
+          <span className="amount__name">{habit.name}</span>
+          <span className="amount__date">{date}</span>
+        </div>
+        <div className="composer__prompts">
+          {PROMPTS.map((p) => (
+            <button key={p} type="button" className="composer__prompt"
+              onClick={() => setText((t) => (t ? `${t}\n\n${p}\n` : `${p}\n`))}>{p}</button>
+          ))}
+        </div>
+        <input className="composer__title" value={title} placeholder="Title (optional)"
+          onChange={(e) => setTitle(e.target.value)} aria-label="Title" />
+        <textarea className="composer__text" value={text} autoFocus placeholder="One honest sentence is enough."
+          onChange={(e) => setText(e.target.value)} aria-label="Reflection" />
+        <div className="composer__label">State today</div>
+        <div className="composer__pills">
+          {MOODS.map((m) => (
+            <button key={m.id} type="button"
+              className={`composer__pill${mood === m.id ? " composer__pill--on" : ""}`}
+              onClick={() => setMood(mood === m.id ? null : m.id)}>{m.label}</button>
+          ))}
+        </div>
+        <div className="composer__label">Tag</div>
+        <div className="composer__pills">
+          {TAGS.map((t) => (
+            <button key={t} type="button"
+              className={`composer__pill${tags.includes(t) ? " composer__pill--on" : ""}`}
+              onClick={() => setTags((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t])}>{t}</button>
+          ))}
+        </div>
+        <div className="amount__row">
+          <button type="button" className="amount__action" onClick={onCancel}>Cancel</button>
+          <button type="button" className="amount__save" disabled={!valid}
+            onClick={() => onSave({ text, title, mood, tags })}>Save entry</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function HabitRow({ row, onToggle, onOpen, onEnterAmount, onCompose }: {
   row: ListRow;
   onToggle: (habitId: string, date: string) => void;
   onOpen: (habit: Habit) => void;
   onEnterAmount: (habit: Habit, cell: ListCell) => void;
+  onCompose: (habit: Habit, cell: ListCell) => void;
 }) {
   const { habit, cells } = row;
-  // A boolean cell cycles in place; a measurable one asks for the
-  // amount. Neither navigates — only the habit's name does that.
-  const cycles = habit.type === "boolean";
+  // Subtype decides only the INPUT affordance — scheduling, scoring, streaks
+  // and the calendar all run through the same engine (spec §3.2).
+  //   journal    → tapping a day opens an inline composer; the entry is the
+  //                completion, so it cannot be ticked without text
+  //   abstinence → the tri-state cycle already means claim → relapse → clear,
+  //                and today also gets an explicit inline claim button
+  const subtype = (habit as Habit & { subtype?: string }).subtype ?? "standard";
+  const isJournal = subtype === "journal";
+  const isAbstinence = subtype === "abstinence";
+  const cycles = habit.type === "boolean" && !isJournal;
+  // The last cell is today (listDays runs present → past).
+  const todayCell = cells.find((c) => c.state.kind === "today");
 
   const archived = habit.archivedAt !== null;
 
@@ -173,7 +262,13 @@ function HabitRow({ row, onToggle, onOpen, onEnterAmount }: {
         {/* Dimming alone would read as a rendering glitch, so the state
             is also stated. */}
         {archived ? <span className="row__archived">archived</span> : null}
+        {isAbstinence ? <span className="row__sub">streak</span> : null}
+        {isJournal ? <span className="row__sub">write</span> : null}
       </button>
+      {isAbstinence && todayCell ? (
+        <button type="button" className="row__claim" title="Claim today as clean"
+          onClick={() => onToggle(habit.id, todayCell.date)}>Claim</button>
+      ) : null}
 
       {cells.map((cell) => {
         const className = [
@@ -196,7 +291,8 @@ function HabitRow({ row, onToggle, onOpen, onEnterAmount }: {
             aria-label={actionable && !cycles ? `${label}. Enter an amount.` : label}
             onClick={() => {
               if (!actionable) return;
-              if (cycles) onToggle(habit.id, cell.date);
+              if (isJournal) onCompose(habit, cell);
+              else if (cycles) onToggle(habit.id, cell.date);
               else onEnterAmount(habit, cell);
             }}
           >
@@ -208,13 +304,14 @@ function HabitRow({ row, onToggle, onOpen, onEnterAmount }: {
   );
 }
 
-function Group({ group, collapsed, onToggleCollapse, onToggle, onOpen, onEnterAmount }: {
+function Group({ group, collapsed, onToggleCollapse, onToggle, onOpen, onEnterAmount, onCompose }: {
   group: ListGroup;
   collapsed: boolean;
   onToggleCollapse: () => void;
   onToggle: (habitId: string, date: string) => void;
   onOpen: (habit: Habit) => void;
   onEnterAmount: (habit: Habit, cell: ListCell) => void;
+  onCompose: (habit: Habit, cell: ListCell) => void;
 }) {
   const name = group.routine?.name ?? "Habits";
   const groupId = group.routine?.id ?? "loose";
@@ -238,6 +335,7 @@ function Group({ group, collapsed, onToggleCollapse, onToggle, onOpen, onEnterAm
             onToggle={onToggle}
             onOpen={onOpen}
             onEnterAmount={onEnterAmount}
+            onCompose={onCompose}
           />
         ))}
       </div>
@@ -618,13 +716,28 @@ export function ListScreen({ onOpenHabit, onAddHabit }: {
   const [writeError, setWriteError] = useState<Error | null>(null);
   const [evicted, setEvicted] = useState<EvictionReport | null>(null);
   const [amount, setAmount] = useState<{ habit: Habit; cell: ListCell } | null>(null);
+  const [compose, setCompose] = useState<{ habit: Habit; cell: ListCell } | null>(null);
   const filtering = !!options.includeArchived || !!options.hideCompletedToday;
 
   const { reload } = view;
+  // handleToggle is memoised on `reload` alone so every row keeps a stable
+  // callback; reading `view` from a ref keeps the subtype lookup live instead
+  // of frozen at the first (still-loading) render.
+  const viewRef = useRef(view);
+  viewRef.current = view;
   const handleToggle = useCallback(async (habitId: string, date: string) => {
     try {
       setWriteError(null);
-      await toggleEntry(db, habitId, date);
+      const entry = await toggleEntry(db, habitId, date);
+      // An abstinence claim mirrors into purity_log so the Purity detail view's
+      // triggers, reflections and risk window keep reading the same days.
+      const cur = viewRef.current;
+      const h = cur.status === "ready"
+        ? cur.data.groups.flatMap((g) => g.rows).find((r) => r.habit.id === habitId)?.habit
+        : null;
+      if (h && (h as Habit & { subtype?: string }).subtype === "abstinence") {
+        mirrorPurityDay(date, entry ? entry.value : null);
+      }
       reload();
     } catch (err) {
       // A failed write must be visible, not swallowed into a cell that
@@ -730,6 +843,21 @@ export function ListScreen({ onOpenHabit, onAddHabit }: {
         />
       )}
 
+      {compose && (
+        <JournalComposer
+          habit={compose.habit}
+          date={compose.cell.date}
+          onCancel={() => setCompose(null)}
+          onSave={(payload) => void writeAmount(async () => {
+            // Content to the journal store, completion to the habit engine —
+            // one action, both kept in step, no screen change.
+            saveJournalEntry(compose.cell.date, payload);
+            await setEntry(db, compose.habit.id, compose.cell.date, 1);
+            setCompose(null);
+          })}
+        />
+      )}
+
       {view.status === "loading" && <Skeleton dayCount={dayCount} />}
 
       {view.status === "error" && (
@@ -790,6 +918,7 @@ export function ListScreen({ onOpenHabit, onAddHabit }: {
             onToggle={handleToggle}
             onOpen={onOpenHabit}
             onEnterAmount={(habit, cell) => setAmount({ habit, cell })}
+            onCompose={(habit, cell) => setCompose({ habit, cell })}
           />
         );
       })}

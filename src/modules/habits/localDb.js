@@ -110,9 +110,11 @@ function validateHabitShape(h) {
 }
 
 // ── Normalisers: guarantee the full shape regardless of what was stored ─
+const SUBTYPES = ["standard", "abstinence", "journal"];
 const normHabit = (h) => ({
   id: String(h.id),
   name: String(h.name),
+  subtype: SUBTYPES.includes(h.subtype) ? h.subtype : "standard",
   icon: h.icon ?? null,
   question: h.question ?? null,
   type: h.type,
@@ -154,7 +156,7 @@ const normEntry = (e) => ({
 // wrote to its backup files, so a backup from either app imports into the
 // other. Internally everything else stays camelCase domain objects.
 const habitToRow = (h) => ({
-  id: h.id, name: h.name, icon: h.icon, question: h.question, type: h.type, unit: h.unit,
+  id: h.id, name: h.name, subtype: h.subtype, icon: h.icon, question: h.question, type: h.type, unit: h.unit,
   target: h.target, target_direction: h.targetDirection, frequency_type: h.frequencyType,
   frequency_days: h.frequencyDays == null ? null : JSON.stringify(h.frequencyDays),
   frequency_count: h.frequencyCount, routine_id: h.routineId, sort_order: h.sortOrder,
@@ -162,7 +164,7 @@ const habitToRow = (h) => ({
   created_at: h.createdAt, updated_at: h.updatedAt,
 });
 const rowToHabit = (r) => normHabit({
-  id: r.id, name: r.name, icon: r.icon, question: r.question, type: r.type, unit: r.unit,
+  id: r.id, name: r.name, subtype: r.subtype, icon: r.icon, question: r.question, type: r.type, unit: r.unit,
   target: r.target, targetDirection: r.target_direction, frequencyType: r.frequency_type,
   frequencyDays: r.frequency_days == null ? null
     : (typeof r.frequency_days === "string" ? JSON.parse(r.frequency_days) : r.frequency_days),
@@ -288,7 +290,7 @@ export class LocalDb {
     if (data.routineId) await this.getRoutine(data.routineId);
     const ts = stamp();
     const habit = normHabit({
-      id: uuid(), name: data.name, icon: data.icon ?? null, question: data.question ?? null,
+      id: uuid(), name: data.name, subtype: data.subtype, icon: data.icon ?? null, question: data.question ?? null,
       type: data.type, unit: data.unit ?? null, target: data.target ?? null, targetDirection,
       frequencyType: data.frequencyType, frequencyDays: data.frequencyDays ?? null,
       frequencyCount: data.frequencyCount ?? null, routineId: data.routineId ?? null,
@@ -338,7 +340,7 @@ export class LocalDb {
     validateHabitShape(shape);
     all[i] = normHabit({
       ...cur, ...shape,
-      name: pick("name", cur.name), icon: pick("icon", cur.icon), question: pick("question", cur.question),
+      name: pick("name", cur.name), subtype: pick("subtype", cur.subtype), icon: pick("icon", cur.icon), question: pick("question", cur.question),
       routineId: pick("routineId", cur.routineId), sortOrder: pick("sortOrder", cur.sortOrder),
       color: pick("color", cur.color), reminderTime: pick("reminderTime", cur.reminderTime),
       updatedAt: stamp(),

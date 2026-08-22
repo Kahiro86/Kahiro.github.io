@@ -1,2 +1,7 @@
 node_modules/
 dist/
+
+# esbuild scratch entries written by the test harnesses
+tests/**/_*.js
+tests/**/_*.ts
+!tests/**/_shim.mjs

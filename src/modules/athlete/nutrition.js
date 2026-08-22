@@ -711,7 +711,18 @@ export function nutritionReport(log, targets, days = 7) {
     const t = dayTotals(entries);
     dayList.push({ ds, t, score: nutritionScore(t, targets), meals: entries.length });
   }
-  if (!dayList.length) return { logged: 0 };
+  // An unlogged window still returns the full shape — callers render the
+  // "Running low" strip outside the `logged` guard, and a missing array there
+  // is a blank screen rather than an empty state.
+  if (!dayList.length) {
+    return {
+      logged: 0, days,
+      avgKcal: 0, avgP: 0, avgC: 0, avgF: 0,
+      split: { p: 0, c: 0, f: 0 },
+      avgScore: 0, proteinHitPct: 0, avgMeals: 0,
+      topFoods: [], best: null, worst: null, deficiencies: [],
+    };
+  }
   const avg = (fn) => Math.round(dayList.reduce((s, d) => s + fn(d), 0) / dayList.length);
   const avgKcal = avg((d) => d.t.kcal), avgP = avg((d) => d.t.p);
   const avgC = avg((d) => d.t.c), avgF = avg((d) => d.t.f);

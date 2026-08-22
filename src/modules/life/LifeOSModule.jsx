@@ -8,18 +8,16 @@
 import { useEffect, useState } from "react";
 import { Target, Utensils } from "lucide-react";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
-import { LifeOSCore } from "./LifeOSCore.jsx";
 import { NutritionTab } from "../athlete/NutritionTab.jsx";
 
 // The Athlete module is retired — only Nutrition remains. The group keeps the
 // "athlete" id so existing deep links (life:athlete) still land here.
 const GROUPS = [
-  { id: "life", l: "Life", i: Target },
   { id: "athlete", l: "Nutrition", i: Utensils },
 ];
 
 export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpInfo, navHint } = {}) {
-  const [group, setGroup] = useState("life");
+  const [group, setGroup] = useState("athlete");
 
   useEffect(() => {
     if (navHint?.group) setGroup(navHint.group);
@@ -32,7 +30,6 @@ export function LifeOSModule({ habits, setHabits, loaded = true, onNavigate, xpI
         tabs={GROUPS} active={group} onSelect={setGroup} />
 
       <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        {group === "life" && <LifeOSCore habits={habits} setHabits={setHabits} loaded={loaded} onNavigate={onNavigate} xpInfo={xpInfo} />}
         {group === "athlete" && <div style={{ flex: 1, overflowY: "auto" }}><NutritionTab /></div>}
       </div>
     </div>

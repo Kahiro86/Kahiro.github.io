@@ -85,6 +85,26 @@ function UrgeTimer() {
   );
 }
 
+/**
+ * The Purity detail, opened from its pinned habit inside Discipline. Same
+ * screen as before the merge — urge timer, risk window, recovery speed,
+ * triggers, calendar, milestones — it just no longer lives on its own tab.
+ */
+export function PurityDetail({ onBack }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {onBack && (
+        <button onClick={onBack} aria-label="Back to Discipline"
+          style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 6, margin: "16px 0 0 24px",
+            background: "none", border: "none", color: T3, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+          <ChevronLeft size={14} /> Discipline
+        </button>
+      )}
+      <div style={{ flex: 1, overflowY: "auto" }}><PurityTab /></div>
+    </div>
+  );
+}
+
 export function PurityTab() {
   const [rawLog, setLog] = useStorageState("purity_log", {});
   const log = useMemo(() => sanitizePurity(rawLog), [rawLog]);

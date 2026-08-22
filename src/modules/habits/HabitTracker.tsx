@@ -9,7 +9,7 @@
 // `standalone.tsx` renders this same component on its own page. The
 // acceptance suites drive that page, so they exercise the code that ships
 // here rather than a copy of it.
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db, onSyncPull } from "./localDb";
 import * as logic from "./logic/index";
 import type { Habit } from "./logic/dbTypes";
@@ -17,6 +17,9 @@ import { ListScreen } from "./ui/ListScreen";
 import { DetailScreen } from "./ui/DetailScreen";
 import { CalendarScreen } from "./ui/CalendarScreen";
 import { HabitEditor } from "./ui/HabitEditor";
+import { PurityDetail } from "../life/PurityTab.jsx";
+import { JournalDetail } from "../life/JournalDetail.jsx";
+import { db as localDb } from "./localDb";
 import "./ui/tokens.css";
 
 declare global {
@@ -45,6 +48,9 @@ type Route =
   | { screen: "edit"; habit: Habit };
 
 function Screens() {
+  // Read once for subtype routing; the list screen owns its own live view.
+  const [habits, setHabits] = useState<Array<{ id: string; subtype?: string }>>([]);
+  useEffect(() => { localDb.listHabits({ includeArchived: true }).then(setHabits).catch(() => setHabits([])); }, []);
   // One linear path in and back out — a router would be more machinery
   // than the navigation actually has.
   const [route, setRoute] = useState<Route>({ screen: "list" });
@@ -59,7 +65,12 @@ function Screens() {
       return <HabitEditor onDone={afterWrite} onCancel={backToList} />;
     case "edit":
       return <HabitEditor habit={route.habit} onDone={afterWrite} onCancel={backToList} />;
-    case "detail":
+    case "detail": {
+      // Purity and Journal are pinned habits, not separate tabs: opening one
+      // shows its own detail inside Discipline (spec §3.1/§3.3).
+      const pinned = (habits.find((h) => h.id === route.habitId) as { subtype?: string } | undefined)?.subtype;
+      if (pinned === "abstinence") return <PurityDetail onBack={backToList} />;
+      if (pinned === "journal") return <JournalDetail onBack={backToList} />;
       return (
         <DetailScreen
           habitId={route.habitId}
@@ -68,6 +79,7 @@ function Screens() {
           onEdit={(habit) => setRoute({ screen: "edit", habit })}
         />
       );
+    }
     case "calendar":
       return (
         <CalendarScreen
