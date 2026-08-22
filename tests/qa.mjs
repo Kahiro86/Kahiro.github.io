@@ -8,7 +8,11 @@ import { extname, join, normalize } from "node:path";
 // chunks (dynamic import()) are CORS-blocked over file://. Spin up a tiny
 // static server over ./dist and point the browser at it. Launch Playwright's
 // resolved Chromium; PLAYWRIGHT_CHROMIUM_PATH overrides it (dev sandbox).
-const DIST = fileURLToPath(new URL("../dist", import.meta.url));
+// QA_DIST lets a run be pointed at a snapshot of dist/ instead of dist/
+// itself. A rebuild mid-run swaps the hashed asset filenames underneath the
+// browser, which shows up as 404s and false "blank page" failures — so a long
+// run should snapshot first and set this.
+const DIST = process.env.QA_DIST || fileURLToPath(new URL("../dist", import.meta.url));
 if (!existsSync(join(DIST, "index.html"))) {
   console.error(`Build not found at ${DIST}/index.html — run "npm run build" first.`);
   process.exit(1);
