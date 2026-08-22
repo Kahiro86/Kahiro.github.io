@@ -18,7 +18,7 @@ import {
   sanitizeGoals, newGoal, goalPct, setGoalProgress, updateGoal,
   nextCheckpoint, goalDaysLeft, goalsSummary,
 } from "../../shared/goals.js";
-import { TITLES } from "../../shared/xpEngine.js";
+import { RANKS } from "../../shared/xp/values.js";
 import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
 import { useDayMarks } from "../../shared/dayMarks.js";
 import { migrateHabits } from "../../shared/habitEngine.js";
@@ -194,7 +194,7 @@ function GoalCard({ g, onSet, onEdit, onArchive }) {
 function HallOfFame({ xp }) {
   const totalTiers = xp.journeys.reduce((s, j) => s + j.tiers.length, 0);
   const gotTiers = xp.journeys.reduce((s, j) => s + j.done, 0);
-  const titleLadder = [...TITLES].reverse(); // Beginner → Legend
+  const titleLadder = RANKS; // Signatory → Season's End, drawn from the Covenant
   const [logins] = useStorageState("xp_logins", {});
   const [rawHabits] = useStorageState("habits", []);
   const [freezes] = useStorageState("streak_freezes", { frozen: [] });
@@ -239,12 +239,12 @@ function HallOfFame({ xp }) {
           </div>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
-          {titleLadder.map(([lvl, t]) => {
-            const got = xp.level >= lvl;
-            const current = xp.title === t;
+          {titleLadder.map((r) => {
+            const got = xp.level >= r.at;
+            const current = xp.title === r.l;
             return (
-              <span key={t} style={{ padding: "4px 10px", borderRadius: 10, fontSize: 10, fontWeight: got ? 700 : 400, letterSpacing: 0.5, background: current ? `${JO}22` : got ? GL : "transparent", border: `1px solid ${current ? JO + "66" : got ? BD : BD + "66"}`, color: current ? "#FFFFFF" : got ? T2 : T3, opacity: got ? 1 : 0.55 }}>
-                {t} · L{lvl}
+              <span key={r.l} title={r.from} style={{ padding: "4px 10px", borderRadius: 10, fontSize: 10, fontWeight: got ? 700 : 400, letterSpacing: 0.5, background: current ? `${JO}22` : got ? GL : "transparent", border: `1px solid ${current ? JO + "66" : got ? BD : BD + "66"}`, color: current ? "#FFFFFF" : got ? T2 : T3, opacity: got ? 1 : 0.55 }}>
+                {r.l} · L{r.at}
               </span>
             );
           })}

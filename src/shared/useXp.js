@@ -2,12 +2,30 @@
 // Subscribes to every store the XP engine derives from, so any qualifying
 // action anywhere in the app updates XP instantly (and cross-tab / cross-
 // device via the same sync events the stores already emit).
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useStorageState } from "./useStorageState.js";
 import { computeXp } from "./xpEngine.js";
+import { runXp } from "./xp/run.js";
+import { writeStore } from "./useStorageState.js";
+import { LEDGER_KEY } from "./xp/ledger.js";
 import { gymSessionsToWorkouts } from "../modules/gym/gymSessions.js";
+import { isScheduled } from "../modules/habits/logic/schedule";
+import { localDateStr } from "./dates.js";
+
+// Sum the last `n` banked days, inclusive of today.
+function sumDays(byDay, n, today) {
+  let s = 0;
+  const d = new Date(`${today}T12:00:00`);
+  for (let i = 0; i < n; i++) {
+    const ds = localDateStr(d);
+    s += byDay[ds] || 0;
+    d.setDate(d.getDate() - 1);
+  }
+  return s;
+}
 
 export function useXp() {
+  const todayDs = localDateStr();
   const [habits, , l1] = useStorageState("habits", []);
   const [purity, , l2] = useStorageState("purity_log", {});
   const [trades] = useStorageState("ict_trades", []);
@@ -38,6 +56,8 @@ export function useXp() {
   // engine's life-day, all through the same derive-only pipeline.
   const [htHabits] = useStorageState("ht_habits", []);
   const [htEntries] = useStorageState("ht_entries", []);
+  const [sleep] = useStorageState("trade_sleep", {});
+  const [rawLedger, , l5] = useStorageState(LEDGER_KEY, null);
 
   // Gym-facet sessions feed the same fitness pipeline by mapping to the legacy
   // `workouts` shape, so a logged workout moves the shared level, the Iron Body
@@ -48,6 +68,18 @@ export function useXp() {
     () => [...(Array.isArray(workouts) ? workouts.filter(Boolean) : []), ...gymSessionsToWorkouts(gymSessions)],
     [workouts, gymSessions]
   );
+
+  // Journal text keyed by day — the engine refuses to pay for an entry under
+  // the minimum word count, and needs the text to count it.
+  const journalText = useMemo(() => {
+    const out = {};
+    for (const e of Array.isArray(entries) ? entries : []) {
+      const d = String(e?.date || "").slice(0, 10);
+      if (!d) continue;
+      out[d] = `${out[d] || ""} ${e.text || ""}`.trim();
+    }
+    return out;
+  }, [entries]);
 
   const xp = useMemo(
     () => computeXp({
@@ -62,5 +94,67 @@ export function useXp() {
      htHabits, htEntries]
   );
 
-  return { ...xp, loaded: l1 && l2 && l3 && l4, setUnlocked, setLogins };
+  // ── The banked ledger is the live XP source ──────────────────────
+  // computeXp survives only as the counters and journeys engine; every number
+  // the user sees as XP comes from here (criterion 10). `derivedTotal` is
+  // read once, to open the ledger with the pre-revamp total intact.
+  const ledger = useMemo(
+    () => runXp({
+      deps: {
+        htHabits, htEntries, workouts: allWorkouts, nutrition, nutritionProfile,
+        sleep, finance, reviews, church, verses, faithNotes, missions,
+        mindNotes, decisions, library, goals, wants,
+        journalTextByDate: journalText,
+      },
+      ledger: rawLedger,
+      derivedTotal: xp.total,
+      isScheduledOn: (h, ds) => isScheduled(h, ds),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [htHabits, htEntries, allWorkouts, nutrition, nutritionProfile, sleep, finance,
+     reviews, church, verses, faithNotes, missions, mindNotes, decisions, library,
+     goals, wants, journalText, rawLedger],
+  );
+
+  // Persist whatever was banked. Writing through writeStore keeps the ledger
+  // on the same sync path as every other store.
+  useEffect(() => {
+    if (!l5 || !ledger.changed) return;
+    writeStore(LEDGER_KEY, ledger.ledger);
+  }, [l5, ledger.changed, ledger.ledger]);
+
+  // computeXp survives as the counters / journeys / achievements engine only.
+  // Everything it returns is spread first so those keep working, then every
+  // XP-bearing field is overridden by the ledger — so no number the user sees
+  // as XP can come from the old value table (criterion 10). The old engine's
+  // own totals are now dead weight; they come out in Gate 5, when analytics
+  // and the journeys move onto the ledger too.
+  return {
+    ...xp,
+    cats: ledger.byDomain,
+    byCat: ledger.byDomain,
+    total: ledger.total,
+    byDay: ledger.byDay,
+    level: ledger.level,
+    title: ledger.rank.l,
+    rank: ledger.rank,
+    nextLevelXp: ledger.nextLevelXp,
+    toNext: ledger.toNext,
+    xpIntoLevel: ledger.xpIntoLevel,
+    xpForNext: ledger.xpForNext,
+    pctToNext: ledger.xpForNext > 0 ? Math.round((ledger.xpIntoLevel / ledger.xpForNext) * 100) : 0,
+    todayLedger: ledger.today,
+    difficulty: ledger.difficulty,
+    opening: ledger.opening,
+    ledger: ledger.ledger,
+    // Period aggregates, recomputed from the banked days rather than from the
+    // old engine's derived events.
+    today: ledger.byDay[todayDs] || 0,
+    week: sumDays(ledger.byDay, 7, todayDs),
+    month: sumDays(ledger.byDay, 31, todayDs),
+    year: sumDays(ledger.byDay, 366, todayDs),
+    avg30: Math.round(sumDays(ledger.byDay, 30, todayDs) / 30),
+    loaded: l1 && l2 && l3 && l4 && l5,
+    setUnlocked, setLogins,
+  };
 }

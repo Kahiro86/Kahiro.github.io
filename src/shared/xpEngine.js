@@ -21,10 +21,12 @@ import { habitFeed } from "../modules/habits/xpFeed.js";
 
 // Internal value table — tune freely for balance; the UI never shows it.
 const V = {
-  habitDone: 10, perfectDay: 25, login: 5,
+  habitDone: 10, perfectDay: 25,
   purityClean: 10, purityHonest: 5,
   journalDay: 15,
-  tradeLogged: 20, tradeChecklist: 10, tradeNotes: 5, tradeShots: 5, tradeEmotions: 5,
+  // Trading awards nothing (§4.4, excluded by policy). Kept at 0 rather than
+  // deleted so the counters below still run and the journeys keep their data.
+  tradeLogged: 0, tradeChecklist: 0, tradeNotes: 0, tradeShots: 0, tradeEmotions: 0,
   reviewDaily: 30, reviewWeekly: 50, reviewMonthly: 100,
   strength: 30, cardio: 25, mobility: 15, recovery: 15, pr: 50, measurement: 10,
   incomeLog: 10, billPaid: 15,
@@ -266,7 +268,10 @@ export function computeXp(deps = {}) {
   // Life — daily check-in (auto-stamped once per app-open day). Flagged
   // `login:true` so it still earns its XP, but the Year of Consistency engine
   // can exclude a bare app-open from counting as real activity.
-  for (const d of Object.keys(sanitizeLogins(deps.logins))) events.push({ d, xp: V.login, c: "life", login: true });
+  // Opening the app pays nothing (criterion 11). The xp_logins stamp survives
+  // only as the consistency streak's start-date record — presence is data, it
+  // is not effort, and it must never be an award path again.
+  for (const d of Object.keys(sanitizeLogins(deps.logins))) events.push({ d, xp: 0, c: "life", login: true });
 
   // Trading — logged trades (capped/day) + process quality + reviews.
   const perDayTrades = {};
