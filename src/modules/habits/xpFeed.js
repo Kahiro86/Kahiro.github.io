@@ -36,7 +36,7 @@ export const SUBTYPE_XP = { standard: 10, abstinence: 15, journal: 15 };
  */
 export function habitFeed(htHabits, htEntries, today) {
   const habits = arr(htHabits).filter((h) => h && h.id && !h.archivedAt);
-  const completions = [];   // { d, xp } — value depends on the habit's subtype
+  const completions = [];   // { d, xp, habitId } — value depends on the habit's subtype
   const perfectDays = [];
   const streakHits = [];
   let bestStreak = 0;
@@ -58,7 +58,7 @@ export function habitFeed(htHabits, htEntries, today) {
   for (const h of habits) {
     const worth = SUBTYPE_XP[h.subtype] || SUBTYPE_XP.standard;
     for (const [d, entry] of mapOf.get(h.id)) {
-      if (isCompleted(h, entry)) completions.push({ d, xp: worth });
+      if (isCompleted(h, entry)) completions.push({ d, xp: worth, habitId: h.id });
     }
   }
 
