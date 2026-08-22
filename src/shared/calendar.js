@@ -79,13 +79,13 @@ export function activeDots(dom) {
 export function dayLines(ds, S) {
   const d = dayDomains(ds, S);
   const lines = [];
-  if (d.habitsTotal > 0) lines.push({ key: "habits", icon: "✅", label: "Habits", detail: `${d.habitsDone}/${d.habitsTotal} done`, nav: "life" });
-  if (d.workout > 0) lines.push({ key: "workout", icon: "🏋️", label: "Workout", detail: `${d.workout} session${d.workout > 1 ? "s" : ""}`, nav: "life" });
-  if (d.meal > 0) lines.push({ key: "meal", icon: "🍽️", label: "Nutrition", detail: `${d.meal.toLocaleString()} kcal logged`, nav: "life" });
+  if (d.habitsTotal > 0) lines.push({ key: "habits", icon: "✅", label: "Habits", detail: `${d.habitsDone}/${d.habitsTotal} done`, nav: "habits" });
+  if (d.workout > 0) lines.push({ key: "workout", icon: "🏋️", label: "Workout", detail: `${d.workout} session${d.workout > 1 ? "s" : ""}`, nav: "gym:today" });
+  if (d.meal > 0) lines.push({ key: "meal", icon: "🍽️", label: "Fuel", detail: `${d.meal.toLocaleString()} kcal logged`, nav: "gym:today" });
   if (d.trade > 0) lines.push({ key: "trade", icon: "📈", label: "Trades", detail: `${d.trade} journaled`, nav: "firm" });
-  if (d.journal > 0) lines.push({ key: "journal", icon: "📝", label: "Journal", detail: `${d.journal} entr${d.journal > 1 ? "ies" : "y"}`, nav: "life" });
-  if (d.measure > 0) lines.push({ key: "measure", icon: "📏", label: "Measurements", detail: "logged", nav: "life" });
-  if (d.purity) lines.push({ key: "purity", icon: d.purity === "clean" ? "🌿" : "⚠️", label: "Purity", detail: d.purity === "clean" ? "clean day" : d.purity, nav: "life" });
+  if (d.journal > 0) lines.push({ key: "journal", icon: "📝", label: "Journal", detail: `${d.journal} entr${d.journal > 1 ? "ies" : "y"}`, nav: "habits" });
+  if (d.measure > 0) lines.push({ key: "measure", icon: "📏", label: "Measurements", detail: "logged", nav: "gym:trends" });
+  if (d.purity) lines.push({ key: "purity", icon: d.purity === "clean" ? "🌿" : "⚠️", label: "Purity", detail: d.purity === "clean" ? "clean day" : d.purity, nav: "habits" });
   if (d.bill > 0) lines.push({ key: "bill", icon: "💸", label: "Bill due", detail: `${d.bill} due`, nav: "firm" });
   return lines;
 }

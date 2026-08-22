@@ -31,7 +31,7 @@ export function buildDirective(deps = {}) {
   // 1. Non-negotiables still open — the floor of the day.
   const openNN = habits.filter((h) => isNonNeg(h) && !isWeekly(h) && isScheduled(h, ds) && !isDone(h, ds));
   if (openNN.length) {
-    c.push({ score: 90, key: "nonneg", icon: "❤️", tone: "urgent", nav: "life",
+    c.push({ score: 90, key: "nonneg", icon: "❤️", tone: "urgent", nav: "habits",
       headline: `Lock in your non-negotiables — start with ${openNN[0].name}.`,
       why: `${openNN.length} still open. These are the floor, not the ceiling.` });
   }
@@ -42,7 +42,7 @@ export function buildDirective(deps = {}) {
     .sort((a, b) => currentStreak(b) - currentStreak(a))[0];
   if (atRisk) {
     const st = currentStreak(atRisk);
-    c.push({ score: 70 + Math.min(st, 120) / 4, key: "risk", icon: "🔥", tone: "urgent", nav: "life",
+    c.push({ score: 70 + Math.min(st, 120) / 4, key: "risk", icon: "🔥", tone: "urgent", nav: "habits",
       headline: `Protect the ${st}-day ${atRisk.name} streak.`,
       why: "Scheduled today and still unchecked — one rep keeps it alive." });
   }
@@ -86,7 +86,7 @@ export function buildDirective(deps = {}) {
     const doneThisWeek = new Set(workouts.map((w) => w.date).filter((k) => weekDates.includes(k))).size;
     const behind = expected - doneThisWeek;
     if (behind >= 2) {
-      c.push({ score: 62 + behind * 4, key: "pace", icon: "🏋️", tone: "info", nav: "life:athlete",
+      c.push({ score: 62 + behind * 4, key: "pace", icon: "🏋️", tone: "info", nav: "gym:today",
         headline: `You're ${behind} workout${behind > 1 ? "s" : ""} behind this week's plan.`,
         why: "Catch one back today before the gap sets the tone for the week." });
     }
@@ -121,7 +121,7 @@ export function buildDirective(deps = {}) {
   const mission = deps.mission;
   if (!c.length) {
     if (mission && mission.total > 0 && mission.pct === 100) {
-      return { key: "clear", icon: "✅", tone: "good", nav: "life",
+      return { key: "clear", icon: "✅", tone: "good", nav: "habits",
         headline: "Everything's done. Hold the standard.",
         why: "Nothing is owed today — rest is part of the work.", suppress: [] };
     }
@@ -130,7 +130,7 @@ export function buildDirective(deps = {}) {
         headline: "You're ahead of yesterday — keep the pace.",
         why: "No fires to fight. Do the next rep before the momentum cools.", suppress: [] };
     }
-    return { key: "start", icon: "🎯", tone: "good", nav: "life",
+    return { key: "start", icon: "🎯", tone: "good", nav: "habits",
       headline: "No alarms today — pick your hardest task and start there.",
       why: "Momentum is built on the thing you'd rather avoid.", suppress: [] };
   }

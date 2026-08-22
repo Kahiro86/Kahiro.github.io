@@ -19,6 +19,7 @@ import { billsDueSoon } from "../finance/bills.js";
 import { Ring } from "../../shared/charts.jsx";
 
 import { useStorageState } from "../../shared/useStorageState.js";
+import { useWorkouts } from "../../shared/useWorkouts.js";
 import { habitSummary } from "../habits/summary.js";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { sanitizeTrades as sanitizeTiTrades, sanitizeAccounts as sanitizeTiAccounts, netPnl as tiNetPnl, accountMetrics as tiAccountMetrics } from "../trading/intel/tradingIntel.js";
@@ -207,7 +208,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [tiTrades] = useStorageState("ti_trades", []);
   const [tiAccounts] = useStorageState("ti_accounts", []);
   const [tiSettings] = useStorageState("ti_settings", {});
-  const [workouts] = useStorageState("athlete_workouts", []);
+  const workouts = useWorkouts();
   const [dayMarks] = useDayMarks();
   const restDays = dayMarks.rest, cheatDays = dayMarks.cheat;
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
@@ -428,7 +429,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       dots: Array.from({ length: 6 }, (_, i) => tradedOn(daysAgoStr(5 - i))),
     },
     {
-      key: "fuel", icon: Flame, label: "Fuel", nav: "life",
+      key: "fuel", icon: Flame, label: "Fuel", nav: "gym:today",
       accent: kcal > 0 ? "g" : "off",
       value: kcal > 0 ? kcal.toLocaleString() : "—", unit: kcal > 0 ? "kcal" : "",
       sub: nTargets.p ? `protein ${prot} / ${nTargets.p} g` : `${prot} g protein`,
@@ -445,14 +446,14 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       xp: woToday ? XPV.workout : 0,
     },
     {
-      key: "journal", icon: BookOpen, label: "Journal", nav: "life",
+      key: "journal", icon: BookOpen, label: "Journal", nav: "habits",
       accent: journaledToday ? "g" : "off",
       value: journaledToday ? "Written" : "Not yet",
       sub: journaledToday ? "entry saved today" : "nothing written yet",
       subTone: journaledToday ? "good" : null,
     },
     {
-      key: "purity", icon: Sparkles, label: "Purity", nav: "life",
+      key: "purity", icon: Sparkles, label: "Purity", nav: "habits",
       accent: purityStreak > 0 ? "g" : "off",
       value: `${purityStreak}`, unit: "clean",
       sub: purityStreak > 0 ? "days in a row" : "log today",
@@ -491,7 +492,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       <FocusToday />
 
       {/* ── day-score hero ── */}
-      <DayScore pct={lifeScore} delta={dayDelta} spark={spark} xpToday={xpToday} onClick={() => onNavigate("life")} />
+      <DayScore pct={lifeScore} delta={dayDelta} spark={spark} xpToday={xpToday} onClick={() => onNavigate("habits")} />
 
       <MotivePush context={["day-start", "legendary"].filter((c) => c !== "legendary" || cs.currentStreak >= 100)}
         state={{ streak: cs.currentStreak, missedYesterday: cs.currentStreak === 0, legendary: cs.longestStreak >= 100 && cs.currentStreak === cs.longestStreak }} accent={AC} />
@@ -592,7 +593,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
 
       {/* ── ⚔️ THE MAN · THE MACHINE ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
-        <StatCard onClick={() => onNavigate("life")}>
+        <StatCard onClick={() => onNavigate("habits")}>
           <SectionLabel icon={<span style={{ fontSize: 12 }}>🦇</span>}>The Man · Batman</SectionLabel>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <span style={{ fontSize: 34, ...big, color: lifeScore >= 80 ? GR : lifeScore >= 50 ? AM : RE }}>{lifeScore}%</span>

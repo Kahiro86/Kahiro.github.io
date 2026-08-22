@@ -27,7 +27,7 @@ import {
   AI_MEAL_SYSTEM, parseAiEstimate,
 } from "./nutrition.js";
 import { sanitizeSeason, seasonActive, seasonDay, seasonTemplate } from "../../shared/season.js";
-import { gymLink } from "./gymSync.js";
+import { dayTargets, TRAINING_RULE } from "./bodyTargets.js";
 import { Lock } from "lucide-react";
 
 const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
@@ -72,8 +72,13 @@ export function NutritionTab() {
   const log = useMemo(() => sanitizeNutrition(rawLog), [rawLog]);
   const customFoods = useMemo(() => sanitizeFoods(rawFoods), [rawFoods]);
   const profile = useMemo(() => sanitizeProfile(rawProfile), [rawProfile]);
-  const targets = useMemo(() => calcTargets(profile), [profile]);
-  const gym = useMemo(() => gymLink(gymSessions, logDs), [gymSessions, logDs]);
+  // The day's targets come from the training linkage, not from the profile
+  // alone — a training day and a rest day are different days (spec §2.2).
+  const body = useMemo(
+    () => dayTargets({ profile, sessions: gymSessions, ds: logDs, today }),
+    [profile, gymSessions, logDs, today],
+  );
+  const targets = body.targets;
 
   const entries = dayEntries(log, logDs);
   const totals = useMemo(() => dayTotals(entries), [entries]);
@@ -668,39 +673,48 @@ export function NutritionTab() {
         </Card>
       )}
 
-      {/* ── Training link (Gym facet) ── */}
+      {/* ── Training link — the rule, and what it did to today ── */}
       {(() => {
-        const rowIcon = (on) => on ? <Check size={13} color={GR} /> : <CircleDashed size={13} color={T3} />;
-        const proteinTarget = targets.p + gym.proteinBump;
+        const trained = body.resolved === "training";
+        const tone = trained ? GR : body.linked ? AC2 : T3;
+        const delta = targets.kcal - body.base.kcal;
+        const label = trained ? "Training day" : body.resolved === "rest" ? "Rest day" : "Rest day (so far)";
         return (
-          <Card style={{ padding: "13px 16px", border: `1px solid ${gym.connected ? (gym.trainedToday ? GR + "44" : AC2 + "33") : BD}`, background: gym.trainedToday ? `${GR}08` : "transparent" }}>
+          <Card style={{ padding: "13px 16px", border: `1px solid ${tone}44`, background: trained ? `${GR}08` : "transparent" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
-              {gym.connected ? <Link2 size={14} color={gym.trainedToday ? GR : AC2} /> : <Dumbbell size={14} color={T3} />}
+              {body.linked ? <Link2 size={14} color={tone} /> : <Dumbbell size={14} color={T3} />}
               <span style={{ fontSize: 12.5, fontWeight: 700, color: T1, flex: 1 }}>Training link</span>
-              <span style={{ fontSize: 8, letterSpacing: 0.5, textTransform: "uppercase", padding: "2px 7px", borderRadius: 5, border: `1px solid ${gym.connected ? (gym.trainedToday ? GR + "55" : AC2 + "44") : BD}`, color: gym.connected ? (gym.trainedToday ? GR : AC2) : T3 }}>
-                {gym.connected ? (gym.trainedToday ? "Trained today" : "Connected") : "Not connected"}
-              </span>
+              <span style={{ fontSize: 8, letterSpacing: 0.5, textTransform: "uppercase", padding: "2px 7px", borderRadius: 5, border: `1px solid ${tone}55`, color: tone }}>{label}</span>
             </div>
-            {gym.connected ? (
+            {body.linked ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: T2 }}>
-                  {rowIcon(gym.trainedToday)}<span style={{ flex: 1 }}>Training-day calorie allowance</span>
-                  <span style={{ color: gym.trainedToday ? GR : T3, fontFamily: "monospace" }}>{gym.trainedToday ? `+${gym.kcalShift} · ${(targets.kcal + gym.kcalShift).toLocaleString()}` : `+${300} when active`}</span>
+                  <span style={{ flex: 1 }}>Calories {delta === 0 ? "unchanged" : delta > 0 ? "raised" : "lowered"} from base {body.base.kcal.toLocaleString()}</span>
+                  <span style={{ color: tone, fontFamily: "monospace" }}>{delta > 0 ? "+" : ""}{delta} · {targets.kcal.toLocaleString()}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: T2 }}>
-                  {rowIcon(gym.trainedToday)}<span style={{ flex: 1 }}>Protein target on a session day</span>
-                  <span style={{ color: gym.trainedToday ? GR : T3, fontFamily: "monospace" }}>{gym.trainedToday ? `${proteinTarget} g` : "awaiting"}</span>
+                  <span style={{ flex: 1 }}>Protein — held flat on every day</span>
+                  <span style={{ color: T2, fontFamily: "monospace" }}>{targets.p} g</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: T2 }}>
-                  {rowIcon(gym.trainedToday)}<span style={{ flex: 1 }}>Post-session fuel window</span>
-                  <span style={{ color: gym.trainedToday ? GR : T3, fontFamily: "monospace" }}>{gym.trainedToday ? "next 2 h" : "awaiting"}</span>
+                  <span style={{ flex: 1 }}>Carbs carry the difference</span>
+                  <span style={{ color: tone, fontFamily: "monospace" }}>{targets.c} g</span>
                 </div>
-                {!gym.trainedToday && gym.lastDate && (
-                  <div style={{ fontSize: 10, color: T3, marginTop: 2 }}>No session logged for this day · last was {gym.lastDate}. Fuel adjusts automatically when you train.</div>
+                {!trained && (
+                  <div style={{ fontSize: 10.5, color: T3, marginTop: 2, lineHeight: 1.5 }}>
+                    {body.resolved === "provisional"
+                      ? `Nothing logged yet, so today is being scored as a rest day. Train and it becomes ${body.trainingTargets.kcal.toLocaleString()} kcal — your food log is never rewritten either way.`
+                      : "No session was logged, so this day resolved as a rest day."}
+                  </div>
                 )}
+                {/* The rule is written down, not hidden behind a number. */}
+                <div style={{ marginTop: 6, paddingTop: 8, borderTop: `1px solid ${BD}`, fontSize: 10, color: T3, lineHeight: 1.65 }}>
+                  {TRAINING_RULE.map((line) => <div key={line}>{line}</div>)}
+                  <div style={{ marginTop: 3 }}>Measured at {body.trainingDaysPerWeek}&thinsp;training days/week over the last 4 weeks; allowance {body.allowance} kcal.</div>
+                </div>
               </div>
             ) : (
-              <div style={{ fontSize: 11, color: T3, lineHeight: 1.5 }}>Log a workout in the Gym facet and Fuel connects automatically — training days get a calorie allowance and a protein bump.</div>
+              <div style={{ fontSize: 11, color: T3, lineHeight: 1.5 }}>Log a session above and fuel links automatically — training days gain a calorie allowance, rest days give it back, and protein never moves.</div>
             )}
           </Card>
         );
@@ -716,7 +730,7 @@ export function NutritionTab() {
           { on: entries.length > 0, label: "Logged meals", xp: 10 },
           { on: proteinHit, label: "Protein target hit", xp: 10 },
           { on: healthy, label: "Within calorie band", xp: 15 },
-          { on: gym.trainedToday, label: "Gym session", xp: 30, needsGym: !gym.trainedToday },
+          { on: body.trained, label: "Gym session", xp: 30, needsGym: !body.trained },
         ];
         const earned = rows.filter((r) => r.on).reduce((s, r) => s + r.xp, 0);
         const total = rows.reduce((s, r) => s + r.xp, 0);

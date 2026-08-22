@@ -9,6 +9,7 @@ import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designT
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
+import { useWorkouts } from "../../shared/useWorkouts.js";
 import { sanitizeAccounts, tiToLegacyTrades } from "../trading/intel/tradingIntel.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { periodReport, weeklySeries, pearson, rVerdict, checklistVsPnl } from "../../shared/analytics.js";
@@ -61,7 +62,7 @@ export function AnalyticsOS({ habits, onNavigate }) {
     return tiToLegacyTrades(rawTiTrades, realIds);
   }, [rawTiTrades, rawTiAccounts]);
   const [reviews] = useStorageState("ict_reviews", []);
-  const [workouts] = useStorageState("athlete_workouts", []);
+  const workouts = useWorkouts();
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [entries] = useStorageState("journal_entries", []);
   const [nutrition] = useStorageState("nutrition_log", {});

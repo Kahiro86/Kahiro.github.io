@@ -16,9 +16,8 @@ export const NAV_SECTIONS = ["Home", "Facets"];
 export const NAV = [
   { id: "dashboard", label: "Home",         icon: Layers,      section: "Home" },
   { id: "firm",      label: "The Firm",     icon: Building2,   section: "Facets" },
-  { id: "life",      label: "Life",         icon: Target,      section: "Facets" },
   { id: "habits",    label: "Habits",       icon: CircleCheckBig, section: "Facets" },
-  { id: "gym",       label: "Gym",          icon: Dumbbell,    section: "Facets" },
+  { id: "gym",       label: "Body",         icon: Dumbbell,    section: "Facets" },
   { id: "faith",     label: "Faith & Mind", icon: Church,      section: "Facets" },
   { id: "calendar",  label: "Calendar",     icon: CalendarDays, section: "Facets" },
   { id: "journey",   label: "Journey",      icon: Trophy,      section: "Facets" },

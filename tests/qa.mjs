@@ -26,16 +26,16 @@ await new Promise((r) => server.listen(0, r));
 const BASE = `http://localhost:${server.address().port}/index.html`;
 const EXE = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // [module id, sidebar label] pairs — we navigate by clicking the sidebar button.
-// Trading/Finance live inside "firm" now (Trading/Wealth/Doctrine groups);
-// Athlete lives inside "life" (Life/Athlete groups); Mind lives inside
-// "faith" (Faith/Mind groups) — see SUBTABS_MAP below for how each merged
-// module's inner groups get exercised.
+// Trading/Finance live inside "firm" (Trading/Wealth/HQ groups); Nutrition
+// lives inside "gym" (Body: Today/Trends/Coach/History) since the Gate 2
+// merge; Purity and Journal live inside "habits" (Discipline) since Gate 1;
+// Mind lives inside "faith" — see SUBTABS_MAP for how each gets exercised.
 const MODULES = [
-  ["dashboard", "Command Center"], ["firm", "The Firm"], ["life", "Life OS"],
+  ["dashboard", "Command Center"], ["firm", "The Firm"], ["habits", "Habits"], ["gym", "Body"],
   ["faith", "Faith & Mind"], ["calendar", "Calendar"], ["journey", "Journey"], ["analytics", "Analytics"],
 ];
 
-// Per-module sub-tab labels to click through. A merged module (firm/life/
+// Per-module sub-tab labels to click through. A merged module (firm/
 // faith) uses a grouped shape — click the outer group pill first, then each
 // of that group's own inner tabs; an unmerged module keeps the old flat
 // array (click each label directly).
@@ -45,10 +45,7 @@ const SUBTABS_MAP = {
     { group: "Wealth", subtabs: ["Income", "Analyst", "Money", "Portfolio", "Net Worth"] },
     { group: "HQ", subtabs: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"] },
   ],
-  life: [
-    { group: "Life", subtabs: ["Habits", "Insights", "Journal", "Projects", "Purity", "Today"] },
-    { group: "Athlete", subtabs: ["History", "Progress", "Nutrition", "Splits", "This Week"] },
-  ],
+  gym: ["Today", "Trends", "Coach", "History"],
   faith: [
     { group: "Faith", subtabs: ["Scripture & Notes", "The Walk"] },
     { group: "Mind", subtabs: ["Library", "Notes", "Decision Journal"] },
@@ -363,7 +360,7 @@ for (const [vpName, viewport] of Object.entries(viewports)) {
       await check(mod);
 
       // Exercise the sub-tabs where most rendering lives. Grouped modules
-      // (firm/life/faith) click the outer group pill first, then each of
+      // (firm/faith) click the outer group pill first, then each of
       // that group's own inner tabs; flat modules click each label directly.
       const entry = SUBTABS_MAP[mod] || [];
       const grouped = entry.length > 0 && typeof entry[0] === "object";

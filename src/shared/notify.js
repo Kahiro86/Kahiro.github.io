@@ -16,9 +16,9 @@ import { localDateStr, daysAgoStr, daysBetween } from "./dates.js";
 export const NOTIF_CATS = [
   { id: "habits",       l: "Habits",       icon: "✅" },
   { id: "streaks",      l: "Streaks",      icon: "🔥" },
-  { id: "life",         l: "Life OS",      icon: "🌱" },
-  { id: "nutrition",    l: "Nutrition",    icon: "🍽️" },
-  { id: "athlete",      l: "Athlete",      icon: "💪" },
+  { id: "life",         l: "Discipline",   icon: "🌱" },
+  { id: "nutrition",    l: "Fuel",         icon: "🍽️" },
+  { id: "athlete",      l: "Training",     icon: "💪" },
   { id: "trading",      l: "Trading",      icon: "📊" },
   { id: "finance",      l: "Finance",      icon: "💰" },
   { id: "faith",        l: "Faith",        icon: "📖" },
@@ -68,7 +68,7 @@ export const SNOOZES = [
 // ids ("firm:wealth") land on a merged module's specific inner group instead
 // of always its default — see App.jsx's navTo/navHint.
 export const NAV_TARGETS = [
-  { id: "", l: "None" }, { id: "life", l: "Life OS / habit" }, { id: "life:athlete", l: "Athlete / workout" },
+  { id: "", l: "None" }, { id: "habits", l: "Discipline / habit" }, { id: "gym:today", l: "Body / training & fuel" },
   { id: "firm:trading", l: "Trading task" }, { id: "firm:wealth", l: "Finance task" },
   { id: "faith", l: "Faith" }, { id: "faith:mind", l: "Mind" }, { id: "dashboard", l: "Command Center / goals" },
 ];
@@ -76,7 +76,8 @@ export const NAV_TARGETS = [
 // Reminders saved before the module merge may still carry a bare legacy id —
 // map those forward so they keep deep-linking correctly instead of silently
 // landing on the dashboard once the old id is gone from NAV_TARGETS.
-const LEGACY_NAV = { trading: "firm:trading", finance: "firm:wealth", athlete: "life:athlete", mind: "faith:mind" };
+const LEGACY_NAV = { trading: "firm:trading", finance: "firm:wealth", athlete: "gym:today", mind: "faith:mind",
+  life: "habits", "life:athlete": "gym:today", "life:purity": "habits", "life:journal": "habits" };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;

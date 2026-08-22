@@ -18,14 +18,14 @@ export function buildNudges(deps) {
   // 1. Non-negotiables still open today.
   const openNonNegs = habits.filter((h) => isNonNeg(h) && !isWeekly(h) && isScheduled(h, ds) && !isDone(h, ds) && !isSkipped(h, ds));
   if (openNonNegs.length) {
-    out.push({ id: "nonneg", icon: "❤️", tone: "urgent", nav: "life",
+    out.push({ id: "nonneg", icon: "❤️", tone: "urgent", nav: "habits",
       text: `${openNonNegs.length} non-negotiable${openNonNegs.length > 1 ? "s" : ""} still open today — start with ${openNonNegs[0].name}.` });
   }
 
   // 2. Streaks at risk: a 7+ day streak not yet done today.
   const atRisk = habits.filter((h) => isScheduled(h, ds) && !isDone(h, ds) && !isSkipped(h, ds) && currentStreak(h) >= 7);
   for (const h of atRisk.slice(0, 2)) {
-    out.push({ id: `risk_${h.id}`, icon: "🔥", tone: "urgent", nav: "life",
+    out.push({ id: `risk_${h.id}`, icon: "🔥", tone: "urgent", nav: "habits",
       text: `${h.name}'s ${currentStreak(h)}-day streak is on the line today.` });
   }
 
@@ -33,7 +33,7 @@ export function buildNudges(deps) {
   for (const h of habits) {
     const s = rangeStats(h, 7);
     if (s.scheduled >= 4 && s.done <= 1 && !isDone(h, ds)) {
-      out.push({ id: `miss_${h.id}`, icon: "🌱", tone: "info", nav: "life",
+      out.push({ id: `miss_${h.id}`, icon: "🌱", tone: "info", nav: "habits",
         text: `${h.name} slipped this week (${s.done}/${s.scheduled}). Shrink it — the 2-minute version still counts.` });
       break; // one gentle nudge, never a scoreboard
     }
@@ -81,7 +81,7 @@ export function buildNudges(deps) {
   for (const h of habits) {
     const st = currentStreak(h);
     if ([7, 30, 100].includes(st) && isDone(h, ds)) {
-      out.push({ id: `mile_${h.id}`, icon: "🏆", tone: "celebrate", nav: "life",
+      out.push({ id: `mile_${h.id}`, icon: "🏆", tone: "celebrate", nav: "habits",
         text: `${h.name}: ${st}-day streak. That's identity, not luck.` });
     }
   }
@@ -89,7 +89,7 @@ export function buildNudges(deps) {
   // 9. Purity check-in still open (only once the practice has begun).
   const purityLog = sanitizePurity(deps.purity);
   if (Object.keys(purityLog).length && !statusOn(purityLog, ds)) {
-    out.push({ id: "purity", icon: "🛡️", tone: "info", nav: "life",
+    out.push({ id: "purity", icon: "🛡️", tone: "info", nav: "habits",
       text: "Purity check-in is open — claim today." });
   }
 
@@ -101,18 +101,18 @@ export function buildNudges(deps) {
     const hour = new Date().getHours();
     const ydsN = daysAgoStr(1);
     if (!todayN.length && hour >= 12) {
-      out.push({ id: "nutrition", icon: "🍽️", tone: "info", nav: "life:athlete",
+      out.push({ id: "nutrition", icon: "🍽️", tone: "info", nav: "gym:today",
         text: "Nothing logged in Nutrition yet — 10 seconds logs your last meal." });
     } else if (!dayEntries(nlog, ydsN).length) {
       // Yesterday's gap only surfaces once today isn't also empty — one
       // nutrition nudge at a time, never both stacked.
-      out.push({ id: "yesterday_nutrition", icon: "🍽️", tone: "info", nav: "life:athlete",
+      out.push({ id: "yesterday_nutrition", icon: "🍽️", tone: "info", nav: "gym:today",
         text: "Yesterday's nutrition log is empty — log it now, backdated to Yesterday." });
     } else if (todayN.length && hour >= 18) {
       const nT = calcTargets(deps.nutritionProfile);
       const t = dayTotals(todayN);
       if (t.p < nT.p * 0.6) {
-        out.push({ id: "protein", icon: "🥩", tone: "info", nav: "life:athlete",
+        out.push({ id: "protein", icon: "🥩", tone: "info", nav: "gym:today",
           text: `Protein is at ${Math.round(t.p)}g of ${nT.p}g with the day winding down — dinner decides.` });
       }
     }
@@ -142,7 +142,7 @@ export function buildNudges(deps) {
     }
     const ranked = Object.entries(byCat).map(([cat, x]) => ({ cat, pct: Math.round((x.done / x.sched) * 100) })).sort((a, b) => a.pct - b.pct);
     if (ranked.length && ranked[0].pct < 70) {
-      out.push({ id: "focus", icon: "🎯", tone: "info", nav: "life",
+      out.push({ id: "focus", icon: "🎯", tone: "info", nav: "habits",
         text: `This week's focus: ${ranked[0].cat} (${ranked[0].pct}% last 30d). One small rep a day.` });
     }
   }
@@ -154,13 +154,13 @@ export function buildNudges(deps) {
   const yScheduled = habits.filter((h) => isScheduled(h, yds));
   const yUndone = yScheduled.filter((h) => !isDone(h, yds) && !isSkipped(h, yds));
   if (yScheduled.length && yUndone.length >= Math.ceil(yScheduled.length / 2)) {
-    out.push({ id: "yesterday_habits", icon: "📅", tone: "info", nav: "life",
+    out.push({ id: "yesterday_habits", icon: "📅", tone: "info", nav: "habits",
       text: `Yesterday looks incomplete — pick Yesterday in the date picker to finish logging it.` });
   }
 
   const journalEntries = Array.isArray(deps.entries) ? deps.entries : [];
   if (journalEntries.length && !journalEntries.some((e) => (e?.date || "").slice(0, 10) === yds)) {
-    out.push({ id: "yesterday_journal", icon: "📓", tone: "info", nav: "life",
+    out.push({ id: "yesterday_journal", icon: "📓", tone: "info", nav: "habits",
       text: "No journal entry for yesterday — one honest sentence, backdated, still counts." });
   }
 

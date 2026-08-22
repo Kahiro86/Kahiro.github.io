@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { Bell, Plus, Check, X, Clock, Pin, Trash2, Search, ChevronDown, Pencil, Pause, Play } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, GL, CY, GR, RE, AM, PU } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
+import { useWorkouts } from "./useWorkouts.js";
 import { useToast } from "./toast.jsx";
 import { localDateStr, daysAgoStr } from "./dates.js";
 import { migrateHabits, isScheduled, isDone } from "./habitEngine.js";
@@ -78,7 +79,7 @@ export function NotificationCenter({ onNavigate }) {
   const [purity] = useStorageState("purity_log", {});
   const [nutrition] = useStorageState("nutrition_log", {});
   const [nutritionProfile] = useStorageState("nutrition_profile", null);
-  const [workouts] = useStorageState("athlete_workouts", []);
+  const workouts = useWorkouts();
   const [journal] = useStorageState("journal_entries", []);
   const [wants] = useStorageState("wants", []);
   const habits = useMemo(() => migrateHabits(rawHabits).filter((h) => !h.archived && !h.paused), [rawHabits]);

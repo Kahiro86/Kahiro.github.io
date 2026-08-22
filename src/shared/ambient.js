@@ -13,7 +13,8 @@ const M = (mode, mood) => ({ accent: A, accent2: A2, base: BASE, mode, mood });
 const MODULE_THEME = {
   dashboard: { name: "Command",     ...M("network", "collage") },
   firm:      { name: "The Firm",    ...M("network", "collage") },
-  life:      { name: "Life OS",     ...M("petals",  "collage") },
+  gym:       { name: "Body",        ...M("petals",  "collage") },
+  habits:    { name: "Discipline",  ...M("petals",  "collage") },
   faith:     { name: "Faith & Mind", ...M("dust",   "collage") },
   journey:   { name: "Journey",     ...M("embers",  "collage") },
   analytics: { name: "Analytics",   ...M("data",    "collage") },

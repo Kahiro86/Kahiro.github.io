@@ -45,10 +45,13 @@ ok("purity_log untouched (12 days still there)", Object.keys(migrated.purity).le
 ok("journal_entries untouched (3 still there)", migrated.journal.length===3);
 
 console.log("\n── criteria 1 & 2: no top-level Purity/Journal tabs ──");
-await page.locator('[data-tour="nav-life"]').first().click(); await page.waitForTimeout(600); await dismiss();
-const lifeTxt = await page.locator("body").innerText();
-ok("Life facet no longer offers a Purity tab", !/\bPurity\b/.test(lifeTxt));
-ok("Life facet no longer offers a Journal tab", !/\bJournal\b/.test(lifeTxt));
+// Gate 2 retired the Life facet outright, so the check is now that neither
+// Purity nor Journal appears as a top-level destination anywhere in the nav.
+const navIds = await page.locator('[data-tour^="nav-"]').evaluateAll((els) => els.map((e) => e.getAttribute("data-tour")));
+const navTxt = (await page.locator('[data-tour^="nav-"]').allInnerTexts()).join(" | ");
+ok("no Purity entry in the nav", !/purity/i.test(navTxt));
+ok("no Journal entry in the nav", !/journal/i.test(navTxt));
+ok("the Life facet that used to host them is gone", !navIds.includes("nav-life"));
 
 console.log("\n── criterion 4: one screen logs all three ──");
 await page.locator('[data-tour="nav-habits"]').first().click(); await page.waitForTimeout(800); await dismiss();

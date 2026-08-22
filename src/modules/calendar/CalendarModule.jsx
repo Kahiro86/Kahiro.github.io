@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { BD, B2, T1, T2, T3, GL, GL2, CY, AC, GR } from "../../shared/designTokens.js";
 import { Card } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
+import { useWorkouts } from "../../shared/useWorkouts.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 import { migrateHabits } from "../../shared/habitEngine.js";
 import { sanitizeNutrition } from "../athlete/nutrition.js";
@@ -33,7 +34,7 @@ export function CalendarModule({ habits = [], onNavigate }) {
   const [month, setMonth] = useState(now.getMonth());
   const [sel, setSel] = useState(localDateStr());
 
-  const [rawWorkouts] = useStorageState("athlete_workouts", []);
+  const rawWorkouts = useWorkouts();
   const [rawTrades] = useStorageState("ti_trades", []);
   const [rawEntries] = useStorageState("journal_entries", []);
   const [rawNutrition] = useStorageState("nutrition_log", {});

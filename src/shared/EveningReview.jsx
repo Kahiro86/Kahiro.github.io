@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { X, Moon, Check, Sunrise } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, AC2, GR, AM } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
+import { useWorkouts } from "./useWorkouts.js";
 import { localDateStr } from "./dates.js";
 import { isScheduled, isDone } from "./habitEngine.js";
 import { sanitizeNutrition, dayEntries, dayTotals } from "../modules/athlete/nutrition.js";
@@ -23,7 +24,7 @@ export function EveningReview({ onClose, habits = [] }) {
   const ds = localDateStr();
   const [reviews, setReviews] = useStorageState(REVIEW_KEY, {});
   const [log] = useStorageState("nutrition_log", {});
-  const [workouts] = useStorageState("athlete_workouts", []);
+  const workouts = useWorkouts();
   const [entries] = useStorageState("journal_entries", []);
   const [trades] = useStorageState("ti_trades", []);
 

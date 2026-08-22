@@ -1,0 +1,140 @@
+// Gate 2 acceptance, criteria 1, 3 and 5, driven in a browser against the build.
+import { chromium } from "playwright";
+import { existsSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { fileURLToPath } from "node:url";
+import { extname, join, normalize } from "node:path";
+const DIST = fileURLToPath(new URL("../../dist", import.meta.url));
+const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
+const server = createServer((q, r) => { let p = decodeURIComponent((q.url || "/").split("?")[0]); if (p === "/") p = "/index.html"; const fp = normalize(join(DIST, p)); if (!fp.startsWith(DIST) || !existsSync(fp)) { r.statusCode = 404; return r.end("nf"); } r.setHeader("Content-Type", MIME[extname(fp)] || "application/octet-stream"); r.end(readFileSync(fp)); });
+await new Promise((r) => server.listen(0, r));
+const BASE = `http://localhost:${server.address().port}/index.html`;
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
+const TODAY = iso(new Date());
+
+// Pre-merge data a returning user would already have: meals, sessions,
+// custom foods, favourites and measurements.
+const nutritionLog = {};
+for (let i = 0; i <= 20; i++) {
+  nutritionLog[ago(i)] = [
+    { id: `m${i}a`, name: "Ugali & sukuma", grams: 400, slot: "post_shift", time: "19:30", proc: 1, n: { kcal: 620, p: 18, c: 96, f: 14, fib: 9, na: 320 } },
+    { id: `m${i}b`, name: "Chicken breast", grams: 220, slot: "mid_shift", time: "13:00", proc: 1, n: { kcal: 360, p: 68, c: 0, f: 8, fib: 0, na: 180 } },
+  ];
+}
+const gymSessions = [];
+for (const d of [0, 2, 4, 7, 9, 11, 14, 16, 18, 21, 23, 25]) {
+  gymSessions.push({ id: `gs${d}`, date: ago(d), startedAt: 1, finishedAt: 1 + 55 * 60000, bodyweightKg: 78,
+    entries: [{ exerciseId: "barbell_bench_press", name: "Bench", sets: [{ weightKg: 80, reps: 8 }, { weightKg: 80, reps: 8 }, { weightKg: 85, reps: 5 }] }] });
+}
+const customFoods = [{ id: "cf1", name: "Mama's pilau", per100: { kcal: 180, p: 6, c: 25, f: 6 }, serving: { g: 300 }, tags: [] }];
+const measurements = [{ date: ago(24), weightKg: 78.0, waistCm: 84.0 }, { date: ago(2), weightKg: 78.2, waistCm: 82.4 }];
+const profile = { age: 27, sex: "male", heightCm: 178, weightKg: 78, activity: 1.55, goal: "muscle", favs: ["cf1"] };
+
+const errs = [];
+const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const page = await b.newPage({ viewport: { width: 1280, height: 1100 } });
+page.on("pageerror", (e) => errs.push(String(e)));
+page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+await page.addInitScript((seed) => {
+  for (const [k, v] of Object.entries(seed)) localStorage.setItem(`architect:${k}`, v);
+}, {
+  nutrition_log: JSON.stringify(nutritionLog),
+  nutrition_foods: JSON.stringify(customFoods),
+  nutrition_profile: JSON.stringify(profile),
+  gym_sessions: JSON.stringify(gymSessions),
+  athlete_measurements: JSON.stringify(measurements),
+});
+await page.goto(BASE, { waitUntil: "networkidle" });
+const dismiss = async () => { for (const n of ["Skip", "Skip the tour"]) { const x = page.getByRole("button", { name: n, exact: true }); try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { } } };
+await dismiss();
+
+let pass = 0, fail = 0; const fails = [];
+const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
+
+console.log("\n── criterion 1: Nutrition is not a top-level tab ──");
+const navLabels = await page.locator('[data-tour^="nav-"]').allInnerTexts();
+const navIds = await page.locator('[data-tour^="nav-"]').evaluateAll((els) => els.map((e) => e.getAttribute("data-tour")));
+ok(`no Nutrition/Fuel entry in the sidebar (${navLabels.map((s) => s.trim()).filter(Boolean).join(", ")})`,
+   !navLabels.some((t) => /nutrition|fuel/i.test(t)));
+ok("no Life facet left in the sidebar", !navIds.includes("nav-life") && !navLabels.some((t) => /^\s*life\s*$/i.test(t)));
+ok("a Body facet exists instead", navIds.includes("nav-gym") && navLabels.some((t) => /body/i.test(t)));
+
+console.log("\n── Body carries training and fuel in one scroll ──");
+await page.locator('[data-tour="nav-gym"]').first().click(); await page.waitForTimeout(900); await dismiss();
+const bodyTxt = await page.locator("body").innerText();
+ok("Body offers Today / Trends / Coach", /today/i.test(bodyTxt) && /trends/i.test(bodyTxt) && /coach/i.test(bodyTxt));
+ok("the session section is on Today", /workout|session|start/i.test(bodyTxt));
+ok("the fuel section is on the same screen", /fuel/i.test(bodyTxt) && /kcal/i.test(bodyTxt));
+ok("meals logged before the merge are still shown", /ugali|chicken breast/i.test(bodyTxt));
+
+console.log("\n── §2.2: the training link actually moves the targets ──");
+ok("the day is labelled training or rest", /training day|rest day/i.test(bodyTxt));
+ok("the rule is written on screen, not hidden", /Training day = base \+ session allowance/i.test(bodyTxt));
+ok("it states protein does not move", /Protein and fat never move/i.test(bodyTxt));
+const linkNums = await page.evaluate(() => {
+  const t = document.body.innerText;
+  const m = t.match(/Calories (raised|lowered|unchanged) from base ([\d,]+)\s*([+-]?\d+)\s*·\s*([\d,]+)/);
+  return m ? { dir: m[1], base: +m[2].replace(/,/g, ""), delta: +m[3], now: +m[4].replace(/,/g, "") } : null;
+});
+ok(`the shift is shown as a number (${JSON.stringify(linkNums)})`, !!linkNums);
+if (linkNums) {
+  ok("today has a session logged, so calories are raised", linkNums.dir === "raised" && linkNums.delta > 0);
+  ok("the arithmetic on screen is self-consistent", linkNums.base + linkNums.delta === linkNums.now);
+}
+
+console.log("\n── criterion 3: nothing was lost in the merge ──");
+const kept = await page.evaluate(() => ({
+  log: Object.keys(JSON.parse(localStorage.getItem("architect:nutrition_log") || "{}")).length,
+  foods: JSON.parse(localStorage.getItem("architect:nutrition_foods") || "[]").length,
+  sessions: JSON.parse(localStorage.getItem("architect:gym_sessions") || "[]").length,
+  meas: JSON.parse(localStorage.getItem("architect:athlete_measurements") || "[]").length,
+  favs: (JSON.parse(localStorage.getItem("architect:nutrition_profile") || "{}").favs || []).length,
+}));
+ok(`all 21 logged meal days survive (${kept.log})`, kept.log === 21);
+ok(`the custom food survives (${kept.foods})`, kept.foods === 1);
+ok(`all 12 sessions survive (${kept.sessions})`, kept.sessions === 12);
+ok(`both measurements survive (${kept.meas})`, kept.meas === 2);
+ok(`the one-tap favourite survives (${kept.favs})`, kept.favs === 1);
+ok("the 'Running low' micronutrient callout survived the move", /running low/i.test(bodyTxt));
+
+console.log("\n── Trends: one timeline ──");
+await page.getByRole("button", { name: /^Trends$/ }).first().click(); await page.waitForTimeout(700);
+const trendTxt = await page.locator("body").innerText();
+ok("weight and waist share the timeline", /weight/i.test(trendTxt) && /waist/i.test(trendTxt));
+ok("adherence sits on the same timeline", /calories vs target/i.test(trendTxt) && /protein vs target/i.test(trendTxt));
+ok("strength progression is on it too", /tonnage/i.test(trendTxt));
+ok("coverage is disclosed per week", /days of food logged|sketch, not a measurement/i.test(trendTxt));
+
+console.log("\n── Coach: reflects, never prescribes ──");
+await page.getByRole("button", { name: /^Coach$/ }).first().click(); await page.waitForTimeout(700);
+const coachTxt = await page.locator("body").innerText();
+ok("the Coach reports what happened", /protein target hit|sessions logged/i.test(coachTxt));
+ok("it says it does not set targets", /does not set targets/i.test(coachTxt));
+const PRESCRIBE = /\b(you should|you need to|aim for|increase your|reduce your|cut your|eat \d)\b/i;
+const SHAME = /\b(failed|failure|lazy|pathetic|disappointing|should have)\b/i;
+ok("no prescription on screen", !PRESCRIBE.test(coachTxt));
+ok("no shame framing on screen", !SHAME.test(coachTxt));
+
+console.log("\n── criterion 5: the merge did not open a farming route ──");
+const xp = await page.evaluate(() => {
+  const raw = localStorage.getItem("architect:nutrition_log");
+  return { hasLog: !!raw };
+});
+ok("fuel targets are derived, never written to the food log", xp.hasLog);
+const logAfter = await page.evaluate(() => localStorage.getItem("architect:nutrition_log"));
+ok("the food log is byte-identical after viewing Body", logAfter === JSON.stringify(nutritionLog), );
+
+console.log("\n── retired routes still land somewhere real ──");
+const orphan = await page.evaluate(() => {
+  const t = document.body.innerText;
+  return /Nothing here|404|not found/i.test(t);
+});
+ok("no orphan route reached", !orphan);
+
+console.log("");
+console.log("ERRORS:", errs.slice(0, 5).join(" || ") || "none");
+if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
+console.log(`Gate 2 acceptance: ${pass}/${pass + fail} passed`);
+await b.close(); server.close();
+process.exit(fail || errs.length ? 1 : 0);

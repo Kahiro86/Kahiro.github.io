@@ -1,12 +1,17 @@
-// ── Gym facet — log a workout ─────────────────────────────────────────────
-// The training tracker, folded into Kaizen from GymXP. Start a session, add
-// exercises from the ported catalog, log sets, finish → the session is stored
-// raw and its rich XP/PR/muscle summary is derived from GymXP's engine. The
-// same session also feeds Kaizen's shared level + consistency via the
-// `workouts` mapping in useXp (see gymStore.gymSessionsToWorkouts).
+// ── Body — training and fuel, one domain (spec §2.1) ─────────────────────
+// Gym absorbed Nutrition. Training and eating are the same day's decision, so
+// they share a screen: Today carries the session and the fuel log in one
+// scroll, and the day's training state moves the day's calorie and carb
+// targets through bodyTargets.js. Trends puts weight, waist, strength and
+// adherence on one x-axis; Coach reflects the logs back without prescribing.
+//
+// The session itself is unchanged from the GymXP port — stored raw, with its
+// XP/PR/muscle summary derived by GymXP's engine and fed to Kaizen's shared
+// level and consistency via gymStore.gymSessionsToWorkouts.
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Dumbbell, Plus, Check, X, Search, Trash2, Trophy, Clock, TrendingUp, Activity, Timer,
+  MessageCircle, Utensils,
 } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, AC, AC2, GR, RE, AM, PU } from "../../shared/designTokens.js";
 import { Card, SH, Meter, Empty } from "../../shared/ui.jsx";
@@ -21,6 +26,9 @@ import { computeAllSummaries } from "./gymStore.js";
 import { RoutineQuickList, RoutineManager, sanitizeRoutines } from "./GymRoutines.jsx";
 import { MuscleRadar } from "./BodyMap.jsx";
 import { RestTimer } from "./RestTimer.jsx";
+import { NutritionTab } from "../athlete/NutritionTab.jsx";
+import { BodyTrends } from "./BodyTrends.jsx";
+import { BodyCoachPanel } from "./BodyCoachPanel.jsx";
 
 const today = () => localDateStr();
 const uid = () => `gs${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -36,8 +44,8 @@ function setFields(exerciseId) {
   return { weight: !bodyweightOnly, reps: true, addedWeight: weighted };
 }
 
-export function GymOS({ navHint } = {}) {
-  const [tab, setTab] = useState("workout");
+export function BodyOS({ navHint } = {}) {
+  const [tab, setTab] = useState("today");
   const [rawSessions, setSessions, loaded] = useStorageState("gym_sessions", []);
   const [active, setActive] = useStorageState("gym_active", null);
   const [profile, setProfile] = useStorageState("gym_profile", { bodyweightKg: 75 });
@@ -47,7 +55,16 @@ export function GymOS({ navHint } = {}) {
   const [mgrOpen, setMgrOpen] = useState(false);
   const toast = useToast();
 
-  useEffect(() => { if (navHint?.group === "history") setTab("history"); }, [navHint?.nonce]); // eslint-disable-line
+  // Deep links: the retired Nutrition facet pointed at "athlete"/"fuel", and
+  // the old Gym tabs at "workout"/"progress". Both land on their new home.
+  useEffect(() => {
+    const g = navHint?.group;
+    if (!g) return;
+    if (g === "history") setTab("history");
+    else if (g === "progress" || g === "trends") setTab("trends");
+    else if (g === "coach") setTab("coach");
+    else if (g === "workout" || g === "athlete" || g === "fuel" || g === "today") setTab("today");
+  }, [navHint?.nonce]); // eslint-disable-line
 
   const sessions = useMemo(() => sanitizeSessions(rawSessions), [rawSessions]);
   const derived = useMemo(() => computeAllSummaries(sessions), [sessions]);
@@ -108,7 +125,7 @@ export function GymOS({ navHint } = {}) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tabs={[{ id: "workout", l: "Workout", i: Dumbbell }, { id: "progress", l: "Progress", i: Activity }, { id: "history", l: "History", i: Clock }]}
+      <ModuleTabs tabs={[{ id: "today", l: "Today", i: Dumbbell }, { id: "trends", l: "Trends", i: Activity }, { id: "coach", l: "Coach", i: MessageCircle }, { id: "history", l: "History", i: Clock }]}
         active={tab} onSelect={setTab} activeBg={`linear-gradient(135deg,${AC}22,${AC}14)`} activeColor={AC}>
         <div style={{ flex: 1 }} />
         <div title="Lifetime gym level" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: `${AC}11`, border: `1px solid ${AC}22`, borderRadius: 9 }}>
@@ -121,21 +138,39 @@ export function GymOS({ navHint } = {}) {
       <div style={{ flex: 1, overflowY: "auto" }}>
         {!loaded && <div style={{ padding: 40, textAlign: "center", color: T3, fontSize: 13 }}>Loading…</div>}
 
-        {loaded && tab === "workout" && !active && (
-          <StartScreen onStart={start} last={ordered[0]} lastSummary={ordered[0] && derived.byId[ordered[0].id]}
-            thisWeek={thisWeek} streak={streak} total={sessions.length} onOpenLast={() => ordered[0] && setSummaryId(ordered[0].id)}
-            routines={routines} onStartRoutine={startFromRoutine} onManageRoutines={() => setMgrOpen(true)} />
+        {/* ── Today: the session and the fuel, one scroll, because they are
+             the same day's decision (spec §2.1 A). ── */}
+        {loaded && tab === "today" && (
+          <>
+            {!active && (
+              <StartScreen onStart={start} last={ordered[0]} lastSummary={ordered[0] && derived.byId[ordered[0].id]}
+                thisWeek={thisWeek} streak={streak} total={sessions.length} onOpenLast={() => ordered[0] && setSummaryId(ordered[0].id)}
+                routines={routines} onStartRoutine={startFromRoutine} onManageRoutines={() => setMgrOpen(true)} />
+            )}
+            {active && (
+              <ActiveScreen active={active} setActive={setActive} sessions={sessions} onAddExercise={() => setSearchOpen(true)}
+                patchSet={patchSet} addSet={addSet} removeSet={removeSet} removeExercise={removeExercise}
+                onFinish={finish} onCancel={cancel} canFinish={hasWork} onBw={(v) => setActive((a) => ({ ...a, bodyweightKg: v }))} />
+            )}
+            <div style={{ padding: "0 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "18px 0 2px", borderTop: `1px solid ${BD}`, marginTop: 4 }}>
+                <Utensils size={15} color={AC2} />
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: T1, letterSpacing: 0.3 }}>Fuel</span>
+                <span style={{ fontSize: 10.5, color: T3 }}>targets follow the day's training</span>
+              </div>
+            </div>
+            <NutritionTab />
+          </>
         )}
 
-        {loaded && tab === "workout" && active && (
-          <ActiveScreen active={active} setActive={setActive} sessions={sessions} onAddExercise={() => setSearchOpen(true)}
-            patchSet={patchSet} addSet={addSet} removeSet={removeSet} removeExercise={removeExercise}
-            onFinish={finish} onCancel={cancel} canFinish={hasWork} onBw={(v) => setActive((a) => ({ ...a, bodyweightKg: v }))} />
+        {loaded && tab === "trends" && (
+          <>
+            <BodyTrends sessions={sessions} />
+            <ProgressScreen sessions={ordered} byId={derived.byId} muscleTotals={derived.muscleTotals} lifetimeXp={derived.lifetimeXp} />
+          </>
         )}
 
-        {loaded && tab === "progress" && (
-          <ProgressScreen sessions={ordered} byId={derived.byId} muscleTotals={derived.muscleTotals} lifetimeXp={derived.lifetimeXp} />
-        )}
+        {loaded && tab === "coach" && <BodyCoachPanel sessions={sessions} />}
 
         {loaded && tab === "history" && (
           <HistoryScreen sessions={ordered} byId={derived.byId} onOpen={setSummaryId} lifetimeXp={derived.lifetimeXp} />

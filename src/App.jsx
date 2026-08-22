@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { T1 } from "./shared/designTokens.js";
 import { storage } from "./shared/storage.js";
+import { gymSessionsToWorkouts } from "./modules/gym/gymSessions.js";
 import { useStorageState } from "./shared/useStorageState.js";
 import { useIsMobile } from "./shared/useIsMobile.js";
 import { migrateHabits, toLegacy, tapHabit } from "./shared/habitEngine.js";
@@ -25,13 +26,12 @@ import { HABITS_DEF } from "./modules/dashboard/domains.js";
 // only inside modules (recharts, the AI/finance code) leave the initial
 // bundle entirely. Conditionally-rendered panels lazy-load on first open.
 const Dashboard = lazy(() => import("./modules/dashboard/Dashboard.jsx").then((m) => ({ default: m.Dashboard })));
-const LifeOSModule = lazy(() => import("./modules/life/LifeOSModule.jsx").then((m) => ({ default: m.LifeOSModule })));
 const FaithOS = lazy(() => import("./modules/faith/FaithOS.jsx").then((m) => ({ default: m.FaithOS })));
 const AnalyticsOS = lazy(() => import("./modules/analytics/AnalyticsOS.jsx").then((m) => ({ default: m.AnalyticsOS })));
 const JourneyModule = lazy(() => import("./modules/journey/JourneyModule.jsx").then((m) => ({ default: m.JourneyModule })));
 const FirmOS = lazy(() => import("./modules/firm/FirmOS.jsx").then((m) => ({ default: m.FirmOS })));
 const CalendarModule = lazy(() => import("./modules/calendar/CalendarModule.jsx").then((m) => ({ default: m.CalendarModule })));
-const GymOS = lazy(() => import("./modules/gym/GymOS.jsx").then((m) => ({ default: m.GymOS })));
+const BodyOS = lazy(() => import("./modules/gym/BodyOS.jsx").then((m) => ({ default: m.BodyOS })));
 const HabitsOS = lazy(() => import("./modules/habits/HabitTracker.tsx").then((m) => ({ default: m.HabitTracker })));
 import { Sidebar } from "./shared/Sidebar.jsx";
 import { Header } from "./shared/Header.jsx";
@@ -120,12 +120,22 @@ export default function App() {
   // nonce forces the shell's effect to re-fire even when clicked twice in a
   // row for the same group, same idea as reviewSignal below).
   const [navHint, setNavHint] = useState(null); // { module, group, nonce }
+  // Retired facets, forwarded rather than broken: Nutrition and the Athlete
+  // shell folded into Body (Gate 2), Purity and Journal into Discipline
+  // (Gate 1). Saved reminders and old links still carry these ids.
+  const RETIRED = {
+    life: "gym:today", "life:athlete": "gym:today", "life:nutrition": "gym:today",
+    "life:purity": "habits", "life:journal": "habits",
+    athlete: "gym:today", nutrition: "gym:today",
+    "gym:workout": "gym:today", "gym:progress": "gym:trends",
+  };
   const navTo = useCallback((id) => {
     if (id === "settings") return setShowSettings(true);
-    const [base, group] = id.split(":");
+    const target = RETIRED[id] || id;
+    const [base, group] = target.split(":");
     setModule(base);
     if (group) setNavHint({ module: base, group, nonce: Date.now() });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // App lock: gate the UI on open when a PIN is set, and re-lock after the
   // tab has been in the background for 5+ minutes.
@@ -244,12 +254,17 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const [tRaw, wRaw, fRaw, bRaw] = await Promise.all([
-          storage.get("ict_trades"), storage.get("athlete_workouts"),
+        const [tRaw, wRaw, gRaw, fRaw, bRaw] = await Promise.all([
+          storage.get("ict_trades"), storage.get("athlete_workouts"), storage.get("gym_sessions"),
           storage.get("finance_state"), storage.get("ict_balance"),
         ]);
         const trades = tRaw ? JSON.parse(tRaw) : [];
-        const workouts = wRaw ? JSON.parse(wRaw) : [];
+        // Both training stores, same merge as useWorkouts — otherwise the AI
+        // panel is told the user never trains.
+        const legacyWorkouts = wRaw ? JSON.parse(wRaw) : [];
+        const gymSessions = gRaw ? JSON.parse(gRaw) : [];
+        const workouts = [...(Array.isArray(legacyWorkouts) ? legacyWorkouts.filter(Boolean) : []),
+          ...gymSessionsToWorkouts(gymSessions)];
         const finance = fRaw ? JSON.parse(fRaw) : null;
         const stats = getStats(trades);
         const fin = financeSummary(finance || {});
@@ -266,9 +281,8 @@ export default function App() {
     switch (module) {
       case "dashboard": return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
       case "firm": return <FirmOS navHint={navHint?.module === "firm" ? navHint : null} />;
-      case "life": return <LifeOSModule habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} onNavigate={setModule} xpInfo={xpInfo} navHint={navHint?.module === "life" ? navHint : null} />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} navHint={navHint?.module === "faith" ? navHint : null} />;
-      case "gym": return <GymOS navHint={navHint?.module === "gym" ? navHint : null} />;
+      case "gym": return <BodyOS navHint={navHint?.module === "gym" ? navHint : null} />;
       case "habits": return <HabitsOS />;
       case "calendar": return <CalendarModule habits={habitsAll} onNavigate={navTo} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
@@ -372,7 +386,7 @@ export default function App() {
             <Sidebar
               overlay
               active={module}
-              onNavigate={(id) => { setModule(id); setMobileNavOpen(false); }}
+              onNavigate={(id) => { navTo(id); setMobileNavOpen(false); }}
               collapsed={false}
               onToggle={() => setMobileNavOpen(false)}
               onOpenSettings={() => { setShowSettings(true); setMobileNavOpen(false); }}
@@ -421,7 +435,7 @@ export default function App() {
       {globalStyle}
       <AmbientBackground module={module} animate={!isMobile} />
 
-      <Sidebar active={module} onNavigate={setModule} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
+      <Sidebar active={module} onNavigate={navTo} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onOpenSettings={() => setShowSettings(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
         <Header module={module} aiOpen={aiOpen} onAIToggle={() => setAiOpen((o) => !o)} onNavigate={navTo} onOpenHelp={() => setHelpOpen(true)} onOpenSettings={() => setShowSettings(true)} onOpenWhoIAm={() => setWhoOpen(true)} onOpenSearch={() => setSearchOpen(true)} streak={topStreak} xp={xp} level={level} xpTitle={xpInfo.title} pctToNext={xpInfo.pctToNext} toNext={xpInfo.nextLevelXp - xp} xpToday={xpInfo.today} xpTodayByCat={xpInfo.todayByCat} />

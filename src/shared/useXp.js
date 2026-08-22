@@ -42,8 +42,10 @@ export function useXp() {
   // Gym-facet sessions feed the same fitness pipeline by mapping to the legacy
   // `workouts` shape, so a logged workout moves the shared level, the Iron Body
   // journey and the consistency engine's fitness-day — no XP-engine changes.
+  // Same merge as useWorkouts(); kept inline here because this hook already
+  // holds both stores for its other derivations.
   const allWorkouts = useMemo(
-    () => [...(Array.isArray(workouts) ? workouts : []), ...gymSessionsToWorkouts(gymSessions)],
+    () => [...(Array.isArray(workouts) ? workouts.filter(Boolean) : []), ...gymSessionsToWorkouts(gymSessions)],
     [workouts, gymSessions]
   );
 

@@ -7,6 +7,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { X, TrendingUp, TrendingDown, Minus, Target, Check } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, AC, GR, AM, RE } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
+import { useWorkouts } from "./useWorkouts.js";
 import { buildWeekReview, suggestFocus } from "./weekReview.js";
 import { setFocus, dismissFocus, isoWeekKey, sanitizeFocus, isDismissed, focusThisWeek } from "./review.js";
 import { useDayMarks } from "./dayMarks.js";
@@ -17,7 +18,7 @@ import { CHECKIN_KEY, ANSWERS, weekAnswers } from "./focusCheckin.js";
 const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; };
 
 export function WeeklyReview({ habits, onClose }) {
-  const [workouts] = useStorageState("athlete_workouts", []);
+  const workouts = useWorkouts();
   const [nutrition] = useStorageState("nutrition_log", {});
   const [entries] = useStorageState("journal_entries", []);
   const [purity] = useStorageState("purity_log", {});

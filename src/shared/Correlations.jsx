@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { X, GitCompareArrows } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, AC2, GR, RE } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
+import { useWorkouts } from "./useWorkouts.js";
 import { isScheduled, isDone } from "./habitEngine.js";
 import { sanitizeNutrition, dayEntries, dayTotals } from "../modules/athlete/nutrition.js";
 import { sanitizeSessions } from "./focusSessions.js";
@@ -15,7 +16,7 @@ const WINDOW = 60;
 
 export function Correlations({ onClose, byDay = {}, habits = [] }) {
   const [nutritionLog] = useStorageState("nutrition_log", {});
-  const [workouts] = useStorageState("athlete_workouts", []);
+  const workouts = useWorkouts();
   const [trades] = useStorageState("ti_trades", []);
   const [entries] = useStorageState("journal_entries", []);
   const [focus] = useStorageState("focus_sessions", []);
