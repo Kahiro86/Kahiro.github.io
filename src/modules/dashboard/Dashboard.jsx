@@ -110,7 +110,7 @@ function Campaign({ day, pct, phase, remaining, cycle, onClick }) {
 }
 
 // Level — the circular badge, title, XP bar and the next rung.
-function LevelCard({ level, title, xp, nextXp, pct, toNext, onClick }) {
+function LevelCard({ level, title, xp, nextXp, pct, toNext, nextRank, onClick }) {
   return (
     <Panel onClick={onClick} style={{ padding: "13px 15px", display: "flex", alignItems: "center", gap: 13 }}>
       <div style={{ width: 48, height: 48, borderRadius: "50%", flexShrink: 0, border: `1.5px solid ${AC}`,
@@ -127,7 +127,14 @@ function LevelCard({ level, title, xp, nextXp, pct, toNext, onClick }) {
         <div style={{ height: 5, background: "#241F18", borderRadius: 3, overflow: "hidden" }}>
           <div style={{ height: 5, width: `${pct}%`, borderRadius: 3, background: AC }} />
         </div>
-        <div style={{ fontSize: 9.5, color: T3, marginTop: 5 }}>{toNext.toLocaleString()} XP to Level {level + 1}</div>
+        {/* Distance to the next RANK, not just the next level number — §5.1:
+            a rank is remembered, a number isn't. Proximity to a named
+            threshold is the strongest honest motivator available. */}
+        <div style={{ fontSize: 9.5, color: T3, marginTop: 5 }}>
+          {nextRank
+            ? <>{nextRank.toGo.toLocaleString()} XP to <span style={{ color: AC2 }}>{nextRank.l}</span> · L{level + 1} in {toNext.toLocaleString()}</>
+            : <>{toNext.toLocaleString()} XP to Level {level + 1}</>}
+        </div>
       </div>
     </Panel>
   );
@@ -486,7 +493,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       <Campaign day={cs.dayInCycle} pct={cs.cycleCompletionPct} phase={phase} remaining={cs.daysRemaining} cycle={cs.cycle} onClick={() => onNavigate("journey")} />
 
       {/* ── level ── */}
-      <LevelCard level={xp?.level ?? 1} title={xp?.title ?? "Beginner"} xp={xp?.total ?? 0} nextXp={xp?.nextLevelXp ?? 100} pct={xp?.pctToNext ?? 0} toNext={xpToNext} onClick={() => onNavigate("journey")} />
+      <LevelCard level={xp?.level ?? 1} title={xp?.title ?? "Signatory"} xp={xp?.total ?? 0} nextXp={xp?.nextLevelXp ?? 100} pct={xp?.pctToNext ?? 0} toNext={xpToNext} nextRank={xp?.nextRank} onClick={() => onNavigate("journey")} />
 
       {/* ── this week's focus (self-hides when none set) ── */}
       <FocusToday />

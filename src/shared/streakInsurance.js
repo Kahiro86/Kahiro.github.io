@@ -1,14 +1,20 @@
 // ── Streak insurance — earn freeze tokens, protect a missed day ──────
-// Anti-guilt, not cheating: you EARN one freeze token for every 7 active days
+// Anti-guilt, not cheating: you EARN one freeze token for every 14 active days
 // (days that already have real activity), and may spend one to protect a
 // single missed day so a long run survives one bad day. Protection is always
 // explicit and visible — it never fabricates activity, it only tells the
 // consistency engine "this specific day is covered". With no freezes stored,
 // every export below is a no-op and streaks behave exactly as before.
+//
+// The rate and the ceiling are both fixed and stated in the UI (spec §5.1):
+// one per 14 days, never more than 3 held. The ceiling is the point — it
+// converts streak anxiety into a small resource you control, rather than a
+// balance that grows until missing a day costs nothing at all.
 import { localDateStr, daysAgoStr } from "./dates.js";
 
 export const FREEZE_KEY = "streak_freezes";
-const DAYS_PER_TOKEN = 7;
+export const DAYS_PER_TOKEN = 14;
+export const MAX_HELD_TOKENS = 3;
 
 export function sanitizeFreezes(raw) {
   const frozen = Array.isArray(raw?.frozen) ? raw.frozen : [];
@@ -28,7 +34,15 @@ export const activeDayCount = (byDay = {}) => Object.values(byDay || {}).filter(
 export const earnedTokens = (byDay = {}) => Math.floor(activeDayCount(byDay) / DAYS_PER_TOKEN);
 
 export function availableTokens(freezes, byDay = {}) {
-  return Math.max(0, earnedTokens(byDay) - sanitizeFreezes(freezes).frozen.length);
+  const unspent = earnedTokens(byDay) - sanitizeFreezes(freezes).frozen.length;
+  return Math.max(0, Math.min(MAX_HELD_TOKENS, unspent));
+}
+
+/** Active days still needed before the next token. Null once the cap is held. */
+export function daysToNextToken(freezes, byDay = {}) {
+  if (availableTokens(freezes, byDay) >= MAX_HELD_TOKENS) return null;
+  const active = activeDayCount(byDay);
+  return DAYS_PER_TOKEN - (active % DAYS_PER_TOKEN);
 }
 
 // Compose a frozen-day override onto an optional base predicate, ready to hand

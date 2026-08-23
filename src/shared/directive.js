@@ -43,8 +43,8 @@ export function buildDirective(deps = {}) {
   if (atRisk) {
     const st = currentStreak(atRisk);
     c.push({ score: 70 + Math.min(st, 120) / 4, key: "risk", icon: "🔥", tone: "urgent", nav: "habits",
-      headline: `Protect the ${st}-day ${atRisk.name} streak.`,
-      why: "Scheduled today and still unchecked — one rep keeps it alive." });
+      headline: `One rep on ${atRisk.name} today.`,
+      why: `Scheduled today and still open. ${st} days running so far.` });
   }
 
   // 3. Trade-checklist discipline (cross-domain) — look at the recent window.
@@ -87,8 +87,8 @@ export function buildDirective(deps = {}) {
     const behind = expected - doneThisWeek;
     if (behind >= 2) {
       c.push({ score: 62 + behind * 4, key: "pace", icon: "🏋️", tone: "info", nav: "gym:today",
-        headline: `You're ${behind} workout${behind > 1 ? "s" : ""} behind this week's plan.`,
-        why: "Catch one back today before the gap sets the tone for the week." });
+        headline: `${behind} workout${behind > 1 ? "s" : ""} left in this week's plan.`,
+        why: "One today puts you back on pace." });
     }
   }
 
@@ -112,7 +112,7 @@ export function buildDirective(deps = {}) {
     if (closedThisMonth > 0 && !reviewedMonth) {
       c.push({ score: 55, key: "monthclose", icon: "🏛️", tone: "info", nav: "firm:doctrine",
         headline: `Close the month clean — ${daysLeft === 0 ? "today's the last day" : `${daysLeft} day${daysLeft > 1 ? "s" : ""} left`}.`,
-        why: "A withdrawal and a breach-free monthly review keep your scaling gate alive." });
+        why: "A withdrawal and a breach-free monthly review clear this month's gate." });
     }
   }
 

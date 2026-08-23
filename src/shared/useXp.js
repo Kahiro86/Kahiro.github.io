@@ -161,6 +161,7 @@ export function useXp() {
     level: ledger.level,
     title: ledger.rank.l,
     rank: ledger.rank,
+    nextRank: ledger.nextRank,
     nextLevelXp: ledger.nextLevelXp,
     toNext: ledger.toNext,
     xpIntoLevel: ledger.xpIntoLevel,

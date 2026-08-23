@@ -109,7 +109,7 @@ export function WeeklyReview({ habits, onClose }) {
                 </span>
               ))}
               {review.kept.length === 0 && review.slipped.length === 0 && (
-                <span style={{ fontSize: 12, color: T3 }}>Steady week — nothing perfect, nothing badly slipped.</span>
+                <span style={{ fontSize: 12, color: T3 }}>Steady week — nothing at 100%, nothing near zero.</span>
               )}
             </div>
           </Section>
@@ -151,7 +151,7 @@ export function WeeklyReview({ habits, onClose }) {
         <Section label="One focus for the week ahead">
           {review.weakest && (
             <div style={{ fontSize: 11.5, color: T3, marginBottom: 9 }}>
-              Weakest area lately: <span style={{ color: AM, fontWeight: 700 }}>{review.weakest.cat}</span> ({review.weakest.pct}% over 30 days).
+              Lowest coverage lately: <span style={{ color: AM, fontWeight: 700 }}>{review.weakest.cat}</span> ({review.weakest.pct}% over 30 days).
             </div>
           )}
           {saved ? (

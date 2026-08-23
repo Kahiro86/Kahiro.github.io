@@ -192,3 +192,10 @@ export const RANKS = [
 
 export const rankFor = (level) =>
   [...RANKS].reverse().find((r) => level >= r.at) || RANKS[0];
+
+/** The next rank not yet held, and the XP still needed to reach it. */
+export function nextRankFor(level, totalXp) {
+  const next = RANKS.find((r) => r.at > level);
+  if (!next) return null;
+  return { ...next, atXp: xpForLevel(next.at), toGo: Math.max(0, xpForLevel(next.at) - Math.max(0, totalXp || 0)) };
+}

@@ -26,7 +26,7 @@ export function buildNudges(deps) {
   const atRisk = habits.filter((h) => isScheduled(h, ds) && !isDone(h, ds) && !isSkipped(h, ds) && currentStreak(h) >= 7);
   for (const h of atRisk.slice(0, 2)) {
     out.push({ id: `risk_${h.id}`, icon: "🔥", tone: "urgent", nav: "habits",
-      text: `${h.name}'s ${currentStreak(h)}-day streak is on the line today.` });
+      text: `${h.name} is scheduled today — ${currentStreak(h)} days running so far.` });
   }
 
   // 3. Repeated misses: scheduled ≥4 of the last 7 days, done ≤1 — shrink it.
@@ -34,7 +34,7 @@ export function buildNudges(deps) {
     const s = rangeStats(h, 7);
     if (s.scheduled >= 4 && s.done <= 1 && !isDone(h, ds)) {
       out.push({ id: `miss_${h.id}`, icon: "🌱", tone: "info", nav: "habits",
-        text: `${h.name} slipped this week (${s.done}/${s.scheduled}). Shrink it — the 2-minute version still counts.` });
+        text: `${h.name} landed ${s.done} of ${s.scheduled} this week. Shrink it — the 2-minute version still counts.` });
       break; // one gentle nudge, never a scoreboard
     }
   }
@@ -179,7 +179,7 @@ export function buildNudges(deps) {
     .sort((a, b) => b.gap - a.gap)[0];
   if (stalled && (!almost || stalled.w.id !== almost.id)) {
     out.push({ id: "want_stalled", icon: "🌱", tone: "info", nav: "journey",
-      text: `You haven't added to ${stalled.w.name} in ${Math.floor(stalled.gap / 7)} weeks — even a little keeps it alive.` });
+      text: `${Math.floor(stalled.gap / 7)} weeks since you last added to ${stalled.w.name} — even a little moves it.` });
   }
 
   // One voice, not a chorus. Several rules above all speak to the same

@@ -7,7 +7,8 @@ import { X, Shield, Snowflake } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, GR, BL, RE, AC2 } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
 import { useConsistencyStart } from "./consistency.js";
-import { FREEZE_KEY, sanitizeFreezes, availableTokens, earnedTokens, toggleFreeze, recentDays } from "./streakInsurance.js";
+import { FREEZE_KEY, sanitizeFreezes, availableTokens, earnedTokens, toggleFreeze, recentDays,
+  DAYS_PER_TOKEN, MAX_HELD_TOKENS, daysToNextToken } from "./streakInsurance.js";
 
 const STATE = {
   active: { c: GR, label: "Active" },
@@ -23,6 +24,7 @@ export function StreakInsurance({ onClose, byDay = {} }) {
   const tokens = useMemo(() => availableTokens(freezes, byDay), [freezes, byDay]);
   const earned = useMemo(() => earnedTokens(byDay), [byDay]);
   const spent = sanitizeFreezes(freezes).frozen.length;
+  const toNext = useMemo(() => daysToNextToken(freezes, byDay), [freezes, byDay]);
   const days = useMemo(() => recentDays(byDay, freezes, start, 14), [byDay, freezes, start]);
 
   const toggle = (ds) => setFreezes((prev) => toggleFreeze(prev, byDay, ds));
@@ -55,7 +57,8 @@ export function StreakInsurance({ onClose, byDay = {} }) {
           </div>
 
           <div style={{ fontSize: 11.5, color: T3, lineHeight: 1.5 }}>
-            You earn <strong style={{ color: T2 }}>one freeze token every 7 active days</strong>. Spend a token on a missed day and it counts toward your streak — earned rest, not a lie. You've earned {earned} in total.
+            You earn <strong style={{ color: T2 }}>one token every {DAYS_PER_TOKEN} active days</strong>, and hold at most <strong style={{ color: T2 }}>{MAX_HELD_TOKENS}</strong>. Spend one on a missed day and it counts toward your streak — earned rest, not a lie. {earned} earned so far.{" "}
+            {toNext === null ? `You're holding the maximum ${MAX_HELD_TOKENS}.` : `${toNext} more active ${toNext === 1 ? "day" : "days"} until the next.`}
           </div>
 
           <div>

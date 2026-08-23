@@ -209,6 +209,14 @@ ok("ranks come from the Covenant, not a generic ladder",
 ok("rank 1 is Signatory", V.rankFor(1).l === "Signatory");
 ok("level 8 is Operator, the Firm's own word", V.rankFor(8).l === "Operator");
 
+console.log("\n── 32: distance to the next named rank ──");
+const nr = V.nextRankFor(5, V.xpForLevel(5) + 100);
+console.log(`     at L5 with ${V.xpForLevel(5) + 100} XP → ${nr.toGo} XP to ${nr.l}`);
+ok("the next unheld rank is named", nr && nr.l === "Operator");
+ok("the distance to it is a real number", nr.toGo > 0 && nr.toGo === V.xpForLevel(8) - (V.xpForLevel(5) + 100));
+ok("a maxed-out user gets null rather than a fake target", V.nextRankFor(99, 10 ** 9) === null);
+ok("every rank below the current one is skipped", V.nextRankFor(21, 0).at > 21);
+
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Gate 3 XP engine: ${pass}/${pass + fail} passed`);

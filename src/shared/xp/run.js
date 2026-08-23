@@ -13,7 +13,7 @@ import { difficultyMap } from "./difficulty.js";
 import {
   sanitizeLedger, openLedger, bankDay, bankedTotal, recentByDomain, activeDays,
 } from "./ledger.js";
-import { levelFromXp, rankFor, xpForLevel, BALANCE_WINDOW_DAYS } from "./values.js";
+import { levelFromXp, rankFor, nextRankFor, xpForLevel, BALANCE_WINDOW_DAYS } from "./values.js";
 
 const back = (today, n) => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() - n); return localDateStr(d); };
 
@@ -79,6 +79,7 @@ export function runXp({ deps = {}, ledger = null, derivedTotal = 0, today = loca
     toNext: lvl.toNext,
     nextLevelXp: lvl.nextAt,
     rank: rankFor(lvl.level),
+    nextRank: nextRankFor(lvl.level, total),
     streak: streakFrom(new Set(Object.keys(byDay).filter((d) => byDay[d] > 0)), today),
     difficulty: diff,
     changed: opened.opened || pending.length > 0,
