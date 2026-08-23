@@ -313,8 +313,8 @@ function HallOfFame({ xp }) {
 }
 
 // ── Module shell ─────────────────────────────────────────────────────
-export function JourneyModule({ xpInfo }) {
-  const [tab, setTab] = useState("goals");
+export function JourneyModule({ xpInfo, only } = {}) {
+  const [tab, setTab] = useState(() => (Array.isArray(only) && only.length ? only[0] : "goals"));
   // A palette result deep-links here — land on the record's own inner tab.
   const focus = useFocusRequest();
   useEffect(() => { if (focus?.module === "journey" && focus.tab) setTab(focus.tab); }, [focus?.nonce]); // eslint-disable-line
@@ -353,11 +353,19 @@ export function JourneyModule({ xpInfo }) {
 
   if (!goalsLoaded) return <Hydrating label="Loading your journey…" />;
 
+  // `only` lets a host facet render a subset of these screens under its own
+  // tab bar — the Record facet does exactly that, so Goals / Want List / Hall
+  // of Fame stopped needing a nav entry of their own. With one entry there is
+  // no bar to draw at all.
+  const ALL = [{ id: "goals", l: "Goals", i: Target }, { id: "wants", l: "Want List", i: Gem }, { id: "fame", l: "Hall of Fame", i: Trophy }];
+  const shown = Array.isArray(only) && only.length ? ALL.filter((t) => only.includes(t.id)) : ALL;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <ModuleTabs tint="rgba(10,10,10,0.6)" activeBg={`${JO}26`} activeColor="#FFFFFF"
-        tabs={[{ id: "goals", l: "Goals", i: Target }, { id: "wants", l: "Want List", i: Gem }, { id: "fame", l: "Hall of Fame", i: Trophy }]}
-        active={tab} onSelect={setTab} />
+      {shown.length > 1 && (
+        <ModuleTabs tint="rgba(10,10,10,0.6)" activeBg={`${JO}26`} activeColor="#FFFFFF"
+          tabs={shown} active={tab} onSelect={setTab} />
+      )}
 
       <div style={{ flex: 1, overflowY: "auto" }}>
         {tab === "wants" && <WantListModule />}

@@ -73,7 +73,7 @@ export function buildNudges(deps) {
     return daysBetween(d.date, ds) >= 30;
   });
   if (dueDecisions.length) {
-    out.push({ id: "decisions", icon: "⚖️", tone: "info", nav: "faith:mind",
+    out.push({ id: "decisions", icon: "⚖️", tone: "info", nav: "analytics:library",
       text: `${dueDecisions.length} decision${dueDecisions.length > 1 ? "s" : ""} ready for outcome review — judgment compounds when checked.` });
   }
 
@@ -169,7 +169,7 @@ export function buildNudges(deps) {
   const activeWants = sanitizeWants(deps.wants).filter(isActive);
   const almost = activeWants.filter((w) => pctOf(w) >= 90 && remainingOf(w) > 0).sort((a, b) => pctOf(b) - pctOf(a))[0];
   if (almost) {
-    out.push({ id: "want_almost", icon: "🗝️", tone: "info", nav: "journey",
+    out.push({ id: "want_almost", icon: "🗝️", tone: "info", nav: "analytics:goals",
       text: `Only ${fmtKsh(remainingOf(almost))} left on ${almost.name} — you're at ${Math.round(pctOf(almost))}%.` });
   }
   const stalled = activeWants
@@ -178,7 +178,7 @@ export function buildNudges(deps) {
     .filter((x) => x.gap >= 14)
     .sort((a, b) => b.gap - a.gap)[0];
   if (stalled && (!almost || stalled.w.id !== almost.id)) {
-    out.push({ id: "want_stalled", icon: "🌱", tone: "info", nav: "journey",
+    out.push({ id: "want_stalled", icon: "🌱", tone: "info", nav: "analytics:goals",
       text: `${Math.floor(stalled.gap / 7)} weeks since you last added to ${stalled.w.name} — even a little moves it.` });
   }
 

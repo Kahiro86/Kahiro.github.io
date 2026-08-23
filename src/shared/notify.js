@@ -70,13 +70,15 @@ export const SNOOZES = [
 export const NAV_TARGETS = [
   { id: "", l: "None" }, { id: "habits", l: "Discipline / habit" }, { id: "gym:today", l: "Body / training & fuel" },
   { id: "firm:trading", l: "Trading task" }, { id: "firm:wealth", l: "Finance task" },
-  { id: "faith", l: "Faith" }, { id: "faith:mind", l: "Mind" }, { id: "dashboard", l: "Command Center / goals" },
+  { id: "faith", l: "Faith" }, { id: "analytics:library", l: "Library / Mind" }, { id: "dashboard", l: "Command Center / goals" },
 ];
 
 // Reminders saved before the module merge may still carry a bare legacy id —
 // map those forward so they keep deep-linking correctly instead of silently
 // landing on the dashboard once the old id is gone from NAV_TARGETS.
-const LEGACY_NAV = { trading: "firm:trading", finance: "firm:wealth", athlete: "gym:today", mind: "faith:mind",
+const LEGACY_NAV = { trading: "firm:trading", finance: "firm:wealth", athlete: "gym:today",
+  mind: "analytics:library", "faith:mind": "analytics:library",
+  journey: "analytics:progress", "journey:wants": "analytics:goals",
   life: "habits", "life:athlete": "gym:today", "life:purity": "habits", "life:journal": "habits" };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

@@ -12,7 +12,7 @@ export const PAGES = [
   { id: "page:habits", type: "Page", title: "Habits", subtitle: "Track daily · streaks · scores", nav: "habits", icon: "✓", keywords: "habits habit tracker daily streak score routine consistency check log calendar heatmap" },
   { id: "page:faith", type: "Page", title: "Faith & Mind", subtitle: "Scripture · Reading · Decisions", nav: "faith", icon: "✦" },
   { id: "page:calendar", type: "Page", title: "Calendar", nav: "calendar", icon: "▦" },
-  { id: "page:journey", type: "Page", title: "Journey", subtitle: "Hall of Fame · Want List · Goals", nav: "journey", icon: "◆" },
+  { id: "page:record", type: "Page", title: "The Record", subtitle: "Reports · Progress · Goals · Library", nav: "analytics", icon: "◆" },
   { id: "page:analytics", type: "Page", title: "Analytics", nav: "analytics", icon: "◔" },
   { id: "page:settings", type: "Page", title: "Settings", nav: "settings", icon: "⚙", keywords: "settings preferences backup export import data lock pin sync api key restore download" },
   { id: "page:whoiam", type: "Page", title: "Who I Am", subtitle: "Your five-year identity", nav: "__whoiam__", icon: "❖", keywords: "vision identity purpose why mission" },
@@ -50,7 +50,7 @@ export const DESTINATIONS = [
   { id: "dest:body:fuel", type: "Section", title: "Fuel", nav: "gym:today", icon: "🍽", keywords: "nutrition fuel food meals calories macros protein carbs fat diet eating log training day rest day" },
   { id: "dest:habits:discipline", type: "Section", title: "Journal & Purity", nav: "habits", icon: "✓", keywords: "journal reflection diary purity clean abstinence discipline streak" },
   { id: "dest:faith:faith", type: "Section", title: "Faith", nav: "faith:faith", icon: "✝", keywords: "scripture verses devotional church attendance walk recall prayer" },
-  { id: "dest:faith:mind", type: "Section", title: "Mind", nav: "faith:mind", icon: "📖", keywords: "reading books library decisions notes author momentum" },
+  { id: "dest:record:library", type: "Section", title: "Library", nav: "analytics:library", icon: "📖", keywords: "mind reading books library decisions notes author momentum" },
 ];
 
 // Data sources: which store, how to label it, where it lives, and the fields
@@ -58,16 +58,16 @@ export const DESTINATIONS = [
 export const SOURCES = [
   { key: "journal_entries", type: "Journal", icon: "✎", nav: "habits", fields: ["text"], date: "date", deep: { nav: "habits", module: "habits" } },
   { key: "nutrition_foods", type: "Food", icon: "🍽", nav: "gym:today", fields: ["name"] },
-  { key: "wants", type: "Want", icon: "✦", nav: "journey", fields: ["name", "note"], deep: { nav: "journey", module: "journey", tab: "wants" } },
-  { key: "goals", type: "Goal", icon: "◆", nav: "journey", fields: ["title", "name", "text"], deep: { nav: "journey", module: "journey", tab: "goals" } },
+  { key: "wants", type: "Want", icon: "✦", nav: "analytics:goals", fields: ["name", "note"], deep: { nav: "analytics:goals", module: "journey", tab: "wants" } },
+  { key: "goals", type: "Goal", icon: "◆", nav: "analytics:goals", fields: ["title", "name", "text"], deep: { nav: "analytics:goals", module: "journey", tab: "goals" } },
   { key: "ict_trades", type: "Trade", icon: "▲", nav: "firm", fields: ["pair", "notes", "note", "setup", "lesson"], date: "date" },
   { key: "ti_trades", type: "Trade", icon: "▲", nav: "firm", fields: ["pair", "notes", "note", "setup", "lesson"], date: "date" },
   { key: "ti_lessons", type: "Lesson", icon: "◈", nav: "firm", fields: ["title", "note", "text"] },
   { key: "faith_scripture", type: "Scripture", icon: "✝", nav: "faith", fields: ["ref", "text"] },
   { key: "faith_notes", type: "Faith note", icon: "✝", nav: "faith", fields: ["ref", "text"], date: "date" },
-  { key: "mind_notes", type: "Note", icon: "✎", nav: "faith", fields: ["text", "title"], date: "date" },
-  { key: "mind_decisions", type: "Decision", icon: "⚖", nav: "faith", fields: ["decision", "expected", "lesson"], date: "date" },
-  { key: "mind_library", type: "Reading", icon: "📖", nav: "faith", fields: ["title", "author"] },
+  { key: "mind_notes", type: "Note", icon: "✎", nav: "analytics:library", fields: ["text", "title"], date: "date" },
+  { key: "mind_decisions", type: "Decision", icon: "⚖", nav: "analytics:library", fields: ["decision", "expected", "lesson"], date: "date" },
+  { key: "mind_library", type: "Reading", icon: "📖", nav: "analytics:library", fields: ["title", "author"] },
 ];
 
 const PREFIX = "architect:";

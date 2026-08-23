@@ -472,7 +472,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       sub: incomeToday > 0 ? `+KES ${kesShort(incomeToday)} today` : "net worth", subTone: incomeToday > 0 ? "good" : null,
     },
     {
-      key: "streak", icon: Flame, label: "Streak", nav: "journey",
+      key: "streak", icon: Flame, label: "Streak", nav: "analytics:progress",
       accent: cs.currentStreak > 0 ? "g" : "off",
       value: `${cs.currentStreak}`, unit: "days",
       sub: `best ${cs.longestStreak} days`,
@@ -490,10 +490,10 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       </div>
 
       {/* ── campaign · day N of 365 ── */}
-      <Campaign day={cs.dayInCycle} pct={cs.cycleCompletionPct} phase={phase} remaining={cs.daysRemaining} cycle={cs.cycle} onClick={() => onNavigate("journey")} />
+      <Campaign day={cs.dayInCycle} pct={cs.cycleCompletionPct} phase={phase} remaining={cs.daysRemaining} cycle={cs.cycle} onClick={() => onNavigate("analytics:progress")} />
 
       {/* ── level ── */}
-      <LevelCard level={xp?.level ?? 1} title={xp?.title ?? "Signatory"} xp={xp?.total ?? 0} nextXp={xp?.nextLevelXp ?? 100} pct={xp?.pctToNext ?? 0} toNext={xpToNext} nextRank={xp?.nextRank} onClick={() => onNavigate("journey")} />
+      <LevelCard level={xp?.level ?? 1} title={xp?.title ?? "Signatory"} xp={xp?.total ?? 0} nextXp={xp?.nextLevelXp ?? 100} pct={xp?.pctToNext ?? 0} toNext={xpToNext} nextRank={xp?.nextRank} onClick={() => onNavigate("analytics:progress")} />
 
       {/* ── this week's focus (self-hides when none set) ── */}
       <FocusToday />
@@ -650,7 +650,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       </Card>
 
       {/* ── 🏆 PROGRESSION ── */}
-      <StatCard onClick={() => onNavigate("journey")}>
+      <StatCard onClick={() => onNavigate("analytics:progress")}>
         <SectionLabel icon={<Trophy size={12} color={AC} />}>Progression</SectionLabel>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
           <span style={{ fontSize: 30, ...big }}>Level {xp?.level ?? 1}</span>

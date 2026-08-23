@@ -33,14 +33,15 @@ const EXE = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // Trading/Finance live inside "firm" (Trading/Wealth/HQ groups); Nutrition
 // lives inside "gym" (Body: Today/Trends/Coach/History) since the Gate 2
 // merge; Purity and Journal live inside "habits" (Discipline) since Gate 1;
-// Mind lives inside "faith" — see SUBTABS_MAP for how each gets exercised.
+// Journey and Mind live inside "analytics" (The Record) since the Phase 3
+// merge — see SUBTABS_MAP for how each gets exercised.
 const MODULES = [
   ["dashboard", "Command Center"], ["firm", "The Firm"], ["habits", "Habits"], ["gym", "Body"],
-  ["faith", "Faith & Mind"], ["calendar", "Calendar"], ["journey", "Journey"], ["analytics", "Analytics"],
+  ["faith", "Faith"], ["calendar", "Calendar"], ["analytics", "The Record"],
 ];
 
-// Per-module sub-tab labels to click through. A merged module (firm/
-// faith) uses a grouped shape — click the outer group pill first, then each
+// Per-module sub-tab labels to click through. A merged module (firm)
+// uses a grouped shape — click the outer group pill first, then each
 // of that group's own inner tabs; an unmerged module keeps the old flat
 // array (click each label directly).
 const SUBTABS_MAP = {
@@ -50,12 +51,8 @@ const SUBTABS_MAP = {
     { group: "HQ", subtabs: ["Vault", "Gate", "Campaign", "Contingency", "Covenant", "Fleet"] },
   ],
   gym: ["Today", "Trends", "Coach", "History"],
-  faith: [
-    { group: "Faith", subtabs: ["Scripture & Notes", "The Walk"] },
-    { group: "Mind", subtabs: ["Library", "Notes", "Decision Journal"] },
-  ],
-  analytics: ["Trends", "Progression", "Reports"],
-  journey: ["Hall of Fame", "Want List", "Goals"],
+  faith: ["Scripture & Notes", "The Walk"],
+  analytics: ["Reports", "Trends", "Progress", "Effort", "Goals", "Library"],
 };
 
 // Data scenarios: each seeds localStorage BEFORE the app boots.

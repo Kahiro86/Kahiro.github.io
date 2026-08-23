@@ -18,8 +18,7 @@ export const NAV = [
   { id: "firm",      label: "The Firm",     icon: Building2,   section: "Facets" },
   { id: "habits",    label: "Habits",       icon: CircleCheckBig, section: "Facets" },
   { id: "gym",       label: "Body",         icon: Dumbbell,    section: "Facets" },
-  { id: "faith",     label: "Faith & Mind", icon: Church,      section: "Facets" },
+  { id: "faith",     label: "Faith",        icon: Church,      section: "Facets" },
   { id: "calendar",  label: "Calendar",     icon: CalendarDays, section: "Facets" },
-  { id: "journey",   label: "Journey",      icon: Trophy,      section: "Facets" },
-  { id: "analytics", label: "Analytics",    icon: BarChart3,   section: "Facets" },
+  { id: "analytics", label: "The Record",   icon: BarChart3,   section: "Facets" },
 ];

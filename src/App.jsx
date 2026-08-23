@@ -28,7 +28,6 @@ import { HABITS_DEF } from "./modules/dashboard/domains.js";
 const Dashboard = lazy(() => import("./modules/dashboard/Dashboard.jsx").then((m) => ({ default: m.Dashboard })));
 const FaithOS = lazy(() => import("./modules/faith/FaithOS.jsx").then((m) => ({ default: m.FaithOS })));
 const AnalyticsOS = lazy(() => import("./modules/analytics/AnalyticsOS.jsx").then((m) => ({ default: m.AnalyticsOS })));
-const JourneyModule = lazy(() => import("./modules/journey/JourneyModule.jsx").then((m) => ({ default: m.JourneyModule })));
 const FirmOS = lazy(() => import("./modules/firm/FirmOS.jsx").then((m) => ({ default: m.FirmOS })));
 const CalendarModule = lazy(() => import("./modules/calendar/CalendarModule.jsx").then((m) => ({ default: m.CalendarModule })));
 const BodyOS = lazy(() => import("./modules/gym/BodyOS.jsx").then((m) => ({ default: m.BodyOS })));
@@ -128,6 +127,10 @@ export default function App() {
     "life:purity": "habits", "life:journal": "habits",
     athlete: "gym:today", nutrition: "gym:today",
     "gym:workout": "gym:today", "gym:progress": "gym:trends",
+    // The Record absorbed Journey, and Mind moved in as Library.
+    journey: "analytics:progress", "journey:goals": "analytics:goals",
+    "journey:wants": "analytics:goals", "journey:fame": "analytics:progress",
+    "faith:mind": "analytics:library", mind: "analytics:library",
   };
   const navTo = useCallback((id) => {
     if (id === "settings") return setShowSettings(true);
@@ -281,12 +284,11 @@ export default function App() {
     switch (module) {
       case "dashboard": return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
       case "firm": return <FirmOS navHint={navHint?.module === "firm" ? navHint : null} />;
-      case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} navHint={navHint?.module === "faith" ? navHint : null} />;
+      case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
       case "gym": return <BodyOS navHint={navHint?.module === "gym" ? navHint : null} />;
       case "habits": return <HabitsOS />;
       case "calendar": return <CalendarModule habits={habitsAll} onNavigate={navTo} />;
-      case "journey": return <JourneyModule xpInfo={xpInfo} />;
-      case "analytics": return <AnalyticsOS habits={habitsAll} onNavigate={navTo} />;
+      case "analytics": return <AnalyticsOS habits={habitsAll} onNavigate={navTo} xpInfo={xpInfo} navHint={navHint?.module === "analytics" ? navHint : null} />;
       default: return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
     }
   };
