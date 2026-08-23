@@ -34,8 +34,10 @@ function collect(deps, offsetDays, days) {
   const nDays = Object.keys(nlog).filter((d) => inWindow(d, start, end));
   const nKcal = nDays.map((d) => dayTotals(nlog[d]).kcal);
 
+  const habitStats = completionRate(habits, start, end);
+
   return {
-    habitPct: habitPct(habits, start, end),
+    habitPct: habitStats.pct,
     perfect: perfectDays(habits, offsetDays + days).filter((d) => inWindow(d, start, end)).length,
     journal: j.length,
     trades: cl.length,
@@ -51,6 +53,15 @@ function collect(deps, offsetDays, days) {
     decisionsLogged: decisions.length,
     nutriDays: nDays.length,
     nutriKcal: nKcal.length ? Math.round(nKcal.reduce((s, v) => s + v, 0) / nKcal.length) : null,
+    // Coverage for every average above (criterion 27). An average over 6 of 30
+    // days is a sketch; presenting it without saying so states it as fact.
+    coverage: {
+      days,
+      nutriKcal: { of: nDays.length, out: days },
+      adherence: { of: withCl.length, out: cl.length },
+      wr: { of: cl.length, out: cl.length },
+      habitPct: { of: habitStats.scheduled, out: habitStats.scheduled + habitStats.skipped },
+    },
   };
 }
 

@@ -106,6 +106,24 @@ ok("both stores see the same clean days", habitSide.completions.length === clean
 ok("and the same relapse", !habitSide.completions.some((c) => c.d === back(8)));
 ok("the purity streak matches the mirrored habit run", pStats.current === cleanDays.length);
 
+console.log("\n── 27: every average discloses its coverage ──");
+const anSrc = read("src/modules/analytics/AnalyticsOS.jsx");
+ok("a Coverage element exists", /function Coverage\(/.test(anSrc));
+ok("it says how many of how many", /from \{of\} of \{out\}/.test(anSrc));
+ok("thin coverage is called out, not just shown", /too thin to trust/.test(anSrc));
+ok("complete coverage discloses nothing (no noise)", /if \(of >= out\) return null/.test(anSrc));
+ok("the calorie average carries coverage", /coverage=\{cur\.coverage\?\.nutriKcal\}/.test(anSrc));
+ok("the adherence average carries coverage", /coverage=\{cur\.coverage\?\.adherence\}/.test(anSrc));
+ok("analytics computes coverage for its averages", /coverage: \{/.test(read("src/shared/analytics.js")));
+
+console.log("\n── 30: no report presents an under-target as an achievement ──");
+ok("target-relative quantities can be rendered neutrally", /neutral = false/.test(anSrc));
+ok("calorie intake is one of them", /neutral coverage=\{cur\.coverage\?\.nutriKcal\}/.test(anSrc));
+ok("and the reason is on the record", /present eating less than planned as an achievement/.test(anSrc));
+// The Coach already refuses this; re-checked here so the rule holds app-wide.
+const coach = read("src/modules/athlete/bodyCoach.js");
+ok("the Coach still frames under-eating as a question", /opposite fixes/.test(coach));
+
 console.log("\n── one level curve, one XP definition ──");
 const he = stripComments(read("src/shared/habitEngine.js"));
 ok("habitEngine defines no XP", !/export function xpOf|export const levelOf|export const xpForLevel/.test(he));

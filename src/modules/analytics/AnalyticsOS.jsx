@@ -26,25 +26,47 @@ const PERIODS = [
   { id: 365, l: "Year" },
 ];
 
-function Delta({ cur, prev, goodWhenUp = true, fmt = (v) => v }) {
+// `neutral` for quantities that are only meaningful against a target, not as
+// a direction. Calorie intake is the clear case: colouring a drop green would
+// present eating less than planned as an achievement, and colouring a rise
+// green would do the same for overeating. The number moves; it is not a score
+// (criterion 30).
+function Delta({ cur, prev, goodWhenUp = true, neutral = false, fmt = (v) => v }) {
   if (cur == null) return <span style={{ fontSize: 10.5, color: T3 }}>no data</span>;
   if (prev == null || prev === 0) return <span style={{ fontSize: 10.5, color: T3 }}>new</span>;
   const d = cur - prev;
   if (d === 0) return <span style={{ fontSize: 10.5, color: T3 }}>· steady</span>;
   const good = goodWhenUp ? d > 0 : d < 0;
   return (
-    <span style={{ fontSize: 10.5, fontWeight: 700, color: good ? GR : RE }}>
+    <span style={{ fontSize: 10.5, fontWeight: 700, color: neutral ? T2 : good ? GR : RE }}>
       {d > 0 ? "▲" : "▼"} {fmt(Math.abs(d))} vs prior
     </span>
   );
 }
 
-function Metric({ label, value, cur, prev, color = AN, goodWhenUp = true, fmt = (v) => v }) {
+// `coverage` = { of, out }: how many of the period's days or records actually
+// carried data. An average is only as good as what it averaged, so a thin one
+// says so rather than presenting itself as fact (criterion 27).
+function Coverage({ coverage }) {
+  if (!coverage || !coverage.out) return null;
+  const { of, out } = coverage;
+  if (of >= out) return null;                    // complete — nothing to disclose
+  const pct = Math.round((of / out) * 100);
+  const thin = pct < 60;
+  return (
+    <div style={{ fontSize: 9.5, color: thin ? AM : T3, marginTop: 4, lineHeight: 1.4 }}>
+      from {of} of {out}{thin ? " — too thin to trust" : ""}
+    </div>
+  );
+}
+
+function Metric({ label, value, cur, prev, color = AN, goodWhenUp = true, neutral = false, fmt = (v) => v, coverage }) {
   return (
     <div style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 11, padding: "12px 14px" }}>
       <div style={{ fontSize: 9.5, color: T3, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: 19, fontWeight: 800, color, fontFamily: "monospace", marginBottom: 4 }}>{value}</div>
-      <Delta cur={cur} prev={prev} goodWhenUp={goodWhenUp} fmt={fmt} />
+      <Delta cur={cur} prev={prev} goodWhenUp={goodWhenUp} neutral={neutral} fmt={fmt} />
+      <Coverage coverage={coverage} />
     </div>
   );
 }
@@ -156,7 +178,7 @@ export function AnalyticsOS({ habits, onNavigate }) {
                 <Metric label="Closed trades" value={cur.trades} cur={cur.trades} prev={prev.trades} color={CY} />
                 <Metric label="Win rate" value={cur.wr == null ? "—" : `${cur.wr}%`} cur={cur.wr} prev={prev.wr} color={CY} fmt={(v) => `${v}pt`} />
                 <Metric label="P&L" value={cur.trades ? usd(cur.pnl) : "—"} cur={cur.trades ? cur.pnl : null} prev={prev.trades ? prev.pnl : null} color={cur.pnl >= 0 ? GR : RE} fmt={(v) => `$${Math.round(v).toLocaleString()}`} />
-                <Metric label="Checklist adherence" value={cur.adherence == null ? "—" : `${cur.adherence}%`} cur={cur.adherence} prev={prev.adherence} color={PU} fmt={(v) => `${v}pt`} />
+                <Metric label="Checklist adherence" value={cur.adherence == null ? "—" : `${cur.adherence}%`} cur={cur.adherence} prev={prev.adherence} color={PU} fmt={(v) => `${v}pt`} coverage={cur.coverage?.adherence} />
               </div>
             </div>
 
@@ -167,7 +189,7 @@ export function AnalyticsOS({ habits, onNavigate }) {
                 <Metric label="Volume lifted" value={cur.volume ? `${cur.volume.toLocaleString()}kg` : "—"} cur={cur.volume || null} prev={prev.volume || null} color={PU} fmt={(v) => `${Math.round(v).toLocaleString()}kg`} />
                 <Metric label="Cardio minutes" value={cur.cardioMin || "—"} cur={cur.cardioMin || null} prev={prev.cardioMin || null} color={CY} fmt={(v) => `${v}m`} />
                 <Metric label="Nutrition days" value={cur.nutriDays || "—"} cur={cur.nutriDays || null} prev={prev.nutriDays || null} color={GR} />
-                <Metric label="Avg calories" value={cur.nutriKcal == null ? "—" : cur.nutriKcal.toLocaleString()} cur={cur.nutriKcal} prev={prev.nutriKcal} color={AM} fmt={(v) => `${Math.round(v)}`} />
+                <Metric label="Avg calories" value={cur.nutriKcal == null ? "—" : cur.nutriKcal.toLocaleString()} cur={cur.nutriKcal} prev={prev.nutriKcal} color={AM} fmt={(v) => `${Math.round(v)}`} neutral coverage={cur.coverage?.nutriKcal} />
               </div>
             </div>
 
