@@ -55,7 +55,7 @@ export function BodyCoachPanel({ sessions }) {
 
       {c.notes.length > 0 && (
         <Card style={{ padding: "16px 18px" }}>
-          <SH>What actually happened</SH>
+          <SH title="What actually happened" />
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 11 }}>
             {c.notes.map((n) => (
               <div key={n.k} style={{ display: "flex", gap: 9, fontSize: 12.5, color: T2, lineHeight: 1.6 }}>

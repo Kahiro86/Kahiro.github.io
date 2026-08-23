@@ -81,7 +81,7 @@ export function BodyTrends({ sessions }) {
       </div>
 
       <Card style={{ padding: "16px 18px" }}>
-        <SH>One timeline</SH>
+        <SH title="One timeline" />
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
           {SERIES.filter((s) => can[s.k]).map((s) => {
             const points = timeline.map((b) => ({ v: b[s.k] }));
@@ -110,7 +110,7 @@ export function BodyTrends({ sessions }) {
 
       {/* Weeks are only comparable when they carry comparable data — say so. */}
       <Card style={{ padding: "14px 16px" }}>
-        <SH>Coverage by week</SH>
+        <SH title="Coverage by week" />
         <div style={{ display: "flex", gap: 4, marginTop: 10, alignItems: "flex-end" }}>
           {timeline.map((b) => (
             <div key={b.end} title={`${b.label} · ${b.loggedDays}/7 days logged · ${b.sessions} sessions`} style={{ flex: 1 }}>

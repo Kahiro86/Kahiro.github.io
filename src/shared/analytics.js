@@ -6,26 +6,18 @@
 //                               relationships worth knowing about.
 // Trends over isolated numbers; honest "needs more data" under small n.
 import { daysAgoStr, localDateStr } from "./dates.js";
-import { isScheduled, isDone, valueOn, isWellness, perfectDays } from "./habitEngine.js";
+import { isScheduled, isDone, valueOn, isWellness, perfectDays, completionRate } from "./habitEngine.js";
 import { calcPnl } from "../modules/trading/helpers.js";
 import { sanitizeNutrition, dayTotals } from "../modules/athlete/nutrition.js";
 
 const inWindow = (ds, start, end) => ds && ds >= start && ds <= end;
 const win = (offsetDays, days) => ({ start: daysAgoStr(offsetDays + days - 1), end: daysAgoStr(offsetDays) });
 
-function habitPct(habits, start, end) {
-  let sched = 0, done = 0;
-  for (let d = new Date(`${start}T12:00:00`); ; d.setDate(d.getDate() + 1)) {
-    const ds = localDateStr(d);
-    if (ds > end) break;
-    for (const h of habits) {
-      if (!isScheduled(h, ds)) continue;
-      sched++;
-      if (isDone(h, ds)) done++;
-    }
-  }
-  return sched ? Math.floor((done / sched) * 100) : null;
-}
+// Completion rate comes from the domain engine, not from a copy here. The
+// copy this replaces disagreed with the engine — it counted skipped days as
+// misses and counted days before a habit existed — so the same week could
+// read differently depending on which screen you were on (criterion 23).
+const habitPct = (habits, start, end) => completionRate(habits, start, end).pct;
 
 function collect(deps, offsetDays, days) {
   const { start, end } = win(offsetDays, days);

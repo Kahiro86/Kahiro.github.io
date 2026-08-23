@@ -176,6 +176,38 @@ export function rangeStats(h, daysBack) {
   return { scheduled, done, skipped, pct: scheduled ? Math.floor((done / scheduled) * 100) : 0 };
 }
 
+/**
+ * Completion rate across an explicit date range, for a set of habits.
+ *
+ * THE definition of completion rate for the legacy `habits` store. Analytics
+ * had its own copy that disagreed with this one in two ways: it counted a
+ * streak-safe skipped day as a miss, and it counted days before a habit
+ * existed as scheduled-and-missed. Both made a period look worse than it was.
+ *
+ * Returns null — never 0 — when nothing was scheduled in the range. A period
+ * that predates every habit has no rate, and 0% is a different claim.
+ */
+export function completionRate(habits, start, end) {
+  const list = Array.isArray(habits) ? habits.filter(Boolean) : [];
+  let scheduled = 0, done = 0, skipped = 0;
+  for (const h of list) {
+    const created = h.createdAt || "0";
+    for (let d = new Date(`${start}T12:00:00`); ; d.setDate(d.getDate() + 1)) {
+      const ds = localDateStr(d);
+      if (ds > end) break;
+      if (ds < created) continue;          // it did not exist; it cannot have been missed
+      if (!isScheduled(h, ds)) continue;
+      if (isSkipped(h, ds)) { skipped++; continue; }  // streak-safe, not a miss
+      scheduled++;
+      if (isDone(h, ds)) done++;
+    }
+  }
+  return {
+    scheduled, done, skipped,
+    pct: scheduled ? Math.floor((done / scheduled) * 100) : null,
+  };
+}
+
 export const totalCompletions = (h) =>
   Object.entries(h.log || {}).filter(([, e]) => (e?.v || 0) >= (h.target || 1)).length;
 
@@ -227,34 +259,13 @@ export function perfectDays(habits, daysBack = 365) {
   return days;
 }
 
-// ── Gamification: XP earned only from real completions ──────────────
-export function xpOf(habits) {
-  habits = Array.isArray(habits) ? habits : [];
-  const completions = habits.reduce((s, h) => s + totalCompletions(h), 0);
-  const perfect = perfectDays(habits).length;
-  const streakBonus = habits.reduce((s, h) => s + Math.min(currentStreak(h), 100), 0);
-  return completions * 10 + perfect * 25 + streakBonus * 2;
-}
-export const levelOf = (xp) => Math.floor(Math.sqrt(xp / 50)) + 1;
-export const xpForLevel = (lvl) => (lvl - 1) * (lvl - 1) * 50;
+// XP, levels and badges used to live here — a third parallel definition
+// alongside xpEngine's and the gym module's. Since Gate 3 exactly one thing
+// prices an action and one curve defines a level: src/shared/xp/values.js.
+// These had no callers left; they are deleted rather than kept "just in case",
+// because a spare XP formula in a habits file is precisely how the three
+// disagreeing curves happened in the first place.
 
-export function badges(habits, lvl = null) {
-  habits = Array.isArray(habits) ? habits : [];
-  const completions = habits.reduce((s, h) => s + totalCompletions(h), 0);
-  const bestStreak = habits.reduce((m, h) => Math.max(m, longestStreak(h)), 0);
-  const perfect = perfectDays(habits).length;
-  if (lvl == null) lvl = levelOf(xpOf(habits));
-  return [
-    { icon: "🌱", name: "First Rep",     desc: "Complete 1 habit",        got: completions >= 1 },
-    { icon: "🔥", name: "Kaizen Week",   desc: "7-day streak",            got: bestStreak >= 7 },
-    { icon: "⚙️", name: "Iron Month",    desc: "30-day streak",           got: bestStreak >= 30 },
-    { icon: "💯", name: "Century Club",  desc: "100 completions",         got: completions >= 100 },
-    { icon: "⭐", name: "Perfect Day",   desc: "All habits in one day",   got: perfect >= 1 },
-    { icon: "🌟", name: "Perfect Week",  desc: "7 perfect days",          got: perfect >= 7 },
-    { icon: "🚀", name: "Level 5",       desc: "Reach level 5",           got: lvl >= 5 },
-    { icon: "👑", name: "Level 10",      desc: "Reach level 10",          got: lvl >= 10 },
-  ];
-}
 
 // ── Legacy adapter: Dashboard / AI panel / kaizen read this shape ────
 export const toLegacy = (habits) =>

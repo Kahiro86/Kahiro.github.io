@@ -4,7 +4,7 @@
 // behaviour. Trends over isolated numbers.
 import { useMemo, useState } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { BarChart3, GitCompareArrows, Trophy } from "lucide-react";
+import { BarChart3, GitCompareArrows, Trophy, Gauge} from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC } from "../../shared/designTokens.js";
 import { Card, SH, Chip, Meter } from "../../shared/ui.jsx";
 import { mkTT } from "../../shared/ChartTooltip.jsx";
@@ -15,6 +15,7 @@ import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { periodReport, weeklySeries, pearson, rVerdict, checklistVsPnl } from "../../shared/analytics.js";
 import { useXp } from "../../shared/useXp.js";
 import { CAT_LABEL } from "../../shared/xpEngine.js";
+import { EffortLedger } from "./EffortLedger.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 
 const AN = AC; // Nocturne cyan accent (monochrome theme)
@@ -118,7 +119,7 @@ export function AnalyticsOS({ habits, onNavigate }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <ModuleTabs tint="rgba(10,10,10,0.6)" activeBg={`${AN}26`} activeColor="#FFFFFF"
-        tabs={[{ id: "reports", l: "Reports", i: BarChart3 }, { id: "trends", l: "Trends", i: GitCompareArrows }, { id: "xp", l: "Progression", i: Trophy }]}
+        tabs={[{ id: "reports", l: "Reports", i: BarChart3 }, { id: "trends", l: "Trends", i: GitCompareArrows }, { id: "xp", l: "Progression", i: Trophy }, { id: "effort", l: "Effort", i: Gauge }]}
         active={tab} onSelect={setTab}>
         <div style={{ flex: 1 }} />
         {tab === "reports" && (
@@ -219,6 +220,8 @@ export function AnalyticsOS({ habits, onNavigate }) {
             </div>
           </div>
         )}
+
+        {tab === "effort" && <EffortLedger xp={xp} />}
 
         {tab === "xp" && (() => {
           const cats = Object.entries(xp.byCat).filter(([c]) => c !== "awards").sort((a, b) => b[1] - a[1]);
