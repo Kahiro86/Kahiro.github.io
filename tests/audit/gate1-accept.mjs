@@ -44,6 +44,23 @@ ok("all 3 journal days carried", migrated.entries.filter(e=>e.habitId==="sys_jou
 ok("purity_log untouched (12 days still there)", Object.keys(migrated.purity).length===12);
 ok("journal_entries untouched (3 still there)", migrated.journal.length===3);
 
+// Counts alone survive a silent re-key — criterion 3 asks for spot-checks.
+const spotDays = [1,3,5,8,12].map(ago);
+const pOk = spotDays.filter((d)=>{
+  const e = migrated.entries.find((x)=>x.habitId==="sys_purity" && x.date===d);
+  const want = purity[d];
+  return e && ((want.s==="pure" && e.value===1) || (want.s==="relapse" && e.value===0));
+});
+ok(`5 purity days land on their original dates with the right value (${pOk.length}/5)`, pOk.length===5);
+ok("the relapse day is a miss, not a completion",
+   migrated.entries.find((e)=>e.habitId==="sys_purity" && e.date===ago(5))?.value===0);
+ok("purity_log's own rows are byte-identical",
+   JSON.stringify(migrated.purity)===JSON.stringify(purity));
+const jOk = [1,3,6].map(ago).filter((d)=>migrated.entries.some((e)=>e.habitId==="sys_journal" && e.date===d));
+ok(`all 3 journal days land on their original dates (${jOk.length}/3)`, jOk.length===3);
+ok("journal_entries keep their text and title",
+   migrated.journal.every((e)=>journal.some((o)=>o.id===e.id && o.text===e.text && o.title===e.title)));
+
 console.log("\n── criteria 1 & 2: no top-level Purity/Journal tabs ──");
 // Gate 2 retired the Life facet outright, so the check is now that neither
 // Purity nor Journal appears as a top-level destination anywhere in the nav.

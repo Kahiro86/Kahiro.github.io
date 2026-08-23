@@ -98,6 +98,45 @@ ok(`both measurements survive (${kept.meas})`, kept.meas === 2);
 ok(`the one-tap favourite survives (${kept.favs})`, kept.favs === 1);
 ok("the 'Running low' micronutrient callout survived the move", /running low/i.test(bodyTxt));
 
+// Criterion 3 asks for spot-checks, not just counts — a count survives even
+// if every record was silently re-keyed to the wrong day.
+console.log("\n── criterion 3: five records per type, checked individually ──");
+const spot = await page.evaluate(() => ({
+  log: JSON.parse(localStorage.getItem("architect:nutrition_log") || "{}"),
+  sessions: JSON.parse(localStorage.getItem("architect:gym_sessions") || "[]"),
+  meas: JSON.parse(localStorage.getItem("architect:athlete_measurements") || "[]"),
+  foods: JSON.parse(localStorage.getItem("architect:nutrition_foods") || "[]"),
+}));
+const mealDays = [0, 5, 10, 15, 20].map(ago);
+const mealsOk = mealDays.filter((d) => {
+  const got = spot.log[d];
+  const want = nutritionLog[d];
+  return Array.isArray(got) && got.length === want.length
+    && got[0].name === want[0].name && got[0].grams === want[0].grams
+    && got[0].n.kcal === want[0].n.kcal && got[1].name === want[1].name;
+});
+ok(`5 meal days intact on their original dates (${mealsOk.length}/5: ${mealDays.map((d) => d.slice(5)).join(" ")})`, mealsOk.length === 5);
+
+const sessionIds = ["gs0", "gs4", "gs11", "gs18", "gs25"];
+const sessOk = sessionIds.filter((id) => {
+  const got = spot.sessions.find((x) => x.id === id);
+  const want = gymSessions.find((x) => x.id === id);
+  return got && got.date === want.date && got.bodyweightKg === want.bodyweightKg
+    && got.entries[0].sets.length === want.entries[0].sets.length
+    && got.entries[0].sets[2].weightKg === want.entries[0].sets[2].weightKg;
+});
+ok(`5 sessions intact, dates and sets unchanged (${sessOk.length}/5)`, sessOk.length === 5);
+
+ok("both measurements keep their exact date and values",
+   spot.meas.length === 2 && spot.meas.every((m, i) => m.date === measurements[i].date
+     && m.weightKg === measurements[i].weightKg && m.waistCm === measurements[i].waistCm));
+ok("the custom food keeps its name, per-100g values and serving size",
+   spot.foods[0] && spot.foods[0].name === customFoods[0].name
+   && spot.foods[0].per100.kcal === customFoods[0].per100.kcal
+   && spot.foods[0].serving.g === customFoods[0].serving.g);
+ok("no meal day was re-keyed to a date that did not exist before",
+   Object.keys(spot.log).every((d) => Object.prototype.hasOwnProperty.call(nutritionLog, d)));
+
 console.log("\n── Trends: one timeline ──");
 await page.getByRole("button", { name: /^Trends$/ }).first().click(); await page.waitForTimeout(700);
 const trendTxt = await page.locator("body").innerText();
