@@ -17,8 +17,8 @@ const STATE = {
 
 export function StreakInsurance({ onClose, byDay = {} }) {
   const [freezes, setFreezes] = useStorageState(FREEZE_KEY, { frozen: [] });
-  const [logins] = useStorageState("xp_logins", {});
-  const { start } = useConsistencyStart(logins);
+  // byDay is the banked ledger's per-day totals — real activity, not app-opens.
+  const { start } = useConsistencyStart(byDay);
 
   const tokens = useMemo(() => availableTokens(freezes, byDay), [freezes, byDay]);
   const earned = useMemo(() => earnedTokens(byDay), [byDay]);

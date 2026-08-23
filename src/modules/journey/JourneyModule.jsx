@@ -199,7 +199,7 @@ function HallOfFame({ xp }) {
   const [rawHabits] = useStorageState("habits", []);
   const [freezes] = useStorageState("streak_freezes", { frozen: [] });
   const [dayMarks] = useDayMarks();
-  const { start: consistencyStart } = useConsistencyStart(logins);
+  const { start: consistencyStart } = useConsistencyStart(xp.activeDays);
   // Same definition of "a day that counts" as the Command Center — rest/cheat
   // and protected days count.
   const csOpts = useMemo(

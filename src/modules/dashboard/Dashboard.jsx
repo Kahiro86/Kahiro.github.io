@@ -226,7 +226,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [htHabits] = useStorageState("ht_habits", []);
   const [htEntries] = useStorageState("ht_entries", []);
   const [moreOpen, setMoreOpen] = useStorageState("dash_show_more", false);
-  const { start: consistencyStart } = useConsistencyStart(logins);
+  const { start: consistencyStart } = useConsistencyStart(xp?.activeDays);
   const [nowDs, setNowDs] = useState(localDateStr);
 
   useEffect(() => {

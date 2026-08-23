@@ -1,11 +1,11 @@
 // ── Year of Consistency — the app-wide "did you show up" engine ─────
-// A day counts as a "consistency day" when any XP-earning action landed on
-// it anywhere in the app — reusing xpEngine's own per-day XP totals
+// A day counts as a "consistency day" when a real action landed on it
+// anywhere in the app — reusing the ledger's own per-day totals
 // (`xp.byDay`), not a second tracking system. The start date is stamped
-// once, the first time this runs for a user with none recorded yet;
-// existing users bootstrap from their earliest `xp_logins` entry (the
-// closest existing proxy for "first day using the app") so long-time users
-// don't start back at Day 1. The philosophy: progress continues, recovery
+// once, the first time this runs for a user with none recorded yet, from
+// their earliest day of actual activity. It used to bootstrap from the
+// app-open stamp, which quietly made a discipline metric partly a measure
+// of presence. The philosophy: progress continues, recovery
 // matters more than perfection — missing a day never resets the counter,
 // only the current streak, and even that only breaks on a truly skipped
 // day (today itself is always given the benefit of the doubt, same
@@ -13,23 +13,40 @@
 import { useEffect } from "react";
 import { useStorageState } from "./useStorageState.js";
 import { localDateStr, daysBetween, daysAgoStr } from "./dates.js";
-import { sanitizeLogins } from "./xpEngine.js";
 
 export const CONSISTENCY_START_KEY = "year_of_consistency_start";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // One-time-stamped start date. Bootstraps from the earliest known login day
 // for existing users, or today for a brand-new user. Never moves once set.
-export function useConsistencyStart(rawLogins) {
+/**
+ * When the consistency run began.
+ *
+ * This used to be seeded from `xp_logins` — the app-open stamp — which meant a
+ * discipline metric was partly measuring presence. It now starts from the
+ * first day of real activity.
+ *
+ * @param activityDays dates on which something was actually logged. Anything
+ *        iterable of date strings works: a Set, an array, or an object keyed
+ *        by date (the shape `activeDays` and `byDay` both use).
+ *
+ * A start that is already stored is never recomputed. It is a number the user
+ * has been watching climb, and moving it — in either direction — would be
+ * rewriting their history to match a later opinion about how to measure it.
+ */
+export function useConsistencyStart(activityDays) {
   const [raw, setStart, loaded] = useStorageState(CONSISTENCY_START_KEY, null);
   const start = typeof raw === "string" && DATE_RE.test(raw) ? raw : null;
 
   useEffect(() => {
     if (!loaded || start) return;
-    const logins = sanitizeLogins(rawLogins);
-    const earliest = Object.keys(logins).sort()[0];
+    const days = activityDays instanceof Set ? [...activityDays]
+      : Array.isArray(activityDays) ? activityDays
+      : activityDays && typeof activityDays === "object" ? Object.keys(activityDays)
+      : [];
+    const earliest = days.filter((d) => typeof d === "string" && DATE_RE.test(d)).sort()[0];
     setStart(earliest || localDateStr());
-  }, [loaded, start, rawLogins]);
+  }, [loaded, start, activityDays]);
 
   return { start: start || localDateStr(), loaded };
 }

@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./shared/ErrorBoundary.jsx";
 import { IdentityProvider } from "./shared/identity.jsx";
 import { initSync } from "./shared/sync.js";
 import { runDisciplineMigration } from "./modules/habits/migrateDiscipline.js";
+import { purgeDeadStores } from "./shared/purgeDead.js";
 import { writeStore } from "./shared/useStorageState.js";
 
 // One-time cleanup: the habit tracker was removed, so wipe its stored data.
@@ -23,6 +24,7 @@ try {
 // against what's already there and writes only what's missing, so this is safe
 // on every launch. The source stores are left untouched.
 try { runDisciplineMigration(writeStore); } catch { /* never block boot on a migration */ }
+try { purgeDeadStores(); } catch { /* nor on a cleanup */ }
 
 // Cloud sync engine: no-op until the user connects a Supabase project in
 // Settings → Cloud Sync; from then on every device converges on the same data.

@@ -54,7 +54,11 @@ export function summarizeSession(session, priorSessions, streakWeeks = 0) {
 // One chronological pass over every session: computes each session's summary
 // against the history accumulated up to (not including) it, folding it into
 // that running history — O(total sets), not O(n²). Returns per-session
-// summaries keyed by id, lifetime gym XP, and lifetime per-muscle XP.
+// summaries keyed by id, lifetime training points, and per-muscle totals.
+//
+// These are a training-volume stat local to the Body facet. They are NOT the
+// app's XP: since Gate 3 exactly one thing prices an action (src/shared/xp),
+// and nothing here reaches the shared total or level.
 // streakWeeks stays 0 here (the multiplier is a small late-game bonus not
 // worth an O(n²) recompute for a display value).
 export function computeAllSummaries(sessions) {

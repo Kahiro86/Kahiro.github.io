@@ -128,9 +128,14 @@ export function BodyOS({ navHint } = {}) {
       <ModuleTabs tabs={[{ id: "today", l: "Today", i: Dumbbell }, { id: "trends", l: "Trends", i: Activity }, { id: "coach", l: "Coach", i: MessageCircle }, { id: "history", l: "History", i: Clock }]}
         active={tab} onSelect={setTab} activeBg={`linear-gradient(135deg,${AC}22,${AC}14)`} activeColor={AC}>
         <div style={{ flex: 1 }} />
-        <div title="Lifetime gym level" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: `${AC}11`, border: `1px solid ${AC}22`, borderRadius: 9 }}>
+        {/* A training-volume stat, not a second progression. It counts work
+            done in this facet only and never reaches the app's XP or level —
+            those come from one engine (src/shared/xp). Labelled so the two
+            can't be mistaken for each other. */}
+        <div title="Training volume in this facet only — separate from your XP and level"
+          style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 12px", background: `${AC}11`, border: `1px solid ${AC}22`, borderRadius: 9 }}>
           <Dumbbell size={13} color={AC} />
-          <span style={{ fontSize: 11, fontWeight: 800, color: AC, letterSpacing: 0.5 }}>IRON LVL {lifeLvl.level}</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: AC, letterSpacing: 0.5 }}>TRAINING TIER {lifeLvl.level}</span>
           <Meter pct={Math.round((lifeLvl.xpIntoLevel / Math.max(1, lifeLvl.xpForNext)) * 100)} height={4} fill={`linear-gradient(90deg,${AC}88,${AC2})`} style={{ width: 60 }} />
         </div>
       </ModuleTabs>
@@ -321,7 +326,7 @@ function HistoryScreen({ sessions, byId, onOpen, lifetimeXp }) {
   if (!sessions.length) return <div style={{ padding: 24 }}><Empty icon="📜" title="No workouts yet" sub="Finish your first session and it lands here with its full XP breakdown." /></div>;
   return (
     <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 12, maxWidth: 680, margin: "0 auto" }}>
-      <div style={{ fontSize: 11.5, color: T3 }}>{sessions.length} workout{sessions.length !== 1 ? "s" : ""} · {lifetimeXp.toLocaleString()} lifetime gym XP</div>
+      <div style={{ fontSize: 11.5, color: T3 }}>{sessions.length} workout{sessions.length !== 1 ? "s" : ""} · {lifetimeXp.toLocaleString()} lifetime training points</div>
       {sessions.map((s) => {
         const sum = byId[s.id] || { totalSets: 0, xpTotal: 0, prs: [], totalVolume: 0 };
         return (
@@ -372,7 +377,7 @@ function ProgressScreen({ sessions, byId, muscleTotals, lifetimeXp }) {
 
   return (
     <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16, maxWidth: 680, margin: "0 auto" }}>
-      <div style={{ fontSize: 11.5, color: T3 }}>{lifetimeXp.toLocaleString()} lifetime gym XP · muscles ranked F→S by work done</div>
+      <div style={{ fontSize: 11.5, color: T3 }}>{lifetimeXp.toLocaleString()} lifetime training points · muscles ranked F→S by work done</div>
 
       <Card style={{ padding: "16px" }}>
         <SH title="Muscle radar" sub="Rank reach across the six groups" />

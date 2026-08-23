@@ -27,6 +27,26 @@ const stripComments = (src) => src.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*
 const leaks = gymConsumers.filter((f) => /useXp\(|xp_ledger|LEDGER_KEY|writeStore\(\s*["']xp_/.test(stripComments(read(f))));
 ok(`the gym engine does not write to the shared total${leaks.length ? ` (${leaks.join(", ")})` : ""}`, leaks.length === 0);
 
+ok("the gym stat is labelled as separate from XP and level",
+   /separate from your XP and level/.test(read("src/modules/gym/BodyOS.jsx")));
+ok("no surface calls the gym stat XP", !gymConsumers.some((f) => /gym XP|IRON LVL/.test(read(f))));
+
+console.log("\n── the consistency metric no longer measures presence ──");
+const cons = read("src/shared/consistency.js");
+ok("consistency does not read the app-open stamp", !/sanitizeLogins|xp_logins/.test(stripComments(cons)));
+ok("it starts from real activity", /activityDays/.test(cons));
+ok("and never rewrites a start the user has already seen", /never recomputed/.test(cons));
+for (const f of ["src/modules/dashboard/Dashboard.jsx", "src/modules/journey/JourneyModule.jsx", "src/shared/StreakInsurance.jsx"]) {
+  ok(`${f.split("/").pop()} passes activity, not logins`, !/useConsistencyStart\(logins\)/.test(read(f)));
+}
+
+console.log("\n── retired stores are purged, user content is not ──");
+const purge = read("src/shared/purgeDead.js");
+ok("God Mode config is purged", /mode_cfg/.test(purge) && /mode_history/.test(purge));
+ok("hard-mode nutrition config is purged", /nutrition_hard/.test(purge));
+ok("user-authored content is explicitly spared", /ORPHANED_CONTENT_KEYS/.test(purge) && /life_projects/.test(purge));
+ok("the purge runs once, at boot", /purgeDeadStores\(\)/.test(read("src/main.jsx")) && /DONE_KEY/.test(purge));
+
 console.log("\n── criterion 11: nothing pays for presence ──");
 const engine = read("src/shared/xpEngine.js");
 ok("no login value exists anywhere", !/login:\s*[1-9]/.test(engine));
