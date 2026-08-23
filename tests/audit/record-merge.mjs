@@ -73,6 +73,15 @@ ok("rank is rendered from the Covenant ladder", /Signatory|Floor Holder|Rule Kee
 console.log("\n── the duplicate progression view is gone ──");
 ok("Analytics no longer has its own Progression tab", !/Progression/i.test(recTxt));
 
+console.log("\n── cross-domain findings surface in Trends (§5.2) ──");
+const trendsTxt = await openTab("Trends");
+ok("the cross-domain section renders", /across domains/i.test(trendsTxt));
+ok("it says these need more than one module", /reason the domains sit together/i.test(trendsTxt));
+// The label is uppercased in CSS, so innerText returns "LAW 7".
+ok("findings cite a Law by number", /law \d/i.test(trendsTxt));
+ok("the sleep law is quoted, not just numbered", /Sleep is infrastructure/i.test(trendsTxt));
+ok("each finding shows its evidence", /nights|logged days/i.test(trendsTxt));
+
 console.log("\n── retired deep links still land somewhere real ──");
 const stores = await page.evaluate(() => ({
   goals: JSON.parse(localStorage.getItem("architect:goals") || "[]").length,

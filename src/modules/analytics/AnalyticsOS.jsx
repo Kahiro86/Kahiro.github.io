@@ -16,6 +16,7 @@ import { periodReport, weeklySeries, pearson, rVerdict, checklistVsPnl } from ".
 import { useXp } from "../../shared/useXp.js";
 import { CAT_LABEL } from "../../shared/xpEngine.js";
 import { EffortLedger } from "./EffortLedger.jsx";
+import { CrossInsights } from "./CrossInsights.jsx";
 import { JourneyModule } from "../journey/JourneyModule.jsx";
 import { MindOS } from "../mind/MindOS.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
@@ -236,6 +237,10 @@ export function AnalyticsOS({ habits, onNavigate, xpInfo, navHint }) {
               <div style={{ fontSize: 20, fontWeight: 800, color: T1 }}>Trends & correlations</div>
               <div style={{ fontSize: 12.5, color: T3, marginTop: 2 }}>Ten weekly buckets. Patterns, not verdicts — correlation isn't causation, but it's a place to look.</div>
             </div>
+
+            {/* Cross-domain first: these are the findings no single module
+                could produce, and Law 7 asks for the sleep one prominently. */}
+            <CrossInsights days={days} />
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 16 }}>
               <CorrCard title="Sleep vs Habits" sub="Avg sleep logged (bars) · habit consistency % (line)"
