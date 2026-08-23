@@ -18,46 +18,19 @@ import { sanitizePurity } from "../modules/life/purity.js";
 import { sanitizeReviews } from "../modules/trading/reviews.js";
 import { sanitizeNutrition, dayTotals, nutritionScore, calcTargets } from "../modules/athlete/nutrition.js";
 import { habitFeed } from "../modules/habits/xpFeed.js";
+import { DOMAINS } from "./xp/values.js";
 
-// Internal value table — tune freely for balance; the UI never shows it.
-const V = {
-  habitDone: 10, perfectDay: 25,
-  purityClean: 10, purityHonest: 5,
-  journalDay: 15,
-  // Trading awards nothing (§4.4, excluded by policy). Kept at 0 rather than
-  // deleted so the counters below still run and the journeys keep their data.
-  tradeLogged: 0, tradeChecklist: 0, tradeNotes: 0, tradeShots: 0, tradeEmotions: 0,
-  reviewDaily: 30, reviewWeekly: 50, reviewMonthly: 100,
-  strength: 30, cardio: 25, mobility: 15, recovery: 15, pr: 50, measurement: 10,
-  incomeLog: 10, billPaid: 15,
-  church: 20, verseAdded: 10, verseReview: 8, devotional: 15,
-  mindNote: 5, decisionLogged: 15, decisionReviewed: 25, bookFinished: 100,
-  mission: { day: 5, week: 15, month: 40, quarter: 100, year: 250 },
-  mealDay: 10, proteinHit: 10, healthyDay: 15,
-  reminderDone: 5,
-  goalCheckpoint: 25, goalDone: 150,
-  wantSaveDay: 8, wantDone: 120, wantGift: 60,
-};
+// The value table, the streak ladder and the per-source caps that used to
+// live here are gone. Every number the reward system can pay is in
+// src/shared/xp/values.js, and only src/shared/xp/engine.js may price an
+// action. What remains in this file is activity counting: how many habits
+// were completed, how many workouts logged — the inputs to the journeys and
+// the Hall of Fame, which carry no XP of their own.
 
-// Consistency pays more the longer it runs — applied to habit AND purity runs.
-const STREAK_LADDER = { 3: 15, 7: 35, 14: 60, 21: 80, 30: 120, 60: 200, 90: 300, 180: 500, 365: 1000 };
-
-// Per-day caps stop any single pillar from being farmable.
-const CAPS = { trades: 5, workouts: 3, income: 3, mindNotes: 5, prs: 2, reminders: 10 };
-
-const levelOfXp = (xp) => Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1;
-export const xpForLevel = (lvl) => (lvl - 1) * (lvl - 1) * 100;
-
-export const TITLES = [
-  [40, "Legend"], [30, "Grandmaster"], [25, "Sage"], [20, "Master"], [16, "Veteran"],
-  [12, "Architect"], [8, "Operator"], [5, "Disciplined"], [3, "Apprentice"], [1, "Beginner"],
-];
-const titleOf = (lvl) => (TITLES.find(([l]) => lvl >= l) || TITLES[TITLES.length - 1])[1];
-
-export const CAT_LABEL = {
-  life: "Life", trading: "Trading", fitness: "Fitness", finance: "Finance",
-  faith: "Faith", mind: "Mind", awards: "Achievements",
-};
+// Domain labels for anything rendering the ledger's per-domain split. The
+// source of truth is DOMAINS in xp/values.js; this re-exports it in the shape
+// the existing views already consume, so there is still one definition.
+export const CAT_LABEL = Object.fromEntries(Object.entries(DOMAINS).map(([k, v]) => [k, v.l]));
 
 // ── Hall of Fame — lifelong tiered journeys ──────────────────────────
 // Every pillar is a journey that never ends: each milestone reached
@@ -196,7 +169,11 @@ export function sanitizeLogins(raw) {
 export function computeXp(deps = {}) {
   const today = localDateStr();
   const events = [];
-  const push = (d, xp, c, s) => { if (d && xp) events.push({ d, xp, c, s }); };
+  // `mark` records that a real action happened on a day, in a domain. It
+  // carries NO value: since Gate 3 the ledger is the only thing that prices
+  // anything (criterion 10). What survives here is the activity record the
+  // counters, journeys and the consistency engine read.
+  const mark = (d, c, s) => { if (d) events.push({ d, c, s }); };
   const stats = {
     habitCompletions: 0, perfectCount: 0, journalDays: 0, workoutCount: 0,
     tradeCount: 0, reviewCount: 0, cleanDays: 0, churchCount: 0,
@@ -214,9 +191,9 @@ export function computeXp(deps = {}) {
   // life-domain action for the Year of Consistency engine below.
   {
     const hf = habitFeed(deps.htHabits, deps.htEntries, today);
-    for (const c of hf.completions) { push(c.d, c.xp, "life"); stats.habitCompletions++; }
-    for (const d of hf.perfectDays) { push(d, V.perfectDay, "life"); stats.perfectCount++; }
-    for (const { d, run } of hf.streakHits) if (STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "life", true);
+    for (const c of hf.completions) { mark(c.d, "life"); stats.habitCompletions++; }
+    for (const d of hf.perfectDays) { mark(d, "life"); stats.perfectCount++; }
+    // Streak hits are already marked by the completion that produced them.
     if (hf.bestStreak > stats.bestStreak) stats.bestStreak = hf.bestStreak;
   }
 
@@ -239,16 +216,16 @@ export function computeXp(deps = {}) {
     for (const d of dates) {
       const e = purity[d];
       if (e.s === "pure") {
-        if (!purityMerged) push(d, V.purityClean, "life");
+        if (!purityMerged) mark(d, "life");
         stats.cleanDays++;
         const gap = prev ? daysBetween(prev, d) : null;
         run = prev && gap === 1 ? run + 1 : 1;
-        if (!purityMerged && STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "life", true);
+        // The clean day itself is already marked above.
         if (run > stats.bestStreak) stats.bestStreak = run;
         prev = d;
       } else {
         // a relapse logged with a trigger or reflection is honest data — worth something
-        if ((e.triggers || []).length || e.helped || e.trigger || e.improve) push(d, V.purityHonest, "life");
+        if ((e.triggers || []).length || e.helped || e.trigger || e.improve) mark(d, "life");
         run = 0; prev = null;
       }
     }
@@ -256,22 +233,23 @@ export function computeXp(deps = {}) {
 
   // Life — journal: once per journaled day.
   const jDays = new Set(arr(deps.entries).map((e) => dOf(e.date)).filter(Boolean));
-  if (!journalMerged) for (const d of jDays) push(d, V.journalDay, "life");
+  if (!journalMerged) for (const d of jDays) mark(d, "life");
   stats.journalDays = jDays.size;
 
   // Life — missions completed (day → year weighting).
   for (const m of arr(deps.missions)) {
     const d = dOf(m.completedAt);
-    if (m.done && d && V.mission[m.level]) push(d, V.mission[m.level], "life");
+    if (m.done && d) mark(d, "life");
   }
 
   // Life — daily check-in (auto-stamped once per app-open day). Flagged
   // `login:true` so it still earns its XP, but the Year of Consistency engine
   // can exclude a bare app-open from counting as real activity.
-  // Opening the app pays nothing (criterion 11). The xp_logins stamp survives
-  // only as the consistency streak's start-date record — presence is data, it
-  // is not effort, and it must never be an award path again.
-  for (const d of Object.keys(sanitizeLogins(deps.logins))) events.push({ d, xp: 0, c: "life", login: true });
+  // Opening the app is recorded, never rewarded (criterion 11). The stamp
+  // exists so the consistency streak knows when the user started; it is
+  // explicitly excluded from lifeDays below so presence cannot pass for
+  // effort in any metric downstream.
+  for (const d of Object.keys(sanitizeLogins(deps.logins))) events.push({ d, c: "life", login: true });
 
   // Trading — logged trades (capped/day) + process quality + reviews.
   const perDayTrades = {};
@@ -279,19 +257,13 @@ export function computeXp(deps = {}) {
     const d = dOf(t.date);
     if (!d || t.status !== "CLOSED" || t.archived) continue;
     stats.tradeCount++;
-    if ((perDayTrades[d] = (perDayTrades[d] || 0) + 1) > CAPS.trades) continue;
-    let xp = V.tradeLogged;
-    if (+t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal) xp += V.tradeChecklist;
-    if (t.notes || t.lessons) xp += V.tradeNotes;
-    if (t.screenshots) xp += V.tradeShots;
-    if (t.emotionBefore && t.emotionAfter) xp += V.tradeEmotions;
-    push(d, xp, "trading");
+    mark(d, "trading");
   }
   for (const r of sanitizeReviews(deps.reviews)) {
     const d = dOf(r.createdAt) || (r.kind === "daily" ? dOf(r.period) : null);
     if (!d) continue;
     stats.reviewCount++;
-    push(d, r.kind === "monthly" ? V.reviewMonthly : r.kind === "weekly" ? V.reviewWeekly : V.reviewDaily, "trading");
+    mark(d, "trading");
   }
 
   // Trading Intelligence — the new methodology-agnostic journal (ti_trades).
@@ -304,8 +276,8 @@ export function computeXp(deps = {}) {
     stats.tradeCount += s.tradeCount;
     stats.reviewCount += s.reviewCount;
     for (const [d, { count, reviews }] of Object.entries(s.byDate)) {
-      push(d, Math.min(count, CAPS.trades) * V.tradeLogged, "trading");
-      if (reviews > 0) push(d, V.tradeNotes, "trading");
+      mark(d, "trading");
+      if (reviews > 0) mark(d, "trading");
     }
   }
 
@@ -315,24 +287,20 @@ export function computeXp(deps = {}) {
   for (const w of workouts) {
     const d = w.date.slice(0, 10);
     stats.workoutCount++;
-    if ((perDayWo[d] = (perDayWo[d] || 0) + 1) <= CAPS.workouts) {
-      push(d, V[w.type] || V.mobility, "fitness");
-    }
+    mark(d, "fitness");
     if (w.type === "strength") {
       for (const ex of arr(w.exercises)) {
         if (!ex.name) continue;
         const top = arr(ex.sets).reduce((m, s) => Math.max(m, +s?.weight || 0), 0);
         const prevMax = maxByEx[ex.name] || 0;
-        if (top > prevMax && prevMax > 0 && (perDayPr[d] = (perDayPr[d] || 0) + 1) <= CAPS.prs) {
-          push(d, V.pr, "fitness");
-        }
+        if (top > prevMax && prevMax > 0) mark(d, "fitness");
         if (top > prevMax) maxByEx[ex.name] = top;
       }
     }
   }
   const mDays = new Set(arr(deps.measurements).map((m) => dOf(m.date)).filter(Boolean));
   stats.measureDays = mDays.size;
-  for (const d of mDays) push(d, V.measurement, "fitness");
+  for (const d of mDays) mark(d, "fitness");
   // Progress photos — counted for the journey (unlock bonus does the rewarding).
   stats.photoCount = arr(deps.photos).filter((p) => p && p.id && typeof p.dataUrl === "string").length;
 
@@ -347,12 +315,11 @@ export function computeXp(deps = {}) {
       const t = dayTotals(nlog[d]);
       const score = nutritionScore(t, nTargets);
       stats.mealDays++;
-      push(d, V.mealDay, "fitness");
-      if (t.p >= nTargets.p) push(d, V.proteinHit, "fitness");
+      mark(d, "fitness");
+      if (t.p >= nTargets.p) mark(d, "fitness");
       if (score != null && score >= 70) {
-        push(d, V.healthyDay, "fitness");
+        mark(d, "fitness");
         run = prevD && daysBetween(prevD, d) === 1 ? run + 1 : 1;
-        if (STREAK_LADDER[run]) push(d, STREAK_LADDER[run], "fitness", true);
         if (run > stats.healthyBest) stats.healthyBest = run;
         prevD = d;
       } else { run = 0; prevD = null; }
@@ -367,7 +334,7 @@ export function computeXp(deps = {}) {
     for (const e of Array.isArray(deps.notifLog) ? deps.notifLog : []) {
       if (!e || e.state !== "done" || !e.remId || !Number.isFinite(+e.doneAt)) continue;
       const d = localDateStr(new Date(+e.doneAt));
-      if ((perDayRem[d] = (perDayRem[d] || 0) + 1) <= CAPS.reminders) push(d, V.reminderDone, NCAT[e.cat] || "life");
+      mark(d, NCAT[e.cat] || "life");
     }
   }
 
@@ -377,25 +344,25 @@ export function computeXp(deps = {}) {
     const d = dOf(e.date);
     if (!d) continue;
     stats.incomeLogs++;
-    if ((perDayInc[d] = (perDayInc[d] || 0) + 1) <= CAPS.income) push(d, V.incomeLog, "finance");
+    mark(d, "finance");
   }
   for (const b of arr(deps.finance?.bills)) {
     // only the latest paid month is stored per bill — award that one, mid-month
     if (typeof b.lastPaidMonth === "string" && /^\d{4}-\d{2}$/.test(b.lastPaidMonth)) {
-      push(`${b.lastPaidMonth}-15`, V.billPaid, "finance");
+      mark(`${b.lastPaidMonth}-15`, "finance");
     }
   }
 
   // Faith — church, scripture memory, devotional notes.
-  for (const d of arr(deps.church).map(dOf).filter(Boolean)) { push(d, V.church, "faith"); stats.churchCount++; }
+  for (const d of arr(deps.church).map(dOf).filter(Boolean)) { mark(d, "faith"); stats.churchCount++; }
   for (const v of arr(deps.verses)) {
     const added = dOf(v.addedAt);
-    if (added) { push(added, V.verseAdded, "faith"); stats.versesAdded++; }
+    if (added) { mark(added, "faith"); stats.versesAdded++; }
     // review counts carry no per-review dates — attribute them to the last review day
     const n = Math.min(+v.reviews || 0, 200);
-    if (n > 0) push(dOf(v.lastReviewed) || added, n * V.verseReview, "faith");
+    if (n > 0) mark(dOf(v.lastReviewed) || added, "faith");
   }
-  for (const n of arr(deps.faithNotes)) push(dOf(n.date), V.devotional, "faith");
+  for (const n of arr(deps.faithNotes)) mark(dOf(n.date), "faith");
 
   // Mind — notes (capped/day), decisions, reviewed decisions, finished books.
   const perDayNote = {};
@@ -403,15 +370,15 @@ export function computeXp(deps = {}) {
     const d = dOf(n.date);
     if (!d) continue;
     stats.mindNotesCount++;
-    if ((perDayNote[d] = (perDayNote[d] || 0) + 1) <= CAPS.mindNotes) push(d, V.mindNote, "mind");
+    mark(d, "mind");
   }
   for (const dec of arr(deps.decisions)) {
-    push(dOf(dec.date), V.decisionLogged, "mind");
-    if (dOf(dec.reviewedAt)) { push(dOf(dec.reviewedAt), V.decisionReviewed, "mind"); stats.decisionsReviewed++; }
+    mark(dOf(dec.date), "mind");
+    if (dOf(dec.reviewedAt)) { mark(dOf(dec.reviewedAt), "mind"); stats.decisionsReviewed++; }
   }
   for (const b of arr(deps.library)) {
     const d = dOf(b.finishedAt);
-    if (d) { push(d, V.bookFinished, "mind"); stats.booksFinished++; }
+    if (d) { mark(d, "mind"); stats.booksFinished++; }
   }
 
   // Goals — checkpoint and completion stamps are permanent dates written by
@@ -421,8 +388,8 @@ export function computeXp(deps = {}) {
     const AREA_CAT = { fitness: "fitness", health: "fitness", trading: "trading", finance: "finance", faith: "faith", learning: "mind", reading: "mind" };
     for (const g of sanitizeGoals(deps.goals)) {
       const c = AREA_CAT[g.area] || "life";
-      for (const p of CHECKPOINTS) if (g.ms[p]) push(g.ms[p], V.goalCheckpoint, c);
-      if (g.completedAt) { push(g.completedAt, V.goalDone, c); stats.goalsDone++; }
+      for (const p of CHECKPOINTS) if (g.ms[p]) mark(g.ms[p], c);
+      if (g.completedAt) { mark(g.completedAt, c); stats.goalsDone++; }
     }
   }
 
@@ -438,59 +405,33 @@ export function computeXp(deps = {}) {
       for (const c of w.contributions) saveDays.add(c.date);
       stats.wantSaved += savedOf(w);
       if (w.purchasedAt) {
-        push(w.purchasedAt, V.wantDone, "finance");
+        mark(w.purchasedAt, "finance");
         stats.wantsCompleted++;
-        if (w.forWhom === "gift") { push(w.purchasedAt, V.wantGift, "finance"); stats.giftsCompleted++; }
+        if (w.forWhom === "gift") { mark(w.purchasedAt, "finance"); stats.giftsCompleted++; }
       }
     }
-    for (const d of saveDays) push(d, V.wantSaveDay, "finance", true);
+    for (const d of saveDays) mark(d, "finance", true);
     stats.wantStreakBest = bestContribStreak(saveDays);
   }
 
   // Achievements — bonus XP lands on the auto-stamped unlock date.
   const unlocked = sanitizeUnlocked(deps.unlocked);
-  for (const a of ACHIEVEMENTS) if (unlocked[a.id]) push(unlocked[a.id], a.xp, "awards");
+  for (const a of ACHIEVEMENTS) if (unlocked[a.id]) mark(unlocked[a.id], "awards");
 
   // ── Aggregate ───────────────────────────────────────────────────────
-  let total = 0, streakXp = 0;
-  const byDay = {}, byCat = {}, todayByCat = {};
-  // Per-day real-activity sets by domain (login excluded). "Life" = habits,
-  // journal, purity, missions, projects; "fitness" = workouts, nutrition,
-  // measurements. The Year of Consistency engine reads these to require a
-  // genuine action — not a bare app-open — in both domains.
-  const lifeDays = new Set(), fitnessDays = new Set();
+  // Activity only. Per-day real-activity sets by domain (app-opens excluded).
+  // "Life" = habits, journal, purity, missions; "fitness" = workouts,
+  // nutrition, measurements. The Year of Consistency engine reads these to
+  // require a genuine action in both domains — never a bare app-open.
+  const activeDays = {}, lifeDays = new Set(), fitnessDays = new Set();
   for (const e of events) {
-    total += e.xp;
-    byDay[e.d] = (byDay[e.d] || 0) + e.xp;
-    byCat[e.c] = (byCat[e.c] || 0) + e.xp;
-    if (e.d === today) todayByCat[e.c] = (todayByCat[e.c] || 0) + e.xp;
-    if (e.s) streakXp += e.xp;
-    if (e.c === "life" && !e.login) lifeDays.add(e.d);
+    if (e.login) continue; // presence is recorded, never counted as activity
+    (activeDays[e.d] ||= new Set()).add(e.c);
+    if (e.c === "life") lifeDays.add(e.d);
     else if (e.c === "fitness") fitnessDays.add(e.d);
   }
-  // A "consistency day" = real activity in BOTH Life and Athlete that day
-  // (a bare app-open no longer qualifies). Set after aggregation so the
-  // journey milestone matches what the consistency card shows.
+  // A "consistency day" = real activity in BOTH Life and Body that day.
   stats.consistencyDays = [...lifeDays].filter((d) => fitnessDays.has(d)).length;
-
-  // Level straight from earned XP on the normal curve.
-  const level = levelOfXp(total);
-  const prevLevelXp = xpForLevel(level);
-  const nextLevelXp = xpForLevel(level + 1);
-  const sumSince = (since) => {
-    let s = 0;
-    for (const [d, xp] of Object.entries(byDay)) if (d >= since && d <= today) s += xp;
-    return s;
-  };
-  let bestDay = null;
-  for (const [d, xp] of Object.entries(byDay)) if (!bestDay || xp > bestDay[1]) bestDay = [d, xp];
-
-  const weekly = [];
-  for (let w = 11; w >= 0; w--) {
-    let s = 0;
-    for (let i = w * 7; i < w * 7 + 7; i++) s += byDay[daysAgoStr(i)] || 0;
-    weekly.push({ label: w === 0 ? "Now" : `-${w}w`, xp: s });
-  }
 
   const achievements = ACHIEVEMENTS.map((a) => ({
     id: a.id, icon: a.icon, name: a.name, desc: a.desc, xp: a.xp,
@@ -517,15 +458,11 @@ export function computeXp(deps = {}) {
   });
 
   return {
-    stats, journeys,
-    total, level, title: titleOf(level), prevLevelXp, nextLevelXp,
-    pctToNext: Math.min(100, Math.round(((total - prevLevelXp) / Math.max(1, nextLevelXp - prevLevelXp)) * 100)),
-    byCat, byDay, todayByCat, streakXp, weekly, achievements, newly, lifeDays, fitnessDays,
-    today: byDay[today] || 0,
-    week: sumSince(daysAgoStr(6)),
-    month: sumSince(`${today.slice(0, 7)}-01`),
-    year: sumSince(`${today.slice(0, 4)}-01-01`),
-    bestDay,
-    avg30: Math.round(sumSince(daysAgoStr(29)) / 30),
+    stats, journeys, achievements, newly,
+    // Day-level activity, for the consistency engine. No XP is returned from
+    // this file at all — src/shared/xp is the only source of a number the
+    // user sees as XP (criterion 10).
+    lifeDays, fitnessDays,
+    activeDays: Object.fromEntries(Object.entries(activeDays).map(([d, set]) => [d, [...set]])),
   };
 }

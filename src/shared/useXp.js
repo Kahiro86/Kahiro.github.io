@@ -129,10 +129,33 @@ export function useXp() {
   // as XP can come from the old value table (criterion 10). The old engine's
   // own totals are now dead weight; they come out in Gate 5, when analytics
   // and the journeys move onto the ledger too.
+  // Weekly XP bars and the best day come from banked days now, not from the
+  // old engine — it no longer knows what anything is worth.
+  const weekly = useMemo(() => {
+    const out = [];
+    for (let w = 11; w >= 0; w--) {
+      let sum = 0;
+      for (let i = w * 7; i < w * 7 + 7; i++) {
+        const d = new Date(`${todayDs}T12:00:00`); d.setDate(d.getDate() - i);
+        sum += ledger.byDay[localDateStr(d)] || 0;
+      }
+      out.push({ label: w === 0 ? "Now" : `-${w}w`, xp: sum });
+    }
+    return out;
+  }, [ledger.byDay, todayDs]);
+  const bestDay = useMemo(() => {
+    let best = null;
+    for (const [d, v] of Object.entries(ledger.byDay)) if (!best || v > best[1]) best = [d, v];
+    return best;
+  }, [ledger.byDay]);
+
   return {
     ...xp,
     cats: ledger.byDomain,
     byCat: ledger.byDomain,
+    weekly,
+    bestDay,
+    streakXp: 0,
     total: ledger.total,
     byDay: ledger.byDay,
     level: ledger.level,

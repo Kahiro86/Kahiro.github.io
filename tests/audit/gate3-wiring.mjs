@@ -29,14 +29,14 @@ ok(`the gym engine does not write to the shared total${leaks.length ? ` (${leaks
 
 console.log("\n── criterion 11: nothing pays for presence ──");
 const engine = read("src/shared/xpEngine.js");
-ok("the login value is gone from the old table", !/login:\s*[1-9]/.test(engine));
-ok("the login award pushes zero", /xp: 0, c: "life", login: true/.test(engine));
+ok("no login value exists anywhere", !/login:\s*[1-9]/.test(engine));
+ok("the app-open stamp carries no value at all", /\{ d, c: "life", login: true \}/.test(engine));
 const collect = read("src/shared/xp/collect.js");
 ok("no app.* event is ever collected", !/kind:\s*["']app\./.test(collect));
 ok("and the omission is stated, not accidental", /Presence is not collected/.test(collect));
 
 console.log("\n── trading is excluded by policy ──");
-ok("trade awards are zeroed in the old table", /tradeLogged: 0/.test(engine));
+ok("no trade value exists anywhere", !/tradeLogged/.test(engine));
 ok("no trade event is collected", !/kind:\s*["']trade\.logged/.test(collect));
 ok("the day-review still pays", /trading\.dayReview/.test(collect));
 
@@ -48,6 +48,27 @@ console.log("\n── ranks come from the Covenant everywhere they render ──
 const journey = read("src/modules/journey/JourneyModule.jsx");
 ok("the Journey ladder uses RANKS", /from "\.\.\/\.\.\/shared\/xp\/values\.js"/.test(journey) && /RANKS/.test(journey));
 ok("the old TITLES ladder is no longer imported there", !/TITLES/.test(journey));
+
+console.log("\n── criterion 10 (finished): the old engine no longer prices anything ──");
+const eng = read("src/shared/xpEngine.js");
+ok("the value table V is deleted", !/^const V = \{/m.test(eng));
+ok("the streak ladder is deleted", !/STREAK_LADDER\s*=/.test(eng));
+ok("the per-source caps are deleted", !/^const CAPS\s*=/m.test(eng));
+ok("its own level curve is deleted", !/levelOfXp|export const xpForLevel/.test(eng));
+ok("its own title ladder is deleted", !/export const TITLES/.test(eng));
+ok("it returns no total, byDay, byCat or level", !/\btotal,|byDay,|byCat,|nextLevelXp/.test(eng.slice(eng.lastIndexOf("return {"))));
+ok("award sites became value-free marks", /const mark = \(d, c, s\)/.test(eng) && !/const push = \(d, xp/.test(eng));
+ok("app-opens are excluded from the activity record too", /if \(e\.login\) continue/.test(eng));
+ok("domain labels come from the one values table", /Object\.entries\(DOMAINS\)/.test(eng));
+
+console.log("\n── §4.3: the weighting rule is stated in the UI ──");
+const worth = read("src/modules/habits/ui/WorthCard.tsx");
+ok("a habit shows what it is worth", /What this is worth/.test(worth));
+ok("it shows the completion rate driving the weight", /times it came up in the last/.test(worth));
+ok("it shows the arithmetic, not just the answer", /base.*difficulty.*XP/s.test(worth));
+ok("it lists every difficulty band", /DIFFICULTY_BANDS\.map/.test(worth));
+ok("it names the daily cap so the user knows the ceiling", /pays at most/.test(worth));
+ok("the card is mounted on the habit detail", /<WorthCard habit=\{habit\}/.test(read("src/modules/habits/ui/DetailScreen.tsx")));
 
 console.log("\n── no randomness in anything the reward path touches ──");
 const rewardPath = ["src/shared/xp/values.js", "src/shared/xp/engine.js", "src/shared/xp/ledger.js",

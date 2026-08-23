@@ -54,7 +54,12 @@ ok("no Journal entry in the nav", !/journal/i.test(navTxt));
 ok("the Life facet that used to host them is gone", !navIds.includes("nav-life"));
 
 console.log("\n── criterion 4: one screen logs all three ──");
-await page.locator('[data-tour="nav-habits"]').first().click(); await page.waitForTimeout(800); await dismiss();
+await page.locator('[data-tour="nav-habits"]').first().click();
+// Wait for the list to actually render rather than for a fixed interval — the
+// habits chunk grows, and a sleep that was long enough last month silently
+// becomes a false failure.
+await page.locator(".grid.row").first().waitFor({ state: "attached", timeout: 15000 }).catch(() => {});
+await page.waitForTimeout(250); await dismiss();
 const urlBefore = page.url();
 const disc = await page.locator("body").innerText();
 ok("Discipline lists the pinned Purity habit", /Purity/.test(disc));

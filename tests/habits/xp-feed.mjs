@@ -53,8 +53,9 @@ ok("empty input is safe", (() => { const e = habitFeed([], [], today); return e.
 ok("archived habits excluded", habitFeed([{ ...mk("h3", "x"), archivedAt: today }], [{ id: "z", habitId: "h3", date: today, value: 1 }], today).completions.length === 0);
 
 // ── computeXp integration ─────────────────────────────────────────────
+// computeXp no longer prices anything (Gate 3) — it counts activity, and the
+// ledger is what pays. Both halves are checked.
 const xp = computeXp({ htHabits, htEntries });
-ok(`total XP > 0 from habits alone (got ${xp.total})`, xp.total > 0);
 eq("stats.habitCompletions = 10", xp.stats.habitCompletions, 10);
 eq("stats.perfectCount = 5", xp.stats.perfectCount, 5);
 ok(`bestStreak reaches habits' 5 (got ${xp.stats.bestStreak})`, xp.stats.bestStreak >= 5);
@@ -63,7 +64,7 @@ ok("Habit Mastery journey present", xp.journeys.some((j) => j.key === "habits"))
 ok("Perfect Days journey present", xp.journeys.some((j) => j.key === "perfect"));
 const mastery = xp.journeys.find((j) => j.key === "habits");
 ok(`Habit Mastery value tracks completions (got ${mastery?.value})`, mastery && mastery.value === 10);
-ok("today earned life-category XP", (xp.todayByCat.life || 0) > 0);
+ok("today is recorded as a life-domain activity day", (xp.activeDays[today] || []).includes("life"));
 
 // No habits → no habit XP (guards against accidental base award).
 const zero = computeXp({ htHabits: [], htEntries: [] });

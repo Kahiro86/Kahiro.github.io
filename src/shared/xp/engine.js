@@ -55,10 +55,16 @@ export function inRecovery(date, activeDays) {
  */
 export function balanceFactors(recentByDomain) {
   const totals = recentByDomain && typeof recentByDomain === "object" ? recentByDomain : {};
-  const sum = Object.values(totals).reduce((s, v) => s + (Number(v) || 0), 0);
+  const active = Object.entries(totals).filter(([, v]) => (Number(v) || 0) > 0);
+  const sum = active.reduce((s, [, v]) => s + Number(v), 0);
   const out = {};
+  // With only one domain in play there is nothing to grind past, so the
+  // factor never applies. Otherwise someone who only tracks habits would sit
+  // on a permanent 20% penalty for using the part of the app they use — which
+  // punishes narrow usage, not farming, and those are not the same thing.
+  const applies = active.length >= 2 && sum > 0;
   for (const d of Object.keys(DOMAINS)) {
-    out[d] = sum > 0 && (Number(totals[d]) || 0) / sum > BALANCE_THRESHOLD ? BALANCE_FACTOR : 1;
+    out[d] = applies && (Number(totals[d]) || 0) / sum > BALANCE_THRESHOLD ? BALANCE_FACTOR : 1;
   }
   return out;
 }
