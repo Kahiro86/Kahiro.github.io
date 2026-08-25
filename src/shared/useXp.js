@@ -107,7 +107,12 @@ export function useXp() {
         journalTextByDate: journalText,
       },
       ledger: rawLedger,
-      derivedTotal: xp.total,
+      // The historical carry-forward is written once by the boot migration
+      // (shared/xp/openMigration.js), which is the only thing that can still
+      // compute it — the old engine no longer prices anything. Passing 0 here
+      // would open an empty ledger and lose that history, so this render path
+      // must never be the thing that opens one.
+      derivedTotal: rawLedger?.opening?.xp ?? 0,
       isScheduledOn: (h, ds) => isScheduled(h, ds),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps

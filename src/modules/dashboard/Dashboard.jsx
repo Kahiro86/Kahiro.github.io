@@ -11,6 +11,7 @@ import {
   Target, AlertTriangle, Flame, CalendarClock,
   HeartPulse, ChevronRight, Crosshair,
   ListChecks, CandlestickChart, Dumbbell, BookOpen, Sparkles, Gauge,
+  Droplets, Moon,
 } from "lucide-react";
 import { BD, T1, T2, T3, GL, B2, AC, AC2, GR, AM, RE, MONO } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
@@ -23,6 +24,7 @@ import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { sanitizeTrades as sanitizeTiTrades, sanitizeAccounts as sanitizeTiAccounts, netPnl as tiNetPnl, accountMetrics as tiAccountMetrics } from "../trading/intel/tradingIntel.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
+import { hydrationSeries, sleepSeries, todayStatus } from "../../shared/wellbeing.js";
 // Habit facts now come from the new tracker via habitSummary; only the legacy
 // wellness helpers (sleep/water numeric habits) remain from the old engine.
 import { isWellness, valueOn } from "../../shared/habitEngine.js";
@@ -219,6 +221,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [purity] = useStorageState("purity_log", {});
   const [nutritionLog] = useStorageState("nutrition_log", {});
   const [nutritionProfile] = useStorageState("nutrition_profile", null);
+  const [sleepLog] = useStorageState("trade_sleep", {});
   const [verses] = useStorageState("faith_scripture", []);
   const [decisions] = useStorageState("mind_decisions", []);
   const [firmConfig] = useStorageState("firm_config", null);
@@ -367,6 +370,10 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   // ── 🎯 THE MISSION + the two pillars (Batman / Stark) ──
   const freedom = useMemo(() => freedomMath(finance, firmConfig), [finance, firmConfig]);
   const gate = useMemo(() => scalingGate(trades, rawReviews, firmWithdrawals), [trades, rawReviews, firmWithdrawals]);
+  // Hydration and sleep, through the same functions the Record reports on —
+  // so today's tile and this month's trend can never disagree.
+  const hyd = useMemo(() => todayStatus(hydrationSeries({ nutrition: nutritionLog, nutritionProfile, today: ds, days: 1 })), [nutritionLog, nutritionProfile, ds]);
+  const slp = useMemo(() => todayStatus(sleepSeries({ sleep: sleepLog, today: ds, days: 1 })), [sleepLog, ds]);
   const topStreakDays = streaks.length ? streaks[0].days : 0;
 
   if (!loaded) return <Hydrating label="Waking the Command Centre…" />;
@@ -430,6 +437,22 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       subTone: woToday ? "good" : null,
       dots: Array.from({ length: 7 }, (_, i) => workoutOn(daysAgoStr(6 - i))),
       xp: woToday ? XPV.workout : 0,
+    },
+    {
+      key: "hydration", icon: Droplets, label: "Water", nav: "gym:today",
+      accent: hyd.logged ? (hyd.hit ? "g" : "warn") : "off",
+      value: hyd.logged ? `${(hyd.value / 1000).toFixed(1)}` : "—",
+      unit: hyd.logged ? "L" : "",
+      sub: hyd.logged ? `of ${(hyd.target / 1000).toFixed(1)} L` : "nothing logged today",
+      subTone: hyd.hit ? "good" : null,
+    },
+    {
+      key: "sleep", icon: Moon, label: "Sleep", nav: "analytics:trends",
+      accent: slp.logged ? (slp.hit ? "g" : "warn") : "off",
+      value: slp.logged ? `${slp.value}` : "—",
+      unit: slp.logged ? "h" : "",
+      sub: slp.logged ? (slp.hit ? "floor held" : "under the floor") : "last night not logged",
+      subTone: slp.hit ? "good" : null,
     },
     {
       key: "journal", icon: BookOpen, label: "Journal", nav: "habits",

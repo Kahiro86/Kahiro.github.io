@@ -17,6 +17,7 @@ import { useXp } from "../../shared/useXp.js";
 import { CAT_LABEL } from "../../shared/xpEngine.js";
 import { EffortLedger } from "./EffortLedger.jsx";
 import { CrossInsights } from "./CrossInsights.jsx";
+import { Wellbeing } from "./Wellbeing.jsx";
 import { JourneyModule } from "../journey/JourneyModule.jsx";
 import { MindOS } from "../mind/MindOS.jsx";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
@@ -241,6 +242,9 @@ export function AnalyticsOS({ habits, onNavigate, xpInfo, navHint }) {
             {/* Cross-domain first: these are the findings no single module
                 could produce, and Law 7 asks for the sleep one prominently. */}
             <CrossInsights days={days} />
+
+            {/* Hydration and sleep had XP but no report. This is that report. */}
+            <Wellbeing days={days} />
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 16 }}>
               <CorrCard title="Sleep vs Habits" sub="Avg sleep logged (bars) · habit consistency % (line)"

@@ -6,6 +6,7 @@ import { IdentityProvider } from "./shared/identity.jsx";
 import { initSync } from "./shared/sync.js";
 import { runDisciplineMigration } from "./modules/habits/migrateDiscipline.js";
 import { purgeDeadStores } from "./shared/purgeDead.js";
+import { openLedgerWithHistory } from "./shared/xp/openMigration.js";
 import { writeStore } from "./shared/useStorageState.js";
 
 // One-time cleanup: the habit tracker was removed, so wipe its stored data.
@@ -25,6 +26,10 @@ try {
 // on every launch. The source stores are left untouched.
 try { runDisciplineMigration(writeStore); } catch { /* never block boot on a migration */ }
 try { purgeDeadStores(); } catch { /* nor on a cleanup */ }
+// Carry the pre-revamp XP total forward before the first render reads the
+// ledger. Async, but the ledger is idempotent — a render that beats it sees
+// an unopened ledger and simply re-reads once this lands.
+openLedgerWithHistory(writeStore).catch(() => { /* never block boot */ });
 
 // Cloud sync engine: no-op until the user connects a Supabase project in
 // Settings → Cloud Sync; from then on every device converges on the same data.
