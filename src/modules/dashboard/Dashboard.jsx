@@ -647,7 +647,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         </StatCard>
       </div>
 
-      {/* ── 📅 SCHEDULE · 💰 FINANCE · 📊 TRADING (each hides when empty) ── */}
+      {/* ── 📅 SCHEDULE — finance and trading moved to their own fold ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
         {upcoming.length > 0 && (
           <StatCard>
