@@ -63,7 +63,8 @@ ok("the Money & markets fold is offered", /money & markets/i.test(home));
 await page.getByRole("button", { name: /show money and markets/i }).first().click();
 await page.waitForTimeout(700);
 const money = await page.locator("body").innerText();
-ok("opening the fold reveals net worth", /net worth/i.test(money));
+// Net worth is not in the fold either — it lives only inside The Firm.
+ok("net worth is absent even inside the fold", !/net worth/i.test(money));
 ok("opening the fold reveals the trading card", /trades? logged today/i.test(money));
 ok("opening the fold reveals monthly overhead", /monthly overhead/i.test(money));
 await page.getByRole("button", { name: /hide money and markets/i }).first().click();

@@ -11,12 +11,11 @@ import {
   Target, AlertTriangle, Flame, CalendarClock,
   HeartPulse, ChevronRight, Crosshair,
   ListChecks, CandlestickChart, Dumbbell, BookOpen, Sparkles, Gauge,
-  Droplets, Moon, DollarSign, TrendingUp, Check,
+  Droplets, Moon, TrendingUp, Check,
 } from "lucide-react";
 import { BD, T1, T2, T3, GL, B2, AC, AC2, GR, AM, RE, MONO } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
 import { billsDueSoon } from "../finance/bills.js";
-import { financeSummary } from "../finance/summary.js";
 import { OverheadToday } from "../../shared/OverheadToday.jsx";
 
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -50,8 +49,6 @@ const SectionLabel = ({ icon, children }) => (
     {icon}{children}
   </div>
 );
-
-const kes0 = (n) => Math.round(+n || 0).toLocaleString();
 
 function StatCard({ onClick, children, style }) {
   return (
@@ -322,12 +319,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const tradeCountToday = tradesToday.length + tiToday.count;
 
   // ── 💰 MONEY & MARKETS — the folded reference block ──
-  const fin = useMemo(() => financeSummary(finance), [finance]);
   const monthExpenses = useMemo(() => (Array.isArray(finance.bills) ? finance.bills.reduce((s2, b) => s2 + (+b?.amount || 0), 0) : 0), [finance.bills]);
-  const incomeToday = useMemo(
-    () => (Array.isArray(finance.income) ? finance.income : []).filter((e) => e && (e.date || "").slice(0, 10) === ds).reduce((s2, e) => s2 + (+e.amount || 0), 0),
-    [finance.income, ds]
-  );
   const checklistOk = tradesToday.length > 0 && tradesToday.every((t) => +t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal);
 
   // Hydration and sleep, through the same functions the Record reports on —
@@ -597,24 +589,18 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       </div>
 
 
-      {/* ── ▾ 💰 MONEY & MARKETS — folded; nothing here is a daily action ── */}
+      {/* ── ▾ 💰 MONEY & MARKETS — folded; nothing here is a daily action.
+          Net worth is deliberately absent: it lives only inside The Firm. ── */}
       <button onClick={() => setMoneyOpen((v) => !v)} aria-expanded={moneyOpen} aria-label={moneyOpen ? "Hide money and markets" : "Show money and markets"}
         style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "none", border: `1px dashed ${BD}`, borderRadius: 12, padding: "12px 0", color: T3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", transition: "border-color .2s ease, color .2s ease", marginTop: 4 }}
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${AC}66`; e.currentTarget.style.color = T2; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = BD; e.currentTarget.style.color = T3; }}>
         <ChevronRight size={14} style={{ transform: moneyOpen ? "rotate(90deg)" : "none", transition: "transform .2s ease" }} />
-        {moneyOpen ? "Hide money & markets" : "Money & markets — net worth · trading · overhead"}
+        {moneyOpen ? "Hide money & markets" : "Money & markets — trading · overhead"}
       </button>
 
       {moneyOpen && (<>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
-          <StatCard onClick={() => onNavigate("firm:wealth")}>
-            <SectionLabel icon={<DollarSign size={12} color={AC} />}>Finance</SectionLabel>
-            <div style={{ fontSize: 28, ...big, color: fin.personalNetWorth >= 0 ? T1 : RE }}>KES {kes0(fin.personalNetWorth)}</div>
-            <div style={{ fontSize: 10.5, color: T3, marginTop: 3 }}>Net worth</div>
-            {incomeToday > 0 && <div style={{ fontSize: 12, color: GR, marginTop: 8 }}>+KES {kes0(incomeToday)} income today</div>}
-          </StatCard>
-
           <StatCard onClick={() => onNavigate("firm:trading")} style={{ borderColor: kz.active ? `${AC}44` : BD }}>
             <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Killzone" : ""}</SectionLabel>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
