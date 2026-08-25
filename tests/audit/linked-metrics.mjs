@@ -172,5 +172,52 @@ ok("water logged with no food at all still counts", h2.rows[0].value === 2000);
 const h3 = W.hydrationSeries({ nutrition: {}, nutritionProfile: profile, hydration: {}, today: TODAY, days: 1 });
 ok("a day with neither stays unlogged, not zero", h3.rows[0].value === null);
 
+// ── 8. Two devices, one account ──────────────────────────────────────
+console.log("\n8. The mirror under last-write-wins sync");
+// Cloud sync converges per KEY, independently. trade_sleep and the mirror's
+// provenance record are separate keys, so they can arrive out of step — and
+// every one of those orderings has to fail safe, because the alternative is
+// deleting a night the user typed on another device.
+const D1 = "2026-08-20";
+
+ok("provenance arrived, the value did not: retraction is a no-op",
+  L.planMirror(sleepM, {}, { sleep: { [D1]: 7.5 } }, D1, null).canonical[D1] === undefined);
+
+ok("the value arrived from ANOTHER device, provenance says we wrote something else — leave it",
+  L.planMirror(sleepM, { [D1]: 6 }, { sleep: { [D1]: 7.5 } }, D1, null).canonical[D1] === 6);
+
+ok("the value arrived, provenance did not: we do not claim it",
+  L.planMirror(sleepM, { [D1]: 6 }, {}, D1, null) === null);
+
+ok("and we do not overwrite it either",
+  L.planMirror(sleepM, { [D1]: 6 }, {}, D1, { value: 7.5 }) === null);
+
+ok("re-writing our own value after a round trip changes nothing",
+  L.planMirror(sleepM, { [D1]: 7.5 }, { sleep: { [D1]: 7.5 } }, D1, { value: 7.5 }) === null);
+
+// The reverse pass runs on boot on every device. It must converge, not
+// ping-pong: device B seeing device A's mirrored value must not treat it as
+// news and write it back.
+const bootTwice = (writes) => L.reverseEntries({
+  metric: sleepM, habit: { id: "h1", type: "boolean" },
+  canonical: { [D1]: 7.5 }, writes, dates: [D1],
+  entries: [{ habitId: "h1", date: D1, value: 1 }],
+});
+ok("a boot that already agrees writes nothing", bootTwice({}).length === 0);
+ok("and neither does the device that mirrored it", bootTwice({ sleep: { [D1]: 7.5 } }).length === 0);
+
+// A stale provenance record left behind by a lost sync must not be able to
+// delete a value on a later device.
+ok("stale provenance cannot delete a value it does not match",
+  L.planMirror(sleepM, { [D1]: 8 }, { sleep: { [D1]: 7.5 } }, D1, null).canonical[D1] === 8);
+
+console.log("\n8b. Provenance is storable and self-cleaning");
+const w = L.sanitizeLinkWrites({ sleep: { [D1]: 7.5, bad: "x" }, nonsense: { [D1]: 1 }, hydration: {} });
+ok("junk dates are dropped", !("bad" in w.sleep));
+ok("unknown metrics are dropped", !("nonsense" in w));
+ok("an empty metric is not stored", !("hydration" in w));
+const cleared = L.planMirror(sleepM, { [D1]: 7.5 }, { sleep: { [D1]: 7.5 } }, D1, null);
+ok("retracting the last day removes the metric's whole record", !cleared.writes.sleep);
+
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 if (fail) { console.log(fails.map((f) => `  - ${f}`).join("\n")); process.exit(1); }
