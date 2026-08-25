@@ -18,7 +18,7 @@ const root = resolve(here, "..", "..");
 // These drive a real browser against dist/ and are minutes, not seconds.
 const BROWSER = new Set([
   "dashboard-trim", "quick-log", "record-merge", "linked-sync",
-  "meal-plans-ui", "exercise-picker", "launch-perf",
+  "meal-plans-ui", "exercise-picker", "launch-perf", "console-clean",
 ]);
 
 const only = process.argv.slice(2).filter((a) => !a.startsWith("-"));
