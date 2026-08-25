@@ -74,6 +74,32 @@ ok("the app listens for that message", /notification-click/.test(app));
 ok("and routes it through the one navigator", /navTo\(id\)/.test(app));
 ok("a bare module id and a hashed url both work", /raw\.indexOf\("#"\)/.test(app));
 
+// ── 5. Every destination is a real place ─────────────────────────────
+console.log("\n5. Every destination resolves to a real screen");
+// A reminder pointing at a route that no longer exists silently lands on
+// the dashboard — it still "works", which is exactly why nobody notices.
+const navSrc = read("src/shared/nav.js");
+const facets = new Set([...navSrc.matchAll(/\{\s*id:\s*"([a-z]+)"/g)].map((m) => m[1]));
+const appSrc = read("src/App.jsx");
+const bad = [];
+for (const t of N.NAV_TARGETS) {
+  if (!t.id) continue;
+  const [base, group] = t.id.split(":");
+  if (!facets.has(base)) { bad.push(`${t.id} — no facet "${base}"`); continue; }
+  if (!group) continue;
+  // A compound id lands on an inner group, which App forwards via navHint.
+  const owner = { analytics: "src/modules/analytics/AnalyticsOS.jsx", firm: "src/modules/firm/FirmOS.jsx", gym: "src/modules/gym/BodyOS.jsx" }[base];
+  if (!owner) continue;
+  let ownerSrc = "";
+  try { ownerSrc = read(owner); } catch { bad.push(`${t.id} — ${owner} is missing`); continue; }
+  if (!new RegExp(`["']${group}["']`).test(ownerSrc)) bad.push(`${t.id} — ${base} has no "${group}"`);
+}
+ok(`every nav target exists${bad.length ? ` (${bad.join("; ")})` : ""}`, bad.length === 0);
+ok("navTo forwards a compound id as a group hint", /setNavHint\(\{ module: base, group/.test(appSrc));
+const derived = [...new Set(Object.values(N.NAV_BY_CAT))];
+const unknown = derived.filter((d) => !N.NAV_TARGETS.some((t) => t.id === d));
+ok(`every category default is a selectable target${unknown.length ? ` (${unknown.join(", ")})` : ""}`, unknown.length === 0);
+
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Notification actions: ${pass}/${pass + fail} passed`);
