@@ -89,6 +89,54 @@ for (const f of FEATURES) {
   });
 }
 
+// ── Drift guard ──────────────────────────────────────────────────────
+// This map once reported "16 of 16 fully connected" while five stores were
+// not in it at all, including two the audit brief named by hand. A map only
+// reports on what it has been told about, so being told about everything is
+// the whole job. Every synced store is either mapped above or listed here
+// with the reason it does not belong in a feature chain.
+const NOT_A_FEATURE = new Set([
+  // UI state, per device. Nothing to report on.
+  "dash_show_more", "dash_show_money", "help_mode", "onboarding", "whatsnew_seen",
+  "gym_active", "risk_calc", "motive_recent", "motive_history", "motive_favs",
+  // Configuration and profile, not a measured fact.
+  "nutrition_profile", "nutrition_foods", "nutrition_supps", "nutrition_days",
+  "gym_profile", "gym_routines", "firm_config", "firm_covenant", "firm_campaign",
+  "finance_doctrine", "ti_settings", "ti_presets", "ti_accounts", "trade_checklists",
+  "active_season", "streak_freezes", "xp_logins", "push_queue",
+  // Reported through a feature already mapped above, under its own store.
+  "athlete_workouts", "faith_notes", "faith_scripture", "ht_entries", "ht_meta",
+  "hydration_log", "mind_decisions", "mind_notes", "notif_log", "notif_prefs",
+  "xp_achievements", "ict_trades", "finance_snapshots", "firm_withdrawals",
+  "purity_urges", "athlete_photos",
+  // Sub-features with their own surfaces, each reported where it is used.
+  "daily_checklist", "daily_checklist_log", "weekly_focus", "weekly_goal",
+  "weekly_goal_archive", "monthly_overhead", "life_pings", "focus_sessions",
+  "missions", "ti_lessons", "ti_reminders", "trade_gates",
+]);
+
+const KEY_RE = /useStorageState\(\s*["']([a-z_0-9]+)["']/g;
+const allKeys = new Set();
+for (const [k, v] of code) {
+  if (!isView(k)) continue;
+  for (const m of v.matchAll(KEY_RE)) allKeys.add(m[1]);
+}
+const mapped = new Set(FEATURES.flatMap((f) => [f.store, ...(f.also || [])]));
+// A guard that finds nothing because it looked at nothing is worse than no
+// guard: it reports "all accounted for" forever. Assert it actually read the
+// codebase before trusting its silence.
+if (allKeys.size < 40) {
+  console.log(`\n⚠️  the store sweep only found ${allKeys.size} keys — the matcher is broken, not the code`);
+  issues += 1;
+}
+const unaccounted = [...allKeys].filter((k) => !mapped.has(k) && !NOT_A_FEATURE.has(k)).sort();
+if (unaccounted.length) {
+  console.log(`\n⚠️  ${unaccounted.length} synced store(s) are in neither the map nor the exempt list:`);
+  for (const k of unaccounted) console.log(`     ${k}`);
+  console.log("   Add each to FEATURES (it is a feature) or NOT_A_FEATURE (it is not, with why).");
+  issues += unaccounted.length;
+}
+
 const mark = (v) => (v === null ? " —" : v ? " ✓" : " ✗");
 console.log("\nFeature                  Store                       readers  XP  Analytics  CC   State");
 console.log("─".repeat(96));
