@@ -5,10 +5,15 @@
 import { build } from "esbuild";
 import { writeFileSync, mkdtempSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 const here = dirname(fileURLToPath(import.meta.url));
+// The entry stubs are generated, not checked in: an absolute path baked into
+// a committed file only works on the machine that wrote it.
+const root = resolve(here, "..", "..");
+const p = (rel) => join(root, rel).replace(/\\/g, "/");
+writeFileSync(join(here, "_gc.js"), `export * from "${p("src/modules/gym/domain/registry.ts")}";\nexport * from "${p("src/modules/gym/domain/search.ts")}";\nexport { DISCIPLINES, effectOf } from "${p("src/modules/gym/domain/types.ts")}";\nexport { aggregateMuscleVolume, aggregateMuscleXp } from "${p("src/modules/gym/domain/aggregate.ts")}";`);
 const r = await build({ entryPoints: [join(here, "_gc.js")], bundle: true, format: "esm", platform: "node", write: false, logLevel: "silent" });
 const out = join(mkdtempSync(join(tmpdir(), "gc-")), "b.mjs");
 writeFileSync(out, r.outputFiles[0].text);

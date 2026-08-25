@@ -5,3 +5,8 @@ dist/
 tests/**/_*.js
 tests/**/_*.ts
 !tests/**/_shim.mjs
+
+# Audit-test entry stubs are generated at run time (each test writes its
+# own from a path derived from import.meta.url). Committing them bakes one
+# machine's absolute paths into the repo.
+tests/audit/_*.js

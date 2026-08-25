@@ -3,16 +3,24 @@
 import { build } from "esbuild";
 import { writeFileSync, mkdtempSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 const here = dirname(fileURLToPath(import.meta.url));
+// The entry stubs are generated, not checked in: an absolute path baked into
+// a committed file only works on the machine that wrote it.
+const root = resolve(here, "..", "..");
+const p = (rel) => join(root, rel).replace(/\\/g, "/");
 const bundle = async (entry, tag) => {
-  const r = await build({ entryPoints: [join(here, entry)], bundle: true, format: "esm", platform: "node", write: false, logLevel: "silent" });
+  writeFileSync(join(here, "_lm.js"), `export * from "${p("src/modules/habits/linkedMetrics.js")}";`);
+writeFileSync(join(here, "_lmw.js"), `export * from "${p("src/shared/wellbeing.js")}";`);
+const r = await build({ entryPoints: [join(here, entry)], bundle: true, format: "esm", platform: "node", write: false, logLevel: "silent" });
   const out = join(mkdtempSync(join(tmpdir(), `${tag}-`)), "b.mjs");
   writeFileSync(out, r.outputFiles[0].text);
   return import(pathToFileURL(out).href);
 };
+writeFileSync(join(here, "_lm.js"), `export * from "${p("src/modules/habits/linkedMetrics.js")}";`);
+writeFileSync(join(here, "_lmw.js"), `export * from "${p("src/shared/wellbeing.js")}";`);
 const L = await bundle("_lm.js", "lm");
 const W = await bundle("_lmw.js", "lmw");
 
