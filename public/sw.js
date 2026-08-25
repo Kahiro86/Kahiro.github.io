@@ -93,11 +93,9 @@ self.addEventListener("notificationclick", (e) => {
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
       for (const c of cs) {
         if (!("focus" in c)) continue;
-        // navigate() is not everywhere; the message is the fallback the app
-        // listens for, and focus happens either way.
-        if (typeof c.navigate === "function" && target !== "./") {
-          return c.navigate(target).then((n) => (n || c).focus()).catch(() => c.focus());
-        }
+        // The message, not navigate(): changing the hash on an already-loaded
+        // page does not re-run the app's router, so navigate() would move the
+        // URL and leave the screen exactly where it was.
         try { c.postMessage({ type: "notification-click", url: target }); } catch { /* focus still works */ }
         return c.focus();
       }

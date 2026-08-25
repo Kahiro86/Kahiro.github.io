@@ -143,11 +143,22 @@ export default function App() {
     if (group) setNavHint({ module: base, group, nonce: Date.now() });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // A push notification tapped while the app is already open focuses this
-  // window; the service worker sends the destination alongside so the tap
-  // lands on the screen the notification was about instead of wherever the
-  // app happened to be left. Accepts either a bare module id ("gym:today")
-  // or a URL whose hash carries one.
+  // A push that opens the app from CLOSED arrives as a URL with the
+  // destination in its hash (index.html is the only document, so a fragment
+  // is the only thing that can carry one). Read it once, then clear it —
+  // leaving it behind would re-route every later reload to the same screen.
+  useEffect(() => {
+    const id = (window.location.hash || "").replace(/^#/, "");
+    if (!id) return;
+    try { history.replaceState(null, "", window.location.pathname + window.location.search); } catch { /* fine */ }
+    navTo(id);
+  }, [navTo]);
+
+  // A push tapped while the app is already OPEN focuses this window; the
+  // service worker sends the destination alongside so the tap lands on the
+  // screen the notification was about instead of wherever the app happened
+  // to be left. Accepts either a bare module id ("gym:today") or a URL whose
+  // hash carries one.
   useEffect(() => {
     const sw = navigator.serviceWorker;
     if (!sw) return undefined;

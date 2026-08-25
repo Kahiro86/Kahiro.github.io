@@ -397,13 +397,28 @@ export function upcomingOccurrences(rem, now = new Date(), horizonMs = 7 * 86400
 
 // Flat, time-sorted list of the next reminders to push: { occKey, at, title,
 // body, url }. Honours paused, silent priority and disabled categories.
+// The hash is how a cold open carries a destination: index.html is the only
+// document, so a path cannot say "the Body facet" but a fragment can, and
+// main.jsx reads it on boot.
+export const pushUrlFor = (rem) => {
+  const nav = typeof rem?.nav === "string" && rem.nav ? rem.nav : navForCat(rem?.cat);
+  return nav ? `./#${nav}` : "./";
+};
+
 export function buildPushQueue(reminders, prefs, now = new Date(), horizonDays = 7) {
   const p = sanitizePrefs(prefs);
   const out = [];
   for (const rem of sanitizeReminders(reminders)) {
     if (rem.paused || rem.priority === "silent" || !catEnabled(p, rem.cat)) continue;
     for (const occ of upcomingOccurrences(rem, now, horizonDays * 86400000)) {
-      out.push({ occKey: occKeyOf(rem, occ), at: occ.getTime(), title: `${rem.icon || "🔔"} ${rem.title}`, body: rem.desc || "Reminder", url: "./" });
+      out.push({
+        occKey: occKeyOf(rem, occ), at: occ.getTime(),
+        title: `${rem.icon || "🔔"} ${rem.title}`, body: rem.desc || "Reminder",
+        // Where tapping it should land. This was hardcoded to "./", so every
+        // push arrived with nowhere to go and the whole point of a reminder
+        // reaching a closed phone was lost at the last step.
+        url: pushUrlFor(rem),
+      });
     }
   }
   return out.sort((a, b) => a.at - b.at).slice(0, 200);

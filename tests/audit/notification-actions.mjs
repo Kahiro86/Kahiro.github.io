@@ -67,12 +67,33 @@ ok("opening marks it seen but leaves it actionable", /const markRead = \(e\) =>/
 console.log("\n4. A tapped push lands on the right screen");
 const sw = read("public/sw.js");
 ok("the push payload carries a url", /data: \{ url: d\.url/.test(sw));
-ok("an already-open window is navigated, not just focused", /c\.navigate\(target\)/.test(sw));
-ok("with a message fallback where navigate is unavailable", /notification-click/.test(sw));
+ok("an already-open window is told where to go", /notification-click/.test(sw));
+ok("and a closed one is opened at the destination", /openWindow\(target\)/.test(sw));
 const app = read("src/App.jsx");
 ok("the app listens for that message", /notification-click/.test(app));
 ok("and routes it through the one navigator", /navTo\(id\)/.test(app));
 ok("a bare module id and a hashed url both work", /raw\.indexOf\("#"\)/.test(app));
+
+// ── 4b. The push queue carries it too ────────────────────────────────
+console.log("\n4b. A queued push knows where it goes");
+const q = N.buildPushQueue(
+  [N.newReminder({ title: "Log lunch", cat: "nutrition", date: "2020-01-01", time: "12:00", repeat: { kind: "daily", n: 1 } })],
+  {}, new Date("2020-01-01T06:00:00"), 2,
+);
+ok("occurrences are queued", q.length > 0);
+ok("each carries a real destination, not './'", q.every((i) => i.url && i.url !== "./"));
+ok("as a hash the app can read on a cold open", q[0].url === "./#gym:today");
+ok("an explicit destination is used",
+  N.buildPushQueue([N.newReminder({ title: "x", cat: "custom", nav: "habits", date: "2020-01-01", time: "12:00", repeat: { kind: "daily", n: 1 } })],
+    {}, new Date("2020-01-01T06:00:00"), 2)[0].url === "./#habits");
+ok("pushUrlFor falls back to the category", N.pushUrlFor({ cat: "trading" }) === "./#firm:trading");
+
+console.log("\n4c. And the app reads it on a cold open");
+ok("the boot reads location.hash", /window\.location\.hash/.test(app));
+ok("and clears it so a reload does not re-route", /history\.replaceState/.test(app));
+// navigate() would move the URL without re-running the router, which looks
+// like it worked and does nothing.
+ok("the open-window path uses the message, not navigate()", !/c\.navigate\(/.test(sw));
 
 // ── 5. Every destination is a real place ─────────────────────────────
 console.log("\n5. Every destination resolves to a real screen");
