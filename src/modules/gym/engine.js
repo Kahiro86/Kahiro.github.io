@@ -18,6 +18,9 @@ export {
   // search
   searchExercises,
   scoreExerciseMatch,
+  // discipline taxonomy (strength · calisthenics · plyometric · hiit · liit
+  // · hybrid · mobility · stretching · recovery)
+  DISCIPLINES,
   // muscles / groups taxonomy
   MUSCLES,
   GROUPS,

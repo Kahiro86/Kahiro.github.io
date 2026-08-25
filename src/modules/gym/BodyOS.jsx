@@ -20,7 +20,7 @@ import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr } from "../../shared/dates.js";
-import { searchExercises, getExercise, MUSCLE_NAME, gymLevel, GROUPS, MUSCLES, rankForMuscleXp, groupRollup } from "./engine.js";
+import { searchExercises, getExercise, MUSCLE_NAME, gymLevel, GROUPS, MUSCLES, rankForMuscleXp, groupRollup, DISCIPLINES } from "./engine.js";
 import { sanitizeSessions, sortedByDate, weeklyStreak, newSetFrom, lastPerformance } from "./gymSessions.js";
 import { computeAllSummaries } from "./gymStore.js";
 import { RoutineQuickList, RoutineManager, sanitizeRoutines } from "./GymRoutines.jsx";
@@ -438,9 +438,16 @@ function ProgressScreen({ sessions, byId, muscleTotals, lifetimeXp }) {
 // ── Exercise search sheet ────────────────────────────────────────────────────
 function ExerciseSearch({ onPick, onClose }) {
   const [q, setQ] = useState("");
+  // The catalog covers nine kinds of training, and typing is a poor way to
+  // reach eleven stretches you do not yet know the names of. The chips are
+  // how you browse a discipline; the box is how you find a lift you can name.
+  const [disc, setDisc] = useState(null);
   const inputRef = useRef(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
-  const results = useMemo(() => searchExercises(q).slice(0, 60), [q]);
+  const results = useMemo(
+    () => searchExercises(q, disc ? { discipline: disc } : {}).slice(0, 80),
+    [q, disc],
+  );
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 560, maxHeight: "82vh", background: B1, borderTop: `1px solid ${BD}`, borderRadius: "16px 16px 0 0", display: "flex", flexDirection: "column", boxShadow: "0 -20px 50px rgba(0,0,0,0.5)" }}>
@@ -449,6 +456,18 @@ function ExerciseSearch({ onPick, onClose }) {
           <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search exercises…"
             style={{ flex: 1, background: "transparent", border: "none", color: T1, fontSize: 14, outline: "none", fontFamily: "inherit" }} />
           <button onClick={onClose} aria-label="Close" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 8, padding: 6, color: T2, cursor: "pointer", display: "flex" }}><X size={15} /></button>
+        </div>
+        <div style={{ display: "flex", gap: 5, padding: "9px 12px", borderBottom: `1px solid ${BD}`, overflowX: "auto" }}>
+          {[{ id: null, label: "All" }, ...DISCIPLINES.map((d) => ({ id: d.id, label: d.label }))].map((d) => {
+            const on = disc === d.id;
+            return (
+              <button key={d.id ?? "all"} onClick={() => setDisc(d.id)} aria-pressed={on}
+                style={{ padding: "4px 10px", borderRadius: 9, fontSize: 11, whiteSpace: "nowrap", cursor: "pointer", fontFamily: "inherit",
+                  border: `1px solid ${on ? AC + "66" : BD}`, background: on ? `${AC}18` : "transparent", color: on ? AC : T3 }}>
+                {d.label}
+              </button>
+            );
+          })}
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 8 }}>
           {results.length === 0 && <div style={{ padding: 30, textAlign: "center", color: T3, fontSize: 12.5 }}>No matches.</div>}
@@ -460,7 +479,12 @@ function ExerciseSearch({ onPick, onClose }) {
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: `${AC}14`, border: `1px solid ${AC}33`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Dumbbell size={15} color={AC} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: T1 }}>{ex.name}</div>
-                  {primary && <div style={{ fontSize: 10.5, color: T3, marginTop: 1 }}>{primary}</div>}
+                  <div style={{ fontSize: 10.5, color: T3, marginTop: 1, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ color: ex.trainingEffect === "load" ? T3 : AC2 }}>
+                      {DISCIPLINES.find((d) => d.id === ex.discipline)?.label || ex.discipline}
+                    </span>
+                    {primary && <span>· {primary}</span>}
+                  </div>
                 </div>
                 <Plus size={15} color={AC} />
               </button>
