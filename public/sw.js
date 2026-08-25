@@ -82,13 +82,25 @@ self.addEventListener("push", (e) => {
   e.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Tapping a notification focuses an open app window or opens a new one.
+// Tapping a notification focuses an open app window or opens a new one — and
+// takes it to the screen the notification is about. Focusing alone dropped
+// the destination whenever the app happened to be open, which is most of the
+// time, so the reminder landed you wherever you had left off.
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const target = (e.notification.data && e.notification.data.url) || "./";
   e.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
-      for (const c of cs) { if ("focus" in c) return c.focus(); }
+      for (const c of cs) {
+        if (!("focus" in c)) continue;
+        // navigate() is not everywhere; the message is the fallback the app
+        // listens for, and focus happens either way.
+        if (typeof c.navigate === "function" && target !== "./") {
+          return c.navigate(target).then((n) => (n || c).focus()).catch(() => c.focus());
+        }
+        try { c.postMessage({ type: "notification-click", url: target }); } catch { /* focus still works */ }
+        return c.focus();
+      }
       if (self.clients.openWindow) return self.clients.openWindow(target);
     })
   );

@@ -143,6 +143,25 @@ export default function App() {
     if (group) setNavHint({ module: base, group, nonce: Date.now() });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A push notification tapped while the app is already open focuses this
+  // window; the service worker sends the destination alongside so the tap
+  // lands on the screen the notification was about instead of wherever the
+  // app happened to be left. Accepts either a bare module id ("gym:today")
+  // or a URL whose hash carries one.
+  useEffect(() => {
+    const sw = navigator.serviceWorker;
+    if (!sw) return undefined;
+    const onMessage = (e) => {
+      if (e?.data?.type !== "notification-click") return;
+      const raw = String(e.data.url || "");
+      if (!raw || raw === "./") return;
+      const id = raw.includes("#") ? raw.slice(raw.indexOf("#") + 1) : raw;
+      if (id) navTo(id);
+    };
+    sw.addEventListener("message", onMessage);
+    return () => sw.removeEventListener("message", onMessage);
+  }, [navTo]);
+
   // App lock: gate the UI on open when a PIN is set, and re-lock after the
   // tab has been in the background for 5+ minutes.
   const [locked, setLocked] = useState(hasLock);

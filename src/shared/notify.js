@@ -70,7 +70,12 @@ export const SNOOZES = [
 export const NAV_TARGETS = [
   { id: "", l: "None" }, { id: "habits", l: "Discipline / habit" }, { id: "gym:today", l: "Body / training & fuel" },
   { id: "firm:trading", l: "Trading task" }, { id: "firm:wealth", l: "Finance task" },
-  { id: "faith", l: "Faith" }, { id: "analytics:library", l: "Library / Mind" }, { id: "dashboard", l: "Command Center / goals" },
+  { id: "faith", l: "Faith" }, { id: "analytics:library", l: "Library / Mind" },
+  // The Record's goals and Hall of Fame are real routes that nothing could
+  // point a reminder at — the goals and achievements categories both answer
+  // there, so the editor has to be able to offer them.
+  { id: "analytics:goals", l: "Goals / wants" }, { id: "analytics:progress", l: "Progress / Hall of Fame" },
+  { id: "dashboard", l: "Command Center" },
 ];
 
 // Reminders saved before the module merge may still carry a bare legacy id —
@@ -80,6 +85,22 @@ const LEGACY_NAV = { trading: "firm:trading", finance: "firm:wealth", athlete: "
   mind: "analytics:library", "faith:mind": "analytics:library",
   journey: "analytics:progress", "journey:wants": "analytics:goals",
   life: "habits", "life:athlete": "gym:today", "life:purity": "habits", "life:journal": "habits" };
+
+/**
+ * The screen a category answers to. A reminder whose destination was never
+ * set falls back to this rather than to nothing: a Fuel reminder that cannot
+ * open Fuel is a note, and a note does not deserve to interrupt anyone.
+ * Explicit "None" is still respected — nav only defaults when it is empty.
+ */
+export const NAV_BY_CAT = {
+  habits: "habits", streaks: "habits", life: "habits",
+  nutrition: "gym:today", athlete: "gym:today",
+  trading: "firm:trading", finance: "firm:wealth",
+  faith: "faith", mind: "analytics:library",
+  goals: "analytics:goals", achievements: "analytics:progress", xp: "analytics:progress",
+  system: "dashboard", custom: "dashboard",
+};
+export const navForCat = (cat) => NAV_BY_CAT[cat] || "dashboard";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
@@ -132,6 +153,11 @@ export function sanitizeNotifLog(raw) {
       snoozeUntil: Number.isFinite(+e.snoozeUntil) ? +e.snoozeUntil : null,
       esc: Number.isInteger(+e.esc) ? Math.min(3, Math.max(0, +e.esc)) : 0,
       pinned: !!e.pinned,
+      // Where this notification leads. Reminders have always collected a
+      // "Link to" destination and the fired entry has always dropped it, so
+      // the one field that makes a notification actionable never survived
+      // to the notification.
+      nav: typeof e.nav === "string" ? e.nav : "",
     }));
   // Cross-device race can append the same occurrence twice before sync
   // settles — keep the earliest, drop the copy.
@@ -244,13 +270,17 @@ export const newLogEntry = (rem, occKey, firedAt = Date.now()) => ({
   remId: rem.id, occKey, cat: rem.cat, title: rem.title, icon: rem.icon,
   priority: rem.priority, state: "unread", firedAt, doneAt: null,
   snoozeUntil: null, esc: 0, pinned: false,
+  nav: typeof rem.nav === "string" && rem.nav ? rem.nav : navForCat(rem.cat),
 });
 
 // One-off (non-reminder) log entries: achievements, system notices.
-export const systemLogEntry = ({ title, cat = "system", icon = "⚙️", priority = "low", occKey = null }) => ({
+export const systemLogEntry = ({ title, cat = "system", icon = "⚙️", priority = "low", occKey = null, nav = "" }) => ({
   id: `nl${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`,
   remId: null, occKey, cat, title, icon, priority,
   state: "unread", firedAt: Date.now(), doneAt: null, snoozeUntil: null, esc: 0, pinned: false,
+  // A notice with nowhere to go is a notice you can only dismiss. Every
+  // system entry names the screen that answers it.
+  nav: typeof nav === "string" && nav ? nav : navForCat(cat),
 });
 
 // ── Live buckets for the panel ───────────────────────────────────────

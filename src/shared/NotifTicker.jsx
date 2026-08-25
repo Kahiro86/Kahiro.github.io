@@ -60,7 +60,7 @@ export function NotifTicker() {
           if (logged.has(key)) continue;
           const a = ACHIEVEMENTS.find((x) => x.id === id);
           if (a && catEnabled(prefs, "achievements")) {
-            additions.push({ ...systemLogEntry({ title: `Achievement unlocked: ${a.name}`, cat: "achievements", icon: a.icon, priority: "low", occKey: key }), firedAt: now, state: "read", doneAt: null });
+            additions.push({ ...systemLogEntry({ title: `Achievement unlocked: ${a.name}`, cat: "achievements", icon: a.icon, priority: "low", occKey: key, nav: "analytics:progress" }), firedAt: now, state: "read", doneAt: null });
           }
         }
 

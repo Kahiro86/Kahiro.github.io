@@ -4,7 +4,7 @@
 // a full reminder editor, response analytics and per-category controls —
 // all on the synced stores, so every device shows the same inbox.
 import { useMemo, useState } from "react";
-import { Bell, Plus, Check, X, Clock, Pin, Trash2, Search, ChevronDown, Pencil, Pause, Play } from "lucide-react";
+import { Bell, Plus, Check, X, Clock, Pin, Trash2, Search, ChevronDown, Pencil, Pause, Play, ArrowUpRight } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, GL, CY, GR, RE, AM, PU } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
 import { useWorkouts } from "./useWorkouts.js";
@@ -112,6 +112,10 @@ export function NotificationCenter({ onNavigate }) {
   const patchEntry = (id, patch) => setLog((prev) => sanitizeNotifLog(prev).map((e) => (e.id === id ? { ...e, ...patch } : e)));
   const complete = (e) => { patchEntry(e.id, { state: "done", doneAt: Date.now() }); toast("Done ✓", { tone: "success", duration: 1800 }); };
   const dismiss = (e) => patchEntry(e.id, { state: "dismissed" });
+  // Opening a notification answers it as far as "have you seen this" goes,
+  // but not as far as "have you done it" — the entry stays actionable so
+  // the accountability shelf still catches it if you look and walk away.
+  const markRead = (e) => { if (e.state === "unread") patchEntry(e.id, { state: "read" }); };
   const snooze = (e, min) => {
     const until = min == null
       ? (() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(8, 0, 0, 0); return d.getTime(); })()
@@ -197,6 +201,17 @@ export function NotificationCenter({ onNavigate }) {
         </div>
         {actions && (
           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+            {/* The point of the thing. A notification that can only be
+                completed or dismissed is telling you something; one that
+                opens the screen answering it is asking you to do something,
+                which is the only reason to interrupt somebody. */}
+            {e.nav && (
+              <button onClick={() => { markRead(e); onNavigate?.(e.nav); setOpen(false); }}
+                aria-label={`Open ${e.title}`} title="Open"
+                style={{ background: `${CY}14`, border: `1px solid ${CY}44`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: CY, display: "flex" }}>
+                <ArrowUpRight size={11} />
+              </button>
+            )}
             <button onClick={() => complete(e)} aria-label={`Complete ${e.title}`} title="Complete" style={{ background: `${GR}14`, border: `1px solid ${GR}44`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: GR, display: "flex" }}><Check size={11} /></button>
             <button onClick={() => setSnoozeFor(snoozeFor === e.id ? null : e.id)} aria-label={`Snooze ${e.title}`} title="Snooze" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: AM, display: "flex" }}><Clock size={11} /></button>
             <button onClick={() => dismiss(e)} aria-label={`Dismiss ${e.title}`} title="Dismiss" style={{ background: GL, border: `1px solid ${BD}`, borderRadius: 7, padding: "4px 6px", cursor: "pointer", color: T3, display: "flex" }}><X size={11} /></button>
