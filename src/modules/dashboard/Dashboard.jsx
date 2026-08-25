@@ -509,6 +509,34 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         <div style={{ fontSize: 12, color: T2, lineHeight: 1.5 }}>{consistencySentence}</div>
       </Card>
 
+      {/* ── ⚔️ THE MAN · THE MACHINE — the two pillars, above the fold
+          with the cycle they are measured over ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
+        <StatCard onClick={() => onNavigate("habits")}>
+          <SectionLabel icon={<span style={{ fontSize: 12 }}>🦇</span>}>The Man · Batman</SectionLabel>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span style={{ fontSize: 34, ...big, color: lifeScore >= 80 ? GR : lifeScore >= 50 ? AM : RE }}>{lifeScore}%</span>
+            <span style={{ fontSize: 12, color: T2 }}>discipline</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: scoreDelta > 0 ? GR : scoreDelta < 0 ? RE : T3 }}>
+              {scoreDelta > 0 ? `↑ +${scoreDelta}%` : scoreDelta < 0 ? `↓ ${scoreDelta}%` : "· even"}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
+            {topStreakDays > 0 ? `${topStreakDays}-day top streak` : "Journal · purity · nutrition"}
+          </div>
+        </StatCard>
+        <StatCard onClick={() => onNavigate("firm:doctrine")}>
+          <SectionLabel icon={<span style={{ fontSize: 12 }}>⚙️</span>}>The Machine · Stark</SectionLabel>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <span style={{ fontSize: 34, ...big, color: gate.met ? GR : T1 }}>{gate.have}<span style={{ fontSize: 15, color: T3 }}>/{gate.need}</span></span>
+            <span style={{ fontSize: 12, color: T2 }}>clean months · the gate</span>
+          </div>
+          <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
+            Fleet ${Math.round(fleetEquity).toLocaleString()}
+          </div>
+        </StatCard>
+      </div>
+
       {/* ── day-score hero ── */}
       <DayScore pct={lifeScore} delta={dayDelta} spark={spark} xpToday={xpToday} onClick={() => onNavigate("habits")} />
 
@@ -613,39 +641,10 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${AC}66`; e.currentTarget.style.color = T2; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = BD; e.currentTarget.style.color = T3; }}>
         <ChevronRight size={14} style={{ transform: moreOpen ? "rotate(90deg)" : "none", transition: "transform .2s ease" }} />
-        {moreOpen ? "Hide details" : "More — pillars · consistency · schedule · health"}
+        {moreOpen ? "Hide details" : "More — schedule · health"}
       </button>
 
       {moreOpen && (<>
-
-
-
-      {/* ── ⚔️ THE MAN · THE MACHINE ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
-        <StatCard onClick={() => onNavigate("habits")}>
-          <SectionLabel icon={<span style={{ fontSize: 12 }}>🦇</span>}>The Man · Batman</SectionLabel>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontSize: 34, ...big, color: lifeScore >= 80 ? GR : lifeScore >= 50 ? AM : RE }}>{lifeScore}%</span>
-            <span style={{ fontSize: 12, color: T2 }}>discipline</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: scoreDelta > 0 ? GR : scoreDelta < 0 ? RE : T3 }}>
-              {scoreDelta > 0 ? `↑ +${scoreDelta}%` : scoreDelta < 0 ? `↓ ${scoreDelta}%` : "· even"}
-            </span>
-          </div>
-          <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
-            {topStreakDays > 0 ? `${topStreakDays}-day top streak` : "Journal · purity · nutrition"}
-          </div>
-        </StatCard>
-        <StatCard onClick={() => onNavigate("firm:doctrine")}>
-          <SectionLabel icon={<span style={{ fontSize: 12 }}>⚙️</span>}>The Machine · Stark</SectionLabel>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontSize: 34, ...big, color: gate.met ? GR : T1 }}>{gate.have}<span style={{ fontSize: 15, color: T3 }}>/{gate.need}</span></span>
-            <span style={{ fontSize: 12, color: T2 }}>clean months · the gate</span>
-          </div>
-          <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
-            Fleet ${Math.round(fleetEquity).toLocaleString()}
-          </div>
-        </StatCard>
-      </div>
 
       {/* ── 📅 SCHEDULE — finance and trading moved to their own fold ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>

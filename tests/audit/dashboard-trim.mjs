@@ -84,6 +84,7 @@ ok("the More toggle survives", /more —|hide details/i.test(back));
 // The user asked for this block up top: it was buried inside "More", where
 // the only real numbers about the 365-day cycle were never seen.
 ok("Year of Consistency is above the fold", /year of consistency/i.test(back));
+ok("the two pillars are above the fold with it", /the man . batman/i.test(back) && /the machine . stark/i.test(back));
 ok("and its numbers come with it", /current streak/i.test(back) && /consistency rate/i.test(back));
 
 console.log("");
