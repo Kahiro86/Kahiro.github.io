@@ -221,6 +221,50 @@ ok("an unlogged day never drags the average to zero", s2.coverage > 60);
 ok("items missed repeatedly are surfaced", s2.chronicMisses.length > 0);
 ok("with how often they were missed", s2.chronicMisses[0].missedDays >= 2);
 
+// ── 9. Import survives what real files actually look like ────────────
+console.log("\n9. Malformed input fails cleanly, never crashes");
+const survives = (label, text) => {
+  let r;
+  try { r = M.parsePlanCsv(text, { name: "T" }); } catch (e) { ok(`${label} — threw: ${e.message}`, false); return null; }
+  ok(`${label} — returns a result`, r && (r.plan === null || typeof r.plan === "object"));
+  return r;
+};
+survives("empty string", "");
+survives("whitespace only", "   \n\n  ");
+survives("header only", "Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories");
+survives("no header at all", "just,some,words\nand,more,words");
+survives("one column", "Meal\nBreakfast");
+survives("ragged rows", "Meal,Food,Amount,Protein (g)\nA,B\nC,D,E,F,G,H,I");
+survives("non-numeric macros", "Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories\nM,Eggs,3 eggs,lots,some,n/a,plenty");
+survives("negative macros", "Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories\nM,X,100g,-5,-5,-5,-100");
+survives("windows line endings", CSV.replace(/\n/g, "\r\n"));
+survives("a UTF-8 BOM", "\uFEFF" + CSV);
+// "returns a result" is also true of a clean refusal, which is not what we
+// want for a file a spreadsheet exports by default. Assert it PARSED.
+const bomPlan = M.parsePlanCsv("\uFEFF" + CSV, {}).plan;
+ok("a BOM-prefixed export still parses, not just fails politely",
+  bomPlan && bomPlan.meals.length === 2 && bomPlan.meals[0].items.length === 8);
+survives("a 4000-row file", "Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories\n" + Array.from({ length: 4000 }, (_, i) => `M${i % 5},Food ${i},100g,10,10,5,150`).join("\n"));
+survives("quoted commas", 'Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories\nM,"Rice, cooked",200g,4,42,0,184');
+survives("null bytes and control chars", "Meal,Food,Amount\nM,Foo\u0000bar,100g");
+
+console.log("\n9b. And the meaning survives too");
+const quoted = M.parsePlanCsv('Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories\nM,"Rice, cooked",200g,4,42,0,184', {}).plan;
+ok("a quoted comma stays inside the food name", quoted.meals[0].items[0].options[0].name === "Rice, cooked");
+const crlf = M.parsePlanCsv(CSV.replace(/\n/g, "\r\n"), {}).plan;
+ok("windows line endings parse identically", crlf.meals.length === 2 && crlf.meals[0].items.length === 8);
+const noHeader = M.parsePlanCsv("just,some,words\nand,more,words", {});
+ok("a file with no Meal/Food columns is refused with a reason",
+  noHeader.plan === null && noHeader.errors.length > 0);
+const headerOnly = M.parsePlanCsv("Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories", {});
+ok("a header with no rows is refused, not turned into an empty plan",
+  headerOnly.plan === null && /no food rows/i.test(headerOnly.errors.join(" ")));
+const negative = M.parsePlanCsv("Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories\nM,X,100g,-5,-5,-5,-100", {}).plan;
+ok("negative macros do not produce a negative-gram option", negative.meals[0].items[0].options[0].grams >= 0);
+const big = M.parsePlanCsv("Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories\n" + Array.from({ length: 4000 }, (_, i) => `M${i % 5},Food ${i},100g,10,10,5,150`).join("\n"), {}).plan;
+ok("a large file still parses into its meals", big.meals.length === 5);
+ok("and its totals are finite", Number.isFinite(M.planTotals(big, [], "any").day.kcal));
+
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Meal plans: ${pass}/${pass + fail} passed`);
