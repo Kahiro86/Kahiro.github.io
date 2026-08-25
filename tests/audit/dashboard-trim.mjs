@@ -1,0 +1,77 @@
+// The Command Centre, trimmed. Everything below was removed at the user's
+// request; net worth in particular now lives only inside Finance.
+import { chromium } from "playwright";
+import { existsSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { fileURLToPath } from "node:url";
+import { extname, join, normalize } from "node:path";
+const DIST = process.env.QA_DIST || fileURLToPath(new URL("../../dist", import.meta.url));
+const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
+const server = createServer((q, r) => { let p = decodeURIComponent((q.url || "/").split("?")[0]); if (p === "/") p = "/index.html"; const fp = normalize(join(DIST, p)); if (!fp.startsWith(DIST) || !existsSync(fp)) { r.statusCode = 404; return r.end("nf"); } r.setHeader("Content-Type", MIME[extname(fp)] || "application/octet-stream"); r.end(readFileSync(fp)); });
+await new Promise((r) => server.listen(0, r));
+const BASE = `http://localhost:${server.address().port}/index.html`;
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
+
+// Real finance and trading data, so a card that still renders them shows up.
+const seed = {
+  onboarding: JSON.stringify({ overviewSeen: true, done: true }),
+  whatsnew_seen: JSON.stringify("3.1"),
+  dash_show_more: JSON.stringify(true),          // expand it — nothing may hide
+  finance_state: JSON.stringify({ accounts: [{ id: "a1", name: "Main", balance: 250000, kind: "cash" }],
+    income: [{ id: "i1", date: iso(new Date()), amount: 40000, source: "Salary" }], bills: [{ id: "b1", name: "Rent", amount: 30000 }] }),
+  ict_trades: JSON.stringify([{ id: "t1", date: iso(new Date()), status: "CLOSED", outcome: "WIN", checklistTotal: 5, checklistScore: 5 }]),
+  checklist_items: JSON.stringify([{ id: "c1", text: "Make the bed", core: true }]),
+  weekly_focus: JSON.stringify({ text: "Ship the merge", week: iso(new Date()) }),
+};
+
+const errs = [];
+const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const page = await b.newPage({ viewport: { width: 1280, height: 1400 } });
+page.on("pageerror", (e) => errs.push(String(e)));
+page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+await page.addInitScript((s) => { for (const [k, v] of Object.entries(s)) localStorage.setItem(`architect:${k}`, v); }, seed);
+await page.goto(BASE, { waitUntil: "networkidle" });
+const dismiss = async () => { for (const n of ["Skip", "Skip the tour"]) { const x = page.getByRole("button", { name: n, exact: true }); try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { } } };
+await dismiss(); await page.waitForTimeout(1500); await dismiss(); await page.waitForTimeout(500);
+
+let pass = 0, fail = 0; const fails = [];
+const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
+
+const home = await page.locator("body").innerText();
+
+console.log("\n── removed from the Command Centre ──");
+for (const [label, re] of [
+  ["Progression card", /\bPROGRESSION\b/i],
+  ["Current Streaks", /current streaks/i],
+  ["Trading · Killzone card", /trades logged today/i],
+  ["Monthly Overhead bar", /monthly overhead\b/i],
+  ["Today's Checklist", /today'?s checklist/i],
+  ["This Week's Focus box", /one focus statement/i],
+  ["Monthly Overhead Ceiling", /overhead ceiling/i],
+  ["The Mission · Freedom", /the mission · freedom|years to freedom/i],
+]) ok(`${label} is gone`, !re.test(home));
+
+console.log("\n── finance is only inside Finance ──");
+ok("no net-worth figure on the home screen", !/net worth/i.test(home));
+ok("no KES amount on the home screen", !/KES\s?[\d,]/.test(home));
+await page.locator('[data-tour="nav-firm"]').first().click(); await page.waitForTimeout(1100); await dismiss();
+await page.getByRole("button", { name: /^Wealth$/ }).first().click().catch(() => {});
+await page.waitForTimeout(900);
+const firm = await page.locator("body").innerText();
+ok("the Firm still offers Net Worth", /net worth/i.test(firm));
+
+console.log("\n── what the user kept is still there ──");
+await page.locator('[data-tour="nav-dashboard"]').first().click(); await page.waitForTimeout(1100); await dismiss();
+const back = await page.locator("body").innerText();
+ok("the level card survives", /level|signatory|operator|rule keeper|floor holder/i.test(back));
+ok("the day score survives", /discipline|day score|%/i.test(back));
+ok("the domain grid survives", /purity|fuel|training|habits/i.test(back));
+ok("the More toggle survives", /more —|hide details/i.test(back));
+
+console.log("");
+console.log("ERRORS:", errs.slice(0, 3).join(" || ") || "none");
+if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
+console.log(`Dashboard trim: ${pass}/${pass + fail} passed`);
+await b.close(); server.close();
+process.exit(fail || errs.length ? 1 : 0);

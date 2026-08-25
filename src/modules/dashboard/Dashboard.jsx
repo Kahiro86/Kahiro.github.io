@@ -8,22 +8,19 @@
 // the daily view stays a glance; everything is one tap down.
 import { useState, useEffect, useMemo } from "react";
 import {
-  Target, AlertTriangle, Flame, Trophy, CalendarClock, DollarSign,
-  TrendingUp, HeartPulse, ChevronRight, Check, Crosshair,
+  Target, AlertTriangle, Flame, CalendarClock,
+  HeartPulse, ChevronRight, Crosshair,
   ListChecks, CandlestickChart, Dumbbell, BookOpen, Sparkles, Gauge,
 } from "lucide-react";
 import { BD, T1, T2, T3, GL, B2, AC, AC2, GR, AM, RE, MONO } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
-import { TodayTrackers } from "../../shared/TodayTrackers.jsx";
 import { billsDueSoon } from "../finance/bills.js";
-import { Ring } from "../../shared/charts.jsx";
 
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useWorkouts } from "../../shared/useWorkouts.js";
 import { habitSummary } from "../habits/summary.js";
 import { getActiveKillzone, getEATTimeStr } from "../trading/timezone.js";
 import { sanitizeTrades as sanitizeTiTrades, sanitizeAccounts as sanitizeTiAccounts, netPnl as tiNetPnl, accountMetrics as tiAccountMetrics } from "../trading/intel/tradingIntel.js";
-import { financeSummary } from "../finance/summary.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 // Habit facts now come from the new tracker via habitSummary; only the legacy
@@ -36,7 +33,6 @@ import { consistencyOpts } from "../../shared/consistencyOpts.js";
 import { freedomMath } from "../../shared/freedom.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
 import { FocusToday } from "../../shared/FocusToday.jsx";
-import { OverheadToday } from "../../shared/OverheadToday.jsx";
 import { scalingGate } from "../../shared/firm.js";
 import {
   sanitizeNutrition, dayEntries, dayTotals, calcTargets, healthyStreaks,
@@ -45,7 +41,6 @@ import { sanitizePurity } from "../life/purity.js";
 import { getGcalConfig, todaysEvents } from "../../shared/gcal.js";
 import { useConsistencyStart, consistencyStats, totalActivities } from "../../shared/consistency.js";
 
-const kes0 = (n) => Math.round(+n || 0).toLocaleString();
 
 // ── Small shared pieces ──────────────────────────────────────────────
 const SectionLabel = ({ icon, children }) => (
@@ -318,13 +313,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     return out.sort((a, b) => b.days - a.days).slice(0, 4);
   }, [hsum, nutrition, nTargets, purityStreak, cheatDays, ds]);
 
-  // ── 🏆 XP — nearest journey milestone ──
-  const nextReward = useMemo(() => {
-    if (!xp?.journeys) return null;
-    const cand = xp.journeys.filter((j) => j.next).sort((a, b) => (a.next.threshold - a.value) - (b.next.threshold - b.value))[0];
-    return cand ? `${cand.icon} ${cand.next.rank} · ${cand.name}` : "All journeys complete 👑";
-  }, [xp]);
-
   // ── 📅 SCHEDULE — upcoming calendar events only ──
   const [agenda, setAgenda] = useState({ state: getGcalConfig() ? "loading" : "off", events: [] });
   useEffect(() => {
@@ -339,13 +327,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   }, [agenda]);
 
   // ── 💰 FINANCE ──
-  const fin = useMemo(() => financeSummary(finance), [finance]);
-  const monthExpenses = useMemo(() => (Array.isArray(finance.bills) ? finance.bills.reduce((s, b) => s + (+b?.amount || 0), 0) : 0), [finance.bills]);
-  const incomeToday = useMemo(
-    () => (Array.isArray(finance.income) ? finance.income : []).filter((e) => e && (e.date || "").slice(0, 10) === ds).reduce((s, e) => s + (+e.amount || 0), 0),
-    [finance.income, ds]
-  );
-
   // ── 📊 TRADING ──
   const fleetEquity = useMemo(
     () => sanitizeTiAccounts(tiAccounts).filter((a) => !a.archived).reduce((s, a) => s + tiAccountMetrics(a, tiTrades).currentBalance, 0),
@@ -358,8 +339,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     return { count: todays.length, pnl: todays.reduce((s, t) => s + tiNetPnl(t), 0) };
   }, [tiTrades, tiAccounts, tiSettings, ds]);
   const tradeCountToday = tradesToday.length + tiToday.count;
-  const isTradingDay = kz.active || tradeCountToday > 0;
-  const checklistOk = tradesToday.length > 0 && tradesToday.every((t) => +t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal);
 
   // ── ❤️ SYSTEM HEALTH — four indicators ──
   const health = useMemo(() => {
@@ -466,12 +445,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       sub: purityStreak > 0 ? "days in a row" : "log today",
     },
     {
-      key: "finance", icon: DollarSign, label: "Wealth", nav: "firm:wealth",
-      accent: fin.personalNetWorth >= 0 ? "g" : "bad",
-      value: `KES ${kesShort(fin.personalNetWorth)}`,
-      sub: incomeToday > 0 ? `+KES ${kesShort(incomeToday)} today` : "net worth", subTone: incomeToday > 0 ? "good" : null,
-    },
-    {
       key: "streak", icon: Flame, label: "Streak", nav: "analytics:progress",
       accent: cs.currentStreak > 0 ? "g" : "off",
       value: `${cs.currentStreak}`, unit: "days",
@@ -557,7 +530,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         ))}
       </div>
 
-      <TodayTrackers overheadActual={monthExpenses} />
 
       {/* ── ▾ THE FULL COCKPIT — doctrine depth, folded by default ── */}
       <button onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} aria-label={moreOpen ? "Hide the full cockpit" : "Show the full cockpit"}
@@ -565,38 +537,12 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${AC}66`; e.currentTarget.style.color = T2; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = BD; e.currentTarget.style.color = T3; }}>
         <ChevronRight size={14} style={{ transform: moreOpen ? "rotate(90deg)" : "none", transition: "transform .2s ease" }} />
-        {moreOpen ? "Hide details" : "More — mission · pillars · finance · health"}
+        {moreOpen ? "Hide details" : "More — pillars · consistency · schedule · health"}
       </button>
 
       {moreOpen && (<>
 
-      {/* ── 🎯 THE MISSION — the freedom north star ── */}
-      <Card style={{ padding: "18px 22px", background: "linear-gradient(110deg,#161310,#0C0B0A)", display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
-        <Ring pct={freedom.capitalPct} size={104} stroke={9} color={AC}>
-          <div style={{ fontSize: 20, ...big, color: AC }}>{freedom.freedomPct}%</div>
-          <div style={{ fontSize: 7.5, color: T3, letterSpacing: 1, marginTop: 2 }}>FREEDOM</div>
-        </Ring>
-        <div style={{ flex: 1, minWidth: 230 }}>
-          <div style={{ ...UP, fontSize: 10, letterSpacing: 2.5, color: AC }}>The Mission · Freedom</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: T1, marginTop: 3 }}>
-            {freedom.yearsOut === 0 ? "The line is crossed." : freedom.yearsOut == null ? "Build the engines." : `≈ ${freedom.yearsOut} years to freedom`}
-          </div>
-          <div style={{ display: "flex", gap: 24, marginTop: 13, flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontSize: 15, ...big, color: freedom.freedomPct >= 100 ? GR : T1 }}>KES {kesShort(freedom.passiveMonthly)}<span style={{ fontSize: 10, color: T3, fontWeight: 500 }}> /mo</span></div>
-              <div style={{ ...UP, fontSize: 9, color: T3, letterSpacing: 1, marginTop: 3 }}>Passive · goal {kesShort(freedom.freedomNumber)}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 15, ...big }}>KES {kesShort(freedom.capital)}</div>
-              <div style={{ ...UP, fontSize: 9, color: T3, letterSpacing: 1, marginTop: 3 }}>Capital · line {kesShort(freedom.target)}</div>
-            </div>
-          </div>
-        </div>
-        <button onClick={() => onNavigate("firm")} aria-label="Open The Firm"
-          style={{ background: "none", border: `1px solid ${BD}`, borderRadius: 10, padding: "9px 12px", color: T2, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit", fontSize: 12 }}>
-          The Firm <ChevronRight size={13} />
-        </button>
-      </Card>
+
 
       {/* ── ⚔️ THE MAN · THE MACHINE ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
@@ -620,7 +566,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
             <span style={{ fontSize: 12, color: T2 }}>clean months · the gate</span>
           </div>
           <div style={{ fontSize: 11, color: T3, marginTop: 6 }}>
-            Fleet ${Math.round(fleetEquity).toLocaleString()} · vault KES {kesShort(freedom.capital)}
+            Fleet ${Math.round(fleetEquity).toLocaleString()}
           </div>
         </StatCard>
       </div>
@@ -649,36 +595,9 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         <div style={{ fontSize: 12, color: T2, lineHeight: 1.5 }}>{consistencySentence}</div>
       </Card>
 
-      {/* ── 🏆 PROGRESSION ── */}
-      <StatCard onClick={() => onNavigate("analytics:progress")}>
-        <SectionLabel icon={<Trophy size={12} color={AC} />}>Progression</SectionLabel>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-          <span style={{ fontSize: 30, ...big }}>Level {xp?.level ?? 1}</span>
-          <span style={{ fontSize: 12, color: T2 }}>{xp?.title}</span>
-        </div>
-        <div style={{ fontSize: 12, color: T2, fontFamily: MONO, marginTop: 6 }}>{(xp?.total ?? 0).toLocaleString()} / {(xp?.nextLevelXp ?? 100).toLocaleString()} XP</div>
-        <div style={{ height: 4, background: BD, borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${xp?.pctToNext ?? 0}%`, background: AC, borderRadius: 2 }} />
-        </div>
-        {nextReward && <div style={{ fontSize: 10.5, color: T3, marginTop: 8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Next: <span style={{ color: T2 }}>{nextReward}</span></div>}
-      </StatCard>
 
-      {/* ── 🔥 STREAKS (hidden when none) ── */}
-      {streaks.length > 0 && (
-        <div>
-          <SectionLabel icon={<Flame size={12} color={AC} />}>Current Streaks</SectionLabel>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {streaks.map((s) => (
-              <div key={s.label} onClick={() => onNavigate("habits")} title={s.label}
-                style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 12px", background: GL, border: `1px solid ${BD}`, borderRadius: 10, cursor: "pointer" }}>
-                <span style={{ fontSize: 14, lineHeight: 1 }}>{s.icon}</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: AC, fontFamily: MONO }}>{s.days}<span style={{ fontSize: 10, color: T3, fontWeight: 500 }}>d</span></span>
-                <span style={{ fontSize: 11.5, color: T2, whiteSpace: "nowrap", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis" }}>{s.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
+
 
       {/* ── 📅 SCHEDULE · 💰 FINANCE · 📊 TRADING (each hides when empty) ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
@@ -696,35 +615,11 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
           </StatCard>
         )}
 
-        {(incomeToday > 0 || fin.personalNetWorth !== 0) && (
-          <StatCard onClick={() => onNavigate("firm:wealth")}>
-            <SectionLabel icon={<DollarSign size={12} color={AC} />}>Finance</SectionLabel>
-            <div style={{ fontSize: 28, ...big, color: fin.personalNetWorth >= 0 ? T1 : RE }}>KES {kes0(fin.personalNetWorth)}</div>
-            <div style={{ fontSize: 10.5, color: T3, marginTop: 3 }}>Net worth</div>
-            {incomeToday > 0 && <div style={{ fontSize: 12, color: GR, marginTop: 8 }}>+KES {kes0(incomeToday)} income today</div>}
-          </StatCard>
-        )}
 
-        {isTradingDay && (
-          <StatCard onClick={() => onNavigate("firm:trading")} style={{ borderColor: kz.active ? `${AC}44` : BD }}>
-            <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Killzone" : ""}</SectionLabel>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 26, ...big, color: T1 }}>{tradeCountToday}</span>
-              <span style={{ fontSize: 11, color: T3 }}>trade{tradeCountToday === 1 ? "" : "s"} logged today</span>
-            </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 9, fontSize: 11.5, color: T2 }}>
-              <span style={{ color: kz.active ? GR : T3 }}>{kz.active ? "Session live" : "Outside killzone"}</span>
-              {tradesToday.length > 0 && (
-                <span style={{ color: checklistOk ? GR : AM, display: "flex", alignItems: "center", gap: 4 }}>
-                  {checklistOk ? <><Check size={11} /> Checklist</> : "Checklist gaps"}
-                </span>
-              )}
-            </div>
-          </StatCard>
-        )}
+
+
       </div>
 
-      <OverheadToday actual={monthExpenses} />
 
       {/* ── ❤️ SYSTEM HEALTH ── */}
       <div>
