@@ -47,6 +47,14 @@ const FEATURES = [
   { name: "XP ledger", store: "xp_ledger", also: ["xp_achievements"], xp: null, analytics: /journeys|RANKS|nextRankFor/, cc: /xpToday|xp\?\./, home: "The Record → Progress — this IS the XP path, not a feed into it" },
   { name: "Meal plans", store: "nutrition_plans", xp: null, analytics: /adherenceSeries|dayAdherence/, cc: null, home: "Body → Fuel → Meal plans — a template, never intake; adherence reported on the plan itself" },
   { name: "Metric links", store: "hab_link_writes", xp: null, analytics: null, cc: /useLinkedMetrics/, home: "internal provenance for the habit ⇄ counterpart mirror — nothing to report on" },
+  // TodayTrackers was the only surface for these three, and it was unmounted
+  // when the Command Centre was trimmed. The data is intact and syncing; it
+  // simply cannot be seen or edited from anywhere. Whether they get a new
+  // home or are retired is a product call, not a repair, so it is recorded
+  // here rather than decided quietly.
+  { name: "Daily checklist", store: "daily_checklist", xp: null, analytics: null, cc: null, todo: "no surface — TodayTrackers was unmounted with the Command Centre trim" },
+  { name: "Weekly goal", store: "weekly_goal", xp: null, analytics: null, cc: null, todo: "no surface — same" },
+  { name: "Life pings", store: "life_pings", xp: null, analytics: null, cc: null, todo: "no surface — same" },
   { name: "Day marks", store: "athlete_day_marks", xp: null, analytics: /hasCheat|dayMarks/, cc: /useDayMarks/, home: "cheat/season days — excluded from streak grading" },
 ];
 
@@ -110,9 +118,9 @@ const NOT_A_FEATURE = new Set([
   "xp_achievements", "ict_trades", "finance_snapshots", "firm_withdrawals",
   "purity_urges", "athlete_photos",
   // Sub-features with their own surfaces, each reported where it is used.
-  "daily_checklist", "daily_checklist_log", "weekly_focus", "weekly_goal",
-  "weekly_goal_archive", "monthly_overhead", "life_pings", "focus_sessions",
-  "missions", "ti_lessons", "ti_reminders", "trade_gates",
+  "daily_checklist_log", "weekly_focus", "weekly_goal_archive",
+  "monthly_overhead", "focus_sessions", "missions", "ti_lessons",
+  "ti_reminders", "trade_gates",
 ]);
 
 const KEY_RE = /useStorageState\(\s*["']([a-z_0-9]+)["']/g;

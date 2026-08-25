@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import { X, Moon, Check, Sunrise } from "lucide-react";
 import { B1, B2, BD, BD2, T1, T2, T3, GL, AC2, GR, AM } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
+import { focusThisWeek, isDismissed } from "./review.js";
+import { CHECKIN_KEY, CHECKIN_CFG_KEY, ANSWERS, getCheckin, setCheckin, getCadence } from "./focusCheckin.js";
 import { useWorkouts } from "./useWorkouts.js";
 import { localDateStr } from "./dates.js";
 import { isScheduled, isDone } from "./habitEngine.js";
@@ -27,6 +29,18 @@ export function EveningReview({ onClose, habits = [] }) {
   const workouts = useWorkouts();
   const [entries] = useStorageState("journal_entries", []);
   const [trades] = useStorageState("ti_trades", []);
+  // The week's focus and today's answer to it. This lived on the Command
+  // Centre until that block was removed at the user's request, which left
+  // focus_checkins with no writer at all — a Settings cadence for a check-in
+  // that could never happen, and a Weekly Review section that could never
+  // populate. "Did today serve it?" is an end-of-day question, so this is
+  // where it belongs; the Command Centre stays clean either way.
+  const [focusRaw] = useStorageState("weekly_focus", {});
+  const [checkins, setCheckins] = useStorageState(CHECKIN_KEY, {});
+  const [checkinCfg] = useStorageState(CHECKIN_CFG_KEY, { cadence: "daily" });
+  const weekFocus = focusThisWeek(focusRaw);
+  const focusOn = getCadence(checkinCfg) !== "off" && weekFocus && !isDismissed(weekFocus);
+  const answeredToday = getCheckin(checkins, ds);
 
   const existing = getReview(reviews, ds);
   const [rating, setRating] = useState(existing?.rating || 0);
@@ -85,6 +99,27 @@ export function EveningReview({ onClose, habits = [] }) {
             <div style={{ background: `${AC2}0E`, border: `1px solid ${AC2}33`, borderRadius: 11, padding: "11px 13px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, ...label, color: AC2, marginBottom: 6 }}><Sunrise size={12} /> Today's focus — set last night</div>
               {focus.map((f, i) => <div key={i} style={{ fontSize: 12.5, color: T2, padding: "2px 0" }}>• {f}</div>)}
+            </div>
+          )}
+
+          {focusOn && (
+            <div style={{ background: B2, border: `1px solid ${BD}`, borderRadius: 11, padding: "11px 13px" }}>
+              <div style={{ ...label, marginBottom: 5 }}>This week's focus</div>
+              <div style={{ fontSize: 13, color: T1, marginBottom: 9 }}>{weekFocus}</div>
+              <div style={{ fontSize: 11.5, color: T3, marginBottom: 7 }}>Did today serve it?</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {ANSWERS.map((a) => {
+                  const on = answeredToday === a.id;
+                  return (
+                    <button key={a.id} onClick={() => setCheckins((prev) => setCheckin(prev, ds, on ? null : a.id))}
+                      aria-pressed={on} aria-label={`${a.l} — did today serve this week's focus`}
+                      style={{ padding: "5px 13px", borderRadius: 10, fontSize: 11.5, cursor: "pointer", fontFamily: "inherit",
+                        border: `1px solid ${on ? AC2 + "66" : BD}`, background: on ? `${AC2}18` : "none", color: on ? AC2 : T3 }}>
+                      {a.l}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
