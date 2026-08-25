@@ -124,6 +124,16 @@ await page.waitForTimeout(1500); await dismiss();
 home = (await page.locator("body").innerText()).replace(/\s+/g, " ");
 ok("the Command Centre's water tile sees it", /3\.0 ?L|3000 ?ml|Hydration On track/i.test(home));
 
+// ── 5. The link is visible on the habit itself ───────────────────────
+console.log("\n5. The habit says what it is joined to");
+await page.locator('[data-tour="nav-habits"]').first().click();
+await page.waitForTimeout(1400); await dismiss();
+await page.getByText("Sleep well", { exact: true }).first().click();
+await page.waitForTimeout(1200);
+const detail = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+ok("the sleep habit names its link", /LINKED . SLEEP/i.test(detail));
+ok("and explains that a tick measures nothing", /records no measurement/i.test(detail));
+
 console.log("");
 console.log("ERRORS:", errs.slice(0, 3).join(" || ") || "none");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));

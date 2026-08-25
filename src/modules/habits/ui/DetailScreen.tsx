@@ -4,6 +4,7 @@
 import { useCallback, useState } from "react";
 import { db } from "../localDb";
 import { WorthCard } from "./WorthCard";
+import { LinkCard } from "./LinkCard";
 import {
   getDetailHeader, getOverview, getScoreTrend, getHistory,
   getScoreColor, SCORE_COLOR_HEX,
@@ -286,6 +287,9 @@ export function DetailScreen({ habitId, onBack, onOpenCalendar, onEdit }: {
       {/* A2. What this is worth — §4.3 requires the weighting rule to be
           visible on the habit, not buried in an engine. */}
       {habit && <WorthCard habit={habit} />}
+
+      {/* A3. What this habit is joined to, when it stands for a shared metric. */}
+      {habit && <LinkCard habit={habit} />}
 
       {/* B. Overview */}
       <Card
