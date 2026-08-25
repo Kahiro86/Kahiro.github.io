@@ -269,6 +269,23 @@ Two dead Gate 0 scripts were deleted — they drove a pre-revamp `xpEngine` and
 had been crashing on every run since Gate 3 while "the audits pass" kept
 being said. The runner treats a crash as a failure for exactly that reason.
 
+## After the deploy
+Test-only work, so production was not touched again:
+- Every route swept for console errors and warnings with full data, and again
+  with **nothing** stored anywhere. The second is the more common failure —
+  an average over an empty array, a "best day" with no days — and every test
+  before it seeded data first. Both clean on all seven facets.
+- The CSV importer driven through thirteen malformed inputs. All already
+  handled; two cases asserted beyond "did not crash", since a clean refusal
+  also does not crash and is the wrong outcome for a BOM-prefixed export or a
+  quoted comma inside a food name.
+- The metric mirror pinned down across two devices, where sync converges per
+  key and the mirror spans two of them.
+
+One src change followed: the link override was documented and supported and
+had no UI, so with two water habits the older one silently won. Same defect
+class as the notification `nav` field — a capability with no way to reach it.
+
 ## Assumptions added
 - A19: **A claimed day is logged, not measured.** Ticking a boolean wellbeing
   habit means the bar was met; it enters coverage and consistency and never

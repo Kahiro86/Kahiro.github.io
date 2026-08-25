@@ -48,7 +48,9 @@ day's fluid means.
 `resolveLinks(habits, meta)` decides, in this order:
 
 1. An explicit choice in `ht_meta` under `link_<metric>` — a habit id, or
-   `"none"` to link nothing.
+   `"none"` to link nothing. Set from the habit's detail screen: a linked
+   habit offers **Unlink**, and a habit whose name matches a metric it does
+   not hold says which habit does, with a button to take it over.
 2. Otherwise the **oldest** non-archived habit whose name matches the
    metric's pattern, so adding a second "water" habit never silently steals
    the link from the one already carrying history.
@@ -71,5 +73,13 @@ unit cannot be read makes claims instead of measurements.
 - `src/shared/useLinkedMetrics.js` — the reader hook, so no surface has to
   remember to pass claims (and quietly disagree with the ones that do).
 
-Covered by `tests/audit/linked-metrics.mjs` (unit) and
-`tests/audit/linked-sync.mjs` (browser, end to end).
+## Under sync
+Cloud sync converges per key, independently, and the mirror spans two of
+them — the metric's store and `hab_link_writes`. They can arrive out of step,
+so every ordering fails safe: a value the mirror did not write is never
+retracted, a value that arrived without its provenance is never claimed, and
+the boot reconcile converges rather than writing another device's mirrored
+value back as news.
+
+Covered by `tests/audit/linked-metrics.mjs` (unit, including the two-device
+orderings) and `tests/audit/linked-sync.mjs` (browser, end to end).
