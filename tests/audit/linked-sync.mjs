@@ -134,6 +134,23 @@ const detail = (await page.locator("body").innerText()).replace(/\s+/g, " ");
 ok("the sleep habit names its link", /LINKED . SLEEP/i.test(detail));
 ok("and explains that a tick measures nothing", /records no measurement/i.test(detail));
 
+// ── 6. The link can be changed ───────────────────────────────────────
+console.log("\n6. The person decides which habit stands for a metric");
+ok("the linked habit offers to unlink", (await page.getByRole("button", { name: /^Unlink$/ }).count()) > 0);
+await page.getByRole("button", { name: /^Unlink$/ }).first().click();
+await page.waitForTimeout(900);
+const meta = (await store("ht_meta")) || {};
+ok("the choice is recorded", meta.link_sleep === "none");
+const detail2 = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+ok("the card now says it is not linked", /NOT LINKED . SLEEP/i.test(detail2));
+ok("and offers to link it back", /use this habit for sleep/i.test(detail2));
+
+await page.getByRole("button", { name: /use this habit for sleep/i }).first().click();
+await page.waitForTimeout(900);
+ok("linking back names this habit explicitly", ((await store("ht_meta")) || {}).link_sleep === "hs");
+const detail3 = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+ok("and the card reports the link again", /LINKED . SLEEP/i.test(detail3));
+
 console.log("");
 console.log("ERRORS:", errs.slice(0, 3).join(" || ") || "none");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
