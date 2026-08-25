@@ -57,6 +57,9 @@ export function useXp() {
   const [htHabits] = useStorageState("ht_habits", []);
   const [htEntries] = useStorageState("ht_entries", []);
   const [sleep] = useStorageState("trade_sleep", {});
+  // Water logged against the linked habit; added to the food log's beverages
+  // by the one hydration definition, never chosen between.
+  const [hydration] = useStorageState("hydration_log", {});
   const [rawLedger, , l5] = useStorageState(LEDGER_KEY, null);
 
   // Gym-facet sessions feed the same fitness pipeline by mapping to the legacy
@@ -102,7 +105,7 @@ export function useXp() {
     () => runXp({
       deps: {
         htHabits, htEntries, workouts: allWorkouts, nutrition, nutritionProfile,
-        sleep, finance, reviews, church, verses, faithNotes, missions,
+        sleep, hydration, finance, reviews, church, verses, faithNotes, missions,
         mindNotes, decisions, library, goals, wants,
         journalTextByDate: journalText,
       },
@@ -116,7 +119,7 @@ export function useXp() {
       isScheduledOn: (h, ds) => isScheduled(h, ds),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [htHabits, htEntries, allWorkouts, nutrition, nutritionProfile, sleep, finance,
+    [htHabits, htEntries, allWorkouts, nutrition, nutritionProfile, sleep, hydration, finance,
      reviews, church, verses, faithNotes, missions, mindNotes, decisions, library,
      goals, wants, journalText, rawLedger],
   );

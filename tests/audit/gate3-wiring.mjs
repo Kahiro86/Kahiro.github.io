@@ -60,9 +60,13 @@ ok("no trade value exists anywhere", !/tradeLogged/.test(engine));
 ok("no trade event is collected", !/kind:\s*["']trade\.logged/.test(collect));
 ok("the day-review still pays", /trading\.dayReview/.test(collect));
 
-console.log("\n── criterion 32: distance to the next level is on the main surface ──");
+console.log("\n── criterion 32: distance to the next level has a home ──");
+// The user removed the level card from the Command Centre; the Record's Hall
+// of Fame is where progression lives now, so that is where this has to hold.
+const fame = read("src/modules/journey/JourneyModule.jsx");
+ok("the Hall of Fame renders distance to next", /nextLevelXp\s*-\s*xp\.total|toNext/.test(fame));
 const dash = read("src/modules/dashboard/Dashboard.jsx");
-ok("the dashboard renders distance to next", /toNext|nextLevelXp/.test(dash));
+ok("the Command Centre no longer carries a second level readout", !/nextLevelXp/.test(dash));
 
 console.log("\n── ranks come from the Covenant everywhere they render ──");
 const journey = read("src/modules/journey/JourneyModule.jsx");

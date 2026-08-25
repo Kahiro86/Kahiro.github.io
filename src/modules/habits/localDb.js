@@ -56,6 +56,18 @@ function read(key, fallback) {
 // + in-tab broadcast + sync push. Mounted hooks on the same key update live.
 function write(key, value) { writeStore(key, value); }
 
+// ── Entry side-effect hook ───────────────────────────────────────────
+// Layer 1 stays generic: it knows nothing about sleep hours or millilitres.
+// linkSync.js registers here so every entry write — from any screen, the
+// calendar, a routine, the quick log — reaches the metric mirror through one
+// choke point instead of each caller remembering to call it.
+let entryHook = null;
+export function setEntryHook(fn) { entryHook = typeof fn === "function" ? fn : null; }
+const fireEntryHook = (habitId, date, value) => {
+  if (!entryHook) return;
+  try { entryHook(habitId, date, value); } catch { /* the entry is saved; mirroring is best-effort */ }
+};
+
 // ── Validation (mirrors the SQLite Repository, kept as the authority) ─
 const FREQUENCY_TYPES = ["daily", "specific_days", "times_per_week", "times_per_month"];
 
@@ -430,6 +442,7 @@ export class LocalDb {
     }
     this._saveEntries(all);
     this._bump(habitId);
+    fireEntryHook(habitId, date, value);
     return entry;
   }
 
@@ -440,6 +453,7 @@ export class LocalDb {
     if (next.length === all.length) return; // nothing logged that day
     this._saveEntries(next);
     this._bump(habitId);
+    fireEntryHook(habitId, date, null);
   }
 
   async getFirstEntryDate(habitId) {

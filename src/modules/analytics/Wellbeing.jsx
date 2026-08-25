@@ -8,6 +8,7 @@ import { Card, SH } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { localDateStr } from "../../shared/dates.js";
 import { hydrationSeries, sleepSeries, weeklyBuckets } from "../../shared/wellbeing.js";
+import { useLinkedMetrics } from "../../shared/useLinkedMetrics.js";
 
 function Track({ icon, s, fmt }) {
   const weeks = useMemo(() => weeklyBuckets(s, 6), [s]);
@@ -67,8 +68,9 @@ export function Wellbeing({ days = 30 }) {
   const [sleep] = useStorageState("trade_sleep", {});
   const today = localDateStr();
 
-  const hyd = useMemo(() => hydrationSeries({ nutrition, nutritionProfile, today, days }), [nutrition, nutritionProfile, today, days]);
-  const slp = useMemo(() => sleepSeries({ sleep, today, days }), [sleep, today, days]);
+  const { hydration, claims } = useLinkedMetrics();
+  const hyd = useMemo(() => hydrationSeries({ nutrition, nutritionProfile, hydration, claims: claims.hydration, today, days }), [nutrition, nutritionProfile, hydration, claims.hydration, today, days]);
+  const slp = useMemo(() => sleepSeries({ sleep, claims: claims.sleep, today, days }), [sleep, claims.sleep, today, days]);
 
   return (
     <Card style={{ padding: "16px 18px" }}>

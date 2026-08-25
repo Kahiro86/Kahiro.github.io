@@ -27,9 +27,8 @@ import { sanitizeTrades as sanitizeTiTrades, sanitizeAccounts as sanitizeTiAccou
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
 import { hydrationSeries, sleepSeries, todayStatus } from "../../shared/wellbeing.js";
-// Habit facts now come from the new tracker via habitSummary; only the legacy
-// wellness helpers (sleep/water numeric habits) remain from the old engine.
-import { isWellness, valueOn } from "../../shared/habitEngine.js";
+import { SLEEP_FLOOR_HOURS } from "../../shared/views.js";
+import { useLinkedMetrics } from "../../shared/useLinkedMetrics.js";
 import { buildNudges } from "../../shared/insights.js";
 import { buildDirective, isRestDay } from "../../shared/directive.js";
 import { useDayMarks } from "../../shared/dayMarks.js";
@@ -65,7 +64,9 @@ function StatCard({ onClick, children, style }) {
   );
 }
 
-const HEALTH = { good: GR, low: AM, bad: RE };
+// "none" is grey on purpose: an unrecorded night is not a bad night, and
+// a red dot for it is the panel telling you off for something you did not do.
+const HEALTH = { good: GR, low: AM, bad: RE, none: T3 };
 const DTONE = { urgent: AC, info: AM, good: GR }; // directive rail colour by tone
 
 // ── Command Centre building blocks ───────────────────────────────────
@@ -194,6 +195,9 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [nutritionLog] = useStorageState("nutrition_log", {});
   const [nutritionProfile] = useStorageState("nutrition_profile", null);
   const [sleepLog] = useStorageState("trade_sleep", {});
+  // Water logged against the linked habit, and the claim maps from any
+  // linked habit that ticks a bar without measuring it.
+  const { hydration, claims } = useLinkedMetrics();
   const [verses] = useStorageState("faith_scripture", []);
   const [decisions] = useStorageState("mind_decisions", []);
   const [firmConfig] = useStorageState("firm_config", null);
@@ -326,37 +330,46 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   );
   const checklistOk = tradesToday.length > 0 && tradesToday.every((t) => +t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal);
 
+  // Hydration and sleep, through the same functions the Record reports on —
+  // so today's tile and this month's trend can never disagree.
+  const hydSeries = useMemo(() => hydrationSeries({ nutrition: nutritionLog, nutritionProfile, hydration, claims: claims.hydration, today: ds, days: 1 }), [nutritionLog, nutritionProfile, hydration, claims.hydration, ds]);
+  const slpSeries = useMemo(() => sleepSeries({ sleep: sleepLog, claims: claims.sleep, today: ds, days: 1 }), [sleepLog, claims.sleep, ds]);
+  const hyd = useMemo(() => todayStatus(hydSeries), [hydSeries]);
+  const slp = useMemo(() => todayStatus(slpSeries), [slpSeries]);
+
   // ── ❤️ SYSTEM HEALTH — four indicators ──
   const health = useMemo(() => {
-    const sleepH = active.find((h) => isWellness(h) && /sleep/i.test(h.name || ""));
-    const waterH = active.find((h) => isWellness(h) && /hydra|water/i.test(h.name || ""));
-    const sleepV = sleepH ? valueOn(sleepH, ds) : null;
-    const sleepMin = sleepH?.wellnessMin || 7.5;
-    const sleep = sleepV == null ? "bad" : sleepV >= sleepMin ? "good" : sleepV > 0 ? "low" : "bad";
-    const waterV = waterH ? valueOn(waterH, ds) : null;
-    const waterT = waterH?.target || 2;
-    const hydration = waterV == null ? "bad" : waterV >= waterT ? "good" : waterV >= waterT * 0.5 ? "low" : "bad";
+    // Sleep and hydration come from the SAME functions the Record reports on
+    // and the tiles above show — not from a second lookup against the legacy
+    // wellness habits, which is how this panel used to disagree with every
+    // other reading of the same two facts.
+    const grade = (st, halfCredit) => {
+      if (st.value == null && !st.claimed) return "none";     // nothing recorded
+      if (st.hit) return "good";
+      if (st.value == null) return "bad";                     // claimed, and missed
+      return st.value >= halfCredit ? "low" : "bad";
+    };
+    const sleep = grade(slp, SLEEP_FLOOR_HOURS * 0.75);
+    const hydration = grade(hyd, hyd.target * 0.5);
     const t = dayTotals(dayEntries(nutrition, ds));
     const kcalPct = nTargets.kcal ? t.kcal / nTargets.kcal : 0;
-    const calories = mealsOn(ds) === 0 ? "bad" : kcalPct >= 0.8 && kcalPct <= 1.15 ? "good" : "low";
-    const recovery = (sleep === "good" && (isRestDay(ds, restDays) || workoutOn(ds))) ? "good" : sleep === "bad" ? "bad" : "low";
-    const word = { good: "Good", low: "Low", bad: "Poor" };
-    const rword = { good: "Excellent", low: "Moderate", bad: "Low" };
+    const calories = mealsOn(ds) === 0 ? "none" : kcalPct >= 0.8 && kcalPct <= 1.15 ? "good" : "low";
+    const recovery = sleep === "none" ? "none"
+      : (sleep === "good" && (isRestDay(ds, restDays) || workoutOn(ds))) ? "good"
+      : sleep === "bad" ? "bad" : "low";
+    const word = { good: "Good", low: "Low", bad: "Poor", none: "Unlogged" };
+    const rword = { good: "Excellent", low: "Moderate", bad: "Low", none: "Unlogged" };
     return [
       { label: "Sleep", state: sleep, word: word[sleep] },
       { label: "Hydration", state: hydration, word: hydration === "good" ? "On track" : word[hydration] },
       { label: "Calories", state: calories, word: calories === "good" ? "On track" : calories === "low" ? "Off target" : "Unlogged" },
       { label: "Recovery", state: recovery, word: rword[recovery] },
     ];
-  }, [active, nutrition, nTargets, workouts, ds]);
+  }, [hyd, slp, nutrition, nTargets, workouts, restDays, ds]);
 
   // ── 🎯 THE MISSION + the two pillars (Batman / Stark) ──
   const freedom = useMemo(() => freedomMath(finance, firmConfig), [finance, firmConfig]);
   const gate = useMemo(() => scalingGate(trades, rawReviews, firmWithdrawals), [trades, rawReviews, firmWithdrawals]);
-  // Hydration and sleep, through the same functions the Record reports on —
-  // so today's tile and this month's trend can never disagree.
-  const hyd = useMemo(() => todayStatus(hydrationSeries({ nutrition: nutritionLog, nutritionProfile, today: ds, days: 1 })), [nutritionLog, nutritionProfile, ds]);
-  const slp = useMemo(() => todayStatus(sleepSeries({ sleep: sleepLog, today: ds, days: 1 })), [sleepLog, ds]);
   const topStreakDays = streaks.length ? streaks[0].days : 0;
 
   if (!loaded) return <Hydrating label="Waking the Command Centre…" />;

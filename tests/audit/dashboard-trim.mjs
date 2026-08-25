@@ -22,6 +22,7 @@ const seed = {
     income: [{ id: "i1", date: iso(new Date()), amount: 40000, source: "Salary" }], bills: [{ id: "b1", name: "Rent", amount: 30000 }] }),
   ict_trades: JSON.stringify([{ id: "t1", date: iso(new Date()), status: "CLOSED", outcome: "WIN", checklistTotal: 5, checklistScore: 5 }]),
   checklist_items: JSON.stringify([{ id: "c1", text: "Make the bed", core: true }]),
+  monthly_overhead: JSON.stringify({ targetKsh: 40000 }),  // OverheadToday self-hides without a ceiling
   weekly_focus: JSON.stringify({ text: "Ship the merge", week: iso(new Date()) }),
 };
 
@@ -43,8 +44,9 @@ const home = await page.locator("body").innerText();
 console.log("\n── removed from the Command Centre ──");
 for (const [label, re] of [
   ["Progression card", /\bPROGRESSION\b/i],
+  ["Level / XP bar", /\d+\s*\/\s*[\d,]+\s*XP/i],
   ["Current Streaks", /current streaks/i],
-  ["Trading · Killzone card", /trades logged today/i],
+  ["Trading · Killzone card", /trades? logged today/i],
   ["Monthly Overhead bar", /monthly overhead\b/i],
   ["Today's Checklist", /today'?s checklist/i],
   ["This Week's Focus box", /one focus statement/i],
@@ -52,9 +54,20 @@ for (const [label, re] of [
   ["The Mission · Freedom", /the mission · freedom|years to freedom/i],
 ]) ok(`${label} is gone`, !re.test(home));
 
-console.log("\n── finance is only inside Finance ──");
-ok("no net-worth figure on the home screen", !/net worth/i.test(home));
-ok("no KES amount on the home screen", !/KES\s?[\d,]/.test(home));
+console.log("\n── money is folded away, not deleted ──");
+// The fold's own label names what is inside it; that is not the figure.
+const homeSansFold = home.replace(/money & markets[^\n]*/i, "");
+ok("no net-worth figure on the home screen by default", !/net worth/i.test(homeSansFold));
+ok("no KES amount on the home screen by default", !/KES\s?[\d,]/.test(home));
+ok("the Money & markets fold is offered", /money & markets/i.test(home));
+await page.getByRole("button", { name: /show money and markets/i }).first().click();
+await page.waitForTimeout(700);
+const money = await page.locator("body").innerText();
+ok("opening the fold reveals net worth", /net worth/i.test(money));
+ok("opening the fold reveals the trading card", /trades? logged today/i.test(money));
+ok("opening the fold reveals monthly overhead", /monthly overhead/i.test(money));
+await page.getByRole("button", { name: /hide money and markets/i }).first().click();
+await page.waitForTimeout(500);
 await page.locator('[data-tour="nav-firm"]').first().click(); await page.waitForTimeout(1100); await dismiss();
 await page.getByRole("button", { name: /^Wealth$/ }).first().click().catch(() => {});
 await page.waitForTimeout(900);
@@ -64,10 +77,14 @@ ok("the Firm still offers Net Worth", /net worth/i.test(firm));
 console.log("\n── what the user kept is still there ──");
 await page.locator('[data-tour="nav-dashboard"]').first().click(); await page.waitForTimeout(1100); await dismiss();
 const back = await page.locator("body").innerText();
-ok("the level card survives", /level|signatory|operator|rule keeper|floor holder/i.test(back));
+ok("the level card is gone from the Command Centre", !/\bPROGRESSION\b/i.test(back) && !/\d+\s*\/\s*[\d,]+\s*XP/i.test(back));
 ok("the day score survives", /discipline|day score|%/i.test(back));
 ok("the domain grid survives", /purity|fuel|training|habits/i.test(back));
 ok("the More toggle survives", /more —|hide details/i.test(back));
+// The user asked for this block up top: it was buried inside "More", where
+// the only real numbers about the 365-day cycle were never seen.
+ok("Year of Consistency is above the fold", /year of consistency/i.test(back));
+ok("and its numbers come with it", /current streak/i.test(back) && /consistency rate/i.test(back));
 
 console.log("");
 console.log("ERRORS:", errs.slice(0, 3).join(" || ") || "none");

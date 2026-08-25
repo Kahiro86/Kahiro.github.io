@@ -96,10 +96,34 @@ export function collectEvents(deps = {}, today = localDateStr()) {
       add(d, { kind: "meals.dayComplete", label: "Meals logged", group: "meals" });
       if (targets.p > 0 && (t.p || 0) >= targets.p) add(d, { kind: "protein.hit", label: "Protein target", group: "protein" });
       if (targets.kcal > 0 && Math.abs((t.kcal || 0) - targets.kcal) <= targets.kcal * 0.1) add(d, { kind: "calories.inBand", label: "Calories in band" });
-      if (targets.waterMl > 0 && (t.fluidMl || 0) >= targets.waterMl) add(d, { kind: "water.hit", label: "Water target", group: "water" });
       // A quality score is not a separate award any more — it was one of the
       // paths that let one logged day pay three times.
       void nutritionScore;
+    }
+  }
+
+  // ── Water — the two log paths, added, then graded once ────────────
+  // Fluid arrives either as a beverage in the food log or against the linked
+  // hydration habit. Grading inside the nutrition loop meant a day of water
+  // with no food logged paid nothing, which is the wrong lesson to teach.
+  {
+    const nlog = sanitizeNutrition(deps.nutrition);
+    const targets = calcTargets(deps.nutritionProfile);
+    const direct = deps.hydration && typeof deps.hydration === "object" && !Array.isArray(deps.hydration) ? deps.hydration : {};
+    const fluid = {};
+    for (const [d, entries] of Object.entries(nlog)) {
+      if (!dOf(d) || !entries.length) continue;
+      fluid[d] = (fluid[d] || 0) + (dayTotals(entries).fluidMl || 0);
+    }
+    for (const [d, ml] of Object.entries(direct)) {
+      if (!dOf(d)) continue;
+      const v = Number(ml);
+      if (Number.isFinite(v) && v > 0) fluid[d] = (fluid[d] || 0) + v;
+    }
+    if (targets.waterMl > 0) {
+      for (const [d, ml] of Object.entries(fluid)) {
+        if (ml >= targets.waterMl) add(d, { kind: "water.hit", label: "Water target", group: "water" });
+      }
     }
   }
 
