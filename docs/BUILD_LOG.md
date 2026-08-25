@@ -174,3 +174,87 @@ gate logic is duplicated.
 - A18: **`useModeState` is only imported by lazy chunks** (today surface /
   Settings), never by the eager `App` entry, so the Supabase/Phase-8 initial
   bundle win is preserved.
+
+---
+
+# Session: data connections, catalog, plans, boot
+
+## What this session was for
+The app had grown into modules that each worked and did not talk to each
+other. Most of the work below is joining things that were already there,
+not adding new ones.
+
+## Linked metrics (habits ⇄ their counterparts)
+A habit called "Sleep well" and the hours typed into the trading module were
+the same night recorded twice, with neither aware of the other. One
+definition per metric, many writers — `src/modules/habits/linkedMetrics.js`
+(pure) and `linkSync.js` (storage). Full contract in `docs/DATA_LINKS.md`.
+
+Deliberate non-flows, all tested: a boolean tick never becomes a number (it
+records a *claim* — counted for coverage and consistency, excluded from every
+average); workouts and meals are rich records so those links are read-only;
+nothing overwrites or retracts a value the mirror did not write.
+
+**System Health was the duplicate source this hinged on.** It looked sleep and
+water up against the legacy wellness habits while the tiles directly above it
+read `trade_sleep` and `nutrition_log` — two readings of the same two facts in
+one component.
+
+## Exercise catalog: 107 → 164
+Added a `discipline` axis (strength · calisthenics · plyometric · hiit · liit
+· hybrid · mobility · stretching · recovery) and the 57 movements that had
+nowhere to live. Mobility, stretching and recovery carry
+`trainingEffect: "target"`: real muscle shares so they stay findable, but the
+aggregators skip them, because holding a stretch is not training and heat on
+the map becomes a claim the whole app then reasons from.
+
+## Meal plans
+A day's eating written once and applied to any day. Carries choices
+("chicken / beef / salmon" is one swappable item), conditions ("on rest days
+drop the potatoes" is a property of the item, so a rest day is genuinely a
+different plan) and a band rather than a number. Importing reads the CSV shape
+a spreadsheet exports; applying writes ordinary entries into `nutrition_log`,
+which stays the single source of truth for what was eaten.
+
+Not built: an in-app editor for creating a plan from scratch. The building
+blocks exist (`newPlan`/`newMeal`/`newItem`/`patchItem`/`planFromDay`) and are
+unused.
+
+## Notifications
+Every notification now leads somewhere. A reminder could always carry a
+"Link to" destination and the fired notification always discarded it —
+Complete, Snooze and Dismiss are three ways to make a message go away and no
+way to act on it. Entries now carry a destination, default one from their
+category when none is set, and the row offers Open. The push path had the
+same hole: `notificationclick` focused an open window and dropped the target.
+
+## Launch performance
+Four idempotent passes ran before `createRoot().render()` — discipline
+migration, dead-store purge, XP carry-forward, 60-day link reconcile — all
+scaling with how much history you have, so the person with the most data
+waited longest for the first pixel. Moved after paint: **1621ms → ~280ms** to
+app content, on a store with three years of purity days, 800 journal entries
+and 4,200 habit entries. Guarded by `tests/audit/launch-perf.mjs`.
+
+## Testing
+`npm run test:audit` runs the ~22 pure audits in about 15 seconds;
+`test:audit:browser` runs the Playwright ones against `dist/`; `test:all`
+does everything including the 138 gym domain tests.
+
+Two dead Gate 0 scripts were deleted — they drove a pre-revamp `xpEngine` and
+had been crashing on every run since Gate 3 while "the audits pass" kept
+being said. The runner treats a crash as a failure for exactly that reason.
+
+## Assumptions added
+- A19: **A claimed day is logged, not measured.** Ticking a boolean wellbeing
+  habit means the bar was met; it enters coverage and consistency and never
+  an average. "Didn't do it" and "didn't record it" stay different claims.
+- A20: **An imported meal plan's macros beat the food library's.** The
+  spreadsheet said 328 kcal for that chicken; substituting the library's
+  number would make the app disagree with the document in the user's hand for
+  a food they never edited. Plans built in-app bind by id and follow the
+  library instead.
+- A21: **An unrecorded night is not a bad night.** System Health indicators
+  with no data are grey and say "Unlogged" rather than red and "Poor".
+- A22: **A notification without a destination should not exist.** Where one
+  is not set, it is derived from the category rather than left empty.
