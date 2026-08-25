@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { searchExercises } from "../../src/modules/gym/domain/search.js";
 import { createCompoundExercise, clearCompoundRegistry } from "../../src/modules/gym/domain/compound.js";
-import { EXERCISE_CATALOG } from "../../src/modules/gym/domain/catalog.js";
+import { allExercises } from "../../src/modules/gym/domain/registry.js";
 
 beforeEach(() => {
   clearCompoundRegistry();
@@ -9,7 +9,10 @@ beforeEach(() => {
 
 describe("searchExercises", () => {
   it("returns the whole library for an empty query", () => {
-    expect(searchExercises("").length).toBe(EXERCISE_CATALOG.length);
+    // "The library" is the seeded catalog plus the extended one (conditioning,
+    // mobility, stretching, recovery) — whatever the registry exposes, not one
+    // of the two files it is assembled from.
+    expect(searchExercises("").length).toBe(allExercises().length);
   });
 
   it("finds all bench press variants by name", () => {

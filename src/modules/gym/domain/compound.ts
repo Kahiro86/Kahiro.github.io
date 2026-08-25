@@ -1,5 +1,5 @@
 import { getExercise as getSeedExercise } from "./catalog";
-import type { Exercise, MuscleContribution } from "./types";
+import type { Discipline, Exercise, MuscleContribution } from "./types";
 import type { MuscleId } from "./muscles";
 
 // A compound exercise is a derived Exercise built from 2+ existing exercises
@@ -69,11 +69,25 @@ export function createCompoundExercise(
     referenceVolume: components_.reduce((sum, c) => sum + c.exercise.referenceVolume, 0),
     // A compound needs at least as much rest as its most demanding component.
     defaultRestSeconds: Math.max(...components_.map((c) => c.exercise.defaultRestSeconds)),
+    discipline: blendDiscipline(components_.map((c) => c.exercise)),
+    // A compound loads if ANY component does. Pairing a stretch with a squat
+    // is still a set of squats, and dropping the whole thing from the
+    // aggregators because one part was mobility would lose real work.
+    trainingEffect: components_.some((c) => c.exercise.trainingEffect === "load") ? "load" : "target",
     components: components_.map((c) => c.exercise),
   };
 
   compoundRegistry.set(id, compound);
   return compound;
+}
+
+// The compound's own discipline: unanimous among its components, or the
+// honest answer when they disagree — a squat paired with a jump is hybrid
+// work, and calling it either "strength" or "plyometric" would be a guess.
+function blendDiscipline(parts: Exercise[]): Discipline {
+  const kinds = new Set(parts.map((p) => p.discipline));
+  if (kinds.size === 1) return parts[0]!.discipline;
+  return "hybrid";
 }
 
 function blendMuscleContributions(components: Array<{ exercise: Exercise; emphasis: number }>): MuscleContribution[] {

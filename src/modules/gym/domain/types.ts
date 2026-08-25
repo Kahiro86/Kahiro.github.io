@@ -28,6 +28,51 @@ export type Equipment =
   | "bar"
   | "none";
 
+// ── Discipline (v2 §3.9) ─────────────────────────────────────────────
+// What KIND of training a movement is, independent of what it loads. The
+// catalog was built around loaded resistance work, so everything that isn't
+// a lift — intervals, jumps, mobility, stretching, restorative work — had
+// nowhere to live and simply wasn't in it.
+export type Discipline =
+  | "strength"      // loaded resistance work
+  | "calisthenics"  // bodyweight strength and skill
+  | "plyometric"    // elastic, jump and throw work
+  | "hiit"          // high-intensity intervals
+  | "liit"          // low-intensity steady-state / interval work
+  | "hybrid"        // hybrid athleticism: carries, sleds, complexes
+  | "mobility"      // active range of motion
+  | "stretching"    // passive lengthening
+  | "recovery";     // restorative, deliberately low effort
+
+/**
+ * How a movement's muscle shares should be read.
+ *
+ *  "load"    real training volume — heat, XP and progression.
+ *  "target"  the muscles the movement ADDRESSES, without training them.
+ *            A hamstring stretch targets hamstrings; it does not train
+ *            them, and lighting the heatmap for it would be a lie. These
+ *            keep honest shares so search and filtering still work, but the
+ *            aggregators skip them.
+ */
+export type TrainingEffect = "load" | "target";
+
+export const DISCIPLINES: ReadonlyArray<{ id: Discipline; label: string; effect: TrainingEffect }> = [
+  { id: "strength", label: "Strength", effect: "load" },
+  { id: "calisthenics", label: "Calisthenics", effect: "load" },
+  { id: "plyometric", label: "Plyometrics", effect: "load" },
+  { id: "hiit", label: "HIIT", effect: "load" },
+  { id: "liit", label: "LIIT", effect: "load" },
+  { id: "hybrid", label: "Hybrid athleticism", effect: "load" },
+  { id: "mobility", label: "Mobility", effect: "target" },
+  { id: "stretching", label: "Stretching", effect: "target" },
+  { id: "recovery", label: "Recovery", effect: "target" },
+];
+
+const EFFECT_BY_DISCIPLINE = new Map(DISCIPLINES.map((d) => [d.id, d.effect]));
+export function effectOf(discipline: Discipline): TrainingEffect {
+  return EFFECT_BY_DISCIPLINE.get(discipline) ?? "load";
+}
+
 export interface MuscleContribution {
   muscle: MuscleId;
   share: number; // 0-1; all shares for one exercise sum to 1.0
@@ -55,6 +100,10 @@ export interface Exercise {
   equipment: Equipment[];
   referenceVolume: number;
   defaultRestSeconds: number; // compound lifts ~180s, isolation ~60s
+  discipline: Discipline;
+  // Derived from `discipline`, carried on the exercise so the aggregators
+  // never have to know the taxonomy — they just ask whether this loads.
+  trainingEffect: TrainingEffect;
   components?: Exercise[]; // present only for compound (multi-exercise) movements
 }
 

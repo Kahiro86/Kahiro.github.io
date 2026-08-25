@@ -1,4 +1,5 @@
-import { EXERCISE_CATALOG, getExercise as getSeedExercise } from "./catalog";
+import { EXERCISE_CATALOG } from "./catalog";
+import { EXTENDED_CATALOG } from "./catalogExtended";
 import { getCompoundExercise, listCompoundExercises } from "./compound";
 import type { Exercise } from "./types";
 
@@ -6,8 +7,11 @@ import type { Exercise } from "./types";
 // exercises. computeSessionXp / aggregate.ts / search.ts all resolve through
 // here so a compound behaves exactly like any other exercise once created.
 
+const SEEDED: Exercise[] = [...EXERCISE_CATALOG, ...EXTENDED_CATALOG];
+const SEEDED_BY_ID = new Map(SEEDED.map((e) => [e.id, e]));
+
 export function getExercise(id: string): Exercise | undefined {
-  return getCompoundExercise(id) ?? getSeedExercise(id);
+  return getCompoundExercise(id) ?? SEEDED_BY_ID.get(id);
 }
 
 export function requireExercise(id: string): Exercise {
@@ -19,5 +23,5 @@ export function requireExercise(id: string): Exercise {
 }
 
 export function allExercises(): Exercise[] {
-  return [...EXERCISE_CATALOG, ...listCompoundExercises()];
+  return [...SEEDED, ...listCompoundExercises()];
 }

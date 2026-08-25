@@ -1,10 +1,12 @@
 import { allExercises } from "./registry";
-import type { Equipment, Exercise, LoadType, MuscleId } from "./types";
+import type { Discipline, Equipment, Exercise, LoadType, MuscleId } from "./types";
+import { DISCIPLINES } from "./types";
 
 export interface ExerciseSearchOptions {
   muscle?: MuscleId;
   equipment?: Equipment;
   loadType?: LoadType;
+  discipline?: Discipline;
 }
 
 export function searchExercises(query: string, options: ExerciseSearchOptions = {}): Exercise[] {
@@ -22,6 +24,7 @@ function matchesFilters(exercise: Exercise, options: ExerciseSearchOptions): boo
   if (options.muscle && !exercise.muscles.some((m) => m.muscle === options.muscle)) return false;
   if (options.equipment && !exercise.equipment.includes(options.equipment)) return false;
   if (options.loadType && !hasLoadType(exercise, options.loadType)) return false;
+  if (options.discipline && exercise.discipline !== options.discipline) return false;
   return true;
 }
 
@@ -35,6 +38,8 @@ function hasLoadType(exercise: Exercise, loadType: LoadType): boolean {
   }
   return exercise.loadType === loadType;
 }
+
+const DISCIPLINE_LABELS = new Map(DISCIPLINES.map((d) => [d.id, d.label.toLowerCase()]));
 
 // Exported so Layer 2 can rank a list that includes rows searchExercises
 // never sees (locally stored custom exercises) with identical scoring —
@@ -50,7 +55,10 @@ export function scoreExerciseMatch(exercise: Exercise, q: string): number {
   if (name.includes(q)) return 60;
   if (exercise.aliases.some((a) => a.toLowerCase().includes(q))) return 50;
   if (exercise.id.includes(q)) return 40;
+  if (exercise.discipline === q) return 35;
+  if (DISCIPLINE_LABELS.get(exercise.discipline) === q) return 35;
   if (exercise.muscles.some((m) => m.muscle.toLowerCase() === q)) return 30;
+  if (exercise.discipline.includes(q) || (DISCIPLINE_LABELS.get(exercise.discipline) ?? "").includes(q)) return 25;
   if (exercise.equipment.some((e) => e.toLowerCase().includes(q))) return 20;
   return 0;
 }

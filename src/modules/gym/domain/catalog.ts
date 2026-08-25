@@ -1,4 +1,5 @@
-import type { Equipment, Exercise, LoadType, MuscleContribution } from "./types";
+import type { Discipline, Equipment, Exercise, LoadType, MuscleContribution } from "./types";
+import { effectOf } from "./types";
 import type { MuscleId } from "./muscles";
 
 // ~107 seeded exercises, authored at head-level muscle granularity (v2
@@ -12,7 +13,7 @@ import type { MuscleId } from "./muscles";
 // now that Layer 1 authors at head-level directly, Layer 2 just reads
 // exercise.muscles (see heatmap/muscleWeights.ts).
 
-type CoarseMuscleId =
+export type CoarseMuscleId =
   | "chest"
   | "back"
   | "lowerBack"
@@ -31,15 +32,20 @@ type CoarseMuscleId =
   | "abductors"
   | "adductors";
 
-interface CoarseContribution {
+export interface CoarseContribution {
   muscle: CoarseMuscleId;
   share: number;
 }
 
-interface RawExercise {
+export interface RawExercise {
   id: string;
   name: string;
   aliases: string[];
+  // Optional: most of the seeded catalog is loaded resistance or bodyweight
+  // work, and deriveDiscipline() reads that off loadType. Only movements the
+  // load type cannot tell apart — a jump squat from a back squat — are
+  // named explicitly, here or in DISCIPLINE_OVERRIDES.
+  discipline?: Discipline;
   loadType: LoadType;
   limbsLoaded: 1 | 2;
   unilateral: boolean;
@@ -1927,11 +1933,45 @@ const SPLIT_OVERRIDES: Record<string, SplitOverride> = {
   "ab-wheel-rollout": { delt: { anterior: 0.7, lateral: 0.2, posterior: 0.1 } },
 };
 
+// Movements whose load type says nothing about what kind of training they
+// are: a Jump Squat and a Back Squat are both bodyweight-or-barbell squats,
+// and only one of them is plyometric.
+const DISCIPLINE_OVERRIDES: Record<string, Discipline> = {
+  "jump-squat": "plyometric",
+  "broad-jump": "plyometric",
+  "jumping-lunge": "plyometric",
+  "clap-pushup": "plyometric",
+  "high-knees": "plyometric",
+  burpee: "hiit",
+  "mountain-climber": "hiit",
+  "kettlebell-swing": "hybrid",
+  "farmers-carry": "hybrid",
+  "sled-push": "hybrid",
+  "barbell-clean-and-press": "hybrid",
+  "bear-crawl": "hybrid",
+  "dead-hang": "calisthenics",
+};
+
+// Bodyweight work is calisthenics; anything carrying external load is
+// strength. Explicit `discipline` on the row, then an override, then this.
+function deriveDiscipline(raw: RawExercise): Discipline {
+  if (raw.discipline) return raw.discipline;
+  const override = DISCIPLINE_OVERRIDES[raw.id];
+  if (override) return override;
+  if (raw.loadType === "bodyweight" || raw.loadType === "weighted_bodyweight" || raw.loadType === "assisted") {
+    return "calisthenics";
+  }
+  if (raw.loadType === "time" || raw.loadType === "distance") {
+    return raw.equipment.includes("none") || raw.equipment.includes("bodyweight") ? "calisthenics" : "strength";
+  }
+  return "strength";
+}
+
 function primaryFlag(share: number): boolean {
   return share >= PRIMARY_MOVER_SHARE_THRESHOLD;
 }
 
-function splitContribution(exerciseId: string, contribution: CoarseContribution): MuscleContribution[] {
+export function splitContribution(exerciseId: string, contribution: CoarseContribution): MuscleContribution[] {
   const override = SPLIT_OVERRIDES[exerciseId];
   const primaryMover = primaryFlag(contribution.share);
   const share = contribution.share;
@@ -1991,11 +2031,27 @@ function mergeContributions(contributions: MuscleContribution[]): MuscleContribu
   return Array.from(totals.entries()).map(([muscle, v]) => ({ muscle, share: v.share, primaryMover: v.primaryMover }));
 }
 
-function expandExercise(raw: RawExercise): Exercise {
-  const { muscles, ...rest } = raw;
+// An exercise with no primary mover would never mark any muscle "trained" —
+// it would add heat and XP while the map kept saying you had not worked that
+// muscle. That happens whenever effort is spread evenly enough that no single
+// share clears the threshold (a Turkish Get-Up, a rowing stroke), which is a
+// property of the movement, not a reason to disown it. So the largest share
+// is always a primary mover, threshold or no. cardio.ts has always done this;
+// the catalog simply never had a row spread thin enough to need it.
+function ensurePrimaryMover(contributions: MuscleContribution[]): MuscleContribution[] {
+  if (contributions.some((c) => c.primaryMover)) return contributions;
+  const max = Math.max(...contributions.map((c) => c.share));
+  return contributions.map((c) => (c.share === max ? { ...c, primaryMover: true } : c));
+}
+
+export function expandExercise(raw: RawExercise): Exercise {
+  const { muscles, discipline: _d, ...rest } = raw;
+  const discipline = deriveDiscipline(raw);
   return {
     ...rest,
-    muscles: mergeContributions(muscles.flatMap((c) => splitContribution(raw.id, c))),
+    discipline,
+    trainingEffect: effectOf(discipline),
+    muscles: ensurePrimaryMover(mergeContributions(muscles.flatMap((c) => splitContribution(raw.id, c)))),
   };
 }
 

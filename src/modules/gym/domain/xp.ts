@@ -74,6 +74,11 @@ export function computeSessionXp(session: SessionInput, history: HistoryContext)
 
   session.sets.forEach((set, index) => {
     const exercise = requireExercise(set.exerciseId);
+    // Mobility, stretching and recovery pay no muscle XP: the XP curve is a
+    // function of training volume, and holding a stretch is not that. They
+    // still count as a workout DAY in the shared engine, which is where the
+    // reward for turning up on a recovery day belongs.
+    if (exercise.trainingEffect !== "load") return;
     const priorHistory = runningExerciseHistory[exercise.id];
     const isFirstEverLog = priorHistory === undefined;
 

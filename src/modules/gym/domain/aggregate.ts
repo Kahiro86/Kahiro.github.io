@@ -24,6 +24,11 @@ export function aggregateMuscleXp(sets: LoggedSet[]): Record<MuscleId, number> {
 
   for (const set of sets) {
     const exercise = requireExercise(set.exerciseId);
+    // Mobility, stretching and recovery name the muscles they ADDRESS so
+    // they stay findable, but they are not training volume. Heating the map
+    // for a couch stretch would be a claim the rest of the app then reasons
+    // from — progression, "not yet trained", the weekly rollup, all of it.
+    if (exercise.trainingEffect !== "load") continue;
     const volume = computeSetVolume(exercise, set);
     const effortDelta = volume / exercise.referenceVolume;
 
@@ -46,6 +51,11 @@ export function aggregateMuscleVolume(sets: LoggedSet[]): Record<MuscleId, numbe
 
   for (const set of sets) {
     const exercise = requireExercise(set.exerciseId);
+    // Mobility, stretching and recovery name the muscles they ADDRESS so
+    // they stay findable, but they are not training volume. Heating the map
+    // for a couch stretch would be a claim the rest of the app then reasons
+    // from — progression, "not yet trained", the weekly rollup, all of it.
+    if (exercise.trainingEffect !== "load") continue;
     const volume = computeSetVolume(exercise, set);
     for (const contribution of exercise.muscles) {
       result[contribution.muscle] += volume * contribution.share;
@@ -67,6 +77,11 @@ export function aggregateSessionTotals(sets: LoggedSet[]): SessionTotals {
 
   for (const set of sets) {
     const exercise = requireExercise(set.exerciseId);
+    // Mobility, stretching and recovery name the muscles they ADDRESS so
+    // they stay findable, but they are not training volume. Heating the map
+    // for a couch stretch would be a claim the rest of the app then reasons
+    // from — progression, "not yet trained", the weekly rollup, all of it.
+    if (exercise.trainingEffect !== "load") continue;
     const volume = computeSetVolume(exercise, set);
     totalVolume += volume;
 
