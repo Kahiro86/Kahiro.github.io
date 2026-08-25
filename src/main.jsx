@@ -21,28 +21,28 @@ try {
   }
 } catch { /* storage best-effort */ }
 
-// Gate 1 — Discipline merge. Purity days and journal entries become entries on
-// an abstinence / journal habit, on their original dates. Idempotent: it plans
-// against what's already there and writes only what's missing, so this is safe
-// on every launch. The source stores are left untouched.
-try { runDisciplineMigration(writeStore); } catch { /* never block boot on a migration */ }
-try { purgeDeadStores(); } catch { /* nor on a cleanup */ }
-// Carry the pre-revamp XP total forward before the first render reads the
-// ledger. Async, but the ledger is idempotent — a render that beats it sees
-// an unopened ledger and simply re-reads once this lands.
-openLedgerWithHistory(writeStore).catch(() => { /* never block boot */ });
-
-// Linked metrics. Register the habit-entry hook first, so anything logged
-// from here on mirrors into its metric's store, then run the reverse pass:
-// sleep hours and fluid already recorded elsewhere become entries on the
-// habits that stand for them. Idempotent — it writes only the days that
-// disagree — and bounded to the last 60 days so boot stays cheap.
+// ── Work that must not block the first frame ─────────────────────────
+// All four of these used to run before createRoot().render(), so a person
+// with three years of history paid for a migration scan, a store purge, an
+// XP replay and a 60-day reconcile before seeing a single pixel. Every one
+// of them is idempotent and none is needed to draw the app: they write
+// through writeStore, which broadcasts, so any screen already mounted
+// re-renders when their results land.
+//
+// installLinkSync stays synchronous and stays here — it only registers a
+// hook, and a tap logged in the first second must still mirror.
 installLinkSync();
-reconcileLinks().catch(() => { /* the hook is live either way */ });
 
-// Cloud sync engine: no-op until the user connects a Supabase project in
-// Settings → Cloud Sync; from then on every device converges on the same data.
-initSync();
+function afterPaint(fn) {
+  const run = () => { try { fn(); } catch { /* boot work is best-effort */ } };
+  // Two frames, then idle: the first frame is React's commit, the second is
+  // the browser actually painting it. requestIdleCallback alone can fire
+  // before paint on a busy main thread, which is the case we are fixing.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 2000 });
+    else setTimeout(run, 0);
+  }));
+}
 
 // Top-level boundary: catches crashes in App's own body (state derivation,
 // memoised selectors, storage reads) that run *outside* the per-module
@@ -56,6 +56,21 @@ createRoot(document.getElementById("root")).render(
     </ErrorBoundary>
   </StrictMode>
 );
+
+// Gate 1 — Discipline merge. Purity days and journal entries become entries
+// on an abstinence / journal habit, on their original dates. Idempotent: it
+// plans against what's already there and writes only what's missing.
+// Then: the dead-store purge, the pre-revamp XP carry-forward, and the
+// linked-metric reverse pass (sleep hours and fluid recorded elsewhere
+// becoming entries on the habits that stand for them, bounded to 60 days).
+afterPaint(() => {
+  try { runDisciplineMigration(writeStore); } catch { /* never block on a migration */ }
+  try { purgeDeadStores(); } catch { /* nor on a cleanup */ }
+  openLedgerWithHistory(writeStore).catch(() => { /* the ledger is idempotent */ });
+  reconcileLinks().catch(() => { /* the hook is live either way */ });
+  // Cloud sync: a no-op until a Supabase project is connected in Settings.
+  initSync();
+});
 
 // Offline shell + home-screen install. Relative path keeps the scope correct
 // on the GitHub Pages subpath; failures (e.g. file://) are non-fatal.
