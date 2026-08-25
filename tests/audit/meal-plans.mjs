@@ -176,6 +176,51 @@ ok("an item with no options is dropped", M.sanitizePlan({ name: "x", meals: [{ n
 ok("an out-of-range choice falls back to the first option",
   M.sanitizePlan({ name: "x", meals: [{ name: "m", items: [{ options: [{ name: "a", grams: 1 }], chosen: 9 }] }] }).meals[0].items[0].chosen === 0);
 
+// ── 8. Adherence ─────────────────────────────────────────────────────
+console.log("\n8. Did the day actually follow the plan?");
+const dayOf = (names) => names.map((n, i) => ({ id: `x${i}`, name: n, slot: "pre_shift", grams: 100, proc: 2, n: { kcal: 200, p: 15, c: 20, f: 5 } }));
+
+const full = M.planToEntries(plan, [], { dayType: "training" }).map((e) => ({ ...e }));
+const a1 = M.dayAdherence({ plan, entries: full, dayType: "training", bands: plan.targets });
+ok("a day logged straight from the plan is fully covered", a1.coverage === 100);
+ok("nothing is reported missing", a1.missing.length === 0);
+ok("and nothing is reported as extra", a1.extra.length === 0);
+
+const half = full.slice(0, 9);
+const a2 = M.dayAdherence({ plan, entries: half, dayType: "training" });
+ok(`a partial day scores partial (${a2.coverage}%)`, a2.coverage > 0 && a2.coverage < 100);
+ok("and names what is missing", a2.missing.length === a2.planned - a2.matched);
+
+console.log("\n8b. Swapping an option is following the plan, not breaking it");
+const swapped = full.map((e) => (/chicken/i.test(e.name) ? { ...e, name: "salmon" } : e));
+ok("a swapped protein still counts as the planned item",
+  M.dayAdherence({ plan, entries: swapped, dayType: "training" }).coverage === 100);
+
+console.log("\n8c. An unlogged day is unknown, not a failure");
+const a3 = M.dayAdherence({ plan, entries: [], dayType: "training" });
+ok("coverage is null, not 0", a3.coverage === null);
+ok("the plan's items are still listed as unmet", a3.missing.length === a3.planned);
+
+console.log("\n8d. Food outside the plan is reported, not silently ignored");
+const withExtra = [...full, ...dayOf(["Chocolate bar"])];
+const a4 = M.dayAdherence({ plan, entries: withExtra, dayType: "training" });
+ok("the plan is still fully covered", a4.coverage === 100);
+ok("and the extra is named", a4.extra.includes("Chocolate bar"));
+
+console.log("\n8e. Across a window");
+const log = {};
+const TODAY_DS = "2026-08-25";
+const D = (n) => { const d = new Date(`${TODAY_DS}T12:00:00`); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+for (let i = 0; i < 6; i++) log[D(i)] = full.slice(0, 12); // six partial days
+log[D(7)] = full;                                          // one perfect day
+const s2 = M.adherenceSeries({ plan, log, days: 10, today: TODAY_DS, dayTypeFor: () => "training", bands: plan.targets });
+ok("only logged days are graded", s2.loggedDays === 7);
+ok("and unlogged days are counted apart", s2.unloggedDays === 3);
+ok("coverage averages the logged days only", s2.coverage > 0 && s2.coverage < 100);
+ok("an unlogged day never drags the average to zero", s2.coverage > 60);
+ok("items missed repeatedly are surfaced", s2.chronicMisses.length > 0);
+ok("with how often they were missed", s2.chronicMisses[0].missedDays >= 2);
+
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Meal plans: ${pass}/${pass + fail} passed`);

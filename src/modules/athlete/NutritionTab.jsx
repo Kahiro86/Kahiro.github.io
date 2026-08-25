@@ -822,6 +822,7 @@ export function NutritionTab() {
         targets={targets}
         dayType={body.trained ? "training" : "rest"}
         logDs={logDs}
+        log={log}
         onApply={(newEntries) => writeDay(logDs, (day) => [...day, ...newEntries])}
       />
 

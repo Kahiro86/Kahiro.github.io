@@ -338,6 +338,115 @@ function unscale(n, grams) {
   return out;
 }
 
+// ── Adherence: did the day actually follow the plan? ─────────────────
+// The plan says what should be eaten and nutrition_log says what was. Until
+// something compares them, a plan is a document you keep next to the app
+// rather than a thing the app helps you hold to.
+//
+// Two separate questions, deliberately not blended into one score:
+//
+//   coverage  how much of the plan showed up. Item-by-item, by name, so a
+//             day is answerable: "the plan had 9 items, 7 are in the log".
+//   macros    what the day actually came to, against the plan's own band.
+//
+// A day is only graded if something was logged. A day you did not record is
+// not a day you failed the plan — those two are different, and collapsing
+// them is how a report starts lying about the weeks you were busy.
+
+const norm = (x) => String(x || "").toLowerCase().replace(/\s*·.*$/, "").trim();
+
+/**
+ * One day against one plan.
+ *   { logged, planned, matched, missing, extra, coverage, totals, vsBand }
+ * `coverage` is null when nothing was logged.
+ */
+export function dayAdherence({ plan, entries, dayType = "any", bands = null }) {
+  const logged = (Array.isArray(entries) ? entries : []).filter((e) => e && e.name);
+  const planned = [];
+  for (const meal of plan.meals) {
+    for (const item of itemsFor(meal, dayType)) {
+      // Any of the item's options counts: swapping salmon for chicken is
+      // following the plan, not deviating from it. That is what the options
+      // are for, and grading only the currently-chosen one would punish the
+      // flexibility the plan was written with.
+      planned.push({ meal: meal.name, names: item.options.map((o) => norm(o.name)), label: chosenOption(item).name });
+    }
+  }
+  if (!logged.length) {
+    return { logged: 0, planned: planned.length, matched: 0, missing: planned.map((p2) => p2.label), extra: [], coverage: null, totals: null, vsBand: null };
+  }
+
+  const pool = logged.map((e) => norm(e.name));
+  const used = new Set();
+  const missing = [];
+  let matched = 0;
+  for (const item of planned) {
+    const i = pool.findIndex((n, idx) => !used.has(idx) && item.names.some((pn) => n === pn || n.includes(pn) || pn.includes(n)));
+    if (i >= 0) { used.add(i); matched += 1; } else missing.push(item.label);
+  }
+  const extra = logged.filter((_, i) => !used.has(i)).map((e) => e.name);
+  const totals = dayTotalsOf(logged);
+  return {
+    logged: logged.length,
+    planned: planned.length,
+    matched,
+    missing,
+    extra,
+    coverage: planned.length ? Math.round((matched / planned.length) * 100) : null,
+    totals,
+    vsBand: bands ? planVsTarget(totals, bands) : null,
+  };
+}
+
+// Local copy of the log's day arithmetic, so this module does not depend on
+// the nutrition screen having already computed it.
+function dayTotalsOf(entries) {
+  const t = zero();
+  for (const e of entries) addInto(t, e?.n);
+  return round(t);
+}
+
+/**
+ * A plan across a window. Days with nothing logged are counted separately
+ * from days that missed the plan, and never averaged in.
+ */
+export function adherenceSeries({ plan, log, days = 30, today, dayTypeFor = () => "any", bands = null }) {
+  const src = log && typeof log === "object" && !Array.isArray(log) ? log : {};
+  const end = today || new Date().toISOString().slice(0, 10);
+  const list = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(`${end}T12:00:00`);
+    d.setDate(d.getDate() - i);
+    list.push(d.toISOString().slice(0, 10));
+  }
+  const rows = list.map((d) => ({
+    d,
+    ...dayAdherence({ plan, entries: src[d] || [], dayType: dayTypeFor(d), bands }),
+  }));
+  const graded = rows.filter((r) => r.coverage != null);
+  return {
+    rows,
+    days: rows.length,
+    loggedDays: graded.length,
+    unloggedDays: rows.length - graded.length,
+    // Averaged over days that were logged; an unrecorded day is unknown,
+    // not a zero.
+    coverage: graded.length ? Math.round(graded.reduce((s2, r) => s2 + r.coverage, 0) / graded.length) : null,
+    // The items the plan keeps losing — the actionable half of the report.
+    chronicMisses: chronicMisses(graded),
+  };
+}
+
+function chronicMisses(rows, limit = 5) {
+  const counts = new Map();
+  for (const r of rows) for (const m of r.missing) counts.set(m, (counts.get(m) || 0) + 1);
+  return [...counts.entries()]
+    .filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([name, missedDays]) => ({ name, missedDays, ofDays: rows.length }));
+}
+
 // ── CSV import ───────────────────────────────────────────────────────
 // The columns a plan exported from a spreadsheet actually has:
 //   Meal, Food, Amount, Protein (g), Carbs (g), Fat (g), Calories

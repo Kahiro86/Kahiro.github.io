@@ -45,7 +45,7 @@ const FEATURES = [
   // xp: null means "pays nothing, by design" — see each note for why.
   { name: "Notifications", store: "notif_reminders", also: ["notif_log", "notif_prefs"], xp: null, analytics: /notifAnalytics\(/, cc: null, home: "The bell — unpaid on purpose: the reminder's task pays when logged, so paying the reminder too would count one action twice" },
   { name: "XP ledger", store: "xp_ledger", also: ["xp_achievements"], xp: null, analytics: /journeys|RANKS|nextRankFor/, cc: /xpToday|xp\?\./, home: "The Record → Progress — this IS the XP path, not a feed into it" },
-  { name: "Meal plans", store: "nutrition_plans", xp: null, analytics: null, cc: null, todo: "adherence is not reported — \"did I follow the plan?\" has no answer yet", home: "Body → Fuel → Meal plans (a template, never intake)" },
+  { name: "Meal plans", store: "nutrition_plans", xp: null, analytics: /adherenceSeries|dayAdherence/, cc: null, home: "Body → Fuel → Meal plans — a template, never intake; adherence reported on the plan itself" },
   { name: "Metric links", store: "hab_link_writes", xp: null, analytics: null, cc: /useLinkedMetrics/, home: "internal provenance for the habit ⇄ counterpart mirror — nothing to report on" },
   { name: "Day marks", store: "athlete_day_marks", xp: null, analytics: /hasCheat|dayMarks/, cc: /useDayMarks/, home: "cheat/season days — excluded from streak grading" },
 ];
@@ -69,7 +69,7 @@ for (const f of FEATURES) {
   // ignored, best and toughest day) — a facet reporting on itself, which is
   // the rule this matcher already applies to Body Trends and the Firm's
   // Analyst tab.
-  const ANALYTIC = (k) => /modules\/(analytics|journey)\/|shared\/(analytics|views|crossModule|wellbeing|consistency)\.js|bodyTrends|NotificationCenter|Report|Review|Trends|Overview|Analyst|IntelAnalytics/i.test(k);
+  const ANALYTIC = (k) => /modules\/(analytics|journey)\/|shared\/(analytics|views|crossModule|wellbeing|consistency)\.js|bodyTrends|NotificationCenter|MealPlans|Report|Review|Trends|Overview|Analyst|IntelAnalytics/i.test(k);
   const inAnalytics = f.analytics ? anyFile(f.analytics, ANALYTIC) : null;
   const inCC = f.cc ? f.cc.test(code.get("src/modules/dashboard/Dashboard.jsx") || "") : null;
 

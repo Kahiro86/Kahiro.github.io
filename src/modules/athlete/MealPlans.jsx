@@ -13,6 +13,7 @@ import { SLOTS } from "./nutrition.js";
 import {
   sanitizePlans, sanitizePlan, parsePlanCsv, planTotals, planVsTarget,
   planToEntries, itemsFor, chosenOption, bandsFromTargets, DAY_TYPES,
+  adherenceSeries,
 } from "./mealPlans.js";
 
 const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box", width: "100%" };
@@ -35,7 +36,7 @@ function BandRow({ k, label, unit, v }) {
   );
 }
 
-export function MealPlans({ foods, targets, dayType, logDs, onApply }) {
+export function MealPlans({ foods, targets, dayType, logDs, log, onApply }) {
   const [rawPlans, setPlans] = useStorageState("nutrition_plans", []);
   const [openId, setOpenId] = useState(null);
   const [importing, setImporting] = useState(false);
@@ -53,6 +54,12 @@ export function MealPlans({ foods, targets, dayType, logDs, onApply }) {
   const bands = open?.targets && Object.keys(open.targets).length ? open.targets : bandsFromTargets(targets);
   const totals = useMemo(() => (open ? planTotals(open, foods, dayType) : null), [open, foods, dayType]);
   const verdict = useMemo(() => (totals ? planVsTarget(totals.day, bands) : null), [totals, bands]);
+  // How the last 30 days actually went against this plan. A plan you never
+  // check yourself against is a document, not a system.
+  const adherence = useMemo(
+    () => (open ? adherenceSeries({ plan: open, log, days: 30, today: logDs, dayTypeFor: () => dayType, bands }) : null),
+    [open, log, logDs, dayType, bands],
+  );
 
   const save = (next) => setPlans(next.map((p) => sanitizePlan(p)));
 
@@ -214,6 +221,39 @@ export function MealPlans({ foods, targets, dayType, logDs, onApply }) {
                     </div>
                   )}
                 </div>
+
+                {/* Adherence — the answer to "did I actually follow this?" */}
+                {adherence && adherence.loggedDays > 0 && (
+                  <div style={{ borderTop: `1px solid ${BD}`, paddingTop: 11, marginTop: 11 }}>
+                    <div style={{ fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase", color: T3, fontWeight: 700, marginBottom: 5 }}>
+                      Last 30 days
+                    </div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", fontSize: 11.5 }}>
+                      <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 17, color: adherence.coverage >= 80 ? GR : adherence.coverage >= 50 ? AM : T2 }}>
+                        {adherence.coverage}%
+                      </span>
+                      <span style={{ color: T3 }}>
+                        of the plan, over {adherence.loggedDays} logged day{adherence.loggedDays === 1 ? "" : "s"}
+                      </span>
+                      {adherence.unloggedDays > 0 && (
+                        <span style={{ color: T3, fontSize: 10.5 }}>
+                          · {adherence.unloggedDays} day{adherence.unloggedDays === 1 ? "" : "s"} not recorded, not counted
+                        </span>
+                      )}
+                    </div>
+                    {adherence.chronicMisses.length > 0 && (
+                      <div style={{ fontSize: 11, color: T3, marginTop: 7, lineHeight: 1.55 }}>
+                        Most often missed:{" "}
+                        {adherence.chronicMisses.map((m, i) => (
+                          <span key={m.name}>
+                            {i > 0 && " · "}
+                            <span style={{ color: T2 }}>{m.name}</span> ({m.missedDays}×)
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {p.note && (
                   <div style={{ fontSize: 11, color: T3, lineHeight: 1.55, marginTop: 10, paddingTop: 9, borderTop: `1px solid ${BD}` }}>

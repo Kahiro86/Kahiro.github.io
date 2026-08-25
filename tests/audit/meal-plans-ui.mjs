@@ -101,6 +101,14 @@ await page.waitForTimeout(1200);
 const day2 = ((await store("nutrition_log")) || {})[TODAY] || [];
 ok("a second log appends rather than wiping the day", day2.length > day.length);
 
+// ── 6. Adherence ─────────────────────────────────────────────────────
+console.log("\n6. The plan reports how well it was followed");
+const body6 = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+ok("the last 30 days are summarised", /last 30 days/i.test(body6));
+ok("with a percentage of the plan", /\d+% of the plan/i.test(body6));
+ok("over logged days only", /over \d+ logged day/i.test(body6));
+ok("and unrecorded days are excluded out loud", /not recorded, not counted/i.test(body6) || !/not recorded/i.test(body6));
+
 console.log("");
 console.log("ERRORS:", errs.slice(0, 3).join(" || ") || "none");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
