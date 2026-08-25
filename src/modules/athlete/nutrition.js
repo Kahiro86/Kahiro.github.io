@@ -487,6 +487,9 @@ export function sanitizeNutrition(raw) {
         ...(e.sugared ? { sugared: true } : {}),
         ...(typeof e.season === "string" ? { season: e.season } : {}),
         ...(typeof e.loggedAt === "number" ? { loggedAt: e.loggedAt } : {}),
+        // Which meal plan an entry came from, so a planned day is
+        // distinguishable from one logged food by food.
+        ...(typeof e.fromPlan === "string" ? { fromPlan: e.fromPlan } : {}),
         ...(e.late ? { late: true } : {}),
         n: cleanN(e.n),
       }));
@@ -507,8 +510,14 @@ export function scaleNutrients(per100, grams) {
   return out;
 }
 
+// Two random characters was enough while entries were typed one at a time.
+// Applying a meal plan creates seventeen inside the same millisecond, and a
+// collision there means two rows share an id — edit or delete one and the
+// other goes with it. Six characters of entropy per entry, plus a counter
+// that cannot repeat within a tick.
+let entrySeq = 0;
 export const newEntry = (food, grams, slot, time) => ({
-  id: `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`,
+  id: `m${Date.now().toString(36)}${(entrySeq++).toString(36)}${Math.random().toString(36).slice(2, 8)}`,
   slot, time: time || "", name: food.name, grams: +grams || 0,
   proc: food.proc || 2, n: scaleNutrients(food.per100, +grams || 0),
   loggedAt: Date.now(),

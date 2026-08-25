@@ -16,7 +16,6 @@ import { Ring } from "../../shared/charts.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
-import { migrateHabits, isWellness, valueOn } from "../../shared/habitEngine.js";
 import { callClaude, getApiKey } from "../../shared/anthropic.js";
 import {
   FOOD_DB, SLOTS, SHIFT_SLOTS, GOALS, ACTIVITY, NUTRIENTS, MICROS, DEFAULT_PROFILE,
@@ -28,6 +27,9 @@ import {
 } from "./nutrition.js";
 import { sanitizeSeason, seasonActive, seasonDay, seasonTemplate } from "../../shared/season.js";
 import { dayTargets, TRAINING_RULE } from "./bodyTargets.js";
+import { hydrationSeries, todayStatus } from "../../shared/wellbeing.js";
+import { useLinkedMetrics } from "../../shared/useLinkedMetrics.js";
+import { MealPlans } from "./MealPlans.jsx";
 import { Lock } from "lucide-react";
 
 const input = { background: B2, border: `1px solid ${BD}`, borderRadius: 9, padding: "8px 11px", fontSize: 12.5, color: T1, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
@@ -55,9 +57,11 @@ export function NutritionTab() {
   const [rawLog, setLog] = useStorageState("nutrition_log", {});
   const [rawFoods, setFoods] = useStorageState("nutrition_foods", []);
   const [rawProfile, setProfile] = useStorageState("nutrition_profile", DEFAULT_PROFILE);
-  const [rawHabits] = useStorageState("habits", []);
   const [days, setDays] = useStorageState("nutrition_days", {}); // { ds: { completedAt, clean } }
   const [gymSessions] = useStorageState("gym_sessions", []);
+  // Water logged against the linked habit, added to the food log's
+  // beverages by the one hydration definition the whole app reports on.
+  const { hydration, claims } = useLinkedMetrics();
   const [measurements] = useStorageState("athlete_measurements", []);
   const toast = useToast();
   const today = localDateStr();
@@ -82,6 +86,10 @@ export function NutritionTab() {
 
   const entries = dayEntries(log, logDs);
   const totals = useMemo(() => dayTotals(entries), [entries]);
+  const hyd = useMemo(
+    () => todayStatus(hydrationSeries({ nutrition: log, nutritionProfile: rawProfile, hydration, claims: claims.hydration, today: logDs, days: 1 })),
+    [log, rawProfile, hydration, claims.hydration, logDs],
+  );
   const score = nutritionScore(totals, targets);
   const suggestions = useMemo(() => qualitySuggestions(totals, targets, entries), [totals, targets, entries]);
   // Season-tagged days are excluded from healthy-streak grading (like a
@@ -92,12 +100,6 @@ export function NutritionTab() {
   const report7 = useMemo(() => nutritionReport(log, targets, 7), [log, targets]);
   const report30 = useMemo(() => nutritionReport(log, targets, 30), [log, targets]);
 
-  // Hydration from the shared wellness habit — never a second water store.
-  const water = useMemo(() => {
-    const h = migrateHabits(rawHabits).find((x) => x && !x.archived && isWellness(x) && /hydra|water/i.test(x.name || ""));
-    if (!h) return null;
-    return { done: valueOn(h, logDs), target: h.target || 2, unit: h.unit || "L" };
-  }, [rawHabits, logDs]);
 
   // Recents: unique foods from the last 14 days, most recent first.
   const recents = useMemo(() => {
@@ -387,7 +389,7 @@ export function NutritionTab() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: T2, flexWrap: "wrap" }}>
-          <span>Water <b style={{ color: T1 }}>{((totals.fluidMl || 0) / 1000).toFixed(1)}</b>/{(targets.waterMl / 1000).toFixed(1)} L</span>
+          <span>Water <b style={{ color: T1 }}>{((hyd.value ?? 0) / 1000).toFixed(1)}</b>/{(targets.waterMl / 1000).toFixed(1)} L</span>
           <span>Sodium <b style={{ color: totals.na > 2300 ? AM : T1 }}>{Math.round(totals.na || 0).toLocaleString()}</b> mg</span>
           <span style={{ marginLeft: "auto", color: score == null ? T3 : score >= 70 ? GR : score >= 50 ? AM : RE }}>Score {score == null ? "—" : score}</span>
         </div>
@@ -814,6 +816,15 @@ export function NutritionTab() {
       )}
 
       {/* ── Goals ── */}
+      {/* ── Meal plans — a day's eating written once, applied to any day ── */}
+      <MealPlans
+        foods={[...customFoods, ...FOOD_DB]}
+        targets={targets}
+        dayType={body.trained ? "training" : "rest"}
+        logDs={logDs}
+        onApply={(newEntries) => writeDay(logDs, (day) => [...day, ...newEntries])}
+      />
+
       <Collapse id="nutri_goals" title="Goals & Profile" sub={`${GOALS.find((g) => g.id === profile.goal)?.l} · ${targets.kcal} kcal · ${targets.p}g protein · ~${(targets.waterMl / 1000).toFixed(1)}L water`}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           {GOALS.map((g) => (
