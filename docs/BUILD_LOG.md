@@ -216,6 +216,13 @@ different plan) and a band rather than a number. Importing reads the CSV shape
 a spreadsheet exports; applying writes ordinary entries into `nutrition_log`,
 which stays the single source of truth for what was eaten.
 
+**Adherence** answers "did I actually follow it?" — coverage and macros
+reported separately rather than blended into a score, because "the plan had 9
+items, 7 are in the log" is answerable and a single number hides which half
+went wrong. Swapping an option counts as following the plan (that is what the
+options are for); a day with nothing logged is unknown rather than failed, and
+is counted apart so a busy week cannot make the report lie.
+
 Not built: an in-app editor for creating a plan from scratch. The building
 blocks exist (`newPlan`/`newMeal`/`newItem`/`patchItem`/`planFromDay`) and are
 unused.
@@ -235,6 +242,23 @@ scaling with how much history you have, so the person with the most data
 waited longest for the first pixel. Moved after paint: **1621ms → ~280ms** to
 app content, on a store with three years of purity days, 800 journal entries
 and 4,200 habit entries. Guarded by `tests/audit/launch-perf.mjs`.
+
+## The dependency map
+`tests/audit/dataflow.mjs` said "16 of 16 fully connected" while five stores
+were not in it at all — a map only reports on what it has been told about.
+Now 21, including Notifications and the XP ledger, which the audit brief named
+by hand. It distinguishes a broken chain (exits non-zero) from a known gap
+that is recorded but not built, because reporting both with ⚠️ is how a
+warning column stops being read.
+
+## One source per measured fact
+The same bug was fixed three times in three places: a screen looks sleep or
+water up against the LEGACY wellness habits while another screen reads the
+authoritative store, and the two disagree about the same day. Dashboard's
+System Health, NutritionTab's water line, and the Record's weekly sleep
+average. Guarded in `metric-definitions.mjs`: no file outside `habitEngine`
+may call `isWellness()` except the three that need it to EXCLUDE a wellness
+habit, each listed with why.
 
 ## Testing
 `npm run test:audit` runs the ~22 pure audits in about 15 seconds;
