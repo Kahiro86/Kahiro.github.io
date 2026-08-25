@@ -133,6 +133,38 @@ const curves = files.filter((f) => {
 });
 ok(`exactly one level curve in the codebase${curves.length ? ` (extra: ${curves.join(", ")})` : ""}`, curves.length === 0);
 
+console.log("\n── one source per measured fact ──");
+// This exact bug has now been fixed three times in three places: a screen
+// looks sleep or water up against the LEGACY wellness habits while another
+// screen reads the authoritative store, and the two disagree about the same
+// day. It is easy to write and invisible until someone compares two numbers,
+// so it gets a guard rather than another round of noticing.
+//
+// isWellness/valueOn are only legitimate for EXCLUDING a wellness habit from
+// a habit percentage; reading a value out of one is the bug.
+const WELLNESS_OK = new Set([
+  // Excludes sleep from the habit percentage, then reads hours from
+  // trade_sleep. The exclusion is the point.
+  "src/shared/analytics.js",
+  // The legacy quick-log surface, which is about the legacy habits.
+  "src/shared/QuickLog.jsx",
+  // The projection layer that maps legacy habits into the shared views.
+  "src/shared/views.js",
+]);
+const wellnessReaders = files
+  .map((f) => f.slice(root.length + 1).replace(/\\/g, "/"))
+  .filter((rel) => rel !== "src/shared/habitEngine.js" && !WELLNESS_OK.has(rel))
+  .filter((rel) => /isWellness\s*\(/.test(stripComments(read(rel))));
+ok(`no screen reads sleep or water off a wellness habit${wellnessReaders.length ? ` (${wellnessReaders.join(", ")})` : ""}`,
+  wellnessReaders.length === 0);
+
+// analytics.js is already read above as `an`.
+ok("the weekly sleep average comes from the sleep log", /sleepLog\[ds\]/.test(an));
+ok("and not from a habit's logged value", !/valueOn\(sleep/.test(an));
+const dash = stripComments(read("src/modules/dashboard/Dashboard.jsx"));
+ok("System Health reads the shared wellbeing series", /hydrationSeries|sleepSeries/.test(dash));
+ok("and no longer looks up a wellness habit", !/isWellness/.test(dash));
+
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Metric definitions: ${pass}/${pass + fail} passed`);

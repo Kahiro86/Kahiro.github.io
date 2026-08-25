@@ -94,20 +94,23 @@ export const rVerdict = (r) => {
 
 export function weeklySeries(deps, weeks = 10) {
   const habits = (deps.habits || []).filter((h) => h && !h.archived && !h.paused);
+  // Sleep is excluded from the habit percentage because it is measured, not
+  // ticked — its hours come from trade_sleep, the one authoritative source
+  // (criterion 40). This used to average a LEGACY wellness habit instead, so
+  // the Record's weekly sleep line could disagree with the Record's own
+  // Wellbeing panel about the same nights, on the same screen.
   const nonSleep = habits.filter((h) => !(isWellness(h) && /sleep/i.test(h.name || "")));
-  const sleep = habits.find((h) => isWellness(h) && /sleep/i.test(h.name || ""));
+  const sleepLog = deps.sleep && typeof deps.sleep === "object" && !Array.isArray(deps.sleep) ? deps.sleep : {};
   const spiritual = habits.filter((h) => h.category === "Spiritual");
   const out = [];
   for (let w = weeks - 1; w >= 0; w--) {
     const { start, end } = win(w * 7, 7);
     let sleepSum = 0, sleepN = 0;
-    if (sleep) {
-      for (let d = new Date(`${start}T12:00:00`); ; d.setDate(d.getDate() + 1)) {
-        const ds = localDateStr(d);
-        if (ds > end) break;
-        const v = valueOn(sleep, ds);
-        if (v > 0) { sleepSum += v; sleepN++; }
-      }
+    for (let d = new Date(`${start}T12:00:00`); ; d.setDate(d.getDate() + 1)) {
+      const ds = localDateStr(d);
+      if (ds > end) break;
+      const v = Number(sleepLog[ds]);
+      if (Number.isFinite(v) && v > 0) { sleepSum += v; sleepN++; }
     }
     const wo = (deps.workouts || []).filter((x) => x && inWindow(x.date, start, end));
     const j = (deps.entries || []).filter((e) => e && inWindow((e.date || "").slice(0, 10), start, end));

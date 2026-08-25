@@ -116,6 +116,7 @@ export function AnalyticsOS({ habits, onNavigate, xpInfo, navHint }) {
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
   const [entries] = useStorageState("journal_entries", []);
   const [nutrition] = useStorageState("nutrition_log", {});
+  const [sleepLog] = useStorageState("trade_sleep", {});
   const [library] = useStorageState("mind_library", []);
   const [decisions] = useStorageState("mind_decisions", []);
   const xp = useXp();
@@ -130,7 +131,10 @@ export function AnalyticsOS({ habits, onNavigate, xpInfo, navHint }) {
     library: (Array.isArray(library) ? library : []).filter((b) => b && b.id),
     decisions: (Array.isArray(decisions) ? decisions : []).filter((d) => d && d.id),
     nutrition,
-  }), [habits, trades, reviews, workouts, entries, finance, library, decisions, nutrition]);
+    // Hours, from the one authoritative store — not from a wellness habit
+    // that happens to have "sleep" in its name.
+    sleep: sleepLog,
+  }), [habits, trades, reviews, workouts, entries, finance, library, decisions, nutrition, sleepLog]);
 
   const report = useMemo(() => periodReport(deps, days), [deps, days]);
   const weeks = useMemo(() => weeklySeries(deps, 10), [deps]);
