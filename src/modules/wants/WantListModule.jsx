@@ -19,7 +19,7 @@ import {
   WANT_CATEGORIES, CATEGORY_ICON, iconFor, PRIORITIES, PRIORITY_LABEL, PRIORITY_COLOR,
   FUNDING_SOURCES, STATUS_LABEL, progressColor, fmtKsh,
   sanitizeWants, newWant, savedOf, remainingOf, pctOf, statusOf, isComplete,
-  timelineOf, highestMilestone, addContribution, markPurchased, updateWant, archiveWant,
+  timelineOf, highestMilestone, addContribution, removeContribution, markPurchased, updateWant, archiveWant,
   wantsAnalytics, suggestionsFor, wantAchievements, committedSavings,
 } from "../../shared/wants.js";
 import { localDateStr } from "../../shared/dates.js";
@@ -101,7 +101,7 @@ const Placeholder = ({ cat, height = 128 }) => (
 );
 
 // ── One want card ────────────────────────────────────────────────────
-function WantCard({ w, onAdd, onPurchase, onEdit, onArchive, celebrate }) {
+function WantCard({ w, onAdd, onPurchase, onEdit, onArchive, onRemoveContribution, celebrate }) {
   const [open, setOpen] = useState(false);
   const saved = savedOf(w), remaining = remainingOf(w), pct = pctOf(w);
   const status = statusOf(w);
@@ -222,9 +222,22 @@ function WantCard({ w, onAdd, onPurchase, onEdit, onArchive, celebrate }) {
                 <div style={{ fontSize: 9, color: T3, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Contributions</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 132, overflowY: "auto" }}>
                   {[...w.contributions].reverse().slice(0, 8).map((c2) => (
-                    <div key={c2.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: T2, padding: "4px 8px", background: GL, borderRadius: 7 }}>
+                    <div key={c2.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 11, color: T2, padding: "4px 8px", background: GL, borderRadius: 7 }}>
                       <span>{fmtDate(c2.date)} · <span style={{ color: T3 }}>{(FUNDING_SOURCES.find((s) => s.id === c2.source) || {}).label || "Manual"}</span></span>
-                      <span style={{ fontFamily: "'JetBrains Mono',monospace", color: GR }}>+{fmtKsh(c2.amount)}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", color: GR }}>+{fmtKsh(c2.amount)}</span>
+                        {/* A mistyped amount was permanent: contributions were
+                            listed and nothing could take one back, so a wrong
+                            figure sat in "how close am I" forever. */}
+                        {!done && (
+                          <button onClick={() => onRemoveContribution(w.id, c2.id)}
+                            aria-label={`Remove the ${fmtKsh(c2.amount)} contribution from ${fmtDate(c2.date)}`}
+                            title="Remove this contribution"
+                            style={{ background: "none", border: "none", padding: 0, color: T3, cursor: "pointer", display: "flex" }}>
+                            <X size={11} />
+                          </button>
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -512,6 +525,23 @@ export function WantListModule() {
   const active = visible.filter((w) => !w.purchasedAt);
   const completed = wants.filter((w) => w.purchasedAt && !w.archived);
 
+  // Take one back. Offered with an undo rather than a confirm: the amount
+  // is right there on the row, so the mistake is obvious and the recovery
+  // should be one tap, not a dialog.
+  const doRemoveContribution = (wantId, contribId) => {
+    let removed = null;
+    setWants((prev) => {
+      const w = prev.find((x) => x && x.id === wantId);
+      removed = w && Array.isArray(w.contributions) ? w.contributions.find((c) => c.id === contribId) : null;
+      return removeContribution(prev, wantId, contribId);
+    });
+    toast("Contribution removed", {
+      tone: "danger",
+      action: "Undo",
+      onAction: () => { if (removed) setWants((prev) => addContribution(prev, wantId, removed)); },
+    });
+  };
+
   // Save a contribution, celebrating if it crosses a fresh milestone.
   const doAdd = (contrib) => {
     const before = highestMilestone(pctOf(addTarget));
@@ -652,7 +682,7 @@ export function WantListModule() {
           {active.map((w) => (
             <WantCard key={w.id} w={w} celebrate={celebrateId === w.id}
               onAdd={setAddTarget} onPurchase={setPurchaseTarget}
-              onEdit={(x) => { setEditing(x); setFormOpen(true); }} onArchive={doArchive} />
+              onEdit={(x) => { setEditing(x); setFormOpen(true); }} onArchive={doArchive} onRemoveContribution={doRemoveContribution} />
           ))}
         </div>
       )}
@@ -662,7 +692,7 @@ export function WantListModule() {
         <Collapse id="wants_completed" title="Completed Collection" count={completed.length} defaultOpen={fStatus === "done"}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
             {completed.map((w) => (
-              <WantCard key={w.id} w={w} onAdd={setAddTarget} onPurchase={setPurchaseTarget} onEdit={() => {}} onArchive={doArchive} />
+              <WantCard key={w.id} w={w} onAdd={setAddTarget} onPurchase={setPurchaseTarget} onEdit={() => {}} onArchive={doArchive} onRemoveContribution={doRemoveContribution} />
             ))}
           </div>
         </Collapse>
