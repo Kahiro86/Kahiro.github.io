@@ -1,7 +1,7 @@
 // Gate 2 §2.2 — the training/rest target linkage. This is the load-bearing
 // part of the Body merge, so it is tested as arithmetic, not by eyeballing UI.
 import { build } from "esbuild";
-import { writeFileSync, mkdtempSync } from "node:fs";
+import { writeFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -87,6 +87,26 @@ ok(`a rest day never drops below BMR (${heavyRest.targets.kcal} ≥ ${bmr})`, he
 console.log("\n── the rule is written down, not hidden ──");
 ok("TRAINING_RULE is exported as readable text", Array.isArray(B.TRAINING_RULE) && B.TRAINING_RULE.length >= 3);
 ok("every day carries its rule for display", Array.isArray(trainDay.rule) && trainDay.rule.length >= 3);
+
+console.log("\n── the week the app thinks you train ──");
+// WEEK_PLAN is not decoration. directive.js reads type === "Rest" to decide
+// whether a day with no session is a miss, and the Notification Center
+// announces today's and tomorrow's session from it. A generic split that
+// disagrees with the real week is wrong data driving daily judgements.
+const plan = readFileSync(join(root, "src/modules/athlete/constants.js"), "utf8");
+const rows = [...plan.matchAll(/\{\s*day:\s*"([A-Z]{3})",\s*type:\s*"([^"]+)"/g)].map((m) => [m[1], m[2]]);
+ok("all seven days are planned", rows.length === 7);
+ok("the order is MON→SUN", rows.map((r) => r[0]).join(",") === "MON,TUE,WED,THU,FRI,SAT,SUN");
+const typeOf = Object.fromEntries(rows);
+ok("Monday is lower body", /lower/i.test(typeOf.MON));
+ok("Tuesday is upper body", /upper/i.test(typeOf.TUE));
+ok("Wednesday is endurance", /endurance/i.test(typeOf.WED));
+ok("Thursday is the SECOND lower day, not rest", /lower/i.test(typeOf.THU) && !/rest/i.test(typeOf.THU));
+ok("Friday is upper body", /upper/i.test(typeOf.FRI));
+ok("Saturday is active recovery, which still expects something logged",
+  /recovery/i.test(typeOf.SAT) && typeOf.SAT !== "Rest");
+ok("Sunday is the only full rest day",
+  typeOf.SUN === "Rest" && rows.filter(([, t]) => t === "Rest").length === 1);
 
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
