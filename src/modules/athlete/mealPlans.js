@@ -242,6 +242,102 @@ export function planToEntries(plan, foods, { dayType = "any", mealIds = null } =
   return out;
 }
 
+// ── Building a plan ──────────────────────────────────────────────────
+export const newPlan = (name = "New plan") => sanitizePlan({ name, meals: [] });
+
+export const newMeal = (name = "Meal", slot = "pre_shift") => sanitizeMeal({ name, slot, items: [] });
+
+/**
+ * An item built in the app binds to a library food by id, so editing that
+ * food's macros updates every plan using it. Grams default to the food's own
+ * realistic serving where it has one — 100 g is a unit, not a portion.
+ */
+export function newItem(food, grams = null) {
+  return sanitizeItem({
+    options: [optionFromFood(food, grams)],
+    chosen: 0,
+    dayType: "any",
+  });
+}
+
+export function optionFromFood(food, grams = null) {
+  const g = Number.isFinite(+grams) && +grams > 0 ? +grams : (food?.serving?.g || 100);
+  return {
+    name: String(food?.name || "Food"),
+    grams: g,
+    foodId: String(food?.id || ""),
+    ...(food?.serving?.l ? { portion: `${food.serving.l}` } : {}),
+  };
+}
+
+/** Immutably replace one meal inside a plan. `fn` receives the meal. */
+export function patchMeal(plan, mealId, fn) {
+  return sanitizePlan({ ...plan, meals: plan.meals.map((m) => (m.id === mealId ? fn(m) : m)) });
+}
+
+/** Immutably replace one item inside a meal. */
+export function patchItem(plan, mealId, itemId, fn) {
+  return patchMeal(plan, mealId, (m) => ({ ...m, items: m.items.map((i) => (i.id === itemId ? fn(i) : i)) }));
+}
+
+/** A copy under a new name and new ids, so editing it cannot touch the original. */
+export function duplicatePlan(plan) {
+  return sanitizePlan({
+    ...plan,
+    id: uid("pl"),
+    name: `${plan.name} (copy)`,
+    createdAt: new Date().toISOString(),
+    meals: plan.meals.map((m) => ({ ...m, id: uid("pm"), items: m.items.map((i) => ({ ...i, id: uid("pi") })) })),
+  });
+}
+
+/**
+ * A day you already logged, turned into a plan. This is how most plans will
+ * really be born: you eat a good day, and you want it again. Entries are
+ * grouped by their slot, and each becomes an item bound to the library food
+ * it was logged from where the name still matches.
+ */
+export function planFromDay(entries, foods, { name = "Saved day" } = {}) {
+  const bySlot = new Map();
+  for (const e of Array.isArray(entries) ? entries : []) {
+    if (!e || !e.name) continue;
+    if (!bySlot.has(e.slot)) bySlot.set(e.slot, []);
+    bySlot.get(e.slot).push(e);
+  }
+  const list = Array.isArray(foods) ? foods : [];
+  const meals = Array.from(bySlot.entries()).map(([slot, es]) => ({
+    name: SLOTS.find((x) => x.id === slot)?.l || "Meal",
+    slot,
+    items: es.map((e) => {
+      const food = list.find((f) => f && String(f.name).toLowerCase() === String(e.name).toLowerCase());
+      return {
+        options: [food
+          ? optionFromFood(food, e.grams)
+          // The food is gone from the library, or was named freehand. Keep the
+          // macros the entry was logged with rather than dropping the row —
+          // the person ate it, and a plan that quietly omits it is wrong.
+          : { name: e.name, grams: e.grams, per100: unscale(e.n, e.grams) }],
+        chosen: 0,
+        dayType: "any",
+      };
+    }),
+  }));
+  return sanitizePlan({ name, meals });
+}
+
+// An entry stores absolute nutrients for its grams; a plan option stores
+// per-100 g. This is the one conversion between them.
+function unscale(n, grams) {
+  const g = +grams || 0;
+  if (g <= 0) return {};
+  const out = {};
+  for (const k of NUTRIENT_KEYS) {
+    const v = +n?.[k];
+    if (Number.isFinite(v) && v !== 0) out[k] = (v / g) * 100;
+  }
+  return out;
+}
+
 // ── CSV import ───────────────────────────────────────────────────────
 // The columns a plan exported from a spreadsheet actually has:
 //   Meal, Food, Amount, Protein (g), Carbs (g), Fat (g), Calories
