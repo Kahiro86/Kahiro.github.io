@@ -11,11 +11,13 @@ import {
   Target, AlertTriangle, Flame, CalendarClock,
   HeartPulse, ChevronRight, Crosshair,
   ListChecks, CandlestickChart, Dumbbell, BookOpen, Sparkles, Gauge,
-  Droplets, Moon,
+  Droplets, Moon, DollarSign, TrendingUp, Check,
 } from "lucide-react";
 import { BD, T1, T2, T3, GL, B2, AC, AC2, GR, AM, RE, MONO } from "../../shared/designTokens.js";
 import { Card, Hydrating } from "../../shared/ui.jsx";
 import { billsDueSoon } from "../finance/bills.js";
+import { financeSummary } from "../finance/summary.js";
+import { OverheadToday } from "../../shared/OverheadToday.jsx";
 
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useWorkouts } from "../../shared/useWorkouts.js";
@@ -34,7 +36,6 @@ import { useDayMarks } from "../../shared/dayMarks.js";
 import { consistencyOpts } from "../../shared/consistencyOpts.js";
 import { freedomMath } from "../../shared/freedom.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
-import { FocusToday } from "../../shared/FocusToday.jsx";
 import { scalingGate } from "../../shared/firm.js";
 import {
   sanitizeNutrition, dayEntries, dayTotals, calcTargets, healthyStreaks,
@@ -50,6 +51,8 @@ const SectionLabel = ({ icon, children }) => (
     {icon}{children}
   </div>
 );
+
+const kes0 = (n) => Math.round(+n || 0).toLocaleString();
 
 function StatCard({ onClick, children, style }) {
   return (
@@ -101,37 +104,6 @@ function Campaign({ day, pct, phase, remaining, cycle, onClick }) {
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
         <span style={{ fontSize: 9.5, color: T3 }}>{pct}% complete</span>
         <span style={{ fontSize: 9.5, color: T3 }}>{remaining} days remaining</span>
-      </div>
-    </Panel>
-  );
-}
-
-// Level — the circular badge, title, XP bar and the next rung.
-function LevelCard({ level, title, xp, nextXp, pct, toNext, nextRank, onClick }) {
-  return (
-    <Panel onClick={onClick} style={{ padding: "13px 15px", display: "flex", alignItems: "center", gap: 13 }}>
-      <div style={{ width: 48, height: 48, borderRadius: "50%", flexShrink: 0, border: `1.5px solid ${AC}`,
-        background: "radial-gradient(circle at 35% 30%,#2A2113,#141110)", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 17, fontWeight: 800, lineHeight: 1, color: AC, fontFamily: MONO }}>{level}</span>
-        <span style={{ ...UP, fontSize: 7, color: T3, marginTop: 1 }}>LVL</span>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "baseline", marginBottom: 5 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: T1 }}>{title}</span>
-          <span style={{ marginLeft: "auto", fontSize: 10.5, color: T3, fontFamily: MONO }}>{xp.toLocaleString()} / {nextXp.toLocaleString()} XP</span>
-        </div>
-        <div style={{ height: 5, background: "#241F18", borderRadius: 3, overflow: "hidden" }}>
-          <div style={{ height: 5, width: `${pct}%`, borderRadius: 3, background: AC }} />
-        </div>
-        {/* Distance to the next RANK, not just the next level number — §5.1:
-            a rank is remembered, a number isn't. Proximity to a named
-            threshold is the strongest honest motivator available. */}
-        <div style={{ fontSize: 9.5, color: T3, marginTop: 5 }}>
-          {nextRank
-            ? <>{nextRank.toGo.toLocaleString()} XP to <span style={{ color: AC2 }}>{nextRank.l}</span> · L{level + 1} in {toNext.toLocaleString()}</>
-            : <>{toNext.toLocaleString()} XP to Level {level + 1}</>}
-        </div>
       </div>
     </Panel>
   );
@@ -231,6 +203,9 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   const [htHabits] = useStorageState("ht_habits", []);
   const [htEntries] = useStorageState("ht_entries", []);
   const [moreOpen, setMoreOpen] = useStorageState("dash_show_more", false);
+  // Money and markets are reference numbers, not a daily instruction, so
+  // they live behind their own fold — shut by default, remembered per device.
+  const [moneyOpen, setMoneyOpen] = useStorageState("dash_show_money", false);
   const { start: consistencyStart } = useConsistencyStart(xp?.activeDays);
   const [nowDs, setNowDs] = useState(localDateStr);
 
@@ -270,7 +245,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     const pct = total ? Math.floor((done / total) * 100) : 0;
     return { label: "Today's Habits", done, total, pct, left: total - done };
   }, [hsum]);
-  const xpToNext = xp ? Math.max(0, xp.nextLevelXp - xp.total) : 0;
 
   // ── 📈 Life Score: one composite %, and the nine-day trail ──
   const dayScore = (d) => {
@@ -342,6 +316,15 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
     return { count: todays.length, pnl: todays.reduce((s, t) => s + tiNetPnl(t), 0) };
   }, [tiTrades, tiAccounts, tiSettings, ds]);
   const tradeCountToday = tradesToday.length + tiToday.count;
+
+  // ── 💰 MONEY & MARKETS — the folded reference block ──
+  const fin = useMemo(() => financeSummary(finance), [finance]);
+  const monthExpenses = useMemo(() => (Array.isArray(finance.bills) ? finance.bills.reduce((s2, b) => s2 + (+b?.amount || 0), 0) : 0), [finance.bills]);
+  const incomeToday = useMemo(
+    () => (Array.isArray(finance.income) ? finance.income : []).filter((e) => e && (e.date || "").slice(0, 10) === ds).reduce((s2, e) => s2 + (+e.amount || 0), 0),
+    [finance.income, ds]
+  );
+  const checklistOk = tradesToday.length > 0 && tradesToday.every((t) => +t.checklistTotal > 0 && (+t.checklistScore || 0) >= +t.checklistTotal);
 
   // ── ❤️ SYSTEM HEALTH — four indicators ──
   const health = useMemo(() => {
@@ -488,11 +471,30 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       {/* ── campaign · day N of 365 ── */}
       <Campaign day={cs.dayInCycle} pct={cs.cycleCompletionPct} phase={phase} remaining={cs.daysRemaining} cycle={cs.cycle} onClick={() => onNavigate("analytics:progress")} />
 
-      {/* ── level ── */}
-      <LevelCard level={xp?.level ?? 1} title={xp?.title ?? "Signatory"} xp={xp?.total ?? 0} nextXp={xp?.nextLevelXp ?? 100} pct={xp?.pctToNext ?? 0} toNext={xpToNext} nextRank={xp?.nextRank} onClick={() => onNavigate("analytics:progress")} />
-
-      {/* ── this week's focus (self-hides when none set) ── */}
-      <FocusToday />
+      {/* ── 🗓️ YEAR OF CONSISTENCY — the cycle's stat block, next to the
+          campaign bar that counts the same 365 days ── */}
+      <Card style={{ padding: "16px 20px", background: "linear-gradient(110deg,#151310,#0C0B0A)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+          <span style={{ ...UP, fontSize: 10, letterSpacing: 2.5, color: AC2 }}>Year of Consistency</span>
+          <span style={{ fontSize: 11, color: T3 }}>{cs.daysRemaining} days left this cycle</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(104px,1fr))", gap: 12, marginBottom: 12 }}>
+          {[
+            ["Current streak", `${cs.currentStreak}d`, AC],
+            ["Longest streak", `${cs.longestStreak}d`, AC2],
+            ["Consistency rate", `${cs.consistencyRate}%`, GR],
+            ["Total activities", totalAct.toLocaleString(), T1],
+            ["This week", `${cs.weeklyCompletion}%`, T1],
+            ["This month", `${cs.monthlyCompletion}%`, T1],
+          ].map(([l, v, c]) => (
+            <div key={l}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: c, fontFamily: MONO }}>{v}</div>
+              <div style={{ ...UP, fontSize: 9, color: T3, letterSpacing: 0.5, marginTop: 2 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: T2, lineHeight: 1.5 }}>{consistencySentence}</div>
+      </Card>
 
       {/* ── day-score hero ── */}
       <DayScore pct={lifeScore} delta={dayDelta} spark={spark} xpToday={xpToday} onClick={() => onNavigate("habits")} />
@@ -554,6 +556,44 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       </div>
 
 
+      {/* ── ▾ 💰 MONEY & MARKETS — folded; nothing here is a daily action ── */}
+      <button onClick={() => setMoneyOpen((v) => !v)} aria-expanded={moneyOpen} aria-label={moneyOpen ? "Hide money and markets" : "Show money and markets"}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "none", border: `1px dashed ${BD}`, borderRadius: 12, padding: "12px 0", color: T3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", transition: "border-color .2s ease, color .2s ease", marginTop: 4 }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${AC}66`; e.currentTarget.style.color = T2; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = BD; e.currentTarget.style.color = T3; }}>
+        <ChevronRight size={14} style={{ transform: moneyOpen ? "rotate(90deg)" : "none", transition: "transform .2s ease" }} />
+        {moneyOpen ? "Hide money & markets" : "Money & markets — net worth · trading · overhead"}
+      </button>
+
+      {moneyOpen && (<>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
+          <StatCard onClick={() => onNavigate("firm:wealth")}>
+            <SectionLabel icon={<DollarSign size={12} color={AC} />}>Finance</SectionLabel>
+            <div style={{ fontSize: 28, ...big, color: fin.personalNetWorth >= 0 ? T1 : RE }}>KES {kes0(fin.personalNetWorth)}</div>
+            <div style={{ fontSize: 10.5, color: T3, marginTop: 3 }}>Net worth</div>
+            {incomeToday > 0 && <div style={{ fontSize: 12, color: GR, marginTop: 8 }}>+KES {kes0(incomeToday)} income today</div>}
+          </StatCard>
+
+          <StatCard onClick={() => onNavigate("firm:trading")} style={{ borderColor: kz.active ? `${AC}44` : BD }}>
+            <SectionLabel icon={<TrendingUp size={12} color={AC} />}>Trading{kz.active ? " · Killzone" : ""}</SectionLabel>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontSize: 26, ...big, color: T1 }}>{tradeCountToday}</span>
+              <span style={{ fontSize: 11, color: T3 }}>trade{tradeCountToday === 1 ? "" : "s"} logged today</span>
+            </div>
+            <div style={{ display: "flex", gap: 16, marginTop: 9, fontSize: 11.5, color: T2 }}>
+              <span style={{ color: kz.active ? GR : T3 }}>{kz.active ? "Session live" : "Outside killzone"}</span>
+              {tradesToday.length > 0 && (
+                <span style={{ color: checklistOk ? GR : AM, display: "flex", alignItems: "center", gap: 4 }}>
+                  {checklistOk ? <><Check size={11} /> Checklist</> : "Checklist gaps"}
+                </span>
+              )}
+            </div>
+          </StatCard>
+        </div>
+
+        <OverheadToday actual={monthExpenses} />
+      </>)}
+
       {/* ── ▾ THE FULL COCKPIT — doctrine depth, folded by default ── */}
       <button onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} aria-label={moreOpen ? "Hide the full cockpit" : "Show the full cockpit"}
         style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "none", border: `1px dashed ${BD}`, borderRadius: 12, padding: "12px 0", color: T3, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", transition: "border-color .2s ease, color .2s ease", marginTop: 4 }}
@@ -594,34 +634,6 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         </StatCard>
       </div>
 
-      {/* ── 🗓️ YEAR OF CONSISTENCY — the full stat block ── */}
-      <Card style={{ padding: "16px 20px", background: "linear-gradient(110deg,#151310,#0C0B0A)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <span style={{ ...UP, fontSize: 10, letterSpacing: 2.5, color: AC2 }}>Year of Consistency</span>
-          <span style={{ fontSize: 11, color: T3 }}>{cs.daysRemaining} days left this cycle</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(104px,1fr))", gap: 12, marginBottom: 12 }}>
-          {[
-            ["Current streak", `${cs.currentStreak}d`, AC],
-            ["Longest streak", `${cs.longestStreak}d`, AC2],
-            ["Consistency rate", `${cs.consistencyRate}%`, GR],
-            ["Total activities", totalAct.toLocaleString(), T1],
-            ["This week", `${cs.weeklyCompletion}%`, T1],
-            ["This month", `${cs.monthlyCompletion}%`, T1],
-          ].map(([l, v, c]) => (
-            <div key={l}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: c, fontFamily: MONO }}>{v}</div>
-              <div style={{ ...UP, fontSize: 9, color: T3, letterSpacing: 0.5, marginTop: 2 }}>{l}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ fontSize: 12, color: T2, lineHeight: 1.5 }}>{consistencySentence}</div>
-      </Card>
-
-
-
-
-
       {/* ── 📅 SCHEDULE · 💰 FINANCE · 📊 TRADING (each hides when empty) ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12 }}>
         {upcoming.length > 0 && (
@@ -637,12 +649,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
             </div>
           </StatCard>
         )}
-
-
-
-
       </div>
-
 
       {/* ── ❤️ SYSTEM HEALTH ── */}
       <div>
