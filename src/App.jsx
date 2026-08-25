@@ -6,6 +6,9 @@ import { useStorageState } from "./shared/useStorageState.js";
 import { useIsMobile } from "./shared/useIsMobile.js";
 import { migrateHabits, toLegacy, tapHabit } from "./shared/habitEngine.js";
 import { htToLegacyHabits } from "./modules/habits/legacyAdapter.js";
+import { db as localDb } from "./modules/habits/localDb.js";
+import { toggleEntry } from "./modules/habits/logic/index";
+const QuickLog = lazy(() => import("./shared/QuickLog.jsx").then((m) => ({ default: m.QuickLog })));
 import { useXp } from "./shared/useXp.js";
 import { XPCelebration } from "./shared/XPCelebration.jsx";
 import { NotifTicker } from "./shared/NotifTicker.jsx";
@@ -176,6 +179,22 @@ export default function App() {
   );
   // Getting-started checklist — derived from real data, nothing extra tracked.
   const [goals] = useStorageState("goals", []);
+  // ── Quick log ────────────────────────────────────────────────────
+  // The day's habits and meals, logged from any screen. `habitsAll` merges
+  // both stores, and the adapter prefixes tracker ids with "ht_", so a tap
+  // routes itself — no second list to keep in step.
+  const quickTap = useCallback((id) => {
+    if (typeof id === "string" && id.startsWith("ht_")) {
+      const habitId = id.slice(3);
+      // toggleEntry writes through the tracker's Db, which broadcasts on the
+      // same store channel useStorageState listens to — so ht_entries updates
+      // and the ring re-renders without a second source of truth here.
+      toggleEntry(localDb, habitId, localDateStr()).catch(() => { /* the row stays as it was */ });
+      return;
+    }
+    setHabitsV2((prev) => tapHabit(prev, id));
+  }, [setHabitsV2]);
+
   const checklist = useMemo(() => computeChecklist({ onboard, habits: habitsV2, goals }), [onboard, habitsV2, goals]);
   const topStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
   // Global progression: XP derives from every store, never stored directly.
@@ -403,6 +422,11 @@ export default function App() {
         )}
         <XPCelebration xp={xpInfo} />
         <NotifTicker />
+        {/* The day's habits and meals, from wherever you happen to be. Hidden
+            while a full-screen overlay owns the view. */}
+        <Suspense fallback={null}>
+          <QuickLog habits={habitsAll} onTap={quickTap} hidden={aiOpen || showSettings || helpOpen || searchOpen || tourOn} />
+        </Suspense>
         <AutoGoalSync xp={xpInfo} />
         <WeeklyReviewGate habits={habitsAll} openSignal={reviewSignal} />
         <Suspense fallback={null}>
@@ -450,6 +474,11 @@ export default function App() {
       <XPCelebration xp={xpInfo} />
         <NotifTicker />
         <AutoGoalSync xp={xpInfo} />
+        {/* The day's habits and meals, from wherever you happen to be. Hidden
+            while a full-screen overlay owns the view. */}
+        <Suspense fallback={null}>
+          <QuickLog habits={habitsAll} onTap={quickTap} hidden={aiOpen || showSettings || helpOpen || searchOpen || tourOn} />
+        </Suspense>
         <WeeklyReviewGate habits={habitsAll} openSignal={reviewSignal} />
       <Suspense fallback={null}>
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onStartTour={startTour} onOpenHelp={() => setShowSettings(false) || setHelpOpen(true)} helpMode={helpMode} setHelpMode={setHelpMode} />}

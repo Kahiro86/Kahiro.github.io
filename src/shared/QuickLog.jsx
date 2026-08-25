@@ -70,6 +70,15 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
   // The command palette can open the sheet from anywhere (openSignal ticks up).
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
 
+  // Escape closes it. Without this the only way out is hitting the backdrop
+  // exactly, and an overlay that is hard to dismiss is worse than no overlay.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   const scheduled = habits.filter((h) => !h.archived && !h.paused && isScheduled(h, ds));
   // NOTE: every hook must run above this line — no hooks after an early return.
   if (!scheduled.length) return null;
@@ -107,7 +116,7 @@ export function QuickLog({ habits, onTap, hidden, offsetRight = 24, openSignal =
     <>
       {open && <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 88 }} />}
       {open && (
-        <div style={{ position: "fixed", bottom: 86, right: offsetRight, width: "min(360px, calc(100vw - 24px))", maxHeight: "72vh", overflowY: "auto", background: B1, border: `1px solid ${BD2}`, borderRadius: 16, padding: "14px", zIndex: 89, boxShadow: "0 18px 60px rgba(0,0,0,0.6)", animation: "fadeIn 0.18s ease" }}>
+        <div data-quicklog="sheet" style={{ position: "fixed", bottom: 86, right: offsetRight, width: "min(360px, calc(100vw - 24px))", maxHeight: "72vh", overflowY: "auto", background: B1, border: `1px solid ${BD2}`, borderRadius: 16, padding: "14px", zIndex: 89, boxShadow: "0 18px 60px rgba(0,0,0,0.6)", animation: "fadeIn 0.18s ease" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: T1, letterSpacing: 0.5 }}>⚡ Quick Log · {done.length}/{scheduled.length} today</span>
             <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: T3, cursor: "pointer", display: "flex" }}><X size={14} /></button>

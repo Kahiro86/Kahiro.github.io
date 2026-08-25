@@ -29,8 +29,10 @@ for (const f of files) {
   if (ALLOWED.some((a) => rel.endsWith(a))) continue;
   const src = readFileSync(f, "utf8");
   if (!/athlete_workouts/.test(src)) continue;
-  // Reading it is only safe alongside the gym-session merge.
-  if (!/gymSessionsToWorkouts|useWorkouts/.test(src)) offenders.push(rel);
+  // Reading it is only safe alongside the gym sessions. Three valid ways:
+  // merge inline, go through useWorkouts(), or hand both stores to a view
+  // that merges them (shared/views.js does this for the cross-module work).
+  if (!/gymSessionsToWorkouts|useWorkouts|gym_sessions/.test(src)) offenders.push(rel);
 }
 ok(`no view reads athlete_workouts without merging gym sessions${offenders.length ? ` (${offenders.join(", ")})` : ""}`, offenders.length === 0);
 
@@ -45,6 +47,10 @@ for (const c of consumers) {
   const src = readFileSync(join(root, "src", c), "utf8");
   ok(`${c.split("/").pop()} goes through useWorkouts`, /useWorkouts\(\)/.test(src));
 }
+
+const views = readFileSync(join(root, "src/shared/views.js"), "utf8");
+ok("the view that consumes both stores merges them", /\.\.\.gymSessionsToWorkouts\(gymSessions\)/.test(views));
+ok("and it takes both, so neither can be forgotten", /workouts, gymSessions/.test(views));
 
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
