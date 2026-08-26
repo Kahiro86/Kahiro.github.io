@@ -76,6 +76,23 @@ afterPaint(() => {
 // on the GitHub Pages subpath; failures (e.g. file://) are non-fatal.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+    navigator.serviceWorker.register("./sw.js").then((reg) => {
+      if (!reg) return;
+      // Registering once is not enough for an installed PWA. The browser
+      // checks for a new worker on navigation, and an app resumed from the
+      // Home Screen does no navigation — so a deploy can sit unseen for days
+      // on the device most likely to be running this. Ask on every return to
+      // the foreground instead, throttled to hourly so a person flicking
+      // between apps is not making a request each time.
+      let lastCheck = 0;
+      const check = () => {
+        if (document.hidden) return;
+        const now = Date.now();
+        if (now - lastCheck < 3600000) return;
+        lastCheck = now;
+        reg.update().catch(() => { /* offline, or the check simply failed */ });
+      };
+      document.addEventListener("visibilitychange", check);
+    }).catch(() => { /* no service worker: the app works, just not offline */ });
   });
 }

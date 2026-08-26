@@ -100,6 +100,14 @@ for (const call of ["runDisciplineMigration(", "purgeDeadStores(", "openLedgerWi
 ok("the link hook is still registered synchronously", main.indexOf("installLinkSync()") < renderAt);
 ok("afterPaint waits for a real paint, not just idle", /requestAnimationFrame\(\(\) => requestAnimationFrame/.test(main));
 
+// A deploy that never reaches the device is not a deploy. An installed PWA
+// resumed from the Home Screen does no navigation, so the browser's own
+// update check never fires — this app has to ask.
+ok("the service worker is asked for updates on foreground", /reg\.update\(\)/.test(main));
+ok("triggered by returning to the app", /visibilitychange/.test(main));
+ok("and throttled so it is not a request per app-switch", /3600000/.test(main));
+ok("registration still cannot break boot", /\.catch\(\(\) =>/.test(main.slice(main.indexOf("serviceWorker"))));
+
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Launch performance: ${pass}/${pass + fail} passed`);
