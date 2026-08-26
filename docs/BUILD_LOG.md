@@ -299,3 +299,69 @@ class as the notification `nav` field — a capability with no way to reach it.
   with no data are grey and say "Unlogged" rather than red and "Poor".
 - A22: **A notification without a destination should not exist.** Where one
   is not set, it is derived from the category rather than left empty.
+
+---
+
+# State at handoff
+
+## Deployed
+`main` carries the build; GitHub Pages serves the repo root. Everything
+below is live except the last batch noted as pending.
+
+## The pattern that dominated this session
+Four separate bugs turned out to be the same shape — **a capability the code
+already had that nothing could reach**:
+
+| Capability | Existed | Reachable |
+|---|---|---|
+| A reminder's destination (`nav`) | always | discarded when the notification fired; every queued push had `url: "./"` |
+| The habit↔metric link override | documented in `DATA_LINKS.md` | nothing could set it |
+| `removeContribution` in `wants.js` | always | no caller — a mistyped amount was permanent |
+| The daily focus check-in | Settings and Weekly Review both built on it | its only writer was removed with the Command Centre block |
+
+None of these threw an error. They are invisible to a test that checks for
+crashes and obvious to a test that asks "can a person actually do this?".
+**Worth repeating the sweep after any surface is removed**: `grep` for exports
+with no consumer in `src/`, then check each against whether it is a helper or
+a feature.
+
+A fifth was plain wrong data: `WEEK_PLAN` is hardcoded and uneditable, drove
+System Health's Recovery and the daily training nudges, and disagreed with
+the real training week — it called Thursday a rest day.
+
+## Open, and deliberately not decided
+- **The daily checklist, weekly goal and life pings have no surface.**
+  `TodayTrackers.jsx` was their only one and was unmounted when the Command
+  Centre was trimmed. The data is intact and syncing. Deleting the component
+  retires three features; rehoming them invents surfaces nobody asked for.
+  Both are product calls. Shown as `📋 planned · no surface` in the
+  dependency map so it stays visible rather than rotting quietly.
+- **recharts (115 KB gzip per charted route).** `AUDIT.md` argues for
+  replacing it with a small SVG renderer. Left alone: it is framed there as a
+  proposal awaiting a decision, and the initial load pulls only react + the
+  app chunk, so it costs nothing at launch. It is a real win on the Fuel and
+  Record routes if you want it.
+- **No in-app meal-plan editor.** Plans import from CSV and apply. The
+  building blocks exist and are unused: `newPlan`, `newMeal`, `newItem`,
+  `patchItem`, `patchMeal`, `duplicatePlan`, `planFromDay` — the last turns a
+  day you already logged into a plan, which is probably how most plans would
+  really be made.
+
+## Running the tests
+```
+npm run test:audit           # ~22 pure audits, ~15s — run constantly
+npm run test:audit:browser   # 10 Playwright audits against dist/, ~3 min
+npm run test:gym             # 138 vendored domain tests
+npm run test                 # the blank-page QA sweep, 25-60 min
+npm run test:all             # build + everything above except the QA sweep
+```
+A crashing audit counts as a **failure**, not a skip. Two dead scripts sat in
+`tests/audit/` for weeks crashing on every run while "the audits pass" kept
+being said out loud, because nobody read the exit codes.
+
+## What the browser audits cover that the QA sweep does not
+QA catches a blank page. Below it: `console-clean` (every route, full data,
+zero warnings), `empty-state` (every route with **nothing** stored — the more
+common real failure), `mobile-layout` (390px, horizontal overflow and
+off-screen controls), `launch-perf` (a boot budget plus the structural
+assertions the number depends on).
