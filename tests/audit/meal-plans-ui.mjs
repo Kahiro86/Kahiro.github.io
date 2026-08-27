@@ -39,7 +39,10 @@ await dismiss(); await page.waitForTimeout(1600); await dismiss(); await page.wa
 const store = (k) => page.evaluate((key) => JSON.parse(localStorage.getItem(`architect:${key}`) || "null"), k);
 
 console.log("\n1. The plans surface is on the Fuel screen");
-await page.locator('[data-tour="nav-gym"]').first().click();
+// Meal plans moved with Fuel to the Nutrition facet's Plan tab (§13).
+await page.locator('[data-tour="nav-nutrition"]').first().click();
+await page.waitForTimeout(1800);
+await page.getByRole("button", { name: /^Plan$/ }).first().click();
 await page.waitForTimeout(1800); await dismiss();
 const body1 = await page.locator("body").innerText();
 ok("Meal plans has a home", /meal plans/i.test(body1));

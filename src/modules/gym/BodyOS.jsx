@@ -27,6 +27,7 @@ import { RoutineQuickList, RoutineManager, sanitizeRoutines } from "./GymRoutine
 import { MuscleRadar } from "./BodyMap.jsx";
 import { RestTimer } from "./RestTimer.jsx";
 import { BodyTrends } from "./BodyTrends.jsx";
+import { BalanceCard } from "./BalanceCard.jsx";
 import { BodyCoachPanel } from "./BodyCoachPanel.jsx";
 
 const today = () => localDateStr();
@@ -162,6 +163,8 @@ export function BodyOS({ navHint } = {}) {
         {loaded && tab === "trends" && (
           <>
             <BodyTrends sessions={sessions} />
+            {/* §3: what kind of training this was, and what is missing. */}
+            <div style={{ padding: "0 24px" }}><BalanceCard sessions={sessions} /></div>
             <ProgressScreen sessions={ordered} byId={derived.byId} muscleTotals={derived.muscleTotals} lifetimeXp={derived.lifetimeXp} />
           </>
         )}

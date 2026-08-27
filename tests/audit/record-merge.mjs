@@ -44,7 +44,9 @@ console.log(`     ${labels.join(" · ")}`);
 ok("Journey has no nav entry", !ids.includes("nav-journey"));
 ok("the merged facet is named The Record", labels.some((l) => /the record/i.test(l)));
 ok("Faith stands alone, no longer 'Faith & Mind'", labels.some((l) => /^faith$/i.test(l)) && !labels.some((l) => /faith & mind/i.test(l)));
-ok("six facets, down from eight", ids.length === 7); // 6 facets + Home
+// Seven now: §13 promoted Nutrition to a facet of its own. Still down from
+// the eight this merge started with, which was the point of the merge.
+ok("seven facets, still down from the original eight", ids.length === 8); // 7 facets + Home
 
 console.log("\n── Faith kept its own content ──");
 await page.locator('[data-tour="nav-faith"]').first().click(); await page.waitForTimeout(900); await dismiss();
