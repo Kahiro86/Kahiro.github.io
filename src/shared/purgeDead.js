@@ -24,7 +24,18 @@ export const DEAD_CONFIG_KEYS = [
 ];
 
 // Read by nothing, but authored by the user. Left alone on purpose.
-export const ORPHANED_CONTENT_KEYS = ["life_projects"];
+//
+// The checklist, the weekly focus and the life pings joined this list when
+// their only surface — the Command Centre block the owner asked to have
+// removed — went with it. Removing a screen is not a reason to delete what
+// somebody typed into it, and each of these is recoverable the moment there
+// is somewhere to put it.
+export const ORPHANED_CONTENT_KEYS = [
+  "life_projects",
+  "daily_checklist", "daily_checklist_log",
+  "weekly_goal", "weekly_goal_archive",
+  "life_pings",
+];
 
 /**
  * Runs once, ever. Returns what it removed so the caller can report it.
