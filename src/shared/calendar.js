@@ -53,6 +53,11 @@ export function dayDomains(ds, S) {
   const partial = habits.filter((a) => a.status === "partial").length;
   const kcalRow = acts.find((a) => a.type === "calories");
   const purityRow = acts.find((a) => a.type === "purity");
+  // Sleep and fluid are in the feed and were missing from the day drawer,
+  // which made a calendar that claimed to show "what happened" quietly leave
+  // out the two facts most days actually have.
+  const sleepRow = acts.find((a) => a.type === "sleep");
+  const waterRow = acts.find((a) => a.type === "hydration");
   const billsDue = S.bills.filter((b) => daysUntilDue(b, ds) === 0 && !isPaidThisCycle(b, ds)).length;
 
   return {
@@ -69,6 +74,12 @@ export function dayDomains(ds, S) {
     journal: acts.filter((a) => a.type === "journal").length,
     measure: S.measurements.filter((m) => m && m.date === ds).length,
     purity: purityRow ? (activityDone(purityRow) ? "clean" : "relapse") : null,
+    // Null, not zero: a night nobody recorded is silence, and zero hours is a
+    // claim about sleep that did not happen.
+    sleep: sleepRow ? sleepRow.actual : null,
+    sleepTarget: sleepRow ? sleepRow.target : null,
+    water: waterRow ? waterRow.actual : 0,
+    waterTarget: waterRow ? waterRow.target : 0,
     bill: billsDue,
     acts,
   };
@@ -115,6 +126,21 @@ export function dayLines(ds, S) {
   }
   if (d.workout > 0) lines.push({ key: "workout", icon: "🏋️", label: "Workout", detail: `${d.workout} session${d.workout > 1 ? "s" : ""}`, nav: "gym:today" });
   if (d.meal > 0) lines.push({ key: "meal", icon: "🍽️", label: "Fuel", detail: `${d.meal.toLocaleString()} kcal logged`, nav: "nutrition:today" });
+  // Sleep and fluid get a line but no dot. The grid already carries nine
+  // domains; a tenth and eleventh would turn a month into confetti, and these
+  // two are read on the day, not scanned across the month.
+  if (d.sleep != null) {
+    lines.push({
+      key: "sleep", icon: "😴", label: "Sleep", nav: "analytics:trends",
+      detail: `${d.sleep} h${d.sleepTarget ? ` · floor ${d.sleepTarget} h` : ""}`,
+    });
+  }
+  if (d.water > 0) {
+    lines.push({
+      key: "water", icon: "💧", label: "Hydration", nav: "nutrition:today",
+      detail: `${(d.water / 1000).toFixed(1)} L${d.waterTarget ? ` of ${(d.waterTarget / 1000).toFixed(1)} L` : ""}`,
+    });
+  }
   if (d.trade > 0) lines.push({ key: "trade", icon: "📈", label: "Trades", detail: `${d.trade} journaled`, nav: "firm" });
   if (d.journal > 0) lines.push({ key: "journal", icon: "📝", label: "Journal", detail: `${d.journal} entr${d.journal > 1 ? "ies" : "y"}`, nav: "habits" });
   if (d.measure > 0) lines.push({ key: "measure", icon: "📏", label: "Measurements", detail: "logged", nav: "gym:trends" });
