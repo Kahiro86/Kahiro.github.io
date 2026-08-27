@@ -138,11 +138,25 @@ export function resolveOption(option, foods) {
   // for that chicken; silently substituting the library's number would make
   // the app's totals disagree with the document the user is holding, for a
   // food they never asked to change.
+  //
+  // But a spreadsheet states calories and macros and nothing else, so logging
+  // an imported plan used to contribute ZERO magnesium, iron, fibre and the
+  // rest — the micronutrient panel under-reported every planned meal. The
+  // library's profile fills in what the plan did not state; the plan's own
+  // numbers still win wherever it stated one. Nothing is overwritten, a gap
+  // is filled.
   if (option.per100) {
+    const known = list.find((f) => f && String(f.name).toLowerCase() === option.name.toLowerCase());
+    const per100 = known?.per100 ? { ...known.per100, ...option.per100 } : option.per100;
     return {
-      food: { id: `plan_${option.name}`, name: option.name, proc: 2, per100: option.per100 },
+      food: {
+        id: `plan_${option.name}`, name: option.name,
+        proc: known?.proc ?? 2, per100,
+        ...(known?.bev ? { bev: true } : {}),
+      },
       grams: option.grams,
       matched: false,
+      enriched: !!known,
     };
   }
 

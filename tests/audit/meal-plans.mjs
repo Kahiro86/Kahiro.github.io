@@ -265,6 +265,28 @@ const big = M.parsePlanCsv("Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calor
 ok("a large file still parses into its meals", big.meals.length === 5);
 ok("and its totals are finite", Number.isFinite(M.planTotals(big, [], "any").day.kcal));
 
+// ── 10. Micronutrients (§1) ──────────────────────────────────────────
+console.log("\n10. A planned meal carries its micronutrients");
+const micCsv = "Meal,Food,Amount,Protein (g),Carbs (g),Fat (g),Calories\nM1,Avocado,100g,2,9,15,160\nM1,Nuts seeds mix,50g,8,8,20,240";
+const micPlan = M.parsePlanCsv(micCsv, {}).plan;
+const micEntries = M.planToEntries(micPlan, lib, {});
+const avo = micEntries.find((e) => /avocado/i.test(e.name));
+const nutsMix = micEntries.find((e) => /nuts/i.test(e.name));
+const MICRO = ["fib", "k", "ca", "mg", "fe", "zn", "vc"];
+// A spreadsheet states calories and macros and nothing else, so this used to
+// log zero of everything else — the micronutrient panel under-reported every
+// planned meal.
+ok("a known food logs real micronutrients", MICRO.every((k) => (avo.n[k] || 0) > 0));
+ok("fibre specifically", avo.n.fib > 0);
+ok("but the spreadsheet's macros still stand", avo.n.kcal === 160 && avo.n.p === 2 && avo.n.f === 15);
+ok("a food the library has never heard of invents none", MICRO.every((k) => !(nutsMix.n[k] > 0)));
+ok("while keeping the macros it was given", nutsMix.n.kcal === 240 && nutsMix.n.p === 8);
+const resolved = M.resolveOption(micPlan.meals[0].items[0].options[0], lib);
+ok("the enrichment is flagged rather than silent", resolved.enriched === true);
+ok("and it is still not a library match", resolved.matched === false);
+ok("an unknown food is not flagged as enriched",
+  M.resolveOption(micPlan.meals[0].items[1].options[0], lib).enriched === false);
+
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Meal plans: ${pass}/${pass + fail} passed`);
