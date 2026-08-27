@@ -32,6 +32,7 @@ const Dashboard = lazy(() => import("./modules/dashboard/Dashboard.jsx").then((m
 const FaithOS = lazy(() => import("./modules/faith/FaithOS.jsx").then((m) => ({ default: m.FaithOS })));
 const AnalyticsOS = lazy(() => import("./modules/analytics/AnalyticsOS.jsx").then((m) => ({ default: m.AnalyticsOS })));
 const FirmOS = lazy(() => import("./modules/firm/FirmOS.jsx").then((m) => ({ default: m.FirmOS })));
+const NutritionOS = lazy(() => import("./modules/athlete/NutritionOS.jsx").then((m) => ({ default: m.NutritionOS })));
 const CalendarModule = lazy(() => import("./modules/calendar/CalendarModule.jsx").then((m) => ({ default: m.CalendarModule })));
 const BodyOS = lazy(() => import("./modules/gym/BodyOS.jsx").then((m) => ({ default: m.BodyOS })));
 const HabitsOS = lazy(() => import("./modules/habits/HabitTracker.tsx").then((m) => ({ default: m.HabitTracker })));
@@ -126,10 +127,13 @@ export default function App() {
   // shell folded into Body (Gate 2), Purity and Journal into Discipline
   // (Gate 1). Saved reminders and old links still carry these ids.
   const RETIRED = {
-    life: "gym:today", "life:athlete": "gym:today", "life:nutrition": "gym:today",
+    life: "gym:today", "life:athlete": "gym:today", "life:nutrition": "nutrition",
     "life:purity": "habits", "life:journal": "habits",
-    athlete: "gym:today", nutrition: "gym:today",
+    athlete: "gym:today",
     "gym:workout": "gym:today", "gym:progress": "gym:trends",
+    // Fuel left Body and became its own facet, so every link that used to
+    // land on the Body screen expecting food now goes where the food is.
+    "gym:fuel": "nutrition", "gym:nutrition": "nutrition",
     // The Record absorbed Journey, and Mind moved in as Library.
     journey: "analytics:progress", "journey:goals": "analytics:goals",
     "journey:wants": "analytics:goals", "journey:fame": "analytics:progress",
@@ -334,6 +338,7 @@ export default function App() {
       case "dashboard": return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
       case "firm": return <FirmOS navHint={navHint?.module === "firm" ? navHint : null} />;
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
+      case "nutrition": return <NutritionOS navHint={navHint?.module === "nutrition" ? navHint : null} />;
       case "gym": return <BodyOS navHint={navHint?.module === "gym" ? navHint : null} />;
       case "habits": return <HabitsOS />;
       case "calendar": return <CalendarModule onNavigate={navTo} />;

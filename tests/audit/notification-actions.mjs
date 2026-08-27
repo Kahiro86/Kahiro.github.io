@@ -34,7 +34,7 @@ console.log("\n2. A fired reminder carries its destination");
 const rem = N.newReminder({ title: "Log lunch", cat: "nutrition" });
 ok("a new reminder starts with no explicit destination", rem.nav === "");
 const fired = N.newLogEntry(rem, "occ-1");
-ok("but the fired entry resolves one from its category", fired.nav === "gym:today");
+ok("but the fired entry resolves one from its category", fired.nav === "nutrition");
 
 const explicit = N.newReminder({ title: "Read", cat: "custom", nav: "analytics:library" });
 ok("an explicit destination is kept", N.newLogEntry(explicit, "occ-2").nav === "analytics:library");
@@ -46,7 +46,7 @@ ok("and an explicit one still wins",
 
 console.log("\n2b. It survives storage");
 const round = N.sanitizeNotifLog([fired])[0];
-ok("the destination round-trips through sanitize", round.nav === "gym:today");
+ok("the destination round-trips through sanitize", round.nav === "nutrition");
 ok("a junk destination is dropped, not carried", N.sanitizeNotifLog([{ ...fired, nav: 42 }])[0].nav === "");
 
 console.log("\n2c. No fired notification is a dead end");
@@ -82,7 +82,7 @@ const q = N.buildPushQueue(
 );
 ok("occurrences are queued", q.length > 0);
 ok("each carries a real destination, not './'", q.every((i) => i.url && i.url !== "./"));
-ok("as a hash the app can read on a cold open", q[0].url === "./#gym:today");
+ok("as a hash the app can read on a cold open", q[0].url === "./#nutrition");
 ok("an explicit destination is used",
   N.buildPushQueue([N.newReminder({ title: "x", cat: "custom", nav: "habits", date: "2020-01-01", time: "12:00", repeat: { kind: "daily", n: 1 } })],
     {}, new Date("2020-01-01T06:00:00"), 2)[0].url === "./#habits");

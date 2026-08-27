@@ -52,11 +52,17 @@ await dismiss();
 let pass = 0, fail = 0; const fails = [];
 const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
 
-console.log("\n── criterion 1: Nutrition is not a top-level tab ──");
+// SUPERSEDED. Gate 2 folded Nutrition into Body to kill the Life facet. The
+// integration brief §13 reverses that specific decision — eating is decided
+// more often than training, and it had ended up two levels down. The rest of
+// Gate 2 (one Body facet, no Life, targets that follow training) still holds
+// and is still checked below.
+console.log("\n── criterion 1 (revised §13): Nutrition is its own facet, after Home ──");
 const navLabels = await page.locator('[data-tour^="nav-"]').allInnerTexts();
 const navIds = await page.locator('[data-tour^="nav-"]').evaluateAll((els) => els.map((e) => e.getAttribute("data-tour")));
-ok(`no Nutrition/Fuel entry in the sidebar (${navLabels.map((s) => s.trim()).filter(Boolean).join(", ")})`,
-   !navLabels.some((t) => /nutrition|fuel/i.test(t)));
+ok(`Nutrition is a facet (${navLabels.map((s) => s.trim()).filter(Boolean).join(", ")})`,
+   navIds.includes("nav-nutrition"));
+ok("directly after Home", navIds.indexOf("nav-nutrition") === navIds.indexOf("nav-dashboard") + 1);
 ok("no Life facet left in the sidebar", !navIds.includes("nav-life") && !navLabels.some((t) => /^\s*life\s*$/i.test(t)));
 ok("a Body facet exists instead", navIds.includes("nav-gym") && navLabels.some((t) => /body/i.test(t)));
 
@@ -65,13 +71,18 @@ await page.locator('[data-tour="nav-gym"]').first().click(); await page.waitForT
 const bodyTxt = await page.locator("body").innerText();
 ok("Body offers Today / Trends / Coach", /today/i.test(bodyTxt) && /trends/i.test(bodyTxt) && /coach/i.test(bodyTxt));
 ok("the session section is on Today", /workout|session|start/i.test(bodyTxt));
-ok("the fuel section is on the same screen", /fuel/i.test(bodyTxt) && /kcal/i.test(bodyTxt));
-ok("meals logged before the merge are still shown", /ugali|chicken breast/i.test(bodyTxt));
+// Fuel moved out of Body (§13), so Body must NOT show it — the point is one
+// home per thing, not two.
+ok("Body no longer carries the fuel section", !/meal plans/i.test(bodyTxt));
 
-console.log("\n── §2.2: the training link actually moves the targets ──");
-ok("the day is labelled training or rest", /training day|rest day/i.test(bodyTxt));
-ok("the rule is written on screen, not hidden", /Training day = base \+ session allowance/i.test(bodyTxt));
-ok("it states protein does not move", /Protein and fat never move/i.test(bodyTxt));
+console.log("\n── §2.2: the training link still moves the targets, now in Nutrition ──");
+await page.locator('[data-tour="nav-nutrition"]').first().click();
+await page.waitForTimeout(1800);
+const fuelTxt = await page.locator("body").innerText();
+ok("meals logged before the merge are still shown", /ugali|chicken breast/i.test(fuelTxt));
+ok("the day is labelled training or rest", /training day|rest day/i.test(fuelTxt));
+ok("the rule is written on screen, not hidden", /Training day = base \+ session allowance/i.test(fuelTxt));
+ok("it states protein does not move", /Protein and fat never move/i.test(fuelTxt));
 const linkNums = await page.evaluate(() => {
   const t = document.body.innerText;
   const m = t.match(/Calories (raised|lowered|unchanged) from base ([\d,]+)\s*([+-]?\d+)\s*·\s*([\d,]+)/);
@@ -96,7 +107,8 @@ ok(`the custom food survives (${kept.foods})`, kept.foods === 1);
 ok(`all 12 sessions survive (${kept.sessions})`, kept.sessions === 12);
 ok(`both measurements survive (${kept.meas})`, kept.meas === 2);
 ok(`the one-tap favourite survives (${kept.favs})`, kept.favs === 1);
-ok("the 'Running low' micronutrient callout survived the move", /running low/i.test(bodyTxt));
+// It moved with Fuel to the Nutrition facet (§13), which is where fuelTxt was read.
+ok("the 'Running low' micronutrient callout survived the move", /running low/i.test(fuelTxt));
 
 // Criterion 3 asks for spot-checks, not just counts — a count survives even
 // if every record was silently re-keyed to the wrong day.
@@ -138,6 +150,8 @@ ok("no meal day was re-keyed to a date that did not exist before",
    Object.keys(spot.log).every((d) => Object.prototype.hasOwnProperty.call(nutritionLog, d)));
 
 console.log("\n── Trends: one timeline ──");
+// Back to Body — the §2.2 checks above moved to the Nutrition facet.
+await page.locator('[data-tour="nav-gym"]').first().click(); await page.waitForTimeout(1800);
 await page.getByRole("button", { name: /^Trends$/ }).first().click(); await page.waitForTimeout(700);
 const trendTxt = await page.locator("body").innerText();
 ok("weight and waist share the timeline", /weight/i.test(trendTxt) && /waist/i.test(trendTxt));

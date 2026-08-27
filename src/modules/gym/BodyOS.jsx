@@ -11,7 +11,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Dumbbell, Plus, Check, X, Search, Trash2, Trophy, Clock, TrendingUp, Activity, Timer,
-  MessageCircle, Utensils,
+  MessageCircle,
 } from "lucide-react";
 import { B1, B2, BD, T1, T2, T3, GL, AC, AC2, GR, RE, AM, PU } from "../../shared/designTokens.js";
 import { Card, SH, Meter, Empty } from "../../shared/ui.jsx";
@@ -26,7 +26,6 @@ import { computeAllSummaries } from "./gymStore.js";
 import { RoutineQuickList, RoutineManager, sanitizeRoutines } from "./GymRoutines.jsx";
 import { MuscleRadar } from "./BodyMap.jsx";
 import { RestTimer } from "./RestTimer.jsx";
-import { NutritionTab } from "../athlete/NutritionTab.jsx";
 import { BodyTrends } from "./BodyTrends.jsx";
 import { BodyCoachPanel } from "./BodyCoachPanel.jsx";
 
@@ -157,14 +156,6 @@ export function BodyOS({ navHint } = {}) {
                 patchSet={patchSet} addSet={addSet} removeSet={removeSet} removeExercise={removeExercise}
                 onFinish={finish} onCancel={cancel} canFinish={hasWork} onBw={(v) => setActive((a) => ({ ...a, bodyweightKg: v }))} />
             )}
-            <div style={{ padding: "0 24px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "18px 0 2px", borderTop: `1px solid ${BD}`, marginTop: 4 }}>
-                <Utensils size={15} color={AC2} />
-                <span style={{ fontSize: 13.5, fontWeight: 800, color: T1, letterSpacing: 0.3 }}>Fuel</span>
-                <span style={{ fontSize: 10.5, color: T3 }}>targets follow the day's training</span>
-              </div>
-            </div>
-            <NutritionTab />
           </>
         )}
 

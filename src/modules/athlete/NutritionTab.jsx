@@ -53,7 +53,14 @@ function NumField({ label, value, onCommit, width = 84 }) {
   );
 }
 
-export function NutritionTab() {
+/**
+ * `only` selects which sections render, so the Nutrition facet can put one
+ * question on each tab instead of stacking every card on one screen (§2,
+ * progressive disclosure). Omitted, everything renders — which is what the
+ * screen did before it had a facet around it.
+ */
+export function NutritionTab({ only = null }) {
+  const shows = (id) => !only || only.includes(id);
   const [rawLog, setLog] = useStorageState("nutrition_log", {});
   const [rawFoods, setFoods] = useStorageState("nutrition_foods", []);
   const [rawProfile, setProfile] = useStorageState("nutrition_profile", DEFAULT_PROFILE);
@@ -368,6 +375,7 @@ export function NutritionTab() {
           <div style={{ fontSize: 12, color: T2, lineHeight: 1.55 }}>{seasonTpl.framing}</div>
         </Card>
       )}
+      {shows("today") && (<>
       <MotivePush context={["meal", "protein", "water"]} accent={GR} compact />
       {/* ── Daily dashboard — ring + macro bars, then water/sodium/score ── */}
       <Card style={{ padding: "18px 20px" }}>
@@ -785,8 +793,10 @@ export function NutritionTab() {
         </div>
       )}
 
+      </>)}
+
       {/* ── Micronutrients ── */}
-      {entries.length > 0 && (
+      {shows("micros") && entries.length > 0 && (
         <Collapse id="nutri_micros" title="Micronutrients" sub="today's coverage of daily targets">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10 }}>
             {MICROS.map((k) => {
@@ -817,15 +827,16 @@ export function NutritionTab() {
 
       {/* ── Goals ── */}
       {/* ── Meal plans — a day's eating written once, applied to any day ── */}
-      <MealPlans
+      {shows("plan") && <MealPlans
         foods={[...customFoods, ...FOOD_DB]}
         targets={targets}
         dayType={body.trained ? "training" : "rest"}
         logDs={logDs}
         log={log}
         onApply={(newEntries) => writeDay(logDs, (day) => [...day, ...newEntries])}
-      />
+      />}
 
+      {shows("today") && (<>
       <Collapse id="nutri_goals" title="Goals & Profile" sub={`${GOALS.find((g) => g.id === profile.goal)?.l} · ${targets.kcal} kcal · ${targets.p}g protein · ~${(targets.waterMl / 1000).toFixed(1)}L water`}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           {GOALS.map((g) => (
@@ -863,8 +874,10 @@ export function NutritionTab() {
         </div>
       </Collapse>
 
+      </>)}
+
       {/* ── Trends ── */}
-      {Object.keys(log).length > 0 && (
+      {shows("trends") && Object.keys(log).length > 0 && (
         <Card style={{ padding: "16px 18px" }}>
           <SH title="Trends" sub="Calories · nutrition score — last 14 days" />
           <ResponsiveContainer width="100%" height={170}>
@@ -882,7 +895,7 @@ export function NutritionTab() {
       )}
 
       {/* ── Reports ── */}
-      {[["nutri_rep7", "Weekly Report", report7], ["nutri_rep30", "Monthly Report", report30]].map(([id, title, r]) => (
+      {shows("trends") && [["nutri_rep7", "Weekly Report", report7], ["nutri_rep30", "Monthly Report", report30]].map(([id, title, r]) => (
         <Collapse key={id} id={id} title={title} sub={r.logged ? `${r.logged} day${r.logged > 1 ? "s" : ""} logged · avg score ${r.avgScore}` : "no data yet"}>
           {!r.logged ? (
             <div style={{ fontSize: 12, color: T3, padding: "8px 0" }}>Log a few days and the report writes itself.</div>

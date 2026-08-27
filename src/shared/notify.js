@@ -68,7 +68,7 @@ export const SNOOZES = [
 // ids ("firm:wealth") land on a merged module's specific inner group instead
 // of always its default — see App.jsx's navTo/navHint.
 export const NAV_TARGETS = [
-  { id: "", l: "None" }, { id: "habits", l: "Discipline / habit" }, { id: "gym:today", l: "Body / training & fuel" },
+  { id: "", l: "None" }, { id: "habits", l: "Discipline / habit" }, { id: "nutrition", l: "Nutrition" }, { id: "gym:today", l: "Body / training" },
   { id: "firm:trading", l: "Trading task" }, { id: "firm:wealth", l: "Finance task" },
   { id: "faith", l: "Faith" }, { id: "analytics:library", l: "Library / Mind" },
   // The Record's goals and Hall of Fame are real routes that nothing could
@@ -94,7 +94,7 @@ const LEGACY_NAV = { trading: "firm:trading", finance: "firm:wealth", athlete: "
  */
 export const NAV_BY_CAT = {
   habits: "habits", streaks: "habits", life: "habits",
-  nutrition: "gym:today", athlete: "gym:today",
+  nutrition: "nutrition", athlete: "gym:today",
   trading: "firm:trading", finance: "firm:wealth",
   faith: "faith", mind: "analytics:library",
   goals: "analytics:goals", achievements: "analytics:progress", xp: "analytics:progress",
