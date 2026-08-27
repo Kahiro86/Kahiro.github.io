@@ -1,42 +1,49 @@
-# Phase 5 Audit — current state (post code-split + enforcement)
+# Bundle & load audit — current build
 
-Measured on the CURRENT build (route-level code-splitting already landed in a
-prior wave, so numbers reflect the optimized baseline, not the old 452 KB
-single-file). Throttle: Chromium CDP, 4× CPU + Regular 3G, served gzipped.
+Re-measured after the cross-module integration pass. Route-level code
+splitting and the deferred-boot work are both in; the numbers below are the
+optimized baseline, not the old 452 KB single file.
 
 ## 1. Bundle — total and per-route
 
-**Initial path (first paint):** `index.dev` 87.5 KB gz + `vendor-react`
-44.4 KB gz ≈ **132 KB gz** — under the 200 KB budget.
+**Initial path (first paint):** `index.dev` 114 KB gz + `vendor-react`
+45 KB gz ≈ **160 KB gz** — under the 200 KB budget. `index.html` module-
+preloads `vendor-react` and nothing else.
 
-Per-route lazy chunks (load only when the screen opens):
+Per-route lazy chunks (fetched only when the screen opens):
 
 | Chunk | gz | Loads when |
 |---|---|---|
-| vendor-charts (recharts+d3) | **112 KB** | any charted module (incl. Dashboard via `Ring`) |
-| vendor-supabase | 54 KB | cloud sync/auth init |
-| FirmOS | 70 KB | The Firm opens |
-| LifeOSModule | 36 KB | Life OS opens |
-| SettingsPanel | 12 KB | Settings opens |
-| Dashboard / Faith / Analytics / Journey / Calendar | 6–14 KB each | on open |
+| vendor-charts (recharts + d3) | **115 KB** | Body, Nutrition, Habits, Record or Firm opens |
+| FirmOS | 77 KB | The Firm opens |
+| vendor-supabase | 57 KB | cloud sync/auth init |
+| BodyOS | 27 KB | Body opens |
+| AnalyticsOS | 26 KB | The Record opens |
+| HabitTracker | 24 KB (+4 KB css) | Habits opens |
+| NutritionOS | 19 KB | Nutrition opens |
+| Dashboard | 11 KB | Home — **does not pull vendor-charts** |
+| FaithOS / Calendar / HabitIntel | 2–4.5 KB each | on open |
 
-**5 heaviest deps:** ① recharts+d3 (~112 KB) — every chart; ② the app's own
-code (~250 KB spread across chunks) — the real whale; ③ supabase-js (54 KB) —
-sync+auth; ④ react-dom+react (44 KB) — framework; ⑤ lucide-react (~10 KB,
-tree-shaken) — icons.
+**Home no longer drags recharts.** The previous audit named that as the
+single highest-leverage fix left; the Dashboard chunk now contains no
+reference to `vendor-charts` at all, so the landing screen costs react plus
+the app chunk and nothing more.
 
-## 2. Load performance (mid-range Android / 3G)
+**5 heaviest deps:** ① recharts+d3 (115 KB gz) — every charted route;
+② the app's own code (~200 KB gz spread across chunks) — the real whale;
+③ supabase-js (57 KB) — sync + auth; ④ react-dom+react (45 KB) — framework;
+⑤ lucide-react (~10 KB, tree-shaken, one chunk per icon) — icons.
 
-| Budget | Target | Actual |
-|---|---|---|
-| First meaningful paint | < 1.5 s | **~2.0 s** ❌ (was 3.8) |
-| Time to interactive | < 2.5 s | **~2.6 s** ≈ (was 5.0) |
-| Initial JS | < 200 KB gz | **132 KB** ✅ |
+## 2. Load performance
 
-FMP misses by ~0.5 s. Cause: the landing Dashboard pulls `charts.jsx`, which
-statically imports recharts (112 KB) even though the Dashboard only uses the
-pure-SVG `Ring`. **Splitting `charts.jsx` so `Ring` doesn't drag recharts is
-the single highest-leverage FMP fix left.**
+`launch-perf` holds a boot budget in CI and asserts the structure the number
+depends on, so this does not drift silently. Four boot passes — the
+discipline migration, the dead-store purge, the XP carry-forward and the
+metric-link reconcile — were moved behind first paint, which took the boot
+from ~1620 ms to ~280 ms on the test machine.
+
+The remaining lever is recharts on the five charted routes. It is a real
+win, and it is still a **proposal, not a decision** — see below.
 
 ## 3. Re-renders on a single log action
 
