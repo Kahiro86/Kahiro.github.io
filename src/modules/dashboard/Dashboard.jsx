@@ -34,6 +34,7 @@ import { useDayMarks } from "../../shared/dayMarks.js";
 import { consistencyOpts } from "../../shared/consistencyOpts.js";
 import { freedomMath } from "../../shared/freedom.js";
 import { MotivePush } from "../../shared/MotivePush.jsx";
+import { FocusPanel } from "../../shared/FocusPanel.jsx";
 import { scalingGate } from "../../shared/firm.js";
 import {
   sanitizeNutrition, dayEntries, dayTotals, calcTargets, healthyStreaks,
@@ -558,6 +559,10 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
         </div>
         <ChevronRight size={16} color={T3} style={{ flexShrink: 0 }} />
       </button>
+
+      {/* ── 🎯 FOCUS — do more / avoid, from the activity feed. Renders
+          nothing when the data does not support saying anything. ── */}
+      <FocusPanel onNavigate={onNavigate} />
 
       {/* ── ⚠️ PRIORITY ALERTS (hidden when clear) ── */}
       {alerts.length > 0 && (
