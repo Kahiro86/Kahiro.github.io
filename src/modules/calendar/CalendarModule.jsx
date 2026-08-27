@@ -10,13 +10,11 @@ import { Card } from "../../shared/ui.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useWorkouts } from "../../shared/useWorkouts.js";
 import { localDateStr, daysAgoStr } from "../../shared/dates.js";
-import { migrateHabits } from "../../shared/habitEngine.js";
-import { sanitizeNutrition } from "../athlete/nutrition.js";
 import { sanitizeTrades } from "../trading/intel/tradingIntel.js";
-import { sanitizePurity } from "../life/purity.js";
 import { sanitizeBills } from "../finance/bills.js";
 import { DEFAULT_FINANCE_STATE } from "../finance/constants.js";
 import { CAL_DOMAINS, calendarGrid, dayDomains, activeDots, dayLines } from "../../shared/calendar.js";
+import { buildActivityFeed } from "../../shared/activity.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -28,7 +26,7 @@ const relLabel = (ds) => {
   return new Date(`${ds}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 };
 
-export function CalendarModule({ habits = [], onNavigate }) {
+export function CalendarModule({ onNavigate }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -41,17 +39,32 @@ export function CalendarModule({ habits = [], onNavigate }) {
   const [rawPurity] = useStorageState("purity_log", {});
   const [rawMeasures] = useStorageState("athlete_measurements", []);
   const [finance] = useStorageState("finance_state", DEFAULT_FINANCE_STATE);
+  const [htHabits] = useStorageState("ht_habits", []);
+  const [htEntries] = useStorageState("ht_entries", []);
+  const [nutritionProfile] = useStorageState("nutrition_profile", null);
+  const [hydration] = useStorageState("hydration_log", {});
+  const [sleep] = useStorageState("trade_sleep", {});
+  const [church] = useStorageState("faith_church", []);
+  const [verses] = useStorageState("faith_scripture", []);
+  const [faithNotes] = useStorageState("faith_notes", []);
+
+  // The calendar renders the activity feed. It is not a second dataset that
+  // has to be kept in step — an edit or a delete in any module changes the
+  // feed, so the month changes with it and there is nothing to fall out of
+  // sync with (§6).
+  const feed = useMemo(() => buildActivityFeed({
+    htHabits, htEntries, workouts: rawWorkouts,
+    nutrition: rawNutrition, nutritionProfile, hydration,
+    sleep, church, verses, faithNotes,
+    entries: rawEntries, purity: rawPurity,
+  }), [htHabits, htEntries, rawWorkouts, rawNutrition, nutritionProfile, hydration, sleep, church, verses, faithNotes, rawEntries, rawPurity]);
 
   const S = useMemo(() => ({
-    habits: migrateHabits(habits),
-    workouts: Array.isArray(rawWorkouts) ? rawWorkouts : [],
+    feed,
     trades: sanitizeTrades(rawTrades),
-    entries: (Array.isArray(rawEntries) ? rawEntries : []).filter((e) => e && e.id),
-    nutrition: sanitizeNutrition(rawNutrition),
-    purity: sanitizePurity(rawPurity),
     measurements: (Array.isArray(rawMeasures) ? rawMeasures : []).filter((m) => m && m.id),
     bills: sanitizeBills(finance?.bills),
-  }), [habits, rawWorkouts, rawTrades, rawEntries, rawNutrition, rawPurity, rawMeasures, finance]);
+  }), [feed, rawTrades, rawMeasures, finance]);
 
   const grid = useMemo(() => calendarGrid(year, month), [year, month]);
   const today = localDateStr();
@@ -94,6 +107,12 @@ export function CalendarModule({ habits = [], onNavigate }) {
                 const future = cell.ds > today;
                 return (
                   <button key={cell.ds} onClick={() => setSel(cell.ds)}
+                    // The visible text is just a day number, which repeats in
+                    // the padding rows — two "27"s in one grid. Unusable with
+                    // a screen reader, and ambiguous to anything else trying
+                    // to address a specific day.
+                    aria-label={`${new Date(`${cell.ds}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}${dom.habitsTotal ? `, ${dom.habitsDone} of ${dom.habitsTotal} habits done` : ""}`}
+                    aria-pressed={isSel}
                     style={{ position: "relative", minHeight: 58, padding: "5px 6px", borderRadius: 10, textAlign: "left", cursor: "pointer", fontFamily: "inherit",
                       background: isSel ? GL2 : cell.inMonth ? GL : "transparent",
                       border: `1px solid ${isSel ? AC + "88" : isToday ? AC + "44" : BD}`,

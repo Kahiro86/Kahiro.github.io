@@ -336,7 +336,7 @@ export default function App() {
       case "faith": return <FaithOS habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} />;
       case "gym": return <BodyOS navHint={navHint?.module === "gym" ? navHint : null} />;
       case "habits": return <HabitsOS />;
-      case "calendar": return <CalendarModule habits={habitsAll} onNavigate={navTo} />;
+      case "calendar": return <CalendarModule onNavigate={navTo} />;
       case "analytics": return <AnalyticsOS habits={habitsAll} onNavigate={navTo} xpInfo={xpInfo} navHint={navHint?.module === "analytics" ? navHint : null} />;
       default: return <Dashboard onNavigate={navTo} onOpenSettings={() => setShowSettings(true)} onOpenReview={() => setReviewSignal((n) => n + 1)} habits={habitsV2} setHabits={setHabitsV2} loaded={habitsLoaded} xp={xpInfo} />;
     }

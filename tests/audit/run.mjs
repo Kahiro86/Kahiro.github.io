@@ -19,7 +19,7 @@ const root = resolve(here, "..", "..");
 const BROWSER = new Set([
   "dashboard-trim", "quick-log", "record-merge", "linked-sync",
   "meal-plans-ui", "exercise-picker", "launch-perf", "console-clean", "empty-state", "mobile-layout",
-  "faith-chain",
+  "faith-chain", "partial-and-calendar",
 ]);
 
 const only = process.argv.slice(2).filter((a) => !a.startsWith("-"));
