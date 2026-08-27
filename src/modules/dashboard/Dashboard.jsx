@@ -411,7 +411,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       dots: Array.from({ length: 6 }, (_, i) => tradedOn(daysAgoStr(5 - i))),
     },
     {
-      key: "fuel", icon: Flame, label: "Fuel", nav: "gym:today",
+      key: "fuel", icon: Flame, label: "Fuel", nav: "nutrition:today",
       accent: kcal > 0 ? "g" : "off",
       value: kcal > 0 ? kcal.toLocaleString() : "—", unit: kcal > 0 ? "kcal" : "",
       sub: nTargets.p ? `protein ${prot} / ${nTargets.p} g` : `${prot} g protein`,
@@ -428,7 +428,7 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
       xp: woToday ? XPV.workout : 0,
     },
     {
-      key: "hydration", icon: Droplets, label: "Water", nav: "gym:today",
+      key: "hydration", icon: Droplets, label: "Water", nav: "nutrition:today",
       accent: hyd.logged ? (hyd.hit ? "g" : "warn") : "off",
       value: hyd.logged ? `${(hyd.value / 1000).toFixed(1)}` : "—",
       unit: hyd.logged ? "L" : "",

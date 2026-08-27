@@ -101,18 +101,18 @@ export function buildNudges(deps) {
     const hour = new Date().getHours();
     const ydsN = daysAgoStr(1);
     if (!todayN.length && hour >= 12) {
-      out.push({ id: "nutrition", icon: "🍽️", tone: "info", nav: "gym:today",
+      out.push({ id: "nutrition", icon: "🍽️", tone: "info", nav: "nutrition:today",
         text: "Nothing logged in Nutrition yet — 10 seconds logs your last meal." });
     } else if (!dayEntries(nlog, ydsN).length) {
       // Yesterday's gap only surfaces once today isn't also empty — one
       // nutrition nudge at a time, never both stacked.
-      out.push({ id: "yesterday_nutrition", icon: "🍽️", tone: "info", nav: "gym:today",
+      out.push({ id: "yesterday_nutrition", icon: "🍽️", tone: "info", nav: "nutrition:today",
         text: "Yesterday's nutrition log is empty — log it now, backdated to Yesterday." });
     } else if (todayN.length && hour >= 18) {
       const nT = calcTargets(deps.nutritionProfile);
       const t = dayTotals(todayN);
       if (t.p < nT.p * 0.6) {
-        out.push({ id: "protein", icon: "🥩", tone: "info", nav: "gym:today",
+        out.push({ id: "protein", icon: "🥩", tone: "info", nav: "nutrition:today",
           text: `Protein is at ${Math.round(t.p)}g of ${nT.p}g with the day winding down — dinner decides.` });
       }
     }

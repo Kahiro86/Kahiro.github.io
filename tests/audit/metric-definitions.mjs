@@ -165,6 +165,26 @@ const dash = stripComments(read("src/modules/dashboard/Dashboard.jsx"));
 ok("System Health reads the shared wellbeing series", /hydrationSeries|sleepSeries/.test(dash));
 ok("and no longer looks up a wellness habit", !/isWellness/.test(dash));
 
+// §13 left a class of dead link behind: Fuel moved out of Body into its own
+// facet, but the chips, insights, calendar lines and search results that
+// point at food kept sending people to "gym:today" — a screen that no longer
+// has any food on it. A link that lands on the wrong screen is worse than no
+// link, because the user assumes they misread the number.
+const FOOD_LINKERS = [
+  "src/modules/dashboard/Dashboard.jsx",
+  "src/shared/calendar.js",
+  "src/shared/insights.js",
+  "src/shared/search.js",
+];
+for (const rel of FOOD_LINKERS) {
+  const src = stripComments(read(rel));
+  // Lines that mention food AND hand out a destination.
+  const bad = src.split("\n").filter((l) =>
+    /nav:\s*"gym:today"/.test(l) && /fuel|kcal|nutrition|protein|food|meal|hydration|water/i.test(l));
+  ok(`${rel.split("/").pop()} sends food links to Nutrition, not Body${bad.length ? ` (${bad.length} left)` : ""}`,
+    bad.length === 0);
+}
+
 console.log("");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Metric definitions: ${pass}/${pass + fail} passed`);

@@ -114,7 +114,7 @@ export function dayLines(ds, S) {
     }
   }
   if (d.workout > 0) lines.push({ key: "workout", icon: "🏋️", label: "Workout", detail: `${d.workout} session${d.workout > 1 ? "s" : ""}`, nav: "gym:today" });
-  if (d.meal > 0) lines.push({ key: "meal", icon: "🍽️", label: "Fuel", detail: `${d.meal.toLocaleString()} kcal logged`, nav: "gym:today" });
+  if (d.meal > 0) lines.push({ key: "meal", icon: "🍽️", label: "Fuel", detail: `${d.meal.toLocaleString()} kcal logged`, nav: "nutrition:today" });
   if (d.trade > 0) lines.push({ key: "trade", icon: "📈", label: "Trades", detail: `${d.trade} journaled`, nav: "firm" });
   if (d.journal > 0) lines.push({ key: "journal", icon: "📝", label: "Journal", detail: `${d.journal} entr${d.journal > 1 ? "ies" : "y"}`, nav: "habits" });
   if (d.measure > 0) lines.push({ key: "measure", icon: "📏", label: "Measurements", detail: "logged", nav: "gym:trends" });

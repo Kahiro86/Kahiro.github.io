@@ -47,7 +47,7 @@ export const DESTINATIONS = [
   { id: "dest:firm:trading", type: "Section", title: "Trading Journal", nav: "firm:trading", icon: "▲", keywords: "trade trades journal ict setups lessons intel entries" },
   { id: "dest:firm:wealth", type: "Section", title: "Wealth", nav: "firm:wealth", icon: "◈", keywords: "finance money income net worth bills cashflow vault withdrawals savings debt" },
   { id: "dest:firm:doctrine", type: "Section", title: "The Firm — HQ", nav: "firm:doctrine", icon: "▲", keywords: "doctrine firm campaign gate covenant contingency mission" },
-  { id: "dest:body:fuel", type: "Section", title: "Fuel", nav: "gym:today", icon: "🍽", keywords: "nutrition fuel food meals calories macros protein carbs fat diet eating log training day rest day" },
+  { id: "dest:body:fuel", type: "Section", title: "Fuel", nav: "nutrition:today", icon: "🍽", keywords: "nutrition fuel food meals calories macros protein carbs fat diet eating log training day rest day" },
   { id: "dest:habits:discipline", type: "Section", title: "Journal & Purity", nav: "habits", icon: "✓", keywords: "journal reflection diary purity clean abstinence discipline streak" },
   { id: "dest:faith:faith", type: "Section", title: "Faith", nav: "faith:faith", icon: "✝", keywords: "scripture verses devotional church attendance walk recall prayer" },
   { id: "dest:record:library", type: "Section", title: "Library", nav: "analytics:library", icon: "📖", keywords: "mind reading books library decisions notes author momentum" },
@@ -57,7 +57,7 @@ export const DESTINATIONS = [
 // worth reading. Extraction is defensive — any field may be missing.
 export const SOURCES = [
   { key: "journal_entries", type: "Journal", icon: "✎", nav: "habits", fields: ["text"], date: "date", deep: { nav: "habits", module: "habits" } },
-  { key: "nutrition_foods", type: "Food", icon: "🍽", nav: "gym:today", fields: ["name"] },
+  { key: "nutrition_foods", type: "Food", icon: "🍽", nav: "nutrition:today", fields: ["name"] },
   { key: "wants", type: "Want", icon: "✦", nav: "analytics:goals", fields: ["name", "note"], deep: { nav: "analytics:goals", module: "journey", tab: "wants" } },
   { key: "goals", type: "Goal", icon: "◆", nav: "analytics:goals", fields: ["title", "name", "text"], deep: { nav: "analytics:goals", module: "journey", tab: "goals" } },
   { key: "ict_trades", type: "Trade", icon: "▲", nav: "firm", fields: ["pair", "notes", "note", "setup", "lesson"], date: "date" },
