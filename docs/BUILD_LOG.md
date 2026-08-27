@@ -330,12 +330,6 @@ System Health's Recovery and the daily training nudges, and disagreed with
 the real training week — it called Thursday a rest day.
 
 ## Open, and deliberately not decided
-- **The daily checklist, weekly goal and life pings have no surface.**
-  `TodayTrackers.jsx` was their only one and was unmounted when the Command
-  Centre was trimmed. The data is intact and syncing. Deleting the component
-  retires three features; rehoming them invents surfaces nobody asked for.
-  Both are product calls. Shown as `📋 planned · no surface` in the
-  dependency map so it stays visible rather than rotting quietly.
 - **recharts (115 KB gzip per charted route).** `AUDIT.md` argues for
   replacing it with a small SVG renderer. Left alone: it is framed there as a
   proposal awaiting a decision, and the initial load pulls only react + the
@@ -345,7 +339,60 @@ the real training week — it called Thursday a rest day.
   building blocks exist and are unused: `newPlan`, `newMeal`, `newItem`,
   `patchItem`, `patchMeal`, `duplicatePlan`, `planFromDay` — the last turns a
   day you already logged into a plan, which is probably how most plans would
-  really be made.
+  really be made. Explicitly out of scope at the owner's instruction.
+
+## Decided since
+- **The daily checklist, weekly goal and life pings are retired.** The owner
+  asked for the Command Centre block that held them to be removed, and
+  `TodayTrackers.jsx` was their only surface, so the component went with it
+  rather than sitting unmounted pretending to be a feature. **The data was
+  not deleted**: those five stores joined `ORPHANED_CONTENT_KEYS`, and the
+  sanitizers in `shared/today.js` were kept on purpose as the recovery path.
+  The dependency map now reads 21 of 21 connected because that is true, not
+  because the exceptions were widened.
+
+## Cross-module integration pass
+The brief's own summary of itself was "build connections, not more screens",
+and the work divided cleanly along that line.
+
+- **One activity record.** `shared/activity.js` derives a single shape —
+  `{date, type, category, actual, target, unit, pct, status}` — from the
+  stores that already exist. It is not a second database: ids are derived
+  from what the activity *is* (`habit:hs:2026-08-25`), so rebuilding the feed
+  can never duplicate a row. Calendar, Faith and the focus layer all read it.
+- **Partial completion is preserved end to end.** A habit logged at 12 of 20
+  used to collapse to "not done". `completionOf` keeps the ratio, un-clamped
+  (20 of 15 is 133%, not 100%), and returns `null` rather than dividing by a
+  zero target. `at_most` habits get no ratio at all — a percentage of a
+  ceiling measures how close to failing you came, which is not a completion.
+- **"Unlogged" is not "missed".** Every summary distinguishes them. A day
+  nobody recorded is silence, and grading silence as failure is how an
+  honest tracker turns into a guilt machine.
+- **Recommendations, with a floor.** `shared/focus.js` and
+  `gym/trainingBalance.js` both refuse to speak below a minimum evidence bar
+  (four days; twenty sets). Saying nothing is a supported answer.
+- **Training balance counts sets, not sessions.** A session labelled
+  "mobility" that is nineteen sets of squats and one hip opener is a strength
+  session, and the discipline comes from the exercise registry rather than
+  the label. `BalanceCard` names the disciplines with *nothing* logged, since
+  an absent bar is invisible and absence is the whole finding.
+- **Nutrition is its own facet, second in the nav.** Four tabs, one question
+  each; the header says what is *left*, not what was eaten; micros are
+  ordered worst-first. Moving it left a trail of links pointing at
+  `gym:today` — Home's Fuel and Water chips, the calendar's Fuel line, the
+  search destination and food results, three nutrition insights — all of
+  which opened a Body screen with no food on it. `metric-definitions` now
+  fails if a food-flavoured line hands out a Body destination.
+
+## What the five §14 flows actually test
+`meal-lifecycle` is the shape to copy. It is not "does logging work"; it is
+**one write, five surfaces**: log 100g of oats and the facet header, the slot
+row, the micronutrient table, Home's Fuel chip and the calendar day must all
+move together; edit to 200g and all five double; delete and all five go back,
+with the day reading as *unlogged* rather than as a day of zeros. Any single
+surface can be made to pass alone. The bug this catches is the sixth surface
+that kept yesterday's number — which is exactly the bug that was found three
+separate times before the test existed.
 
 ## Running the tests
 ```

@@ -1,6 +1,14 @@
 // ── Today-surface trackers (daily checklist, weekly/monthly goals, pings)
 // Small, local-first stores that compose onto the Command Center. No
 // gamification here — plain state. Pure helpers + sanitizers only.
+//
+// Only the monthly-overhead half has a live surface (OverheadToday, on Home).
+// The checklist, weekly-goal and ping helpers below are deliberately kept
+// after their surface was retired: their stores are in ORPHANED_CONTENT_KEYS
+// — the user's own words, never purged — and these sanitizers are exactly
+// what a future home for that data would need to read it back safely. They
+// are the recovery path, not forgotten code, so leave them when sweeping for
+// exports with no consumer.
 import { localDateStr, daysBetween } from "./dates.js";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
