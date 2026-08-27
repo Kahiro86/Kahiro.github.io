@@ -12,8 +12,10 @@ import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { DatePicker, relativeDateLabel } from "../../shared/DatePicker.jsx";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { useToast } from "../../shared/toast.jsx";
+import { db as habitDb } from "../habits/localDb.js";
+import { buildActivityFeed, summarise, windowOf, isDone as activityDone } from "../../shared/activity.js";
 import { localDateStr, daysAgoStr, daysBetween } from "../../shared/dates.js";
-import { isScheduled, isDone, tapHabit, rangeStats, currentStreak, totalCompletions, newHabit } from "../../shared/habitEngine.js";
+import { isScheduled, isDone, tapHabit, rangeStats, currentStreak } from "../../shared/habitEngine.js";
 
 const FA = CY; // Nocturne cyan accent (monochrome theme)
 
@@ -49,6 +51,11 @@ function MonthGrid({ habit }) {
   );
 }
 
+// Which habit names count as spiritual practice. Name matching is imperfect,
+// so it is used only to SHOW a habit here — never to move or duplicate it.
+const PRAYER_RE = /\bpray|\bprayer\b|\bdevotion/i;
+const SPIRITUAL_RE = /\bpray|\bprayer\b|\bdevotion|\bscripture\b|\bbible\b|\bworship\b|\bfast(ing)?\b|\bchurch\b/i;
+
 export function FaithCore({ habits, setHabits, loaded = true }) {
   const [tab, setTab] = useState("walk");
   const [verses, setVerses] = useStorageState("faith_scripture", []);
@@ -62,25 +69,56 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
   const toast = useToast();
   const ds = localDateStr();
 
+  // Faith reads the activity feed rather than keeping its own record of what
+  // was prayed or read. One action, many views: a Prayer habit ticked in the
+  // tracker IS the prayer, and it shows here, on the Calendar and in the
+  // Record without any of them writing a second copy (§5, §10).
+  const [htHabits] = useStorageState("ht_habits", []);
+  const [htEntries] = useStorageState("ht_entries", []);
+  const [church] = useStorageState("faith_church", []);
+  const feed = useMemo(
+    () => buildActivityFeed({ htHabits, htEntries, church, verses, faithNotes: notes })
+      .filter((a) => a.category === "faith" || (a.type === "habit" && SPIRITUAL_RE.test(a.label))),
+    [htHabits, htEntries, church, verses, notes],
+  );
+  const walk30 = useMemo(() => {
+    const rows = windowOf(feed, 30, ds);
+    const days = new Set(rows.filter(activityDone).map((a) => a.date));
+    return { days: days.size, acts: rows.length, pct: Math.round((days.size / 30) * 100) };
+  }, [feed, ds]);
+  const prayer30 = useMemo(() => summarise(feed.filter((a) => PRAYER_RE.test(a.label)), "habit", 30, ds), [feed, ds]);
+  const scripture30 = useMemo(() => summarise(feed, "scripture", 30, ds), [feed, ds]);
+
+  // Spiritual practice is whatever is being tracked NOW. This used to filter
+  // the retired legacy store by category, so the screen could say "no
+  // spiritual habits yet" directly above a prayer figure of 1/1.
   const spiritual = useMemo(
-    () => habits.filter((h) => h && !h.archived && !h.paused && h.category === "Spiritual"),
-    [habits]
+    () => (Array.isArray(htHabits) ? htHabits : [])
+      .filter((h) => h && h.id && !h.archivedAt && SPIRITUAL_RE.test(String(h.name || ""))),
+    [htHabits],
   );
   const versesSafe = useMemo(() => (Array.isArray(verses) ? verses : []).filter((v) => v && v.id), [verses]);
   const notesSafe = useMemo(() => (Array.isArray(notes) ? notes : []).filter((n) => n && n.id)
     .sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))), [notes]);
 
   const due = versesSafe.filter(isDue);
-  const stats90 = spiritual.map((h) => rangeStats(h, 90));
-  const pct90 = stats90.length
-    ? Math.floor((stats90.reduce((s, x) => s + x.done, 0) / Math.max(1, stats90.reduce((s, x) => s + x.scheduled, 0))) * 100)
-    : 0;
-  const totalSessions = spiritual.reduce((s, h) => s + totalCompletions(h), 0);
   const [revealed, setRevealed] = useState({}); // scripture recall: verse id → text shown
 
-  const addSpiritualHabit = () => {
-    setHabits((prev) => [...prev, newHabit({ name: "Prayer", icon: "🙏", color: FA, category: "Spiritual", pillar: "nonneg" })]);
-    toast("Prayer habit added — edit it in Life OS → Habits", { tone: "success" });
+  // Faith has always said prayer lives in the habit engine, and then created
+  // it in the RETIRED one — so the habit landed in a store the tracker never
+  // reads and the person never saw it again. It goes into the live tracker
+  // now, which is also what makes it show up here: this screen reads the
+  // activity feed, and the feed reads ht_entries.
+  const addSpiritualHabit = async () => {
+    try {
+      await habitDb.createHabit({
+        name: "Prayer", icon: "🙏", type: "boolean",
+        frequencyType: "daily", color: FA,
+      });
+      toast("Prayer habit added — tick it here or in Habits", { tone: "success" });
+    } catch {
+      toast("Could not add the habit.", { tone: "danger" });
+    }
   };
 
   const addVerse = (ref, text) => {
@@ -162,9 +200,9 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
         {loaded && tab === "walk" && (
           <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 11 }}>
-              <Chip label="90-day consistency" value={`${pct90}%`} color={FA} />
-              <Chip label="Total sessions"     value={totalSessions.toLocaleString()} color={GR} />
-              <Chip label="Verses memorising"  value={versesSafe.length} color={PU} />
+              <Chip label="Days with practice · 30d" value={`${walk30.days}/30`} color={FA} />
+              <Chip label="Prayer · 30d" value={prayer30.logged ? `${prayer30.met}/${prayer30.logged}` : "—"} color={GR} />
+              <Chip label="Scripture · 30d" value={scripture30.logged || "—"} color={PU} />
             </div>
 
             {spiritual.length === 0 ? (
@@ -177,29 +215,29 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
                 </button>
               </Card>
             ) : spiritual.map((h) => {
-              const s90 = rangeStats(h, 90), s30 = rangeStats(h, 30);
+              const rows = feed.filter((a) => a.meta?.habitId === h.id);
+              const s30 = summarise(rows, "habit", 30, ds);
+              const s90 = summarise(rows, "habit", 90, ds);
+              const today = rows.find((a) => a.date === ds);
               return (
                 <Card key={h.id} style={{ padding: "16px 18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 12, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 18 }}>{h.icon}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 11, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 18 }}>{h.icon || "🙏"}</span>
                     <div style={{ flex: 1, minWidth: 140 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: T1 }}>{h.name}</div>
                       <div style={{ fontSize: 10.5, color: T3, marginTop: 2 }}>
-                        {s30.pct}% last 30d · {s90.pct}% last 90d · 🔥 {currentStreak(h)}d
+                        {s30.logged ? `${s30.met} of ${s30.logged} logged · 30d` : "not logged in 30 days"}
+                        {s90.logged ? ` · ${s90.met}/${s90.logged} · 90d` : ""}
                       </div>
                     </div>
-                    {!isDone(h, ds) && isScheduled(h, ds) && (
-                      <button onClick={() => setHabits((prev) => tapHabit(prev, h.id))}
-                        style={{ padding: "7px 14px", background: `${FA}14`, border: `1px solid ${FA}44`, borderRadius: 9, color: FA, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                        Complete today
-                      </button>
+                    {today ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: activityDone(today) ? GR : T3, fontWeight: 700 }}>
+                        <Check size={13} />{activityDone(today) ? "Today ✓" : `Today ${today.pct ?? 0}%`}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, color: T3 }}>Tick it in Habits</span>
                     )}
-                    {isDone(h, ds) && <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: GR, fontWeight: 700 }}><Check size={13} />Today ✓</span>}
                   </div>
-                  <div style={{ overflowX: "auto", paddingBottom: 2 }}>
-                    <MonthGrid habit={h} />
-                  </div>
-                  <div style={{ fontSize: 9.5, color: T3, marginTop: 7 }}>Last 12 weeks — each column is a week</div>
                 </Card>
               );
             })}
