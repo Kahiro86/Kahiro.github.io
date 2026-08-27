@@ -396,12 +396,18 @@ separate times before the test existed.
 
 ## Running the tests
 ```
-npm run test:audit           # ~22 pure audits, ~15s — run constantly
-npm run test:audit:browser   # 10 Playwright audits against dist/, ~3 min
-npm run test:gym             # 138 vendored domain tests
+npm run test:audit           # 26 pure audits, ~20s — run constantly
+npm run test:audit:browser   # 14 Playwright audits against dist/, ~4 min
+npm run test:gym             # 138 vendored gym domain tests
+npm run test:habits          # 282 vendored habit domain tests
 npm run test                 # the blank-page QA sweep, 25-60 min
 npm run test:all             # build + everything above except the QA sweep
 ```
+`test:all` did not include the habit suite until now, which is exactly how
+three stale assertions survived the partial-completion work: the numeric cell
+gained `pct` and `status`, and the only tests that would have said so were
+the ones nothing ran. A suite outside the one command nobody has to remember
+is a suite that is not run.
 A crashing audit counts as a **failure**, not a skip. Two dead scripts sat in
 `tests/audit/` for weeks crashing on every run while "the audits pass" kept
 being said out loud, because nobody read the exit codes.

@@ -64,13 +64,17 @@ describe("buildListView cell states", () => {
     const numeric = makeHabit({ id: "h1", type: "numeric", target: 8, unit: "glasses", createdDate: "2026-01-01" });
     const view = buildListView([], [numeric], [makeEntry("2026-08-13", 6, "h1")], TODAY, days);
     // Below target, but the list shows the amount, not a pass/fail mark.
-    expect(view.groups[0].rows[0].cells[1].state).toEqual({ kind: "numeric", value: 6, unit: "glasses" });
+    // The ratio rides along so the cell can be shaded by how far it got —
+    // 6 of 8 is a partial day, which is neither a tick nor a miss.
+    expect(view.groups[0].rows[0].cells[1].state).toEqual({ kind: "numeric", value: 6, unit: "glasses", pct: 75, status: "partial" });
   });
 
   it("shows a numeric zero as a value, not as a miss", () => {
     const numeric = makeHabit({ id: "h1", type: "numeric", target: 8, createdDate: "2026-01-01" });
     const view = buildListView([], [numeric], [makeEntry("2026-08-13", 0, "h1")], TODAY, days);
-    expect(view.groups[0].rows[0].cells[1].state).toEqual({ kind: "numeric", value: 0, unit: null });
+    // Logged zero is a recorded nothing, not an unlogged day: status "none",
+    // not "unlogged".
+    expect(view.groups[0].rows[0].cells[1].state).toEqual({ kind: "numeric", value: 0, unit: null, pct: 0, status: "none" });
   });
 });
 
@@ -214,7 +218,7 @@ describe("cell states over the calendar", () => {
     const water = makeHabit({ type: "numeric", target: 2, unit: "L", createdDate: "2026-01-01" });
     const view = buildListView([], [water], [makeEntry("2026-08-13", 1.5)], TODAY, days);
     const cell = view.groups[0].rows[0].cells.find((c) => c.date === "2026-08-13")!;
-    expect(cell.state).toEqual({ kind: "numeric", value: 1.5, unit: "L" });
+    expect(cell.state).toEqual({ kind: "numeric", value: 1.5, unit: "L", pct: 75, status: "partial" });
   });
 });
 

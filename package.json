@@ -12,7 +12,8 @@
     "test:ci": "npm run build && node tests/qa.mjs",
     "test:audit": "node tests/audit/run.mjs",
     "test:audit:browser": "node tests/audit/run.mjs --browser",
-    "test:all": "npm run build && node tests/audit/run.mjs --all && node tests/gym/run.mjs"
+    "test:all": "npm run build && node tests/audit/run.mjs --all && node tests/gym/run.mjs && node tests/habits/run.mjs",
+    "test:habits": "node tests/habits/run.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.1",
