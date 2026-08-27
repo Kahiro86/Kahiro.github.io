@@ -162,10 +162,34 @@
   opacity: 0.7;
 }
 
+/* A logged amount, with a fill behind it showing how much of the target it
+   is. Quiet on purpose — the number is the content and the fill is context,
+   so partial days read differently from complete ones at a glance without
+   the grid turning into a bar chart. */
 .cell__value {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   font-size: 11px;
   color: var(--text-primary);
+  border-radius: 7px;
+  overflow: hidden;
 }
+.cell__num { position: relative; z-index: 1; }
+.cell__fill {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: rgba(203, 161, 53, 0.16);
+  transition: height 0.2s ease;
+}
+.cell__value--partial { color: var(--muted, #BDBDBD); }
+.cell__value--complete .cell__fill,
+.cell__value--exceeded .cell__fill { background: rgba(63, 185, 80, 0.18); }
+.cell__value--exceeded .cell__num { color: var(--accent-gold, #CBA135); }
+.cell__value--none { color: var(--muted-2, #7A7568); }
 
 .cell__unit {
   font-size: 9px;

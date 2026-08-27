@@ -8,7 +8,7 @@
 import type { Db, Habit, Routine, Entry } from "./dbTypes";
 import { addDays } from "./dates";
 import { isScheduled } from "./schedule";
-import { isCompleted } from "./completion";
+import { isCompleted, completionOf, type CompletionStatus } from "./completion";
 import { dayKey } from "./core";
 
 /** What a single day-cell shows. Spec §5, Screen 1. */
@@ -26,7 +26,7 @@ export type CellState =
    * the calendar.
    */
   | { kind: "lapsed" }
-  | { kind: "numeric"; value: number; unit: string | null }
+  | { kind: "numeric"; value: number; unit: string | null; pct: number | null; status: CompletionStatus }
   /** A day this habit was never due. */
   | { kind: "blank" };
 
@@ -72,7 +72,13 @@ export function listDays(today: string, count: number): string[] {
 
 function cellState(habit: Habit, entry: Entry | undefined, date: string, today: string, scheduled: boolean): CellState {
   if (entry) {
-    if (habit.type === "numeric") return { kind: "numeric", value: entry.value, unit: habit.unit };
+    if (habit.type === "numeric") {
+      // Carry the completion alongside the raw value. The cell has always
+      // shown the number; nothing told it whether that number was a third of
+      // the target or twice it, so every logged amount looked alike.
+      const c = completionOf(habit, entry);
+      return { kind: "numeric", value: entry.value, unit: habit.unit, pct: c.pct, status: c.status };
+    }
     return isCompleted(habit, entry) ? { kind: "complete" } : { kind: "missed" };
   }
   // An unlogged day only invites a tap if the habit is actually due

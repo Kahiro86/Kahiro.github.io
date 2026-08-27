@@ -51,7 +51,15 @@ function cellDescription(habit: Habit, cell: ListCell): string {
     case "complete": return `${habit.name}, ${cell.date}: completed`;
     case "missed": return `${habit.name}, ${cell.date}: missed`;
     case "today": return `${habit.name}, today: not logged yet`;
-    case "numeric": return `${habit.name}, ${cell.date}: ${cell.state.value}${habit.unit ? ` ${habit.unit}` : ""}`;
+    case "numeric": {
+      const st = cell.state;
+      const amount = `${st.value}${habit.unit ? ` ${habit.unit}` : ""}`;
+      // A screen reader hearing "5 min" learns nothing about whether that
+      // was the whole target or a third of it.
+      return st.pct == null
+        ? `${habit.name}, ${cell.date}: ${amount}`
+        : `${habit.name}, ${cell.date}: ${amount} of ${habit.target}${habit.unit ? ` ${habit.unit}` : ""}, ${st.pct}%`;
+    }
     case "lapsed": return `${habit.name}, ${cell.date}: the day ended without this being done`;
     case "blank": return `${habit.name}, ${cell.date}: not scheduled`;
   }
@@ -68,10 +76,18 @@ function CellContent({ state, unit }: { state: CellState; unit: string | null })
     // day the habit was never due.
     case "lapsed": return <span className="cell__dash" />;
     case "numeric":
+      // The number, with a fill behind it showing how much of the target it
+      // is. A bare "5" and a bare "15" looked identical at a glance, which is
+      // the whole complaint: the magnitude was recorded and never shown.
       return (
-        <span className="cell__value">
-          {state.value}
-          {unit ? <span className="cell__unit">{unit}</span> : null}
+        <span className={`cell__value cell__value--${state.status}`}>
+          {state.pct != null && state.pct > 0 && (
+            <span className="cell__fill" style={{ height: `${Math.min(100, state.pct)}%` }} aria-hidden />
+          )}
+          <span className="cell__num">
+            {state.value}
+            {unit ? <span className="cell__unit">{unit}</span> : null}
+          </span>
         </span>
       );
     case "blank": return null;
