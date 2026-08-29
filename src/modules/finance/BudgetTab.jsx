@@ -39,7 +39,11 @@ export function BudgetTab({ netPay, budgets, setBudgets, totalBudgeted, totalSpe
     setBills((prev) => [newBill({ name: billDraft.name.trim(), amount: +billDraft.amount || 0, dueDay: Math.min(31, Math.max(1, +billDraft.dueDay || 1)) }), ...sanitizeBills(prev)]);
     setBillDraft(null);
   };
-  const markPaid = (b) => setBills((prev) => sanitizeBills(prev).map((x) => (x.id === b.id ? { ...x, lastPaidMonth: isPaidThisCycle(x, today) ? "" : ym } : x)));
+  // Toggling a bill records or removes a DATED payment, not just a month
+  // marker — see payBill in bills.js for why the scalar was not enough.
+  const markPaid = (b) => setBills((prev) => sanitizeBills(prev).map((x) => (
+    x.id === b.id ? (isPaidThisCycle(x, today) ? unpayBill(x, today) : payBill(x, today)) : x
+  )));
   const deleteBill = (b) => {
     setBills((prev) => sanitizeBills(prev).filter((x) => x.id !== b.id));
     toast(`${b.name} removed`, { action: "Undo", onAction: () => setBills((prev) => [b, ...sanitizeBills(prev)]), tone: "danger" });

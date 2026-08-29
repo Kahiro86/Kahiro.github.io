@@ -10,11 +10,12 @@ const p = (f) => join(root, "src/shared/xp", f).replace(/\\/g, "/");
 const entry = join(here, "_g3r.js");
 writeFileSync(entry, `export * as R from "${p("run.js")}";
 export * as C from "${p("collect.js")}";
-export * as L from "${p("ledger.js")}";`);
+export * as L from "${p("ledger.js")}";
+export * as E from "${p("engine.js")}";`);
 const out = join(mkdtempSync(join(tmpdir(), "g3r-")), "b.mjs");
 const r = await build({ entryPoints: [entry], bundle: true, format: "esm", platform: "node", write: false, logLevel: "silent" });
 writeFileSync(out, r.outputFiles[0].text);
-const { R, C, L } = await import(pathToFileURL(out).href);
+const { R, C, L, E } = await import(pathToFileURL(out).href);
 
 let pass = 0, fail = 0; const fails = [];
 const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
@@ -68,14 +69,21 @@ ok("no trade.logged event exists", !allKinds.has("trade.logged"));
 ok("but the day-review does", allKinds.has("review.weekly"));
 
 console.log("\n── criterion 12: one action, one payment ──");
+// Collect TAGS the group; priceDay decides the winner, because that is the
+// only place difficulty, consistency and balance exist. Ranking at collect
+// time meant ranking on the bare base value, which is finding 7.
 const trainDay = events[back(2)];
-const habitLine = trainDay.find((e) => e.habitId === "h_train");
-const sessionLine = trainDay.find((e) => e.kind === "workout.logged");
-ok("both the session and the habit are recorded", !!habitLine && !!sessionLine);
-ok(`the cheaper one is superseded (${habitLine.supersededBy})`, habitLine.supersededBy === "workout.logged");
-ok("the session is not superseded", !sessionLine.supersededBy);
+ok("both the session and the habit are collected", trainDay.some((e) => e.habitId === "h_train") && trainDay.some((e) => e.kind === "workout.logged"));
+ok("both are tagged as the same real-world action", trainDay.filter((e) => e.group === "training").length === 2);
+ok("and collect does not decide between them", !trainDay.some((e) => e.supersededBy));
+
+const pricedTrain = E.priceDay(trainDay, {});
+const habitLine = pricedTrain.lines.find((l) => l.label === "Train today");
+const sessionLine = pricedTrain.lines.find((l) => l.kind === "workout.logged");
+ok(`the cheaper one is superseded once priced (${habitLine.reason || "-"})`, habitLine.awarded === 0 && habitLine.satisfied === true);
+ok("the session is what pays", sessionLine.awarded > 0);
 const restDay = events[back(1)];
-ok("on a non-training day nothing is superseded", !restDay.some((e) => e.supersededBy));
+ok("on a non-training day nothing is superseded", !E.priceDay(restDay, {}).lines.some((l) => l.satisfied));
 
 console.log("\n── criterion 40: sleep has one source, and it pays ──");
 ok("sleep events collected from trade_sleep only", allKinds.has("sleep.floorHeld"));

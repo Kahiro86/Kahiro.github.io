@@ -123,14 +123,27 @@ export function FaithCore({ habits, setHabits, loaded = true }) {
 
   const addVerse = (ref, text) => {
     setVerses((prev) => [
-      { id: `v${Date.now().toString(36)}`, ref: ref.trim(), text: (text || "").trim(), addedAt: ds, lastReviewed: null, reviews: 0 },
+      { id: `v${Date.now().toString(36)}`, ref: ref.trim(), text: (text || "").trim(), addedAt: ds, lastReviewed: null, reviews: 0, reviewDates: [] },
       ...(Array.isArray(prev) ? prev : []),
     ]);
   };
   const reviewVerse = (id) => {
-    setVerses((prev) => (Array.isArray(prev) ? prev : []).map((v) =>
-      v?.id === id ? { ...v, lastReviewed: ds, reviews: (v.reviews || 0) + 1 } : v
-    ));
+    setVerses((prev) => (Array.isArray(prev) ? prev : []).map((v) => {
+      if (v?.id !== id) return v;
+      // A dated log, not just a counter. The counter drives the spacing
+      // interval and is kept; it cannot say WHEN a review happened, so every
+      // review used to land on lastReviewed — twenty reviews over twenty days
+      // collapsed onto one date on every recompute, and the calendar and the
+      // consistency engine both read dated events. One entry per day: two
+      // reviews in one sitting are one act of review.
+      const dates = Array.isArray(v.reviewDates) ? v.reviewDates : [];
+      return {
+        ...v,
+        lastReviewed: ds,
+        reviews: (v.reviews || 0) + 1,
+        reviewDates: dates.includes(ds) ? dates : [...dates, ds].slice(-500),
+      };
+    }));
   };
   const deleteVerse = (v) => {
     setVerses((prev) => (Array.isArray(prev) ? prev : []).filter((x) => x?.id !== v.id));

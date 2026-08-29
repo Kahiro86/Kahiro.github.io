@@ -38,72 +38,21 @@ const TODAY = "2026-08-28";
 const PROFILE = { age: 27, sex: "male", heightCm: 178, weightKg: 78, activity: 1.55, goal: "muscle" };
 
 // ─────────────────────────────────────────────────────────────────────
+// All six findings this file was opened with are now fixed, and each one's
+// assertion moved to where the behaviour lives:
+//
+//   1  supabase/migrations/0002_kv.sql   (the live database still needs checking)
+//   2  tests/audit/day-score.mjs
+//   3  tests/audit/gate-awards.mjs
+//   4  tests/audit/purity-mirror.mjs
+//   7  tests/audit/gate3-run.mjs         (overlap resolution, now at pricing time)
+//  10  tests/audit/dated-events.mjs
+//  11  tests/audit/dated-events.mjs
+//
+// The file stays because the shape is worth keeping: the next audit's findings
+// go here, asserted as PRESENT, and the suite tells you when one stops being
+// true instead of letting a report go quietly stale.
 const DEFECTS = [
-  {
-    n: 7,
-    title: "Overlap resolution ranks on base price, so multipliers cannot decide the winner",
-    where: "collect.js:220",
-    should: "rank on the priced value, as the comment above it promises",
-    demonstrate() {
-      const habit = {
-        id: "h9", name: "Log meals", type: "boolean", target: null, targetDirection: "at_least",
-        frequencyType: "daily", archivedAt: null, sortOrder: 0,
-        createdAt: "2026-01-01T12:00:00.000Z", updatedAt: "2026-01-01T12:00:00.000Z",
-      };
-      const byDay = collect.collectEvents({
-        htHabits: [habit],
-        htEntries: [{ id: "e1", habitId: "h9", date: D, value: 1, note: null, createdAt: "", updatedAt: "" }],
-        nutrition: { [D]: [{ id: "m1", name: "X", slot: "pre_shift", grams: 100, proc: 1, n: { kcal: 400, p: 30 } }] },
-        nutritionProfile: PROFILE,
-      }, TODAY);
-      const meals = (byDay[D] || []).filter((e) => e.group === "meals");
-      const habitEvent = meals.find((e) => e.kind === "habit.completed");
-      // base 10 loses to base 12 — but at Frontier difficulty the habit is
-      // worth 10 × 1.8 = 18, which would beat meals.dayComplete outright.
-      return {
-        present: !!habitEvent?.supersededBy,
-        detail: `habit.completed (base 10, up to 18 weighted) is superseded by ${habitEvent?.supersededBy} (base 12, never weighted)`,
-      };
-    },
-  },
-
-  {
-    n: 10,
-    title: "Verse reviews all collapse onto the last-reviewed date",
-    where: "collect.js:168-169",
-    should: "one event per review date, or a review log instead of a counter",
-    demonstrate() {
-      const byDay = collect.collectEvents({
-        verses: [{ id: "v1", ref: "Ps 23:1", addedAt: "2026-08-01", reviewCount: 5, lastReviewed: "2026-08-20" }],
-      }, TODAY);
-      const spread = Object.entries(byDay)
-        .map(([d, evs]) => [d, evs.filter((e) => e.kind === "faith.verseReviewed").length])
-        .filter(([, n]) => n > 0);
-      return {
-        present: spread.length === 1 && spread[0][1] === 5,
-        detail: `five reviews land as ${spread.map(([d, n]) => `${n} on ${d}`).join(", ")} — the other four dates are lost`,
-      };
-    },
-  },
-
-  {
-    n: 11,
-    title: "A paid bill is dated to the 15th, and only the last month counts",
-    where: "collect.js:151",
-    should: "the date the bill was actually paid, and a payment log rather than one scalar",
-    demonstrate() {
-      const byDay = collect.collectEvents({
-        finance: { bills: [{ id: "b1", name: "Rent", lastPaidMonth: "2026-07", lastPaidDate: "2026-07-03" }] },
-      }, TODAY);
-      const dates = Object.entries(byDay)
-        .filter(([, evs]) => evs.some((e) => e.kind === "bill.paid"))
-        .map(([d]) => d);
-      return {
-        present: dates.length === 1 && dates[0].endsWith("-15"),
-        detail: `paid on 2026-07-03, recorded on ${dates.join(", ")}; a year of payments would still be ${dates.length} event`,
-      };
-    },
-  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────

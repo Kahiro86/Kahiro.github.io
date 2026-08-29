@@ -22,7 +22,13 @@ const read = (k, fb) => {
 /** Saves (or updates) the journal entry for a date. Returns the entry. */
 export function saveJournalEntry(date, { text, title = "", mood = null, tags = [], stamp = {} }) {
   const list = read("journal_entries", []);
-  const existing = list.find((e) => e && (e.date || "").slice(0, 10) === date && e.fromDiscipline);
+  // Match ANY entry for the date, preferring one this writer made. It used to
+  // require `fromDiscipline`, while QuickJournal writes entries without that
+  // flag and journalFor() reads any of them — so writing through Quick Journal
+  // and then through the Discipline composer on the same day produced two
+  // entries for one day, and the composer opened onto text it would not edit.
+  const sameDay = list.filter((e) => e && (e.date || "").slice(0, 10) === date);
+  const existing = sameDay.find((e) => e.fromDiscipline) || sameDay[0];
   let entry;
   if (existing) {
     entry = { ...existing, title, text, mood, tags, ...stamp, editedAt: new Date().toISOString() };

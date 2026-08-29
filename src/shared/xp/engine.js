@@ -82,29 +82,29 @@ export function priceEvent(event, ctx = {}) {
   const kind = event && event.kind;
   if (!kind) return { xp: 0, paid: false, reason: "no event kind" };
 
-  if (NEVER_PAID[kind]) return { xp: 0, paid: false, kind, reason: NEVER_PAID[kind] };
+  if (NEVER_PAID[kind]) return { xp: 0, paid: false, kind, label: event.label || kind, reason: NEVER_PAID[kind] };
 
   const def = EVENTS[kind];
-  if (!def) return { xp: 0, paid: false, kind, reason: "not in the value table — nothing outside values.js can pay" };
+  if (!def) return { xp: 0, paid: false, kind, label: event.label || kind, reason: "not in the value table — nothing outside values.js can pay" };
 
   // Journal entries under the minimum still save; they just are not paid for.
   if (def.minWords && wordCount(event.text) < def.minWords) {
-    return { xp: 0, paid: false, kind, domain: def.domain, reason: `under ${def.minWords} words — the entry saves, it just doesn't pay` };
+    return { xp: 0, paid: false, kind, label: event.label || kind, domain: def.domain, reason: `under ${def.minWords} words — the entry saves, it just doesn't pay` };
   }
 
   // A real-world action satisfying several trackers pays once, at the highest
   // single value; the others are marked satisfied without paying (§4.4).
   if (event.supersededBy) {
-    return { xp: 0, paid: false, kind, domain: def.domain, satisfied: true, reason: `already paid as ${event.supersededBy}` };
+    return { xp: 0, paid: false, kind, label: event.label || kind, domain: def.domain, satisfied: true, reason: `already paid as ${event.supersededBy}` };
   }
 
   let base = def.base;
   if (def.scale === "purityMilestone") {
     base = PURITY_MILESTONES[event.run] || 0;
-    if (!base) return { xp: 0, paid: false, kind, domain: def.domain, reason: `run of ${event.run} is not a milestone` };
+    if (!base) return { xp: 0, paid: false, kind, label: event.label || kind, domain: def.domain, reason: `run of ${event.run} is not a milestone` };
   }
   if (Number.isFinite(+event.baseOverride)) base = Math.max(0, +event.baseOverride);
-  if (base <= 0) return { xp: 0, paid: false, kind, domain: def.domain, reason: "base value is zero" };
+  if (base <= 0) return { xp: 0, paid: false, kind, label: event.label || kind, domain: def.domain, reason: "base value is zero" };
 
   // Milestones are flat: they are already sized for their rarity, and
   // stacking multipliers on top of 400 produces numbers nobody can predict.
@@ -135,15 +135,33 @@ export const marginalFactor = (k) =>
  * count for streaks, they simply stop paying (§4.6, criterion 18).
  */
 export function priceDay(events, ctx = {}) {
-  const priced = (Array.isArray(events) ? events : []).map((ev) => ({
-    ev,
-    p: priceEvent(ev, {
-      difficulty: ev.habitId && ctx.difficulty ? ctx.difficulty[ev.habitId]?.weight : undefined,
-      consistency: ctx.consistency,
-      recovery: ctx.recovery,
-      balance: ev.kind && EVENTS[ev.kind] ? (ctx.balance || {})[EVENTS[ev.kind].domain] : 1,
-    }),
-  }));
+  const price = (ev) => priceEvent(ev, {
+    difficulty: ev.habitId && ctx.difficulty ? ctx.difficulty[ev.habitId]?.weight : undefined,
+    consistency: ctx.consistency,
+    recovery: ctx.recovery,
+    balance: ev.kind && EVENTS[ev.kind] ? (ctx.balance || {})[EVENTS[ev.kind].domain] : 1,
+  });
+
+  // Overlap resolution happens HERE, not at collect time, because it is a
+  // pricing decision and this is the only place the multipliers exist. It used
+  // to run in collect.js with no context at all, ranking on the bare base
+  // value — so a Frontier-difficulty "log meals" habit worth 10 × 1.8 = 18 lost
+  // to meals.dayComplete's base 12, in flat contradiction of the promise
+  // written above the code that did it.
+  const list = (Array.isArray(events) ? events : []).map((ev) => ({ ev, p: price(ev) }));
+  const winners = {};
+  for (const { ev, p } of list) {
+    if (!ev.group || ev.supersededBy) continue;
+    const best = winners[ev.group];
+    if (!best || p.xp > best.p.xp) winners[ev.group] = { ev, p };
+  }
+  const priced = list.map(({ ev, p }) => {
+    const win = ev.group && winners[ev.group];
+    if (!win || win.ev === ev) return { ev, p };
+    // Re-price with the supersede flag so the line carries its own
+    // explanation rather than a silent zero.
+    return { ev, p: price({ ...ev, supersededBy: win.ev.kind }) };
+  });
 
   // Highest-value first, so the full-rate slots go to the hardest actions.
   // Unpaid lines keep their original position — they carry explanations, not

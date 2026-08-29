@@ -11,7 +11,6 @@
 // the habit is what pays.
 import { localDateStr, daysBetween } from "../dates.js";
 import { EVENTS, PURITY_MILESTONES } from "./values.js";
-import { priceEvent } from "./engine.js";
 import { sanitizeNutrition, dayTotals, calcTargets, nutritionScore } from "../../modules/athlete/nutrition.js";
 import { habitFeed } from "../../modules/habits/xpFeed.js";
 import { cleanMonths, clearedQuarters } from "../firm.js";
@@ -159,7 +158,17 @@ export function collectEvents(deps = {}, today = localDateStr()) {
       add(q.provenOn, { kind: "campaign.quarterCleared", label: `${q.from} → ${q.through} cleared` });
     }
     for (const i of arr(fin.income)) { const d = dOf(i.date); if (d) add(d, { kind: "income.logged", label: i.source || "Income" }); }
-    for (const b of arr(fin.bills)) { if (b.lastPaidMonth) add(`${b.lastPaidMonth}-15`, { kind: "bill.paid", label: b.name || "Bill" }); }
+    for (const b of arr(fin.bills)) {
+      const log = arr(b.payments).map((pm) => dOf(pm?.date)).filter(Boolean);
+      if (log.length) {
+        for (const d of [...new Set(log)]) add(d, { kind: "bill.paid", label: b.name || "Bill" });
+      } else if (/^\d{4}-\d{2}$/.test(String(b.lastPaidMonth || ""))) {
+        // Bills settled before the payment log existed carry only a month, so
+        // the 15th is a stand-in for a day nobody recorded — kept so those
+        // months do not lose their award, and not used for anything new.
+        add(`${b.lastPaidMonth}-15`, { kind: "bill.paid", label: b.name || "Bill" });
+      }
+    }
   }
 
   // ── Reviews. Trading itself pays nothing (§4.4); the day-review does. ──
@@ -176,8 +185,21 @@ export function collectEvents(deps = {}, today = localDateStr()) {
   for (const v of arr(deps.verses)) {
     const added = dOf(v.addedAt || v.date);
     if (added) add(added, { kind: "faith.verseAdded", label: v.ref || "Verse" });
-    const n = Math.max(0, Math.floor(+v.reviewCount || 0));
-    for (let i = 0; i < Math.min(n, 20); i++) add(dOf(v.lastReviewed) || added, { kind: "faith.verseReviewed", label: v.ref || "Verse review" });
+    // One event per date a review actually happened. Two things were wrong
+    // here: the field read was `reviewCount`, which the app has never written
+    // (FaithCore writes `reviews`), so this loop ran zero times and scripture
+    // review has never paid at all; and had it run, it would have stamped
+    // every one of them on `lastReviewed`.
+    const dates = Array.isArray(v.reviewDates) ? v.reviewDates.map(dOf).filter(Boolean) : [];
+    if (dates.length) {
+      for (const d of [...new Set(dates)]) add(d, { kind: "faith.verseReviewed", label: v.ref || "Verse review" });
+    } else if (Math.max(0, Math.floor(+v.reviews || 0)) > 0) {
+      // Verses reviewed before the dated log existed know only that they were
+      // reviewed, and when the LAST one was. One event on that date is the
+      // honest reading; inventing the earlier dates would be worse than
+      // losing them.
+      add(dOf(v.lastReviewed) || added, { kind: "faith.verseReviewed", label: v.ref || "Verse review" });
+    }
   }
   for (const n of arr(deps.faithNotes)) add(dOf(n.date), { kind: "faith.devotional", label: "Devotional" });
   for (const m of arr(deps.missions)) {
@@ -211,33 +233,12 @@ export function collectEvents(deps = {}, today = localDateStr()) {
   // NOTE: no app-open, tab-view or notification-dismissal event exists here.
   // Presence is not collected at all, so it cannot be priced (criterion 11).
 
-  return resolveOverlaps(byDay);
+  return byDay;
 }
 
-/**
- * Within one day, events sharing an overlap group describe the same
- * real-world action. The highest-priced one pays; the rest are marked
- * `supersededBy` and pay nothing while still being recorded.
- */
-export function resolveOverlaps(byDay) {
-  const out = {};
-  for (const [d, events] of Object.entries(byDay)) {
-    const groups = {};
-    for (const ev of events) if (ev.group) (groups[ev.group] ||= []).push(ev);
-    const winners = {};
-    for (const [g, list] of Object.entries(groups)) {
-      let best = null, bestXp = -1;
-      for (const ev of list) {
-        const xp = priceEvent({ ...ev, group: undefined }).xp || 0;
-        if (xp > bestXp) { bestXp = xp; best = ev; }
-      }
-      winners[g] = best;
-    }
-    out[d] = events.map((ev) => (ev.group && winners[ev.group] && winners[ev.group] !== ev
-      ? { ...ev, supersededBy: winners[ev.group].kind }
-      : ev));
-  }
-  return out;
-}
+// Overlap resolution used to live here, ranking candidates on their bare base
+// value because this is the one place in the pipeline where difficulty,
+// consistency and balance are not yet known. It now happens in priceDay, which
+// has all three. Collect's job is to TAG the group; pricing decides the winner.
 
 export { EVENTS };
