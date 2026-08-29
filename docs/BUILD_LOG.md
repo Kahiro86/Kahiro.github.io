@@ -396,8 +396,8 @@ separate times before the test existed.
 
 ## Running the tests
 ```
-npm run test:audit           # 26 pure audits, ~20s — run constantly
-npm run test:audit:browser   # 14 Playwright audits against dist/, ~4 min
+npm run test:audit           # 30 pure audits, ~23s — run constantly
+npm run test:audit:browser   # 15 Playwright audits against dist/, ~5 min
 npm run test:gym             # 138 vendored gym domain tests
 npm run test:habits          # 282 vendored habit domain tests
 npm run test                 # the blank-page QA sweep, 25-60 min
