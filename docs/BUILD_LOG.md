@@ -394,6 +394,43 @@ surface can be made to pass alone. The bug this catches is the sixth surface
 that kept yesterday's number — which is exactly the bug that was found three
 separate times before the test existed.
 
+## The 2026-08-28 audit is closed
+All sixteen findings are fixed. Each assertion lives where its behaviour does,
+and `known-defects.mjs` is empty — kept for the next audit's findings, because
+the shape (assert the defect is PRESENT, fail when it stops being true) is what
+keeps a report from going stale.
+
+The four that were costing something:
+
+| # | what it was | where it is proved now |
+|---|---|---|
+| 1 | `kv` had no migration; its primary key and RLS existed only in the live project | `supabase/migrations/0002_kv.sql` |
+| 2 | Two "same" day scores, 3 parts vs 4, over different habit sets | `day-score.mjs` |
+| 3 | The gate's 100 and the campaign's 400 were priced from arrays nothing writes | `gate-awards.mjs` |
+| 4 | A purity day corrected to a relapse kept paying XP for the retracted claim | `purity-mirror.mjs` |
+
+And the ones that were quietly wrong: overlap resolution ranked on base price
+so multipliers could not decide a winner; scripture review read `reviewCount`
+while the app writes `reviews`, so it had **never fired**; a bill paid every
+month for a year was one event on a day nobody paid; the journal's idempotency
+key missed Quick Journal's entries and made two per day; the level curve made
+level 2 cost more than level 3; the exchange rate was eight separate literals;
+the emergency-fund default was sized for a 50,000 life against a covenant that
+freezes it at 30,000.
+
+**Left open on purpose.** The freedom capital line: 15,000,000 stored against
+the 10,212,000 the income math implies, a 6.81% withdrawal rate. `freedom.js`
+surfaces the gap rather than hiding it, and choosing which number is wrong
+changes the shape of a life plan — a decision, not a defect. And nobody can
+verify from a repo whether the live database actually has the RLS the
+migration now specifies; `0002_kv.sql` carries the three queries that answer it.
+
+**The pattern, again.** Four of the sixteen were a capability nothing could
+reach, and four were a hand-written fixture matching the code instead of the
+app — including one in the defect register itself, which is why finding 10
+looked like bad dates rather than an award that had never fired. `make.*` is
+the answer to the second kind; the first still needs the grep.
+
 ## The fixture layer
 Test data used to be hand-written in every file. That drifted: 22 stores were
 being seeded that the app no longer had, 10 stores it did have had never been
@@ -433,7 +470,7 @@ happened in the first place.
 
 ## Running the tests
 ```
-npm run test:audit           # 30 pure audits, ~23s — run constantly
+npm run test:audit           # 35 pure audits, ~21s — run constantly
 npm run test:audit:browser   # 15 Playwright audits against dist/, ~5 min
 npm run test:gym             # 138 vendored gym domain tests
 npm run test:habits          # 282 vendored habit domain tests
