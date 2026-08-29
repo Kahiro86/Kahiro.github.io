@@ -394,6 +394,43 @@ surface can be made to pass alone. The bug this catches is the sixth surface
 that kept yesterday's number — which is exactly the bug that was found three
 separate times before the test existed.
 
+## The fixture layer
+Test data used to be hand-written in every file. That drifted: 22 stores were
+being seeded that the app no longer had, 10 stores it did have had never been
+seeded at all, and the shapes were wrong in places nobody could see.
+
+**The rule: a fixture is correct exactly when the app's own sanitizer hands it
+back unchanged.** `sanitizeNutrition`, `sanitizeSessions`, `sanitizeProfile`
+and friends are the shape authority; a test's idea of the shape is not.
+`tests/audit/fixture-contract.mjs` enforces that plus a key-inventory ratchet
+that can only shrink. Both its allowlists are empty — 88 of 88 stores covered.
+
+It paid for itself on the way in, catching three defects that had been passing
+as green tests:
+
+| defect | consequence |
+|---|---|
+| `gym_sessions` seeded in the derived shape, not the stored one | `console-clean` and `mobile-layout` walked the Body facet with **zero** sessions while asserting "real-shaped data everywhere" |
+| a meal named "Water", which is not in `FOOD_DB` | 40 days of it contributed no macros and no fluid |
+| `nutrition_profile` missing `targetWeightKg` | every test using it handed the app a shape it silently rewrote |
+
+`make.session()` and `make.meal()` cannot express the first two: the builder
+throws on a food the library does not have, and the session shape comes from
+`sanitizeSessions`.
+
+**Where things live.** `tests/fixtures/keys.mjs` derives the live key set from
+`src/` by reading call sites (a key is one that flows through the four APIs
+that prepend `architect:`), `builders.mjs` makes one record, `scenarios.mjs`
+makes whole worlds, `harness.mjs` holds the server and page setup that used to
+sit in seventeen copies.
+
+**`known-defects.mjs`** is the live record of the 2026-08-28 audit: five
+findings written as demonstrations that assert the defect is **still present**.
+Fix one and the audit fails, telling you to delete the entry. Written as
+ordinary failing tests they would leave the suite permanently red, and a red
+suite is one people stop reading — which is most of how the drift above
+happened in the first place.
+
 ## Running the tests
 ```
 npm run test:audit           # 30 pure audits, ~23s — run constantly
