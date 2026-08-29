@@ -112,6 +112,62 @@ export function vaultBalance(financeState) {
 // needs real trades, so this takes `trades` alongside reviews/withdrawals
 // rather than importing the trading store directly — firm.js stays a pure
 // function of its inputs.
+/**
+ * Is `ym` ("YYYY-MM") a clean month? One definition, used by the gate the UI
+ * shows and by the XP the ledger pays — they were allowed to disagree before,
+ * because the XP path read arrays that nothing ever wrote.
+ *
+ * Clean means all three: the month was reviewed, every reviewed trade in it
+ * held its checklist, and a withdrawal was actually taken. Proving the month
+ * is what clears it, so the review's own date is when it happened.
+ */
+export function cleanMonth(ym, { trades, reviews, withdrawals } = {}) {
+  const rs = sanitizeReviews(reviews);
+  const wds = sanitizeWithdrawals(withdrawals);
+  const review = rs.find((r) => r.kind === "monthly" && r.period === ym);
+  if (!review) return null;
+  const adherence = periodSummary(trades, "monthly", ym).adherence;
+  const withdrew = wds.some((w) => (w.date || "").slice(0, 7) === ym);
+  if (adherence !== 100 || !withdrew) return null;
+  return { ym, adherence, provenOn: (review.date || `${ym}-28`).slice(0, 10) };
+}
+
+/**
+ * Every clean month across the record, oldest first. The gate below asks the
+ * same question of the last three; this asks it of all of them, which is what
+ * a reward for clearing one has to be built on.
+ */
+export function cleanMonths({ trades, reviews, withdrawals } = {}) {
+  const months = new Set(
+    sanitizeReviews(reviews).filter((r) => r.kind === "monthly" && /^\d{4}-\d{2}$/.test(r.period || "")).map((r) => r.period)
+  );
+  return [...months].sort()
+    .map((ym) => cleanMonth(ym, { trades, reviews, withdrawals }))
+    .filter(Boolean);
+}
+
+/**
+ * Consecutive runs of `size` clean months — a cleared campaign quarter. The
+ * run has to be consecutive calendar months, not merely three clean ones
+ * scattered across a year.
+ */
+export function clearedQuarters({ trades, reviews, withdrawals } = {}, size = 3) {
+  const clean = cleanMonths({ trades, reviews, withdrawals });
+  const step = (ym) => { const [y, m] = ym.split("-").map(Number); const d = new Date(y, m, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+  const out = [];
+  for (let i = 0; i + size <= clean.length; i++) {
+    let run = true;
+    for (let k = 1; k < size; k++) if (clean[i + k].ym !== step(clean[i + k - 1].ym)) { run = false; break; }
+    // Non-overlapping: a fourth clean month extends the record, it does not
+    // pay a second 400 for the same three.
+    if (run && (!out.length || clean[i].ym > out[out.length - 1].through)) {
+      out.push({ from: clean[i].ym, through: clean[i + size - 1].ym, provenOn: clean[i + size - 1].provenOn });
+      i += size - 1;
+    }
+  }
+  return out;
+}
+
 export function scalingGate(trades, reviews, withdrawals, need = 3, today = localDateStr()) {
   const rs = sanitizeReviews(reviews);
   const wds = sanitizeWithdrawals(withdrawals);

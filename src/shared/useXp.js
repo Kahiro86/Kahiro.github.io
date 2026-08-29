@@ -61,6 +61,10 @@ export function useXp() {
   // by the one hydration definition, never chosen between.
   const [hydration] = useStorageState("hydration_log", {});
   const [rawLedger, , l5] = useStorageState(LEDGER_KEY, null);
+  // The Firm's scaling gate reads these three. The ledger needs the same ones
+  // to pay for clearing it — before this, the two largest awards in the value
+  // table had no path to the engine at all.
+  const [firmWithdrawals] = useStorageState("firm_withdrawals", []);
 
   // Gym-facet sessions feed the same fitness pipeline by mapping to the legacy
   // `workouts` shape, so a logged workout moves the shared level, the Iron Body
@@ -107,6 +111,7 @@ export function useXp() {
         htHabits, htEntries, workouts: allWorkouts, nutrition, nutritionProfile,
         sleep, hydration, finance, reviews, church, verses, faithNotes, missions,
         mindNotes, decisions, library, goals, wants,
+        trades, firmWithdrawals,
         journalTextByDate: journalText,
       },
       ledger: rawLedger,
@@ -121,7 +126,7 @@ export function useXp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [htHabits, htEntries, allWorkouts, nutrition, nutritionProfile, sleep, hydration, finance,
      reviews, church, verses, faithNotes, missions, mindNotes, decisions, library,
-     goals, wants, journalText, rawLedger],
+     goals, wants, trades, firmWithdrawals, journalText, rawLedger],
   );
 
   // Persist whatever was banked. Writing through writeStore keeps the ledger

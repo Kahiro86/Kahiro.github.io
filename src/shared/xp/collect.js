@@ -14,6 +14,7 @@ import { EVENTS, PURITY_MILESTONES } from "./values.js";
 import { priceEvent } from "./engine.js";
 import { sanitizeNutrition, dayTotals, calcTargets, nutritionScore } from "../../modules/athlete/nutrition.js";
 import { habitFeed } from "../../modules/habits/xpFeed.js";
+import { cleanMonths, clearedQuarters } from "../firm.js";
 
 const arr = (x) => (Array.isArray(x) ? x.filter(Boolean) : []);
 const ds10 = (v) => String(v || "").slice(0, 10);
@@ -145,8 +146,18 @@ export function collectEvents(deps = {}, today = localDateStr()) {
       const vault = Number(w.split?.vault) || 0;
       if (vault > 0) add(d, { kind: "vault.contribution", label: "Vault contribution" });
     }
-    for (const g of arr(fin.gatesCleared)) { const d = dOf(g.date || g.month); if (d) add(d, { kind: "gate.monthCleared", label: g.label || "Gate month cleared" }); }
-    for (const q of arr(fin.quartersCleared)) { const d = dOf(q.date || q.quarter); if (d) add(d, { kind: "campaign.quarterCleared", label: q.label || "Campaign quarter" }); }
+    // The two largest awards in the table used to be priced from
+    // fin.gatesCleared and fin.quartersCleared — arrays nothing in the app has
+    // ever written, so 100 and 400 XP were unreachable while scalingGate sat
+    // next door computing the gate correctly and telling nobody. Both now
+    // derive from the same cleanMonth() predicate the Firm's gate screen uses,
+    // dated to the review that proved the month rather than to a guess.
+    for (const m of cleanMonths({ trades: deps.trades, reviews: deps.reviews, withdrawals: deps.firmWithdrawals })) {
+      add(m.provenOn, { kind: "gate.monthCleared", label: `${m.ym} cleared` });
+    }
+    for (const q of clearedQuarters({ trades: deps.trades, reviews: deps.reviews, withdrawals: deps.firmWithdrawals })) {
+      add(q.provenOn, { kind: "campaign.quarterCleared", label: `${q.from} → ${q.through} cleared` });
+    }
     for (const i of arr(fin.income)) { const d = dOf(i.date); if (d) add(d, { kind: "income.logged", label: i.source || "Income" }); }
     for (const b of arr(fin.bills)) { if (b.lastPaidMonth) add(`${b.lastPaidMonth}-15`, { kind: "bill.paid", label: b.name || "Bill" }); }
   }

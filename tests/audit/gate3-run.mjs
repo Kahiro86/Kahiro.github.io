@@ -37,13 +37,26 @@ const workouts = trainDays.map((d) => ({ id: `w${d}`, type: "strength", date: ba
   exercises: [{ name: "Bench", sets: [{ weight: 80, reps: 8 }, { weight: 80, reps: 8 }, { weight: 80, reps: 8 }] }] }));
 const nutrition = {}; for (let i = 0; i < 20; i++) nutrition[back(i)] = [{ id: `m${i}`, name: "Meal", grams: 400, slot: "post_shift", proc: 1, n: { kcal: 900, p: 70, c: 90, f: 25 } }];
 const sleep = {}; for (let i = 0; i < 20; i++) sleep[back(i)] = i % 5 === 0 ? 5.5 : 7.5;
+// The month before today — a completed month, which is the only kind that
+// can be clean.
+const GATE_MONTH = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; })();
 const deps = {
   htHabits: habits, htEntries: entries, workouts, nutrition,
   nutritionProfile: { age: 27, sex: "male", heightCm: 178, weightKg: 78, activity: 1.55, goal: "muscle" },
   sleep,
-  finance: { withdrawals: [{ id: "w1", date: back(6), amount: 50000, split: { fleet: 20000, vault: 15000, book: 10000, life: 5000 } }],
-             gatesCleared: [{ date: back(5), label: "August gate" }] },
-  reviews: [{ date: back(7), kind: "weekly" }],
+  finance: { withdrawals: [{ id: "w1", date: back(6), amount: 50000, split: { fleet: 20000, vault: 15000, book: 10000, life: 5000 } }] },
+  // A genuinely clean month, not a `gatesCleared` row. That array was what
+  // this fixture used to seed, and nothing in the app writes it — so this
+  // assertion passed against data no user could ever produce, which is
+  // exactly how the award stayed unreachable without anyone noticing.
+  // Clean now means what the Firm's own gate means: reviewed, checklist
+  // held, withdrawal taken.
+  reviews: [
+    { id: "rw", date: back(7), kind: "weekly" },
+    { id: "rm", date: back(4), kind: "monthly", period: GATE_MONTH },
+  ],
+  trades: [{ id: "t1", date: `${GATE_MONTH}-10`, status: "CLOSED", outcome: "WIN", checklistTotal: 5, checklistScore: 5 }],
+  firmWithdrawals: [{ id: "fw1", date: `${GATE_MONTH}-28`, amount: 50000, split: { fleet: 20000, vault: 15000, book: 10000, life: 5000 } }],
 };
 const isScheduledOn = () => true;
 
