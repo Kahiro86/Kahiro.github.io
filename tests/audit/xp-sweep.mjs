@@ -5,6 +5,7 @@
 // file asks the same questions of what replaced it, so the answers stay
 // checkable rather than becoming a claim in a document.
 import { build } from "esbuild";
+import { readFileSync } from "node:fs";
 import { writeFileSync, mkdtempSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -105,6 +106,18 @@ line("sleep floor held", sleep.total, "now paid", sleep.total > 0);
 console.log("\nQ12  Proportionality:");
 line("one-tap habit vs 45-min session", `${E.priceEvent({ kind: "habit.completed" }, { difficulty: 1 }).xp} vs ${E.priceEvent({ kind: "workout.logged" }).xp}`,
   "session pays ≥3× a tap", E.priceEvent({ kind: "workout.logged" }).xp >= 3 * E.priceEvent({ kind: "habit.completed" }, { difficulty: 1 }).xp);
+
+// Criterion 10, structurally rather than by inspection: the retired engine
+// still owns achievements and journeys (moving them is Gate 5), but no amount
+// from the retired value table may leave it. Nothing renders those numbers
+// today — the point is that nothing can start to without this failing.
+{
+  const eng = readFileSync(join(root, "src/shared/xpEngine.js"), "utf8");
+  const achBlock = eng.slice(eng.indexOf("const achievements = ACHIEVEMENTS.map"), eng.indexOf("const newly ="));
+  line("achievements leak no xp from the retired engine", /\bxp: /.test(achBlock) ? "leaks" : "clean", "criterion 10 holds structurally", !/\bxp: /.test(achBlock));
+  const tierBlock = eng.slice(eng.indexOf("const tiers = j.tiers.map"), eng.indexOf("const done = tiers"));
+  line("journey tiers leak no xp either", /\bxp\b/.test(tierBlock) ? "leaks" : "clean", "the ledger is the only thing that prices", !/\bxp\b/.test(tierBlock));
+}
 
 console.log("");
 console.log(bad ? `${bad} answer(s) still unsatisfactory` : "Every §4.1 finding is now answered the right way.");

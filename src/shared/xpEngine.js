@@ -433,8 +433,13 @@ export function computeXp(deps = {}) {
   // A "consistency day" = real activity in BOTH Life and Body that day.
   stats.consistencyDays = [...lifeDays].filter((d) => fitnessDays.has(d)).length;
 
+  // No `xp` on the way out. This engine still owns achievements and journeys —
+  // moving them onto the ledger is Gate 5 — but the amounts beside them came
+  // from the retired value table, and a number the ledger did not pay must not
+  // be reachable from a view. Nothing renders them today; the point is that
+  // nothing can start to (criterion 10).
   const achievements = ACHIEVEMENTS.map((a) => ({
-    id: a.id, icon: a.icon, name: a.name, desc: a.desc, xp: a.xp,
+    id: a.id, icon: a.icon, name: a.name, desc: a.desc,
     got: !!unlocked[a.id] || a.test(stats), date: unlocked[a.id] || null,
   }));
   const newly = ACHIEVEMENTS.filter((a) => a.test(stats) && !unlocked[a.id]).map((a) => a.id);
@@ -443,9 +448,9 @@ export function computeXp(deps = {}) {
   // the next milestone — every milestone reached reveals the one after it.
   const journeys = JOURNEYS.map((j) => {
     const value = stats[j.stat] || 0;
-    const tiers = j.tiers.map(([threshold, xp], i) => {
+    const tiers = j.tiers.map(([threshold], i) => {
       const id = `${j.key}_${threshold}`;
-      return { id, threshold, xp, rank: rankName(i), got: !!unlocked[id] || value >= threshold, date: unlocked[id] || null };
+      return { id, threshold, rank: rankName(i), got: !!unlocked[id] || value >= threshold, date: unlocked[id] || null };
     });
     const done = tiers.filter((t) => t.got).length;
     const next = tiers.find((t) => !t.got) || null;
