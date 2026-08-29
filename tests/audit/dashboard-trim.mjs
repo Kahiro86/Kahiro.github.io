@@ -21,7 +21,10 @@ const seed = {
   finance_state: JSON.stringify({ accounts: [{ id: "a1", name: "Main", balance: 250000, kind: "cash" }],
     income: [{ id: "i1", date: iso(new Date()), amount: 40000, source: "Salary" }], bills: [{ id: "b1", name: "Rent", amount: 30000 }] }),
   ict_trades: JSON.stringify([{ id: "t1", date: iso(new Date()), status: "CLOSED", outcome: "WIN", checklistTotal: 5, checklistScore: 5 }]),
-  checklist_items: JSON.stringify([{ id: "c1", text: "Make the bed", core: true }]),
+  // No checklist seed: the store was never called `checklist_items` (the real
+  // key was `daily_checklist`), so this line was inert even before the
+  // checklist was retired. The assertion below stays — it guards against the
+  // block coming back — but it no longer pretends to be seeded against.
   monthly_overhead: JSON.stringify({ targetKsh: 40000 }),  // OverheadToday self-hides without a ceiling
   weekly_focus: JSON.stringify({ text: "Ship the merge", week: iso(new Date()) }),
 };

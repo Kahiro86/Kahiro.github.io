@@ -26,6 +26,14 @@ const SANITIZERS = {
   wants: ["../../src/shared/wants.js", "sanitizeWants"],
   ict_trades: ["../../src/modules/trading/intel/tradingIntel.js", "sanitizeTrades"],
   ict_reviews: ["../../src/modules/trading/reviews.js", "sanitizeReviews"],
+  // The daily-instrument stores. Registered here as part of closing the
+  // blind-spot list: a store with no fixture has never had its reader run.
+  evening_review: ["../../src/shared/eveningReview.js", "sanitizeReviews"],
+  weekly_plan: ["../../src/shared/weeklyPlan.js", "sanitizePlans"],
+  focus_checkins: ["../../src/shared/focusCheckin.js", "sanitizeCheckins"],
+  prayer_list: ["../../src/shared/prayerList.js", "sanitizePrayers"],
+  review_cards: ["../../src/shared/flashcards.js", "sanitizeCards"],
+  overhead_cfg: ["../../src/shared/today.js", "sanitizeOverhead"],
 };
 
 const deepEqual = async (a, b) => {
@@ -221,8 +229,49 @@ export function richWorld() {
   };
 }
 
+/**
+ * The daily-instrument stores — the evening review, the weekly plan, the
+ * focus check-in, the prayer list, the recall cards, the overhead ledger and
+ * habit routines. Ten stores that no test had ever put a value into, which
+ * means no test had ever run the code that reads them.
+ *
+ * Each is built to its own sanitizer's output shape, so the contract proves
+ * these are shapes the app accepts rather than shapes that look plausible.
+ */
+export function dailyInstrument() {
+  const monday = ago(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
+  return {
+    ...make.returningUser(),
+    evening_review: {
+      [ago(1)]: { rating: 4, win: "Trained before the shift.", lesson: "Sleep earlier.", tomorrow: ["Log breakfast", "Read 20 pages"], at: "21:40" },
+      [ago(2)]: { rating: 2, win: "Showed up.", lesson: "Skipped the plan.", tomorrow: ["Reset"], at: "23:05" },
+    },
+    weekly_plan: {
+      [monday]: { theme: "Hold the floor", priorities: ["Sleep 7h", "Three sessions", "Close the books"], at: "08:00" },
+    },
+    focus_checkins: { [ago(1)]: "yes", [ago(2)]: "partial", [ago(3)]: "no" },
+    focus_checkin_cfg: { cadence: "daily" },
+    prayer_list: [
+      { id: "p1", text: "Wisdom with money", category: "Provision", addedAt: ago(30), answeredAt: null, note: "" },
+      { id: "p2", text: "Health for mum", category: "Health", addedAt: ago(12), answeredAt: ago(2), note: "Scan came back clear." },
+    ],
+    review_cards: [
+      { id: "c1", front: "What does the covenant say about account #2?", back: "Not until #1 has paid three clean months.", reps: 3, intervalDays: 7, ease: 2.3, due: ago(-2), createdAt: ago(20) },
+      { id: "c2", front: "The freedom number", back: "KSh 85,100 a month.", reps: 0, intervalDays: 0, ease: 2.3, due: TODAY, createdAt: ago(4) },
+    ],
+    ht_routines: [
+      { id: "r1", name: "Morning", icon: "🌅", sortOrder: 0, archivedAt: null, createdAt: `${ago(90)}T12:00:00.000Z`, updatedAt: `${ago(90)}T12:00:00.000Z` },
+    ],
+    overhead_cfg: { targetKsh: 30000, updatedAt: `${ago(30)}T12:00:00.000Z` },
+    overhead_alerts: { [TODAY.slice(0, 7)]: [50, 80] },
+    overhead_archive: [
+      { month: ago(40).slice(0, 7), target: 30000, actual: 28400, fired: [50, 80] },
+    ],
+  };
+}
+
 /** The scenarios that must round-trip. */
-export const SCENARIOS = { freshInstall, oneDay, partialDay, activeMonth, richWorld };
+export const SCENARIOS = { freshInstall, oneDay, partialDay, activeMonth, richWorld, dailyInstrument };
 
 // ── Adversarial ──────────────────────────────────────────────────────
 /**

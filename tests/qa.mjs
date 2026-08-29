@@ -63,14 +63,11 @@ const SCENARIOS = {
   corruptTrades: { "architect:ict_trades": JSON.stringify({ notAnArray: true }) },
   tradesBadJSON: { "architect:ict_trades": "{not valid json" },
   corruptFinance: { "architect:finance_state": JSON.stringify(null) },
-  corruptRoutines: { "architect:life_routines": JSON.stringify([{ id: "r1", name: "Morning", habitIds: null }]) },
   corruptJournal: { "architect:journal_entries": JSON.stringify("string-not-array") },
   corruptDayMarks: { "architect:athlete_day_marks": JSON.stringify({ rest: "not-an-array", cheat: [null, 5, "bad-date", "2026-07-27"] }) },
   corruptIdentity: { "architect:app_identity": JSON.stringify({ appName: 12345, ownerName: { nope: 1 }, configured: "yes" }) },
-  corruptHell: { "architect:hell_mode": JSON.stringify({ on: "yes", since: 5, anchorXp: "lots", anchorLevel: null }) },
   corruptPushQueue: { "architect:push_queue": JSON.stringify({ notAnArray: true, at: "soon" }) },
-  corruptNutritionHard: {
-    "architect:nutrition_hard": JSON.stringify({ enabled: "yes", offFrom: 5, proteinFloor: "lots", kcalFloor: -9, kcalCeil: {}, sugaredCap: "two", pending: { from: "bad", proteinFloor: "x" }, tutorialSeen: 1 }),
+  corruptNutritionDays: {
     "architect:nutrition_days": JSON.stringify({ "not-a-date": { completedAt: "x" }, "2026-07-30": { completedAt: 123, clean: "yes" } }),
     "architect:nutrition_log": JSON.stringify({ "2026-07-30": [{ id: "e1", name: "Chai", slot: "dinner", grams: 250, bev: true, sugared: true, time: "bad", loggedAt: "x", n: { kcal: 40, p: 1 } }] }),
   },
@@ -78,17 +75,8 @@ const SCENARIOS = {
     "architect:nutrition_foods": JSON.stringify([null, 5, "x", { id: "cf1" }, { id: "cf2", name: "Bad", per100: "nope" }, { id: "cf3", name: "OK", per100: { kcal: 100, p: 5 }, bev: "yes", tags: "SUGAR", variants: "no" }]),
     "architect:nutrition_log": JSON.stringify({ "2026-07-30": [{ id: "e1", name: "Fizz", slot: "snack", grams: 520, bev: true, loggedAt: "bad", late: 1, n: { kcal: 31, na: 120 } }] }),
   },
-  corruptWorkoutSplits: {
-    "architect:workout_splits": JSON.stringify([null, 5, "x", { name: 12 }, { id: "sp1", name: "Push", exercises: "nope" }, { id: "sp2", name: "Pull", exercises: [null, { name: 9, type: "bad", sets: {}, giantSetId: 5 }] }]),
-    "architect:workout_week": JSON.stringify({ mon: "sp-missing", tue: 5, sun: "sp1", junk: "x" }),
-    "architect:workout_split_log": JSON.stringify({ "2026-07-30": "not-an-array", "bad": ["ex1"] }),
-  },
-  corruptTodayTrackers: {
-    "architect:daily_checklist": JSON.stringify({ notAnArray: true }),
-    "architect:daily_checklist_log": JSON.stringify("string"),
-    "architect:weekly_goal": JSON.stringify({ focus: 5, weekKey: 1, archive: "no" }),
+  corruptOverhead: {
     "architect:monthly_overhead": JSON.stringify({ target: "lots", monthKey: 5, archive: null }),
-    "architect:life_pings": JSON.stringify([null, 5, { id: "p1", label: 9, every: "x", lastDismissed: {} }]),
   },
   corruptJournalFiles: {
     "architect:journal_entries": JSON.stringify([null, { id: "j1", date: "bad-date", text: "x" }, { id: "j2", date: "2026-06-15", text: "ok" }, { id: "j3", text: "no date" }]),
@@ -104,16 +92,17 @@ const SCENARIOS = {
     "architect:who_i_am_revisions": JSON.stringify("not-an-array"),
     "architect:who_i_am_meta": JSON.stringify([1, 2, 3]),
   },
-  corruptModes: {
-    "architect:mode_cfg": JSON.stringify({ hellThreshold: "lots", checklistCutoffHour: 99 }),
-    "architect:mode_history": JSON.stringify({ "not-a-date": { mode: "x" }, "2026-07-30": "nope", "2026-07-29": { mode: "hell", ambiguous: "yes" } }),
-  },
-  modesHellDay: {
-    "architect:mode_cfg": JSON.stringify({ hellThreshold: 2 }),
-    "architect:trade_sleep": JSON.stringify({ "2026-07-31": 4 }),
-    "architect:nutrition_hard": JSON.stringify({ enabled: true, proteinFloor: 180, kcalFloor: 2600, kcalCeil: 3200, sugaredCap: 1, logWindowMin: 20, postShiftRequired: true }),
-    "architect:daily_checklist": JSON.stringify([{ id: "c1", text: "Core", core: true }]),
-    "architect:life_pings": JSON.stringify([{ id: "p1", name: "Laundry", intervalDays: 14, lastDone: "2026-01-01" }]),
+  // Junk under keys no feature owns any more. Sync and backup enumerate every
+  // `architect:` key, so a removed feature's leftovers still ride in every
+  // payload — and the app has to boot past them. Eight scenarios used to make
+  // this point one dead feature at a time; one makes it better, and these keys
+  // are listed in the contract as deliberate orphans rather than as drift.
+  orphanJunk: {
+    "architect:mode_cfg": JSON.stringify({ hellThreshold: "lots" }),
+    "architect:hell_mode": JSON.stringify({ on: "yes", since: 5 }),
+    "architect:daily_checklist": JSON.stringify({ notAnArray: true }),
+    "architect:workout_splits": JSON.stringify([null, 5, "x"]),
+    "architect:life_routines": "{bad json",
   },
   everythingNull: {
     "architect:habits": "null",
@@ -124,7 +113,6 @@ const SCENARIOS = {
   nullEntriesEverywhere: {
     "architect:ict_trades": JSON.stringify([null, { id: "t1", status: "CLOSED", outcome: "WIN" }, null]),
     "architect:athlete_workouts": JSON.stringify([null, { id: "w1", type: "strength", name: "Push", date: "2026-07-01", exercises: [null, { name: "Bench", sets: [] }] }]),
-    "architect:routines": JSON.stringify([null, { id: "r1", name: "AM", icon: "🌅" }]),
     "architect:journal_entries": JSON.stringify([null, { id: "j1", date: "2026-07-01", text: "hi" }]),
     "architect:habits": JSON.stringify([{ id: "h1", name: "Pray", log: { "2026-07-01": null, "2026-07-02": { v: 1 } } }]),
   },
@@ -178,9 +166,6 @@ const SCENARIOS = {
       { id: "t1", accountId: "a1", instrument: "EURUSD", lots: "bad", entry: "x", exit: "y", status: "CLOSED", psychBefore: "nope", review: null, media: [null, { junk: 1 }], sessions: null, confluences: "no", mistakes: [5], reflectionAnswers: [] },
     ]),
     "architect:ti_accounts": JSON.stringify([null, 3, { id: "a1", name: "X", type: "??", startBalance: "nope", status: "??" }]),
-    "architect:ti_strategies": JSON.stringify([null, { name: "S", versions: "no" }, { nope: 1 }]),
-    "architect:ti_instruments": JSON.stringify({ notArray: true }),
-    "architect:ti_sessions": "{bad json",
     "architect:ti_settings": JSON.stringify({ reviewFields: "not-an-array", psychFields: [null, 5, "OK", {}], reflectionQs: 42 }),
     "architect:ti_lessons": JSON.stringify([null, "x", { nope: 1 }, { title: "L", reinforcementCount: "bad", linkedTrades: "no", dateLearned: "nope" }]),
     "architect:ti_reminders": JSON.stringify([null, 5, "x", { nope: 1 }, { text: "R", scope: "??", target: 9 }]),
@@ -189,10 +174,6 @@ const SCENARIOS = {
   tiStoresNull: {
     "architect:ti_trades": "null",
     "architect:ti_accounts": "null",
-    "architect:ti_instruments": "null",
-    "architect:ti_strategies": "null",
-    "architect:ti_conditions": "null",
-    "architect:ti_confluences": "null",
     "architect:ti_lessons": "null",
   },
   corruptWave3: {
@@ -201,7 +182,6 @@ const SCENARIOS = {
     "architect:faith_notes": "null",
     "architect:mind_library": JSON.stringify([null, { id: "b1", title: "T", pagesTotal: "x", pagesRead: null }]),
     "architect:mind_decisions": JSON.stringify([{ id: "d1", date: null }]),
-    "architect:life_projects": JSON.stringify([null, { junk: 1 }, { id: "p1", name: "P", status: "weird" }]),
     "architect:missions": JSON.stringify([null, { id: "m1", level: "bogus", title: "x" }, { id: "m2", level: "day", title: "ok" }]),
   },
   corruptWave4: {
@@ -213,9 +193,7 @@ const SCENARIOS = {
     "architect:athlete_measurements": JSON.stringify([null, { id: "m1", weight: "x", date: null }, "junk"]),
     "architect:athlete_workouts": JSON.stringify([{ id: "w1", type: "cardio", date: "2026-07-01", duration: "x", distance: null }, { id: "w2", type: "mobility", date: "2026-07-02" }]),
   },
-  corruptChecklists: {
-    "architect:ict_checklist_templates": "null",
-    "architect:ict_active_checklist": JSON.stringify(123),
+  corruptIctBalance: {
     "architect:ict_balance": JSON.stringify("not a number"),
   },
   corruptPurity: {

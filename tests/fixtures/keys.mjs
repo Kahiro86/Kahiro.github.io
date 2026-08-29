@@ -27,12 +27,13 @@ export const srcFiles = () => walk(join(ROOT, "src"));
 // `_*.js` under tests/audit are esbuild scratch entries written at run time
 // and gitignored; they are generated, not authored, and must not count as a
 // test seeding anything.
+// tests/fixtures IS the seeding mechanism now, so it counts: a store covered
+// by a scenario is a store with coverage. Only two files are excluded, and
+// for the same reason — they enumerate key names as data rather than seeding
+// them, so counting them would let the audit satisfy its own rules.
 export const testFiles = () => walk(join(ROOT, "tests"))
-  .filter((p) => !rel(p).startsWith("tests/fixtures/"))
+  .filter((p) => rel(p) !== "tests/fixtures/keys.mjs")
   .filter((p) => !/\/_[^/]*\.js$/.test(rel(p)))
-  // The contract itself names every key it tracks, in its own allowlists.
-  // Counting it as a seeder would let it satisfy its own blind-spot rule and
-  // report a coverage it does not have.
   .filter((p) => rel(p) !== "tests/audit/fixture-contract.mjs");
 export const rel = (p) => relative(ROOT, p).replace(/\\/g, "/");
 

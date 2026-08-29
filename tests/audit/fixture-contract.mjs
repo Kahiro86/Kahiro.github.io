@@ -19,46 +19,30 @@
 // prunes becomes a second kind of drift.
 import { appKeys, seededKeys, testOnlyKeys } from "../fixtures/keys.mjs";
 
-// ── Known drift, 2026-08-29 ──────────────────────────────────────────
-// Seeded by tests, gone from the app. Each is a feature that was removed
-// while its fixtures stayed behind.
-const DEAD_OK = {
-  // God Mode — removed at the owner's request; config purged (purgeDead.js:21-23).
-  mode_cfg: "God Mode, deleted", mode_history: "God Mode, deleted",
-  nutrition_hard: "God Mode's hard-mode targets, deleted",
-  hell_mode: "never shipped under this name",
-  // Retired with the Command Centre trim; data kept, surface gone.
-  daily_checklist: "TodayTrackers retired", daily_checklist_log: "TodayTrackers retired",
-  weekly_goal: "TodayTrackers retired", life_pings: "TodayTrackers retired",
-  checklist_items: "TodayTrackers retired",
-  // Superseded by the vendored habit tracker (ht_*).
-  routines: "old habit tracker, deleted", life_routines: "old habit tracker, deleted",
-  life_projects: "module removed; data kept in ORPHANED_CONTENT_KEYS",
-  // Trading stores that were folded into ti_settings / trade_gates.
-  ict_active_checklist: "folded into trade_checklists",
-  ict_checklist_templates: "folded into trade_checklists",
-  ti_conditions: "folded into ti_settings", ti_confluences: "folded into ti_settings",
-  ti_instruments: "folded into ti_settings", ti_sessions: "folded into ti_settings",
-  ti_strategies: "folded into ti_settings",
-  // Superseded by gym_sessions + the exercise registry.
-  workout_splits: "superseded by gym_routines", workout_split_log: "superseded by gym_sessions",
-  workout_week: "superseded by weekly_plan",
+// ── Drift, and the deliberate exceptions ─────────────────────────────
+// This list was 22 entries long on 2026-08-29 and is empty now. Keeping it
+// empty is the whole point of the file: an entry here means a test seeds a
+// store the app does not have, and the next person to add one has to say why
+// in writing.
+const DEAD_OK = {};
+
+// Junk under keys no feature owns any more — seeded on purpose by qa.mjs's
+// orphanJunk scenario. Sync and backup enumerate every `architect:` key, so a
+// removed feature's leftovers still ride in every payload and the app has to
+// boot past them. These are permanent by design, which is why they are not in
+// DEAD_OK: that list is debt to clear, this one is a decision.
+const ORPHAN_BY_DESIGN = {
+  mode_cfg: "God Mode's config — orphan junk, proves boot survives leftovers",
+  hell_mode: "never-shipped mode — orphan junk",
+  daily_checklist: "retired with TodayTrackers — orphan junk",
+  workout_splits: "superseded by gym_routines — orphan junk",
+  life_routines: "old habit tracker — orphan junk, seeded as invalid JSON",
 };
 
-// In the app, seeded by nothing. Each is a real store no test has ever put a
-// value into, so no test has ever exercised the code that reads it.
-const BLIND_OK = {
-  evening_review: "Phase 5 — belongs in a daily-instrument scenario",
-  focus_checkins: "Phase 5 — belongs in activeMonth()",
-  focus_checkin_cfg: "Phase 5 — config for the above",
-  review_cards: "Phase 5 — belongs in activeMonth()",
-  weekly_plan: "Phase 5 — belongs in the training scenarios",
-  prayer_list: "Phase 5 — belongs in a faith scenario",
-  ht_routines: "Phase 5 — habit routines have no coverage at all",
-  overhead_cfg: "Phase 5 — overhead ledger has no coverage at all",
-  overhead_alerts: "Phase 5 — as above",
-  overhead_archive: "Phase 5 — as above",
-};
+// In the app, seeded by nothing. Empty as of the dailyInstrument() scenario:
+// every one of the 88 stores now has a fixture, which means every reader has
+// been run at least once.
+const BLIND_OK = {};
 
 let pass = 0, fail = 0; const fails = [];
 const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
@@ -74,23 +58,27 @@ console.log(`  ${appSet.size} store keys in src/ · ${seeded.size} seeded by tes
 
 console.log(`\n1. No test seeds a store the app does not have`);
 {
-  const rogue = [...dead].filter((k) => !DEAD_OK[k]).sort();
-  ok(`every dead fixture is a known one${rogue.length ? ` — NEW: ${rogue.join(", ")}` : ` (${dead.size} known)`}`,
+  const rogue = [...dead].filter((k) => !DEAD_OK[k] && !ORPHAN_BY_DESIGN[k]).sort();
+  ok(`no test seeds a store that no longer exists${rogue.length ? ` — NEW: ${rogue.join(", ")}` : ` (${Object.keys(ORPHAN_BY_DESIGN).length} deliberate orphans aside)`}`,
     rogue.length === 0);
 }
 
 console.log(`\n2. No store in the app goes unseeded`);
 {
   const rogue = blind.filter((k) => !BLIND_OK[k]).sort();
-  ok(`every blind spot is a known one${rogue.length ? ` — NEW: ${rogue.join(", ")}` : ` (${blind.length} known)`}`,
+  ok(`every one of the ${appSet.size} stores has a fixture${rogue.length ? ` — MISSING: ${rogue.join(", ")}` : ""}`,
     rogue.length === 0);
 }
 
 console.log(`\n3. The allowlist has no stale entries`);
 {
   const fixedDead = Object.keys(DEAD_OK).filter((k) => !dead.has(k)).sort();
-  ok(`no dead-fixture entry outlived its drift${fixedDead.length ? ` — remove: ${fixedDead.join(", ")}` : ""}`,
+  ok(`no dead-fixture entry outlived its drift${fixedDead.length ? ` — remove: ${fixedDead.join(", ")}` : ` (list is empty)`}`,
     fixedDead.length === 0);
+  // An orphan nobody seeds any more is not an orphan; it is a stale note.
+  const goneOrphans = Object.keys(ORPHAN_BY_DESIGN).filter((k) => !dead.has(k)).sort();
+  ok(`every deliberate orphan is still actually seeded${goneOrphans.length ? ` — remove: ${goneOrphans.join(", ")}` : ""}`,
+    goneOrphans.length === 0);
   const fixedBlind = Object.keys(BLIND_OK).filter((k) => !blind.includes(k)).sort();
   ok(`no blind-spot entry outlived its drift${fixedBlind.length ? ` — remove: ${fixedBlind.join(", ")}` : ""}`,
     fixedBlind.length === 0);
@@ -98,9 +86,9 @@ console.log(`\n3. The allowlist has no stale entries`);
 
 console.log(`\n4. Every allowlist entry states a reason`);
 {
-  const bare = [...Object.entries(DEAD_OK), ...Object.entries(BLIND_OK)]
+  const bare = [...Object.entries(DEAD_OK), ...Object.entries(BLIND_OK), ...Object.entries(ORPHAN_BY_DESIGN)]
     .filter(([, why]) => !why || String(why).trim().length < 8).map(([k]) => k);
-  ok(`each of the ${Object.keys(DEAD_OK).length + Object.keys(BLIND_OK).length} entries says why it is there`, bare.length === 0);
+  ok(`each of the ${Object.keys(DEAD_OK).length + Object.keys(BLIND_OK).length + Object.keys(ORPHAN_BY_DESIGN).length} entries says why it is there`, bare.length === 0);
 }
 
 // ── 5. Round-trip ────────────────────────────────────────────────────
