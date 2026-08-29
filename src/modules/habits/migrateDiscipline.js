@@ -123,8 +123,16 @@ export function planDisciplineMigration({ purity, journal, htHabits, htEntries, 
   }
 
   // ── §3.6 skipped days ────────────────────────────────────────────
-  // The legacy habit engine had a streak-safe skip (log[ds].s === true). If any
-  // survive in the old `habits` store they must be preserved, not converted.
+  // The legacy habit engine had a streak-safe skip (log[ds].s === true). The
+  // tracker has no equivalent — an entry is a value or it is absent, and there
+  // is no third state — so these are COUNTED AND NOT CONVERTED. That is the
+  // whole truth of it, and the comment here used to say they "must be
+  // preserved" while nothing preserved anything.
+  //
+  // Nothing is lost: the legacy `habits` store is never deleted (it is user
+  // content, and purgeDead.js only ever removes config), so the skip days
+  // remain exactly where they were written. The count is reported so the
+  // number is visible rather than silently dropped.
   const legacy = readKeySafe("habits");
   for (const h of legacy) {
     for (const [d, e] of Object.entries(h?.log || {})) {

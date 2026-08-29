@@ -1,4 +1,5 @@
 import { Layers, DollarSign, TrendingUp, Activity, Wallet } from "lucide-react";
+import { DEFAULT_XRATE } from "./constants.js";
 import { useMemo, useState } from "react";
 import { B1, BD, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
@@ -122,7 +123,7 @@ export function FinanceOS() {
   // (or the unfiled bucket) the user opts to count is converted from its USD
   // balance and added to personal net worth.
   const tradingCountedUSD = (fw.countedGroupTotal || 0) + (state.tradingUnfiledCountsNW ? fw.unfiledTotal : 0);
-  const tradingNWKES = Math.round(tradingCountedUSD * (+xRate || 130));
+  const tradingNWKES = Math.round(tradingCountedUSD * (+xRate || DEFAULT_XRATE));
   const netWorthKES = totalLiquid + totalInvested - debtTotal + tradingNWKES;
 
   // ── PASSIVE INCOME ────────────────────────────────────────────────
@@ -147,7 +148,7 @@ export function FinanceOS() {
 
   const fmtKES = (amount) => {
     const n = Math.round(+amount || 0);
-    if (currency === "USD") return `$${Math.round(n / (+xRate || 130)).toLocaleString()}`;
+    if (currency === "USD") return `$${Math.round(n / (+xRate || DEFAULT_XRATE)).toLocaleString()}`;
     return `KES ${n.toLocaleString()}`;
   };
 
@@ -187,7 +188,7 @@ export function FinanceOS() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: GL, border: `1px solid ${BD}`, borderRadius: 9 }}>
           <span style={{ fontSize: 10, color: T3 }}>1 USD =</span>
-          <input type="number" inputMode="decimal" value={xRate} onChange={(e) => setXRate(+e.target.value || 130)}
+          <input type="number" inputMode="decimal" value={xRate} onChange={(e) => setXRate(+e.target.value || DEFAULT_XRATE)}
             style={{ width: 52, background: "transparent", border: "none", fontSize: 12, color: AM, fontFamily: "monospace", fontWeight: 700, outline: "none", textAlign: "right" }} />
           <span style={{ fontSize: 10, color: T3 }}>KES</span>
         </div>

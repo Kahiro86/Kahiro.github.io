@@ -5,6 +5,7 @@
 // bucket and can optionally be counted toward net worth. Account creation
 // stays in Trading; here you only name firewalls and file accounts into them.
 import { useState } from "react";
+import { DEFAULT_XRATE } from "./constants.js";
 import { Lock, Plus, Pencil, Check, Trash2, ShieldOff, ArrowRightLeft } from "lucide-react";
 import { B2, BD, T1, T2, T3, GL, CY, GR, AM, RE } from "../../shared/designTokens.js";
 import { Card } from "../../shared/ui.jsx";
@@ -111,7 +112,7 @@ export function FirewallsCard({ fw, firewalls = [], setFirewalls, accounts = [],
             {unfiled.length > 0 && (
               <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 11, cursor: "pointer" }}>
                 <input type="checkbox" checked={!!unfiledCountsNW} onChange={(e) => setUnfiledCountsNW(e.target.checked)} style={{ accentColor: GR, width: 15, height: 15 }} />
-                <span style={{ fontSize: 11.5, color: T2 }}>Count unfiled accounts toward Net Worth (≈ {fmtKES(Math.round((fw?.unfiledTotal || 0) * (+xRate || 130)))})</span>
+                <span style={{ fontSize: 11.5, color: T2 }}>Count unfiled accounts toward Net Worth (≈ {fmtKES(Math.round((fw?.unfiledTotal || 0) * (+xRate || DEFAULT_XRATE)))})</span>
               </label>
             )}
           </div>

@@ -157,13 +157,31 @@ export const BALANCE_FACTOR = 0.8;
 export const BALANCE_WINDOW_DAYS = 7;
 
 // ── Levels (§4.7) ────────────────────────────────────────────────────
-// Cumulative XP to reach a level: 500 × level^1.35, exactly as specified.
-// L5 4,390 · L10 11,195 · L20 28,551 — the spec's own figures.
+// Cumulative XP to reach a level: 500 × level^1.35.
+// L3 2,203 · L5 4,391 · L10 11,194 · L20 28,534 — read off the function, not
+// off the spec sheet. The comment here used to quote 4,390 / 11,195 / 28,551,
+// none of which this code produces.
 //
-// One deviation: the spec lists level 1 at 500, which would put a brand-new
-// user below their own starting level. Level 1 is therefore free and every
-// threshold from 2 up is the formula verbatim.
-export const xpForLevel = (level) => (level <= 1 ? 0 : Math.round(500 * Math.pow(level, 1.35)));
+// Two deviations, both about the bottom of the curve:
+//
+//   · Level 1 is free. The spec lists it at 500, which would put a brand-new
+//     user below their own starting level.
+//   · Level 2 is the midpoint of level 3 rather than the formula's 1,275.
+//     Zeroing level 1 without rebasing level 2 made the SECOND level cost
+//     1,275 and the third only 928 — the curve went backwards exactly where a
+//     new user is most likely to give up. The midpoint makes the first two
+//     steps 1,101 and 1,102. It only ever LOWERS a threshold, so nobody loses
+//     a level they had already reached.
+//
+// Everything from 3 up is the formula verbatim, including its own mild dip at
+// level 4 (1,046 after 1,102). That one is inherited from 500 × l^1.35 itself,
+// not introduced here, and removing it would mean rebasing every threshold and
+// moving people's levels — a worse trade for a wobble of 5%.
+export const xpForLevel = (level) => {
+  if (level <= 1) return 0;
+  if (level === 2) return Math.floor(Math.round(500 * Math.pow(3, 1.35)) / 2);
+  return Math.round(500 * Math.pow(level, 1.35));
+};
 
 export function levelFromXp(xp) {
   const total = Math.max(0, Math.floor(xp || 0));

@@ -1,4 +1,5 @@
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { DEFAULT_XRATE } from "./constants.js";
 import { ArrowUpRight, Compass, Camera, TrendingUp, TrendingDown } from "lucide-react";
 import { BD, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
 import { Card, SH, Meter } from "../../shared/ui.jsx";
@@ -47,7 +48,7 @@ export function OverviewTab({
 
       {/* ── FREEDOM MATH — one target, the arithmetic shown ── */}
       {freedom && freedom.capitalRequired != null && (() => {
-        const usd = Math.round(freedom.freedomNumber / (freedom.xRate || 130));
+        const usd = Math.round(freedom.freedomNumber / (freedom.xRate || DEFAULT_XRATE));
         const yieldPct = (freedom.annualYield * 100).toFixed(1);
         const wrPct = freedom.impliedWithdrawalRate != null ? (freedom.impliedWithdrawalRate * 100).toFixed(1) : null;
         const mismatch = freedom.capitalRequired > 0 && Math.abs(freedom.target - freedom.capitalRequired) / freedom.capitalRequired > 0.1;

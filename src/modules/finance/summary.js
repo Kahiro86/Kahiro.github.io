@@ -1,3 +1,4 @@
+import { DEFAULT_XRATE } from "./constants.js";
 // Personal-finance rollup from finance_state. The funded trading account is
 // deliberately NOT part of any of these totals — trading is its own financial
 // environment (see tradingMetrics) and never enters personal net worth.
@@ -5,7 +6,7 @@ export function financeSummary(state) {
   const s0 = state && typeof state === "object" ? state : {};
   const {
     opBal = 0, savBal = 0, efBal = 0, personalDebt = 0,
-    saccoBal = 0, saccoYield = 0, reitUnits = 0, reitNAV = 0, xRate = 130,
+    saccoBal = 0, saccoYield = 0, reitUnits = 0, reitNAV = 0, xRate = DEFAULT_XRATE,
   } = s0;
   // Array fields default to [] even when explicitly stored as null (a corrupt
   // record can carry `mmfs: null`, which a default param would NOT catch).
@@ -39,6 +40,6 @@ export function financeSummary(state) {
   return {
     totalLiquid, totalInvested, personalNetWorth, monthlyPassive,
     totalBudgeted, totalSpent, thisMonthIncome, personalDebt: +personalDebt || 0,
-    xRate: +xRate || 130,
+    xRate: +xRate || DEFAULT_XRATE,
   };
 }

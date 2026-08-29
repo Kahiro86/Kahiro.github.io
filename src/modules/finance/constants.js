@@ -1,8 +1,16 @@
 import { CY, GR, PU, AM, OR, RE, T2 } from "../../shared/designTokens.js";
 
+/** The KES↔USD planning rate. One definition: it was a bare `130` in eight
+ *  separate fallbacks across FinanceOS, FirewallsCard, OverviewTab, summary.js
+ *  and freedom.js, which agreed only by coincidence of the same literal — so
+ *  changing the assumption meant finding all eight. Trading accounts are
+ *  denominated in USD and personal wealth in KES; this is what reconciles
+ *  them. */
+export const DEFAULT_XRATE = 130;
+
 export const DEFAULT_FINANCE_STATE = {
   currency: "KES",
-  xRate: 130,
+  xRate: DEFAULT_XRATE,
   income: [],
   gross: "",
   opBal: 0,
@@ -48,8 +56,14 @@ export const DEFAULT_FINANCE_STATE = {
   // Recurring monthly bills: { id, name, amount, dueDay, lastPaidMonth }.
   bills: [],
   // Editable financial goals (persisted). history: [{ date, amount }] contribution log.
+  // The life the surplus stands on. Kept here as a literal because this object
+  // is a static default and cannot read firm_config, but it is DERIVED, not
+  // chosen: 6 × lifeCostKsh (shared/firm.js). It was 300,000, which implies a
+  // 50,000/month life and contradicts the covenant's frozen 30,000 by 67% —
+  // the fund was quietly sized for a life the doctrine forbids. If lifeCostKsh
+  // changes, this changes with it.
   goals: [
-    { id: "g_ef",   name: "Emergency Fund (6 months)", icon: "🛡️", target: 300000, current: 0, monthly: 5000,  deadline: "", color: GR, archived: false, createdAt: "", history: [] },
+    { id: "g_ef",   name: "Emergency Fund (6 months)", icon: "🛡️", target: 180000, current: 0, monthly: 5000,  deadline: "", color: GR, archived: false, createdAt: "", history: [] },
     { id: "g_port", name: "Investment Portfolio",      icon: "📈", target: 500000, current: 0, monthly: 10000, deadline: "", color: CY, archived: false, createdAt: "", history: [] },
     { id: "g_nw",   name: "Net Worth KES 5M",          icon: "💰", target: 5000000, current: 0, monthly: 20000, deadline: "", color: PU, archived: false, createdAt: "", history: [] },
   ],

@@ -6,6 +6,7 @@
 // capital now vs the line, and an honest projection of how far out the season
 // still runs at the current trajectory. Pure; reuses financeSummary.
 import { financeSummary } from "../modules/finance/summary.js";
+import { DEFAULT_XRATE } from "../modules/finance/constants.js";
 import { sanitizeFirmConfig } from "./firm.js";
 
 // Month-by-month projection: current capital compounding at the net yield with
@@ -45,7 +46,7 @@ export function freedomMath(finance, config) {
   // from it and the blended yield, not stored separately. capitalRequired =
   // annual income ÷ yield. The stored vault line then implies a withdrawal
   // rate, surfaced so a mismatch is a deliberate choice, never a silent one.
-  const xRate = Number.isFinite(+finance?.xRate) && +finance.xRate > 0 ? +finance.xRate : 130;
+  const xRate = Number.isFinite(+finance?.xRate) && +finance.xRate > 0 ? +finance.xRate : DEFAULT_XRATE;
   const capitalRequired = annualYield > 0 ? Math.round((freedomNumber * 12) / annualYield) : null;
   const impliedWithdrawalRate = target > 0 ? (freedomNumber * 12) / target : null; // fraction
   const milestone = (key, label, monthly) => {
