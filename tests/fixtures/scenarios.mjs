@@ -165,8 +165,64 @@ export function activeMonth({ days = 30 } = {}) {
   };
 }
 
+/**
+ * Every store filled, every screen on its full render path. Two audits —
+ * console-clean and mobile-layout — carried byte-identical copies of this
+ * world, and both carried the same defect in it: sessions shaped
+ * `{ id, date, sets }` when the store's shape is
+ * `{ id, date, entries: [{ exerciseId, sets }] }`. sanitizeSessions dropped
+ * all ten, so both audits walked the Body facet with nothing in it while
+ * their own comments claimed "real-shaped data everywhere".
+ *
+ * The habit names are load-bearing: "Sleep well" and "Hydration" are what
+ * the linked-metric resolver matches on, so this world exercises the mirror.
+ */
+export function richWorld() {
+  const NAMES = ["Sleep well", "Hydration", "Train", "Read", "Pray", "Journal"];
+  const habits = NAMES.map((name, i) => make.habit({
+    id: `h${i}`, name, icon: "✅", createdOn: ago(120),
+    ...(i === 1 ? { type: "numeric", unit: "L", target: 3 } : {}),
+  }));
+  const entries = [];
+  for (const h of habits) for (let i = 0; i < 60; i++) entries.push(make.entry(h.id, ago(i), i % 4 ? 1 : 0));
+
+  const nutrition = {};
+  for (let i = 0; i < 40; i++) {
+    nutrition[ago(i)] = [
+      make.meal("Chicken breast (grilled)", 200),
+      make.meal("Ginger lime black tea, sugared", 500, { slot: "mid_shift", time: "13:00" }),
+    ];
+  }
+  const sleep = {}; for (let i = 0; i < 60; i++) sleep[ago(i)] = 6 + (i % 4);
+
+  return {
+    ...make.returningUser(),
+    dash_show_more: true,
+    dash_show_money: true,
+    ht_habits: habits,
+    ht_entries: entries,
+    nutrition_log: nutrition,
+    nutrition_profile: make.profile(),
+    trade_sleep: sleep,
+    ti_trades: Array.from({ length: 20 }, (_, i) => ({ id: `t${i}`, date: ago(i), status: "CLOSED", outcome: i % 3 ? "WIN" : "LOSS", pnl: i % 3 ? 1200 : -600, checklistTotal: 5, checklistScore: 5, accountId: "a1" })),
+    ti_accounts: [{ id: "a1", name: "Main", startingBalance: 10000 }],
+    ti_settings: { activeAccountId: "a1" },
+    finance_state: {
+      accounts: [{ id: "f1", name: "Main", balance: 250000, kind: "cash" }],
+      income: [{ id: "i1", date: ago(2), amount: 40000, source: "Salary" }],
+      bills: [{ id: "b1", name: "Rent", amount: 30000 }],
+    },
+    journal_entries: Array.from({ length: 20 }, (_, i) => make.journal(ago(i), "Some reflection.")),
+    purity_log: Object.fromEntries(Array.from({ length: 40 }, (_, i) => (i % 7 ? make.pureDay(ago(i)) : make.relapseDay(ago(i))))),
+    athlete_measurements: Array.from({ length: 8 }, (_, i) => ({ id: `m${i}`, date: ago(i * 7), weightKg: 78 - i * 0.2 })),
+    gym_sessions: Array.from({ length: 10 }, (_, i) => make.session(ago(i * 2), {
+      id: `s${i}`, bodyweightKg: 78, entries: [make.exercise("back-squat", 5, 100, 5)],
+    })),
+  };
+}
+
 /** The scenarios that must round-trip. */
-export const SCENARIOS = { freshInstall, oneDay, partialDay, activeMonth };
+export const SCENARIOS = { freshInstall, oneDay, partialDay, activeMonth, richWorld };
 
 // ── Adversarial ──────────────────────────────────────────────────────
 /**

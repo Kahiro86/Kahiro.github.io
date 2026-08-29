@@ -89,6 +89,10 @@ export function meal(name, grams = 100, over = {}) {
     grams,
     proc: food.proc ?? 1,
     time: "08:30",
+    // The bev flag has to ride on the ENTRY, not just the library food:
+    // dayTotals reads `e.bev` to count fluid (nutrition.js:560), so a drink
+    // seeded without it contributes zero hydration.
+    ...(food.bev ? { bev: true } : {}),
     n,
     ...over,
   };
