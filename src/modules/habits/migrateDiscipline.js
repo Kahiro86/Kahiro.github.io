@@ -57,11 +57,20 @@ export function planDisciplineMigration({ purity, journal, htHabits, htEntries, 
   const entries = Array.isArray(htEntries) ? htEntries : [];
   const addHabits = [];
   const addEntries = [];
+  const fixEntries = [];
   const report = { purityDays: 0, purityPure: 0, purityRelapse: 0, journalEntries: 0,
-                   skippedDays: 0, alreadyPresent: 0, habitsCreated: 0 };
+                   skippedDays: 0, alreadyPresent: 0, corrected: 0, habitsCreated: 0 };
 
-  // Dates already carried for each system habit — the idempotency key.
-  const seen = (habitId) => new Set(entries.filter((e) => e && e.habitId === habitId).map((e) => e.date));
+  // Dates already carried for each system habit, WITH their values. The
+  // idempotency key used to be the date alone, which made the migration blind
+  // to a correction: a day flipped from clean to relapse in the Purity screen
+  // was "already present", so nothing updated and XP kept paying for the claim
+  // the user had retracted. Keying on the value catches that.
+  const seen = (habitId) => {
+    const m = new Map();
+    for (const e of entries) if (e && e.habitId === habitId) m.set(String(e.date).slice(0, 10), e);
+    return m;
+  };
 
   // ── Purity → abstinence subtype ──────────────────────────────────
   const pLog = purity && typeof purity === "object" && !Array.isArray(purity) ? purity : {};
@@ -77,11 +86,20 @@ export function planDisciplineMigration({ purity, journal, htHabits, htEntries, 
     }
     for (const d of pDates) {
       const s = pLog[d].s;
+      const want = s === "pure" ? 1 : 0;
       if (s === "pure") report.purityPure++; else report.purityRelapse++;
       report.purityDays++;
-      if (have.has(d)) { report.alreadyPresent++; continue; }
+      const existing = have.get(d);
+      if (existing) {
+        if (Number(existing.value) === want) { report.alreadyPresent++; continue; }
+        // Present but disagreeing: purity_log is the authority on what the day
+        // was, so the tracker entry is corrected rather than duplicated.
+        fixEntries.push({ ...existing, value: want, updatedAt: new Date().toISOString() });
+        report.corrected++;
+        continue;
+      }
       addEntries.push({ id: `mig_p_${d}`, habitId: PURITY_HABIT_ID, date: d,
-        value: s === "pure" ? 1 : 0, note: null, createdAt: iso(d), updatedAt: iso(d) });
+        value: want, note: null, createdAt: iso(d), updatedAt: iso(d) });
     }
   }
 
@@ -96,6 +114,8 @@ export function planDisciplineMigration({ purity, journal, htHabits, htEntries, 
     }
     report.journalEntries = jList.length;
     for (const d of jDates) {
+      // Journal has no value to disagree about — an entry exists or it does
+      // not — so the date remains the whole key here.
       if (have.has(d)) { report.alreadyPresent++; continue; }
       addEntries.push({ id: `mig_j_${d}`, habitId: JOURNAL_HABIT_ID, date: d,
         value: 1, note: null, createdAt: iso(d), updatedAt: iso(d) });
@@ -112,7 +132,7 @@ export function planDisciplineMigration({ purity, journal, htHabits, htEntries, 
     }
   }
 
-  return { addHabits, addEntries, report };
+  return { addHabits, addEntries, fixEntries, report };
 }
 
 function readKeySafe(k) { try { return readKey(k, []); } catch { return []; } }
@@ -132,7 +152,7 @@ export function runDisciplineMigration(writeFn) {
     htEntries: readKey("ht_entries", []),
     everPinned,
   });
-  if (!plan.addHabits.length && !plan.addEntries.length) return plan.report;
+  if (!plan.addHabits.length && !plan.addEntries.length && !plan.fixEntries.length) return plan.report;
 
   if (plan.addHabits.length) {
     writeFn("ht_habits", [...readKey("ht_habits", []), ...plan.addHabits]);
@@ -141,8 +161,10 @@ export function runDisciplineMigration(writeFn) {
       localStorage.setItem(PINNED_KEY, JSON.stringify(ids));
     } catch { /* best effort */ }
   }
-  if (plan.addEntries.length) {
-    writeFn("ht_entries", [...readKey("ht_entries", []), ...plan.addEntries]);
+  if (plan.addEntries.length || plan.fixEntries.length) {
+    const fixById = new Map(plan.fixEntries.map((e) => [e.id, e]));
+    const current = readKey("ht_entries", []).map((e) => (e && fixById.has(e.id) ? fixById.get(e.id) : e));
+    writeFn("ht_entries", [...current, ...plan.addEntries]);
   }
   try { localStorage.setItem("kahiro_discipline_migrated", localDateStr()); } catch { /* best effort */ }
   return plan.report;

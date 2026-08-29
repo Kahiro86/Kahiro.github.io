@@ -10,7 +10,7 @@
 // produced green tests that asserted nothing. contract.mjs rule 5 checks
 // every scenario built from these against the real sanitizers.
 import { FOOD_DB } from "../../src/modules/athlete/nutrition.js";
-import { iso, ago, TODAY } from "./harness.mjs";
+import { iso, ago, TODAY } from "./dates.mjs";
 
 const at = (d) => `${d}T12:00:00.000Z`;
 

@@ -5,6 +5,7 @@
 // (time-of-day window), how fast you recover after a slip, and what to reach
 // for in the moment (the urge timer).
 import { useMemo, useState, useEffect, useRef } from "react";
+import { mirrorPurityToTracker } from "../habits/disciplineWriters.js";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ShieldCheck, ChevronLeft, ChevronRight, Undo2, Flame, Trophy, Hourglass, Clock } from "lucide-react";
 import { B2, BD, BD2, T1, T2, T3, GL, CY, PU, GR, RE, AM } from "../../shared/designTokens.js";
@@ -122,6 +123,11 @@ export function PurityTab() {
   const tracked = Object.keys(log).length;
 
   const mark = (status) => {
+    // Both stores, every time. purity_log owns the content — triggers, the
+    // hour, the reflection — and ht_entries owns the completion signal the XP
+    // engine and the streaks read. Writing one without the other is what let
+    // a corrected day keep paying.
+    mirrorPurityToTracker(today, status);
     setLog((prev) => {
       const clean = sanitizePurity(prev);
       let next = setDay(clean, today, status);
@@ -138,7 +144,10 @@ export function PurityTab() {
       toast("Logged. Day 0 is where every streak starts — rest, and note the trigger.", { tone: "info", duration: 5000 });
     }
   };
-  const undoToday = () => setLog((prev) => setDay(sanitizePurity(prev), today, null));
+  const undoToday = () => {
+    mirrorPurityToTracker(today, null);
+    setLog((prev) => setDay(sanitizePurity(prev), today, null));
+  };
   const setRelapseHour = (h) => setLog((prev) => patchDay(sanitizePurity(prev), today, { t: h }));
   const toggleTrigger = (t) => {
     setLog((prev) => {
@@ -153,6 +162,7 @@ export function PurityTab() {
     if (ds > today) return;
     const cur = statusOn(log, ds);
     const next = cur === null ? "pure" : cur === "pure" ? "relapse" : null;
+    mirrorPurityToTracker(ds, next);
     setLog((prev) => setDay(sanitizePurity(prev), ds, next));
   };
 

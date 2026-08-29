@@ -6,7 +6,7 @@
 // re-keyed (non-negotiable 3).
 import { writeStore } from "../../shared/useStorageState.js";
 import { db } from "./localDb.js";
-import { JOURNAL_HABIT_ID } from "./migrateDiscipline.js";
+import { JOURNAL_HABIT_ID, PURITY_HABIT_ID } from "./migrateDiscipline.js";
 
 const PREFIX = "architect:";
 const read = (k, fb) => {
@@ -51,6 +51,40 @@ export function mirrorPurityDay(date, value) {
   else if (value === 1) next[date] = { ...(next[date] || { triggers: [] }), s: "pure" };
   else next[date] = { ...(next[date] || { triggers: [] }), s: "relapse", t: next[date]?.t ?? new Date().getHours() };
   writeStore("purity_log", next);
+}
+
+/**
+ * The other direction: a day marked, corrected or cleared in the Purity
+ * screen, written through to the tracker entry the XP engine actually reads.
+ *
+ * Only mirrorPurityDay existed before, tracker → purity_log. The Purity screen
+ * wrote purity_log alone, and the boot migration that was supposed to catch up
+ * is idempotent on the DATE — so correcting a clean day to a relapse updated
+ * the streak on Home and left XP paying for the claim the user had just
+ * retracted. Deleting a day left the entry behind entirely.
+ *
+ * status "pure" → value 1, "relapse" → 0, null → the entry is removed, because
+ * an unlogged day is an absent row and not a zero.
+ */
+export function mirrorPurityToTracker(date, status) {
+  const rows = read("ht_entries", []);
+  const list = Array.isArray(rows) ? rows : [];
+  const rest = list.filter((e) => !(e && e.habitId === PURITY_HABIT_ID && String(e.date).slice(0, 10) === date));
+  if (status === null || status === undefined) {
+    if (rest.length !== list.length) writeStore("ht_entries", rest);
+    return;
+  }
+  const now = new Date().toISOString();
+  const prev = list.find((e) => e && e.habitId === PURITY_HABIT_ID && String(e.date).slice(0, 10) === date);
+  writeStore("ht_entries", [...rest, {
+    id: prev?.id || `p_${date}`,
+    habitId: PURITY_HABIT_ID,
+    date,
+    value: status === "pure" ? 1 : 0,
+    note: prev?.note ?? null,
+    createdAt: prev?.createdAt || now,
+    updatedAt: now,
+  }]);
 }
 
 /** Trigger tags on a relapse day (§3.4) — user-extensible, multi-select. */

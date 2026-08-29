@@ -40,30 +40,6 @@ const PROFILE = { age: 27, sex: "male", heightCm: 178, weightKg: 78, activity: 1
 // ─────────────────────────────────────────────────────────────────────
 const DEFECTS = [
   {
-    n: 4,
-    title: "A purity day corrected in the Purity screen never reaches XP",
-    where: "migrateDiscipline.js:82 · PurityTab.jsx:141",
-    should: "the mirror is keyed on the value, not just the date, so an edit propagates",
-    demonstrate() {
-      // The user marked D clean, then went back and corrected it to a relapse.
-      // purity_log has the correction; ht_entries still holds the claim.
-      const plan = migrate.planDisciplineMigration({
-        purity: { [D]: { s: "relapse", triggers: [] } },
-        journal: [],
-        htHabits: [{ id: "sys_purity", name: "Purity" }],
-        htEntries: [{ id: "old", habitId: "sys_purity", date: D, value: 1 }],
-        everPinned: ["sys_purity", "sys_journal"],
-      });
-      // The boot migration is idempotent on the DATE, so it sees the day as
-      // already handled and writes nothing. XP keeps paying for the claim.
-      return {
-        present: plan.addEntries.length === 0,
-        detail: `purity_log says relapse, ht_entries says value 1, and the boot migration adds ${plan.addEntries.length} corrections (alreadyPresent: ${plan.report.alreadyPresent})`,
-      };
-    },
-  },
-
-  {
     n: 7,
     title: "Overlap resolution ranks on base price, so multipliers cannot decide the winner",
     where: "collect.js:220",
