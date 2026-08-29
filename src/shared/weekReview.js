@@ -5,6 +5,7 @@
 // wins, and the weakest area to aim next week's single focus at. Pure:
 // every number derives from the same stores the cockpit already reads.
 import { localDateStr } from "./dates.js";
+import { dayScore as scoreOfDay } from "./dayScore.js";
 import { isScheduled, isDone, currentStreak } from "./habitEngine.js";
 import { isRestDay } from "./directive.js";
 import { sanitizeNutrition, dayEntries } from "../modules/athlete/nutrition.js";
@@ -27,16 +28,27 @@ export function buildWeekReview(deps = {}) {
   const mealsOn = (d) => dayEntries(nutrition, d).length > 0;
   const journaledOn = (d) => entries.some((e) => (e.date || "").slice(0, 10) === d);
 
-  // Composite daily score — same four parts the cockpit's Life Score uses.
-  const dayScore = (d) => {
-    const parts = [];
+  // Composite daily score. The definition is shared/dayScore.js and the
+  // Command Centre reads the same one — this used to be a second copy with a
+  // different part count over a different habit set, under a comment claiming
+  // parity that did not hold.
+  //
+  // The habit ratio comes from `deps.habitRatioOn` when the caller supplies it
+  // (the tracker's own summary, which is what the Command Centre uses), and
+  // falls back to this module's scheduling only when it does not. The two
+  // agreeing is the point; the fallback keeps the pure tests standalone.
+  const localRatio = (d) => {
     const sched = active.filter((h) => isScheduled(h, d));
-    if (sched.length) parts.push(sched.filter((h) => isDone(h, d)).length / sched.length);
-    parts.push(workoutOn(d) || isRestDay(d, deps.restDays) ? 1 : 0);
-    parts.push(mealsOn(d) ? 1 : 0);
-    parts.push(journaledOn(d) ? 1 : 0);
-    return parts.length ? (parts.reduce((s, x) => s + x, 0) / parts.length) * 100 : 0;
+    return sched.length ? sched.filter((h) => isDone(h, d)).length / sched.length : null;
   };
+  const ratioOn = typeof deps.habitRatioOn === "function" ? deps.habitRatioOn : localRatio;
+  const dayScore = (d) => scoreOfDay({
+    habitRatio: ratioOn(d),
+    trained: workoutOn(d),
+    rested: isRestDay(d, deps.restDays),
+    ate: mealsOn(d),
+    wrote: journaledOn(d),
+  });
 
   // This week (Mon→today) and last week (full Mon→Sun).
   const monOffset = (new Date(`${ds}T12:00:00`).getDay() + 6) % 7;

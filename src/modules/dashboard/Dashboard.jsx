@@ -6,7 +6,7 @@
 // stripe that reads its state at a glance. The doctrine depth (freedom
 // mission, the two pillars, finance/trading, system health) folds away so
 // the daily view stays a glance; everything is one tap down.
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Target, AlertTriangle, Flame, CalendarClock,
   HeartPulse, ChevronRight, Crosshair,
@@ -30,6 +30,7 @@ import { SLEEP_FLOOR_HOURS } from "../../shared/views.js";
 import { useLinkedMetrics } from "../../shared/useLinkedMetrics.js";
 import { buildNudges } from "../../shared/insights.js";
 import { buildDirective, isRestDay } from "../../shared/directive.js";
+import { dayScore } from "../../shared/dayScore.js";
 import { useDayMarks } from "../../shared/dayMarks.js";
 import { consistencyOpts } from "../../shared/consistencyOpts.js";
 import { freedomMath } from "../../shared/freedom.js";
@@ -249,18 +250,20 @@ export function Dashboard({ onNavigate, onOpenReview, habits: habitsV2, setHabit
   }, [hsum]);
 
   // ── 📈 Life Score: one composite %, and the nine-day trail ──
-  const dayScore = (d) => {
-    const parts = [];
-    const hr = hsum.ratioOn(d);
-    if (hr != null) parts.push(hr);
-    parts.push(mealsOn(d) > 0 ? 1 : 0);
-    parts.push(journaledOn(d) ? 1 : 0);
-    return parts.length ? Math.round((parts.reduce((s, x) => s + x, 0) / parts.length) * 100) : 0;
-  };
-  const lifeScore = useMemo(() => dayScore(ds), [hsum, workouts, nutrition, entriesSafe, ds]);
-  const yestScore = useMemo(() => dayScore(daysAgoStr(1)), [hsum, workouts, nutrition, entriesSafe, ds]);
+  // The definition lives in shared/dayScore.js and the Weekly Review reads the
+  // same one, from the same habit source — they used to be two functions that
+  // disagreed while a comment claimed they matched.
+  const scoreOn = useCallback((d) => dayScore({
+    habitRatio: hsum.ratioOn(d),
+    trained: workoutOn(d),
+    rested: isRestDay(d, restDays),
+    ate: mealsOn(d) > 0,
+    wrote: journaledOn(d),
+  }), [hsum, workouts, nutrition, entriesSafe, restDays]);
+  const lifeScore = useMemo(() => scoreOn(ds), [scoreOn, ds]);
+  const yestScore = useMemo(() => scoreOn(daysAgoStr(1)), [scoreOn, ds]);
   const scoreDelta = lifeScore - yestScore;
-  const spark = useMemo(() => Array.from({ length: 9 }, (_, i) => dayScore(daysAgoStr(8 - i))), [hsum, nutrition, entriesSafe, ds]);
+  const spark = useMemo(() => Array.from({ length: 9 }, (_, i) => scoreOn(daysAgoStr(8 - i))), [scoreOn, ds]);
   const dayAvg = spark.length ? Math.round(spark.reduce((s, x) => s + x, 0) / spark.length) : 0;
   const dayDelta = lifeScore - dayAvg;
 

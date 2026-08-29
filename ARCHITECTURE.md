@@ -85,7 +85,10 @@ were regrouped and reframed, not merged — each keeps its own depth.
 ## Data model
 
 One Supabase table `kv (user_id, key, value jsonb, updated_at)` with RLS
-"own rows only" — every store is a key; no joins, no duplicate tables.
+"own rows only" — every store is a key; no joins, no duplicate tables. The
+DDL, the `(user_id, key)` primary key that `sync.js`'s upsert depends on, and
+the RLS policy are in `supabase/migrations/0002_kv.sql`; that file also
+carries the three queries to verify an existing project actually has them.
 Local mirror is `localStorage` under the same keys, so offline == online
 data model. Device-local config (`architect_sync`, `kahiro_gcal`, API key)
 deliberately lives outside the synced prefix.
@@ -97,8 +100,10 @@ deliberately lives outside the synced prefix.
 - Derive, don't store: streaks, XP, discipline, reports all recompute.
 - Storage keys keep the legacy `architect:` prefix — renaming would orphan
   every user's data.
-- Single-file deploy: no code-splitting/lazy chunks; keep dependencies lean
-  (react, recharts, lucide-react, supabase-js only).
+- Route-level code-splitting: every facet is a lazy chunk, so Home costs
+  react plus the app chunk and nothing else. Keep dependencies lean (react,
+  recharts, lucide-react, supabase-js only) — `docs/AUDIT.md` has the
+  per-chunk weights.
 
 ## CI & tests
 

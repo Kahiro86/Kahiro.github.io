@@ -1,5 +1,5 @@
 // ── The defect register ──────────────────────────────────────────────
-// Five findings from the 2026-08-28 audit, written as code instead of prose.
+// Findings from the 2026-08-28 audit, written as code instead of prose.
 //
 // Each one DEMONSTRATES the defect and asserts it is still present. That is
 // deliberate and it is not a green rubber stamp: a report goes stale the day
@@ -15,7 +15,7 @@
 // When you fix one: this audit fails, you delete the entry, and the real
 // assertion belongs wherever the behaviour lives.
 import { build } from "esbuild";
-import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
+import { writeFileSync, mkdtempSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -23,7 +23,6 @@ import { tmpdir } from "node:os";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..", "..");
 const p = (rel) => join(root, rel).replace(/\\/g, "/");
-const read = (rel) => readFileSync(join(root, rel), "utf8");
 
 writeFileSync(join(here, "_kd.js"), `
 export * as collect from "${p("src/shared/xp/collect.js")}";
@@ -40,33 +39,6 @@ const PROFILE = { age: 27, sex: "male", heightCm: 178, weightKg: 78, activity: 1
 
 // ─────────────────────────────────────────────────────────────────────
 const DEFECTS = [
-  {
-    n: 2,
-    title: "Home's Day Score and the Weekly Review's score are not the same score",
-    where: "Dashboard.jsx:252 · weekReview.js:31",
-    should: "one definition, read by both — or two names, so nobody thinks they match",
-    demonstrate() {
-      const dash = read("src/modules/dashboard/Dashboard.jsx");
-      const week = read("src/shared/weekReview.js");
-      const body = (src) => {
-        const i = src.indexOf("const dayScore = (d) => {");
-        return src.slice(i, src.indexOf("};", i));
-      };
-      const dashParts = (body(dash).match(/parts\.push/g) || []).length;
-      const weekParts = (body(week).match(/parts\.push/g) || []).length;
-      // Dashboard reads hsum (ht_* only); weekReview reads deps.habits, which
-      // App passes as habitsAll — the legacy store merged with the tracker.
-      const dashSource = /hsum\.ratioOn/.test(body(dash)) ? "ht_* only" : "unknown";
-      const weekSource = /isScheduled\(h, d\)/.test(body(week)) ? "legacy + ht_* merged" : "unknown";
-      const claimsParity = /same four parts the cockpit's Life Score uses/.test(week);
-      return {
-        present: dashParts !== weekParts && claimsParity,
-        detail: `Home averages ${dashParts} parts over ${dashSource}; the Weekly Review averages ${weekParts} over ${weekSource}` +
-          (claimsParity ? `, and weekReview.js still comments that they are the same` : ""),
-      };
-    },
-  },
-
   {
     n: 4,
     title: "A purity day corrected in the Purity screen never reaches XP",
@@ -162,7 +134,7 @@ const DEFECTS = [
 let pass = 0, fail = 0; const fails = [];
 const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
 
-console.log("\nFive findings from the 2026-08-28 audit, still open.\n");
+console.log(`\n${DEFECTS.length} findings from the 2026-08-28 audit, still open.\n`);
 for (const d of DEFECTS) {
   let res;
   try { res = d.demonstrate(); }

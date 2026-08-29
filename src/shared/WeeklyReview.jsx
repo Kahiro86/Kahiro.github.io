@@ -4,6 +4,7 @@
 // into the week ahead (seeded from your weakest area). Auto-surfaces on
 // Sundays via the gate below; openable any day from the cockpit.
 import { useMemo, useState, useEffect, useRef } from "react";
+import { habitSummary } from "../modules/habits/summary.js";
 import { X, TrendingUp, TrendingDown, Minus, Target, Check } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, AC, GR, AM, RE } from "./designTokens.js";
 import { useStorageState } from "./useStorageState.js";
@@ -22,6 +23,8 @@ export function WeeklyReview({ habits, onClose }) {
   const [nutrition] = useStorageState("nutrition_log", {});
   const [entries] = useStorageState("journal_entries", []);
   const [purity] = useStorageState("purity_log", {});
+  const [htHabits] = useStorageState("ht_habits", []);
+  const [htEntries] = useStorageState("ht_entries", []);
   const [focusRaw, setFocusRaw] = useStorageState("weekly_focus", {});
   const [checkins] = useStorageState(CHECKIN_KEY, {});
   const [dayMarks] = useDayMarks();
@@ -31,9 +34,14 @@ export function WeeklyReview({ habits, onClose }) {
   const answered = answers.filter((a) => a.answer);
   const A_TONE = { good: GR, mid: AM, bad: RE };
 
+  // The habit ratio comes from the tracker's own summary — the same source
+  // the Command Centre's score reads — so the two cannot disagree about the
+  // same day. `habits` stays for the per-habit hold/slip rows below, which
+  // are a different question and deliberately include the legacy store.
+  const hsum = useMemo(() => habitSummary(htHabits, htEntries, localDateStr()), [htHabits, htEntries]);
   const review = useMemo(
-    () => buildWeekReview({ habits, workouts, nutrition, entries, purity, restDays: dayMarks.rest, ds: localDateStr() }),
-    [habits, workouts, nutrition, entries, purity, dayMarks.rest]
+    () => buildWeekReview({ habits, workouts, nutrition, entries, purity, restDays: dayMarks.rest, ds: localDateStr(), habitRatioOn: hsum.ratioOn }),
+    [habits, workouts, nutrition, entries, purity, dayMarks.rest, hsum]
   );
 
   // The focus applies to the week ahead: on Sunday (a complete week) that's
