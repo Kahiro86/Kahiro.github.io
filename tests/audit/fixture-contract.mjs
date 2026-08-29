@@ -117,19 +117,27 @@ console.log(`\n5. Every scenario survives the app's own sanitizers`);
   if (!scenarios) {
     ok("scenarios.mjs not present yet — Phase 3 activates this check", true);
   } else {
-    const { validateScenario, SCENARIOS } = scenarios;
+    const { validateScenario, SCENARIOS, ADVERSARIAL } = scenarios;
     const names = Object.keys(SCENARIOS);
     ok(`${names.length} scenarios to check`, names.length > 0);
     for (const name of names) {
-      const problems = validateScenario(SCENARIOS[name]());
+      const problems = await validateScenario(SCENARIOS[name]());
       ok(`${name}() round-trips every store${problems.length ? ` — ${problems.join("; ")}` : ""}`,
         problems.length === 0);
     }
-    // A scenario may only seed keys the app reads. Same rule as 1, but for
-    // the fixtures themselves, which rule 1 deliberately does not scan.
-    for (const name of names) {
-      const rogue = Object.keys(SCENARIOS[name]()).filter((k) => !appSet.has(k)).sort();
+    // A scenario may only seed keys the app reads. Same rule as 1, but aimed
+    // at the fixtures themselves, which rule 1 deliberately does not scan.
+    for (const name of [...names, ...Object.keys(ADVERSARIAL || {})]) {
+      const build = SCENARIOS[name] || ADVERSARIAL[name];
+      const rogue = Object.keys(build()).filter((k) => !appSet.has(k)).sort();
       ok(`${name}() seeds only live stores${rogue.length ? ` — ${rogue.join(", ")}` : ""}`, rogue.length === 0);
+    }
+    // And the inverse, which matters just as much: a corruption fixture the
+    // sanitizers happily accept is not corrupt, and the blank-page harness
+    // built on it proves nothing.
+    for (const name of Object.keys(ADVERSARIAL || {})) {
+      const problems = await validateScenario(ADVERSARIAL[name]());
+      ok(`${name}() is genuinely rejected by the sanitizers (${problems.length} stores)`, problems.length > 0);
     }
   }
 }
