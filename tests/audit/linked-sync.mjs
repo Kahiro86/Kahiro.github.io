@@ -3,20 +3,10 @@
 // elsewhere reach the habit. Neither surface can say "unlogged" about a day
 // the other one has.
 import { chromium } from "playwright";
-import { existsSync, readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-import { extname, join, normalize } from "node:path";
+import { serve, CHROMIUM, ago, TODAY } from "../fixtures/harness.mjs";
 
-const DIST = process.env.QA_DIST || fileURLToPath(new URL("../../dist", import.meta.url));
-const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
-const server = createServer((q, r) => { let p = decodeURIComponent((q.url || "/").split("?")[0]); if (p === "/") p = "/index.html"; const fp = normalize(join(DIST, p)); if (!fp.startsWith(DIST) || !existsSync(fp)) { r.statusCode = 404; return r.end("nf"); } r.setHeader("Content-Type", MIME[extname(fp)] || "application/octet-stream"); r.end(readFileSync(fp)); });
-await new Promise((r) => server.listen(0, r));
-const BASE = `http://localhost:${server.address().port}/index.html`;
+const { base: BASE, close: closeServer } = await serve();
 
-const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
-const TODAY = iso(new Date());
 
 const habit = (over) => ({
   type: "boolean", unit: null, target: null, targetDirection: "at_least",
@@ -48,7 +38,7 @@ let pass = 0, fail = 0; const fails = [];
 const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
 
 const errs = [];
-const b = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const b = await chromium.launch({ executablePath: CHROMIUM });
 const page = await b.newPage({ viewport: { width: 1280, height: 1400 } });
 page.on("pageerror", (e) => errs.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
@@ -155,5 +145,5 @@ console.log("");
 console.log("ERRORS:", errs.slice(0, 3).join(" || ") || "none");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Linked sync: ${pass}/${pass + fail} passed`);
-await b.close(); server.close();
+await b.close(); closeServer();
 process.exit(fail ? 1 : 0);

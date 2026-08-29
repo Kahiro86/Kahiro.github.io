@@ -5,17 +5,9 @@
 // handed no rows, a "best day" with no days. A screen that works with three
 // years of history can still be the first thing a new person sees fail.
 import { chromium } from "playwright";
-import { existsSync, readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-import { extname, join, normalize, resolve, dirname } from "node:path";
+import { serve, CHROMIUM } from "../fixtures/harness.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const DIST = process.env.QA_DIST || join(root, "dist");
-const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
-const server = createServer((q, r) => { let p = decodeURIComponent((q.url || "/").split("?")[0]); if (p === "/") p = "/index.html"; const fp = normalize(join(DIST, p)); if (!fp.startsWith(DIST) || !existsSync(fp)) { r.statusCode = 404; return r.end("nf"); } r.setHeader("Content-Type", MIME[extname(fp)] || "application/octet-stream"); r.end(readFileSync(fp)); });
-await new Promise((r) => server.listen(0, r));
-const BASE = `http://localhost:${server.address().port}/index.html`;
+const { base: BASE, close: closeServer } = await serve();
 
 // Only the flags that suppress first-run overlays. Every DATA store is left
 // exactly as a new install finds it: absent.
@@ -41,7 +33,7 @@ const ROUTES = ["dashboard", "habits", "gym", "faith", "calendar", "analytics", 
 let pass = 0, fail = 0; const fails = [];
 const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
 
-const b = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const b = await chromium.launch({ executablePath: CHROMIUM });
 const page = await b.newPage({ viewport: { width: 1400, height: 1600 } });
 
 const seen = [];
@@ -94,5 +86,5 @@ if (seen.length) {
 }
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Empty state: ${pass}/${pass + fail} routes`);
-await b.close(); server.close();
+await b.close(); closeServer();
 process.exit(fail ? 1 : 0);

@@ -12,19 +12,10 @@
 // them can be made to pass alone; the bug this catches is the sixth surface
 // that kept yesterday's number.
 import { chromium } from "playwright";
-import { existsSync, readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-import { extname, join, normalize, resolve, dirname } from "node:path";
+import { CHROMIUM, dayLabel, serve } from "../fixtures/harness.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const DIST = process.env.QA_DIST || join(root, "dist");
-const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
-const server = createServer((q, r) => { let p = decodeURIComponent((q.url || "/").split("?")[0]); if (p === "/") p = "/index.html"; const fp = normalize(join(DIST, p)); if (!fp.startsWith(DIST) || !existsSync(fp)) { r.statusCode = 404; return r.end("nf"); } r.setHeader("Content-Type", MIME[extname(fp)] || "application/octet-stream"); r.end(readFileSync(fp)); });
-await new Promise((r) => server.listen(0, r));
-const BASE = `http://localhost:${server.address().port}/index.html`;
+const { base: BASE, close: closeServer } = await serve();
 
-const DAY_LABEL = new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
 // Oats, because it is dense in exactly the micronutrients the Micros screen
 // ranks — 10.1g fibre, 362mg potassium, 138mg magnesium per 100g — so a
@@ -45,7 +36,7 @@ let pass = 0, fail = 0; const fails = [];
 const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; fails.push(n); console.log(`  ✗ ${n}`); } };
 
 const errs = [];
-const b = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const b = await chromium.launch({ executablePath: CHROMIUM });
 const page = await b.newPage({ viewport: { width: 1280, height: 1500 } });
 page.on("pageerror", (e) => errs.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
@@ -121,7 +112,7 @@ const dash = await flat();
 ok(`Home's Fuel chip shows the day's calories (${KCAL_100})`, new RegExp(`Fuel[\\s\\S]{0,80}${KCAL_100}`, "i").test(dash));
 await page.locator('[data-tour="nav-calendar"]').first().click();
 await page.waitForTimeout(1600); await dismiss();
-await page.getByRole("button", { name: new RegExp(`^${DAY_LABEL}`) }).first().click();
+await page.getByRole("button", { name: new RegExp(`^${dayLabel()}`) }).first().click();
 await page.waitForTimeout(800);
 const cal1 = await flat();
 ok(`the calendar day says ${KCAL_100} kcal logged`, new RegExp(`${KCAL_100} kcal logged`).test(cal1));
@@ -141,7 +132,7 @@ const fib2 = microOf(micros2, "Fiber");
 ok(`fibre doubled with it (${fib1}g → ${fib2}g)`, fib2 !== null && Math.abs(fib2 - fib1 * 2) <= 1);
 await page.locator('[data-tour="nav-calendar"]').first().click();
 await page.waitForTimeout(1600); await dismiss();
-await page.getByRole("button", { name: new RegExp(`^${DAY_LABEL}`) }).first().click();
+await page.getByRole("button", { name: new RegExp(`^${dayLabel()}`) }).first().click();
 await page.waitForTimeout(800);
 ok(`and the calendar followed (${KCAL_100 * 2} kcal logged)`, new RegExp(`${KCAL_100 * 2} kcal logged`).test(await flat()));
 
@@ -159,7 +150,7 @@ const micros3 = await goNutrition("Micros");
 ok("Micros is back to the unlogged state", /nothing logged today yet/i.test(micros3));
 await page.locator('[data-tour="nav-calendar"]').first().click();
 await page.waitForTimeout(1600); await dismiss();
-await page.getByRole("button", { name: new RegExp(`^${DAY_LABEL}`) }).first().click();
+await page.getByRole("button", { name: new RegExp(`^${dayLabel()}`) }).first().click();
 await page.waitForTimeout(800);
 const cal3 = await flat();
 ok("the calendar no longer claims a meal", !/kcal logged/.test(cal3));
@@ -175,5 +166,5 @@ console.log("");
 console.log("ERRORS:", errs.slice(0, 3).join(" || ") || "none");
 if (fail) console.log("FAILURES:\n  " + fails.join("\n  "));
 console.log(`Meal lifecycle: ${pass}/${pass + fail} passed`);
-await b.close(); server.close();
+await b.close(); closeServer();
 process.exit(fail ? 1 : 0);

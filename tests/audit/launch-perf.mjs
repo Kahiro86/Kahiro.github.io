@@ -9,20 +9,12 @@
 // the most history waited the longest to see anything. They now run after
 // paint, and this test is what stops them creeping back in front of it.
 import { chromium } from "playwright";
-import { existsSync, readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-import { extname, join, normalize, resolve, dirname } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { serve, CHROMIUM, ROOT, ago } from "../fixtures/harness.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const DIST = process.env.QA_DIST || join(root, "dist");
-const MIME = { ".html": "text/html", ".js": "application/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
-const server = createServer((q, r) => { let p = decodeURIComponent((q.url || "/").split("?")[0]); if (p === "/") p = "/index.html"; const fp = normalize(join(DIST, p)); if (!fp.startsWith(DIST) || !existsSync(fp)) { r.statusCode = 404; return r.end("nf"); } r.setHeader("Content-Type", MIME[extname(fp)] || "application/octet-stream"); r.end(readFileSync(fp)); });
-await new Promise((r) => server.listen(0, r));
-const BASE = `http://localhost:${server.address().port}/index.html`;
+const { base: BASE, close: closeServer } = await serve();
 
-const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
 
 const purity = {}; for (let i = 0; i < 1100; i++) purity[ago(i)] = { s: i % 9 === 0 ? "relapse" : "pure", triggers: [] };
 const journal = []; for (let i = 0; i < 800; i++) journal.push({ id: `j${i}`, date: ago(i), title: "Day", text: "x".repeat(300), mood: 3, tags: [] });
@@ -48,7 +40,7 @@ const seed = {
   nutrition_log: JSON.stringify(nutrition),
 };
 
-const b = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const b = await chromium.launch({ executablePath: CHROMIUM });
 const runs = [];
 for (let i = 0; i < 3; i++) {
   const page = await b.newPage({ viewport: { width: 1280, height: 1200 } });
@@ -69,7 +61,7 @@ for (let i = 0; i < 3; i++) {
   runs.push({ paint, ...m });
   await page.close();
 }
-await b.close(); server.close();
+await b.close(); closeServer();
 const med = (k) => runs.map((r) => r[k]).filter((v) => v != null).sort((a, b2) => a - b2)[Math.floor(runs.length / 2)];
 const appContent = med("paint");
 const domInteractive = med("domInteractive");
@@ -90,7 +82,7 @@ ok("no run is a catastrophic outlier", runs.every((r) => r.paint < 1600));
 // The structural half of the same rule: assert the boot chain is arranged
 // the way the number depends on, so a regression is caught by reading as
 // well as by timing.
-const main = readFileSync(join(root, "src/main.jsx"), "utf8");
+const main = readFileSync(join(ROOT, "src/main.jsx"), "utf8");
 const renderAt = main.indexOf("createRoot(document.getElementById");
 const deferAt = main.indexOf("afterPaint(() =>");
 ok("the heavy boot passes are scheduled after the render call", deferAt > renderAt && renderAt > 0);

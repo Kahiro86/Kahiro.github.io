@@ -13,7 +13,10 @@ import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import { extname, join, normalize, resolve, dirname } from "node:path";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+/** The repo root. Audits that read source files (not built files) need this:
+ *  DIST can point at an external QA snapshot, so `DIST/../src` is not the
+ *  repo. */
+export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** The built app under test. QA_DIST points at an immutable snapshot so a
  *  rebuild mid-run cannot swap hashed filenames underneath a live page. */
