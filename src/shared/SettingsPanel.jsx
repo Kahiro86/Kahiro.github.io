@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Check, AlertCircle, Download, Upload, ShieldAlert, Cloud, CloudOff, RefreshCw, Share2, Link2, Smartphone, Bell } from "lucide-react";
+import { X, Check, AlertCircle, Download, Upload, ShieldAlert, Cloud, CloudOff, RefreshCw, Share2, Link2, Smartphone, Bell, Stethoscope } from "lucide-react";
 import { B0, B1, BD, T1, T2, T3, GL, CY, PU, GR, RE, AM, AC2 } from "./designTokens.js";
 import { copyAppLink, downloadCleanCopy, shareAppLink, appLink } from "./cleanCopy.js";
 import { useIdentity, DEFAULT_APP_NAME } from "./identity.jsx";
@@ -7,6 +7,7 @@ import { getApiKey, setApiKey, callClaude } from "./anthropic.js";
 import { storage } from "./storage.js";
 import { localDateStr } from "./dates.js";
 import { getSyncStatus, onSyncStatus, testConnection, pull, flush, onAuthChanged } from "./sync.js";
+import { runSyncCheck } from "./syncCheck.js";
 import { getSyncConfig, saveSyncConfig, signUp, signIn, signOut, resetPassword, updatePassword, getSession, onAuth } from "./supabase.js";
 import { getGcalConfig, setGcalConfig, getToken as getGcalToken } from "./gcal.js";
 import { hasLock, setPin, verifyPin, clearLock } from "./lock.js";
@@ -211,6 +212,16 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
     setSyncMsg({ text: "Signed out. Data stays on this device; sync is paused.", tone: T2 });
   };
   const syncNow = async () => { await flush(); await pull(); };
+  // Read-only: it reports what the two sides hold and changes nothing. Kept
+  // here rather than in the console because a phone browser has no console,
+  // and "my phone is behind" is exactly the case that has to be diagnosed on
+  // the phone.
+  const [check, setCheck] = useState(null);
+  const runCheck = async () => {
+    setCheck("Checking…");
+    try { setCheck(await runSyncCheck()); }
+    catch (err) { setCheck(`The check itself failed: ${err.message}`); }
+  };
 
   // ── Google Calendar state ──────────────────────────────────────────
   const [gcalId, setGcalId] = useState(getGcalConfig()?.clientId || "");
@@ -587,6 +598,18 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
               <button onClick={doSignOut} style={btn()}>Sign out</button>
               <button onClick={disconnectSync} style={btn({ flex: "none", borderColor: `${RE}44`, color: RE })}><CloudOff size={13} /></button>
             </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              <button onClick={runCheck} style={btn()}><Stethoscope size={13} />Sync check</button>
+              {check && check !== "Checking…" && (
+                <>
+                  <button onClick={() => navigator.clipboard?.writeText(check)} style={btn()}>Copy report</button>
+                  <button onClick={() => setCheck(null)} style={btn({ flex: "none" })}><X size={13} /></button>
+                </>
+              )}
+            </div>
+            {check && (
+              <pre style={{ fontSize: 10.5, lineHeight: 1.55, color: T2, background: B0, border: `1px solid ${BD}`, borderRadius: 10, padding: 12, margin: "0 0 10px", overflowX: "auto", whiteSpace: "pre", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", userSelect: "text" }}>{check}</pre>
+            )}
           </>
         )}
         {syncMsg && <div style={{ fontSize: 12, color: syncMsg.tone, marginBottom: 8, lineHeight: 1.5 }}>{syncMsg.text}</div>}

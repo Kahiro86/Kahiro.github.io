@@ -1,6 +1,12 @@
-// ── Kahiro sync check ────────────────────────────────────────────────
-// Paste this whole thing into the browser console on BOTH devices, with the
-// app open, and compare the two outputs.
+// ── Kahiro sync check (console version) ──────────────────────────────
+// THIS IS THE FALLBACK. The check is now in the app: Settings → Cloud sync →
+// "Sync check", which is the only version that can be run on a phone, since
+// a phone browser has no console — and "my phone is behind" is exactly the
+// case that has to be diagnosed on the phone.
+//
+// Keep this one for a device running an older build, or for reading the raw
+// numbers next to the app's own answer. Paste the whole thing into the
+// browser console with the app open.
 //
 // It is READ-ONLY. It writes nothing, pushes nothing, and prints no keys,
 // tokens or personal content — only counts, ids and timestamps, so the output
