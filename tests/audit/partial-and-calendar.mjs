@@ -3,7 +3,7 @@
 // checked as a mirror of the underlying records rather than a dataset of
 // its own.
 import { chromium } from "playwright";
-import { CHROMIUM, TODAY, ago, dayLabel, serve } from "../fixtures/harness.mjs";
+import { CHROMIUM, TODAY, ago, dayLabel, dismisser, serve } from "../fixtures/harness.mjs";
 
 const { base: BASE, close: closeServer } = await serve();
 
@@ -47,7 +47,7 @@ await page.addInitScript((s) => {
   for (const [k, v] of Object.entries(s)) localStorage.setItem(`architect:${k}`, v);
   localStorage.setItem("__seeded", "1");
 }, seed);
-const dismiss = async () => { for (const n of ["Skip", "Skip the tour"]) { const x = page.getByRole("button", { name: n, exact: true }); try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { } } };
+const dismiss = dismisser(page);
 const store = (k) => page.evaluate((key) => JSON.parse(localStorage.getItem(`architect:${key}`) || "null"), k);
 
 const logAmount = async (label, value) => {

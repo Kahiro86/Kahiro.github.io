@@ -17,7 +17,10 @@
 //
 // Rule 3 is the one that keeps the other two honest. An allowlist nobody
 // prunes becomes a second kind of drift.
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { appKeys, seededKeys, testOnlyKeys } from "../fixtures/keys.mjs";
+import { ROOT } from "../fixtures/harness.mjs";
 
 // ── Drift, and the deliberate exceptions ─────────────────────────────
 // This list was 22 entries long on 2026-08-29 and is empty now. Keeping it
@@ -128,6 +131,26 @@ console.log(`\n5. Every scenario survives the app's own sanitizers`);
       ok(`${name}() is genuinely rejected by the sanitizers (${problems.length} stores)`, problems.length > 0);
     }
   }
+}
+
+// The harness exists so that a fix to shared browser plumbing lands once. It
+// only delivers that if nobody re-forks it: thirteen audits carried their own
+// copy of the tour-skipper, none knew about the Week in Review gate, and all
+// thirteen went red on a Sunday for a reason that had nothing to do with the
+// app. This is the ratchet that keeps the copies from growing back.
+console.log(`\n6. The browser plumbing is not re-forked per audit`);
+{
+  const dir = join(ROOT, "tests", "audit");
+  const forked = readdirSync(dir)
+    .filter((f) => f.endsWith(".mjs") && f !== "fixture-contract.mjs") // it names the patterns it looks for
+    .filter((f) => /const dismiss = async|createServer\(/.test(readFileSync(join(dir, f), "utf8")))
+    .sort();
+  ok(`no audit re-implements dismiss() or the static server${forked.length ? ` — ${forked.join(", ")}` : ""}`,
+    forked.length === 0);
+
+  const shared = readFileSync(join(ROOT, "tests", "fixtures", "harness.mjs"), "utf8");
+  ok("and the shared one closes the surfaces that open by themselves",
+    /Week in Review/.test(shared) && /getByRole\("dialog"/.test(shared));
 }
 
 console.log("");

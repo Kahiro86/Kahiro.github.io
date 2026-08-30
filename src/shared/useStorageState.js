@@ -29,6 +29,48 @@ function stampMeta(key, iso = new Date().toISOString()) {
   try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch { /* quota */ }
 }
 
+// ── The common ancestor, per key ─────────────────────────────────────
+// The last cloud version this device reconciled with, as `{ ts, ids }`.
+// Without it a merge cannot tell an item the other device ADDED from one this
+// device DELETED — both look like "present on one side only" — so every list
+// merge needs it. Device-local like the meta above: never synced, never
+// exported, and rebuilt from the next successful reconciliation if it is lost.
+//
+// Only the sync engine writes this, and only when the two sides genuinely
+// agree on a version. Stamping it any earlier records an "ancestor" that was
+// never an ancestor, and the next merge reads this device's own unpushed
+// items as deletions.
+const BASE_KEY = "architect_base";
+// A pull touches every key, and this record holds an id list per list-store —
+// tens of thousands of ids for ht_entries. Re-parsing it per key made a pull
+// quadratic in the size of the data, so the parse is memoised against the raw
+// string. Reading the string still costs nothing and still notices another
+// tab's write, so the cache cannot go stale.
+let baseRaw = null, baseParsed = {};
+export function readBase() {
+  let raw;
+  try { raw = localStorage.getItem(BASE_KEY); } catch { return {}; }
+  if (raw === baseRaw) return baseParsed;
+  let out = {};
+  try {
+    for (const [k, v] of Object.entries(JSON.parse(raw) || {})) {
+      // Tolerate the earlier shape (a bare ISO string) so an upgrade in flight
+      // degrades to "no id list" — keep everything — rather than throwing.
+      out[k] = typeof v === "string" ? { ts: v, ids: null } : v;
+    }
+  } catch { out = {}; }
+  baseRaw = raw; baseParsed = out;
+  return out;
+}
+export function stampBase(key, record) {
+  if (!record?.ts) return;
+  const b = { ...readBase(), [key]: record };
+  const raw = JSON.stringify(b);
+  try { localStorage.setItem(BASE_KEY, raw); baseRaw = raw; baseParsed = b; }
+  catch { baseRaw = null; /* quota: the old ancestor stands, which only ever
+                             resurrects an item — it never drops one */ }
+}
+
 // Parse a raw record, rejecting anything that can't stand in for the
 // default: bad JSON, null, or an array/object shape mismatch. Null entries
 // inside array stores are dropped. Returns undefined when unusable.
@@ -58,6 +100,14 @@ function readSync(key, initialValue) {
   }
 }
 
+/** The current value of one store, parsed, without waiting on the async
+ *  adapter. The sync engine's realtime handler is synchronous and needs the
+ *  local side to merge against; going through the adapter would make it
+ *  async and open a window where two rows race each other. */
+export function readStore(key) {
+  try { return JSON.parse(localStorage.getItem(PREFIX + key)); } catch { return undefined; }
+}
+
 // Write-through a plain value from outside React (non-hook modules, e.g. the
 // habits localStorage Db). Same path as a useStorageState setter's commit:
 // disk → meta timestamp → in-tab broadcast → sync push. The broadcast origin is
@@ -76,6 +126,10 @@ export function writeStore(key, value) {
 export function applyExternal(key, raw, updatedAtIso) {
   storage.set(key, raw);
   stampMeta(key, updatedAtIso || new Date().toISOString());
+  // NB: the ancestor is deliberately NOT stamped here. This is also the path
+  // for writing a MERGED value the cloud has not seen, and recording that as
+  // the agreed version is what made the merge eat unpushed items. sync.js
+  // stamps it, once the two sides actually hold the same thing.
   window.dispatchEvent(new CustomEvent("architect:kv", { detail: { key, raw, origin: "remote" } }));
 }
 

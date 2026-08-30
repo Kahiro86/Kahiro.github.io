@@ -1,7 +1,7 @@
 // §5 / §14 Test 3: tick Pray, and watch it arrive everywhere without a
 // second record being written anywhere. One action, many views.
 import { chromium } from "playwright";
-import { serve, CHROMIUM, ago, TODAY } from "../fixtures/harness.mjs";
+import { CHROMIUM, TODAY, ago, dismisser, serve } from "../fixtures/harness.mjs";
 
 const { base: BASE, close: closeServer } = await serve();
 
@@ -30,7 +30,7 @@ const page = await b.newPage({ viewport: { width: 1280, height: 1400 } });
 page.on("pageerror", (e) => errs.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
 await page.addInitScript((s) => { for (const [k, v] of Object.entries(s)) localStorage.setItem(`architect:${k}`, v); }, seed);
-const dismiss = async () => { for (const n of ["Skip", "Skip the tour"]) { const x = page.getByRole("button", { name: n, exact: true }); try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { } } };
+const dismiss = dismisser(page);
 const store = (k) => page.evaluate((key) => JSON.parse(localStorage.getItem(`architect:${key}`) || "null"), k);
 
 await page.goto(BASE, { waitUntil: "networkidle" });

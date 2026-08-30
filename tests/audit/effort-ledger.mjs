@@ -1,7 +1,7 @@
 // Criterion 29 — the XP & effort ledger renders, and each habit's difficulty
 // weight and driving completion rate are inspectable by the user.
 import { chromium } from "playwright";
-import { serve, CHROMIUM, ago } from "../fixtures/harness.mjs";
+import { CHROMIUM, ago, dismisser, serve } from "../fixtures/harness.mjs";
 
 const { base: BASE, close: closeServer } = await serve();
 
@@ -24,7 +24,7 @@ page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
 await page.addInitScript((seed) => { for (const [k, v] of Object.entries(seed)) localStorage.setItem(`architect:${k}`, v); },
   { ht_habits: JSON.stringify(habits), ht_entries: JSON.stringify(entries) });
 await page.goto(BASE, { waitUntil: "networkidle" });
-const dismiss = async () => { for (const n of ["Skip", "Skip the tour"]) { const x = page.getByRole("button", { name: n, exact: true }); try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { } } };
+const dismiss = dismisser(page);
 await dismiss();
 
 let pass = 0, fail = 0; const fails = [];

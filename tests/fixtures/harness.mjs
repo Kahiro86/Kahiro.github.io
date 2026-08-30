@@ -55,6 +55,33 @@ export async function serve(dist = DIST) {
 // uses them — do not have to import playwright to ask what day it is.
 export { iso, ago, TODAY, dayLabel } from "./dates.mjs";
 
+/** The app's first-run and scheduled chrome, cleared off the screen.
+ *
+ * Thirteen audits carried a byte-identical copy of this that knew only about
+ * the tour's Skip button — so on the Sunday the Week in Review gate opened by
+ * itself, a fixed z-100 overlay sat over the nav and every one of them failed
+ * on a click timeout, with nothing about the app actually broken. Passive
+ * surfaces belong in one list, here, because a new one will be added and
+ * nobody will remember thirteen files.
+ */
+export function dismisser(page) {
+  const OPENS_ITSELF = ["Week in Review", "What's new", "Name your system"];
+  return async function dismiss() {
+    for (const n of ["Skip", "Skip the tour"]) {
+      const x = page.getByRole("button", { name: n, exact: true });
+      try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { /* not showing */ }
+    }
+    for (const label of OPENS_ITSELF) {
+      const dialog = page.getByRole("dialog", { name: label });
+      try {
+        if (!(await dialog.count())) continue;
+        await dialog.first().getByRole("button", { name: "Close" }).first().click({ timeout: 1200 });
+        await page.waitForTimeout(200);
+      } catch { /* not showing, or already closing */ }
+    }
+  };
+}
+
 /**
  * Boot a page against the built app.
  *
@@ -94,12 +121,7 @@ export async function harness({
     }, seed);
   }
 
-  const dismiss = async () => {
-    for (const n of ["Skip", "Skip the tour"]) {
-      const x = page.getByRole("button", { name: n, exact: true });
-      try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { /* not showing */ }
-    }
-  };
+  const dismiss = dismisser(page);
 
   /** The page's visible text, whitespace-collapsed. Note that innerText
    *  honours text-transform, so a CSS-uppercased label reads as uppercase —

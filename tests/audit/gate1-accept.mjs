@@ -1,23 +1,14 @@
 // Gate 1 acceptance, criteria 1–4, driven in a browser against the built app.
 import { chromium } from "playwright";
-import { existsSync, readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-import { extname, join, normalize } from "node:path";
-const DIST = fileURLToPath(new URL("../../dist", import.meta.url));
-const MIME={".html":"text/html",".js":"application/javascript",".css":"text/css",".json":"application/json",".png":"image/png",".svg":"image/svg+xml",".ico":"image/x-icon"};
-const server=createServer((q,r)=>{let p=decodeURIComponent((q.url||"/").split("?")[0]);if(p==="/")p="/index.html";const fp=normalize(join(DIST,p));if(!fp.startsWith(DIST)||!existsSync(fp)){r.statusCode=404;return r.end("nf");}r.setHeader("Content-Type",MIME[extname(fp)]||"application/octet-stream");r.end(readFileSync(fp));});
-await new Promise(r=>server.listen(0,r));
-const BASE=`http://localhost:${server.address().port}/index.html`;
-const iso=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-const ago=(n)=>{const d=new Date();d.setDate(d.getDate()-n);return iso(d);};
+import { serve, CHROMIUM, iso, ago } from "../fixtures/harness.mjs";
+const { base: BASE, close: closeServer } = await serve();
 // Pre-merge data: purity days + journal entries, as a returning user would have.
 const purity={}, journal=[];
 for(let i=1;i<=12;i++) purity[ago(i)] = { s: i===5?"relapse":"pure", triggers: i===5?["Stress"]:[] };
 for(const i of [1,3,6]) journal.push({id:`j${i}`,date:ago(i),title:`Entry ${i}`,text:`reflection ${i}`,mood:"steady"});
 
 const errs=[];
-const b=await chromium.launch({executablePath:"/opt/pw-browsers/chromium-1194/chrome-linux/chrome"});
+const b=await chromium.launch({executablePath: CHROMIUM});
 const page=await b.newPage({viewport:{width:1180,height:1100}});
 page.on("pageerror",e=>errs.push(String(e)));
 page.on("console",m=>{if(m.type()==="error")errs.push(m.text());});
@@ -114,5 +105,5 @@ console.log("");
 console.log("ERRORS:", errs.slice(0,5).join(" || ")||"none");
 if(fail) console.log("FAILURES:\n  "+fails.join("\n  "));
 console.log(`Gate 1 acceptance: ${pass}/${pass+fail} passed`);
-await b.close(); server.close();
+await b.close(); closeServer();
 process.exit(fail||errs.length?1:0);

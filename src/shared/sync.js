@@ -6,15 +6,20 @@
 //   · A realtime postgres_changes subscription applies other devices'
 //     writes within a second or two; pulls on start/focus/online/60s are
 //     the belt-and-braces fallback when the socket is down.
-//   · Conflict resolution is last-write-wins per key using the per-key
-//     timestamps kept by useStorageState. A pull never overwrites newer
-//     local data; newer local data is re-pushed instead.
+//   · Conflict resolution is per KEY for config (last-write-wins on the
+//     per-key timestamps useStorageState keeps) and per ITEM for the list
+//     stores named in merge.js. Whole-key LWW on a list is what lost data:
+//     a device that had not pulled since the other one added a habit wrote a
+//     list that never contained it, looked newer, and won. Both directions —
+//     pull and push — now merge against the last version the two sides agreed
+//     on (the ancestor recorded in `architect_base`) before writing anything.
 //   · One row per (user, key) — duplicates are structurally impossible —
 //     and Row Level Security means a user can only ever read/write their
 //     own rows, even with the anon key public in the page source.
 //   · Sync runs only while signed in; signed out, data stays local.
 import { storage } from "./storage.js";
-import { readMeta, applyExternal, registerSyncNotify } from "./useStorageState.js";
+import { readMeta, readBase, readStore, stampBase, applyExternal, registerSyncNotify } from "./useStorageState.js";
+import { mergeStore, ancestorOf } from "./merge.js";
 import { supabase, getSyncConfig, getSession, onAuth, ensureSdk } from "./supabase.js";
 
 export { getSyncConfig } from "./supabase.js";
@@ -97,19 +102,40 @@ export async function flush() {
   } catch { /* proceed optimistically */ }
 
   const rows = [];
+  const pushedAt = new Map(); // key → what we sent, to become the new ancestor
   const handled = new Set(); // keys we can clear from the dirty queue
   for (const key of dirty) {
     const localTs = meta[key] || "";
     const rt = remote[key];
-    if (rt && (rt.updated_at || "") > localTs) {
-      applyExternal(key, JSON.stringify(rt.value), rt.updated_at); // cloud is newer — keep it
-      handled.add(key);
-      continue;
-    }
     try {
       const raw = await storage.get(key);
       if (raw == null) { handled.add(key); continue; } // deleted locally: nothing to push
-      rows.push({ user_id: session.user.id, key, value: JSON.parse(raw), updated_at: localTs || new Date().toISOString() });
+      let value = JSON.parse(raw);
+      let stamp = localTs || new Date().toISOString();
+
+      if (rt) {
+        // The old code compared this device's write time against the cloud's
+        // and pushed whenever it looked newer. That is the bug: a device that
+        // has not pulled since the other one added something writes a list
+        // that never contained it, looks newer, and wins. Merge first, then
+        // push the merge — so being "newer" can no longer erase what the
+        // other device did.
+        const base = readBase()[key] || null;
+        const merged = mergeStore(key, value, rt.value, localTs, rt.updated_at, base);
+        if (merged.changed) {
+          stamp = new Date().toISOString();
+          value = merged.value;
+          applyExternal(key, JSON.stringify(value), stamp);
+        } else if (merged.strategy === "lww" && (Date.parse(rt.updated_at) || 0) > (Date.parse(localTs) || 0)) {
+          applyExternal(key, JSON.stringify(rt.value), rt.updated_at); // cloud is newer — keep it
+          stampBase(key, ancestorOf(rt.value, rt.updated_at));
+          handled.add(key);
+          continue;
+        }
+      }
+
+      rows.push({ user_id: session.user.id, key, value, updated_at: stamp });
+      pushedAt.set(key, { ts: stamp, value });
       handled.add(key);
     } catch { /* unparseable record: keep local, leave dirty for a later retry */ }
   }
@@ -118,6 +144,10 @@ export async function flush() {
       const { error } = await supabase().from("kv").upsert(rows, { onConflict: "user_id,key" });
       if (error) throw new Error(error.message);
     }
+    // A successful push makes what we sent the version both sides agree on —
+    // and this is the only moment that is reliably true, which is why the
+    // ancestor is recorded here and not when a merged value is written.
+    for (const [k, { ts, value }] of pushedAt) stampBase(k, ancestorOf(value, ts));
     // Clear only the keys we actually resolved; anything that errored stays queued.
     const remaining = getDirty();
     for (const k of handled) remaining.delete(k);
@@ -158,13 +188,37 @@ export async function pull() {
 }
 
 function applyRow(row, meta = readMeta()) {
-  const localTs = meta[row.key] || "";
+  const key = row.key;
+  const localTs = meta[key] || "";
   const remoteTs = row.updated_at || "";
-  if (remoteTs > localTs) {
-    applyExternal(row.key, JSON.stringify(row.value), remoteTs);
-  } else if (localTs > remoteTs) {
-    markDirty(row.key); // local is newer — push it back
+  // Parsed, not string-compared: a local stamp ends in "Z" and Postgres
+  // returns an offset, so `"…+00:00" > "…Z"` is false for the same instant.
+  const lt = Date.parse(localTs) || 0;
+  const rt = Date.parse(remoteTs) || 0;
+
+  // For a list store this resolves item by item, so an addition on either
+  // device survives the other's write instead of being replaced wholesale.
+  // For everything else it is exactly the old last-write-wins.
+  const base = readBase()[key] || null;
+  const merged = mergeStore(key, readStore(key), row.value, localTs, remoteTs, base);
+
+  if (merged.changed) {
+    // The merged value is newer than both sides, so it is stamped now rather
+    // than with the remote's time — otherwise the next pull would think the
+    // cloud were still ahead and merge in a loop.
+    applyExternal(key, JSON.stringify(merged.value), rt > lt ? remoteTs : new Date().toISOString());
   }
+  // Only once this device holds exactly what the cloud holds is there a
+  // version to call the ancestor. If the merge kept items the cloud has not
+  // seen, the old ancestor stands until flush() gets them up there — recording
+  // the cloud's version here would mark this device's own unpushed additions
+  // as things the cloud had "deleted", and the next merge would drop them.
+  if (merged.matchesRemote) stampBase(key, ancestorOf(row.value, remoteTs));
+
+  // Anything the cloud does not yet have has to go back up. That is true when
+  // this device is simply ahead, and also after a merge that kept items the
+  // cloud was missing.
+  if (lt > rt || !merged.matchesRemote) markDirty(key);
 }
 
 // ── Realtime: other devices' writes land within a second or two ──────

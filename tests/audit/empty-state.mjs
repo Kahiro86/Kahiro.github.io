@@ -5,7 +5,7 @@
 // handed no rows, a "best day" with no days. A screen that works with three
 // years of history can still be the first thing a new person sees fail.
 import { chromium } from "playwright";
-import { serve, CHROMIUM } from "../fixtures/harness.mjs";
+import { CHROMIUM, dismisser, serve } from "../fixtures/harness.mjs";
 
 const { base: BASE, close: closeServer } = await serve();
 
@@ -44,7 +44,7 @@ page.on("console", (m) => {
 });
 
 await page.addInitScript((s) => { for (const [k, v] of Object.entries(s)) localStorage.setItem(`architect:${k}`, v); }, seed);
-const dismiss = async () => { for (const n of ["Skip", "Skip the tour"]) { const x = page.getByRole("button", { name: n, exact: true }); try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { } } };
+const dismiss = dismisser(page);
 
 await page.goto(BASE, { waitUntil: "networkidle" });
 await dismiss(); await page.waitForTimeout(1800); await dismiss(); await page.waitForTimeout(600);

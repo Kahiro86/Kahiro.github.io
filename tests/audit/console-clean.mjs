@@ -10,7 +10,7 @@
 // them stop drifting apart, and how the gym-session bug in the copy they
 // each carried came to light.
 import { chromium } from "playwright";
-import { serve, CHROMIUM, tally } from "../fixtures/harness.mjs";
+import { CHROMIUM, dismisser, serve, tally } from "../fixtures/harness.mjs";
 import { richWorld } from "../fixtures/scenarios.mjs";
 
 const { base: BASE, close: closeServer } = await serve();
@@ -45,7 +45,7 @@ page.on("console", (m) => {
 await page.addInitScript((s) => {
   for (const [k, v] of Object.entries(s)) localStorage.setItem(`architect:${k}`, JSON.stringify(v));
 }, seed);
-const dismiss = async () => { for (const n of ["Skip", "Skip the tour"]) { const x = page.getByRole("button", { name: n, exact: true }); try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { } } };
+const dismiss = dismisser(page);
 
 await page.goto(BASE, { waitUntil: "networkidle" });
 await dismiss(); await page.waitForTimeout(1800); await dismiss(); await page.waitForTimeout(600);

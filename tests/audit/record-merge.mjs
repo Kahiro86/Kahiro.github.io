@@ -1,7 +1,7 @@
 // The Record — Analytics + Journey merged, Mind folded in as Library.
 // Same rule as Gates 1 and 2: fully absorbed, no orphan route, nothing lost.
 import { chromium } from "playwright";
-import { serve, CHROMIUM, ago } from "../fixtures/harness.mjs";
+import { CHROMIUM, ago, dismisser, serve } from "../fixtures/harness.mjs";
 
 const { base: BASE, close: closeServer } = await serve();
 
@@ -22,7 +22,7 @@ page.on("pageerror", (e) => errs.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
 await page.addInitScript((s) => { for (const [k, v] of Object.entries(s)) localStorage.setItem(`architect:${k}`, v); }, seed);
 await page.goto(BASE, { waitUntil: "networkidle" });
-const dismiss = async () => { for (const n of ["Skip", "Skip the tour"]) { const x = page.getByRole("button", { name: n, exact: true }); try { if (await x.count()) { await x.first().click({ timeout: 1200 }); await page.waitForTimeout(150); } } catch { } } };
+const dismiss = dismisser(page);
 await dismiss();
 
 let pass = 0, fail = 0; const fails = [];
