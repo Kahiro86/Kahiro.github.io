@@ -2,9 +2,9 @@
 // A trading journal. Log the trade, grade it honestly, and let the
 // dashboard tell you whether the edge is real — and refuse to tell you
 // anything it does not have the trades to support.
-import { useMemo, useState } from "react";
-import { BookOpen, BarChart3, Clock, ClipboardCheck } from "lucide-react";
-import { B0, BD, T1, T2, T3, AC2, SANS, MONO } from "./ui/tokens.js";
+import { useEffect, useMemo, useState } from "react";
+import { BookOpen, BarChart3, Clock, ClipboardCheck, Cloud } from "lucide-react";
+import { B0, BD, T1, T3, AC2, GR, AM, RE, SANS, MONO } from "./ui/tokens.js";
 import { ModuleTabs } from "./ui/ModuleTabs.jsx";
 import { ErrorBoundary } from "./ui/ErrorBoundary.jsx";
 import { useStore } from "./ui/useStore.js";
@@ -16,6 +16,8 @@ import { DashboardTab } from "./screens/DashboardTab.jsx";
 import { PhasesTab } from "./screens/PhasesTab.jsx";
 import { ReviewTab } from "./screens/ReviewTab.jsx";
 import { SeedCard } from "./screens/SeedCard.jsx";
+import { SyncPanel } from "./screens/SyncPanel.jsx";
+import { getSyncStatus, onSyncStatus } from "./sync/sync.js";
 
 const TABS = [
   { id: "journal", l: "Journal", i: BookOpen },
@@ -24,8 +26,13 @@ const TABS = [
   { id: "reviews", l: "Reviews", i: ClipboardCheck },
 ];
 
+const DOT = { live: GR, idle: GR, syncing: AM, auth: AM, offline: AM, error: RE, off: T3 };
+
 export function App() {
   const [tab, setTab] = useState("journal");
+  const [syncOpen, setSyncOpen] = useState(false);
+  const [sync, setSync] = useState(getSyncStatus());
+  useEffect(() => onSyncStatus(setSync), []);
   const [rawTrades, setTrades] = useStore("trades", []);
   const [rawAccounts, setAccounts] = useStore("accounts", []);
   const [rawPhases, setPhases] = useStore("phases", null);
@@ -62,6 +69,22 @@ export function App() {
         <span style={{ marginLeft: "auto", fontSize: 11, color: T3, fontFamily: MONO }}>
           {trades.length} trade{trades.length === 1 ? "" : "s"}
         </span>
+        <button
+          onClick={() => setSyncOpen(true)}
+          title={`Sync and backup — ${sync.status}`}
+          aria-label="Sync and backup"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 9px",
+            background: "transparent", border: `1px solid ${BD}`, borderRadius: 6,
+            color: T3, cursor: "pointer", font: `600 11px ${SANS}`,
+          }}
+        >
+          <Cloud size={13} />
+          <span style={{
+            width: 7, height: 7, borderRadius: 7,
+            background: DOT[sync.status] || T3,
+          }} />
+        </button>
       </header>
 
       <ModuleTabs
@@ -94,6 +117,8 @@ export function App() {
           )}
         </ErrorBoundary>
       </div>
+
+      {syncOpen && <SyncPanel onClose={() => setSyncOpen(false)} />}
     </div>
   );
 }

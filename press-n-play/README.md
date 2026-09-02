@@ -12,8 +12,9 @@ A trading journal. Log the trade, grade it honestly, and let the dashboard
 tell you whether the edge is real — and refuse to tell you anything it
 does not have the trades to support.
 
-Local-first: no server, no account, no sign-in. Everything lives in the
-browser and never leaves it.
+Local-first by default: no server, no account, no sign-in. Everything lives
+in the browser and never leaves it. Optional Supabase sync is available if
+you want the same journal on your phone and your laptop — see below.
 
 ## Running it
 
@@ -67,15 +68,18 @@ Three layers, and the boundary is the point.
 
 ```
 src/engine/    pure functions. no React, no storage, no DOM.
+src/sync/      optional cloud sync. merge.js is pure and tested too.
 src/ui/        primitives, tokens, the chart wrapper, the storage hook.
-src/screens/   four screens. they read the engine and render.
+src/screens/   four screens plus the sync panel. they read and render.
 ```
 
-`src/engine/` is where every number is decided, which is why it can be
-tested by `node tests/engine.test.mjs` with no browser at all. Every
-expected value in that file is worked out by hand in the comment beside
-it — a test whose expectation came from running the code proves only that
-the code is deterministic.
+`src/engine/` is where every number is decided, which is why `npm test`
+proves it with no browser at all. Every expected value in
+`tests/engine.test.mjs` is worked out by hand in the comment beside it — a
+test whose expectation came from running the code proves only that the
+code is deterministic. `tests/merge.test.mjs` does the same for conflict
+resolution; both were mutation-tested, so a suite that would still pass
+with the logic broken was rewritten rather than trusted.
 
 | File | |
 |---|---|
@@ -86,13 +90,15 @@ the code is deterministic.
 | `phases.js` | The phase model, auto-assignment, daylight saving. |
 | `charts.js` | All 39 charts, as data rather than as components. |
 | `review.js` | A period's statistics, computed from its trades. |
+| `../sync/merge.js` | Conflict resolution: union collections by id, honour deletions. |
 
 ## Data
 
-Held in `localStorage` under the `pnp:` prefix. That is durable enough for
-daily use and evictable in principle, so **export a backup** from time to
-time — `exportAll()` in `src/ui/useStore.js` produces one file with
-everything in it.
+Held in `localStorage` under the `pnp:` prefix, with a per-key edit time
+kept alongside it in `pnp_meta` so sync can tell which side of a conflict
+is actually newer. That is durable enough for daily use and evictable in
+principle, so **export a backup** from time to time — the button is in the
+Sync & backup panel, and it writes one file with everything in it.
 
 Nothing derived is ever stored. Risk, R, streaks, drawdown and every
 review statistic are recomputed from the trades each time, so an edited
@@ -109,6 +115,47 @@ price column because filters cannot target a formula, and session phases
 were text you edited twice a year for daylight saving.
 
 The intent was worth keeping. The scaffolding was not.
+
+## Syncing across devices
+
+Off until you turn it on, and the app is complete without it. To switch it
+on you need a Supabase project of your own — the free tier is far more than
+this app will ever use.
+
+1. Create a project at supabase.com.
+2. In its SQL editor, run the SQL shown under **Sync & backup → The SQL to
+   run first** in the app (the cloud button in the header). It creates one
+   table and the policy that confines each user to their own rows.
+3. Paste the project URL and the *anon public* key from Settings → API into
+   the same panel, then create an account and sign in.
+
+### What it does and does not guarantee
+
+Local storage stays the source of truth. Writes are queued, batched and
+pushed; other devices pick them up over a realtime channel in a second or
+two, with polling as the fallback. Everything keeps working offline and
+reconciles on reconnect.
+
+Conflicts do **not** resolve by one device's copy replacing the other's.
+Collections merge per record, keyed by id: log a trade on your phone and
+another on your laptop while both are offline and you end up with both,
+not whichever synced last. Deletes leave a tombstone so a removed trade
+does not reappear, and tombstones expire after 90 days — a device offline
+longer than that, still holding a trade deleted elsewhere, will bring it
+back. `tests/merge.test.mjs` states all of this as assertions.
+
+Settings-shaped keys (`gates`, `seeded`) have no records to merge, so they
+stay whole-value last-write-wins by edit time.
+
+The anon key sits in your browser, not in this repository, and is safe to
+paste: it grants nothing without a signed-in session. Row Level Security is
+what protects the data.
+
+### Sharing a Supabase project with another app
+
+The table is `pnp_kv`, deliberately separate from the `kv` table the Kahiro
+OS app syncs to. One project and one login can serve both; separate tables
+keep each app's keys out of the other's storage.
 
 ## Moving this to its own repository
 
