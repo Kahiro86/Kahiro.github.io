@@ -151,6 +151,18 @@ console.log("\n── periods & aggregation ──");
     tradesInPeriod(feb, "monthly", "2026-02").map((t) => t.id), ["p1", "p2"]);
 }
 
+console.log("\n── blank vs zero ──");
+{
+  // A blank numeric must never be read as a real 0 — it would make an
+  // unrated trade look rated and drag every average towards zero.
+  eq("blank strings are skipped by an average",
+    aggregate([{ x: 8 }, { x: "" }, { x: 6 }], "x", "avg"), 7);
+  eq("blank strings are skipped by a sum",
+    aggregate([{ x: 8 }, { x: "" }], "x", "sum"), 8);
+  eq("a genuine 0 still counts",
+    aggregate([{ x: 8 }, { x: 0 }], "x", "avg"), 4);
+}
+
 console.log("\n── session phases ──");
 {
   const ph = sanitizePhases(seedPhases());

@@ -11,11 +11,13 @@ import { BarChart3, Clock, ClipboardCheck } from "lucide-react";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { Hydrating } from "../../shared/ui.jsx";
-import { sanitizeTrades } from "../trading/intel/tradingIntel.js";
+import { sanitizeTrades, sanitizeAccounts } from "../trading/intel/tradingIntel.js";
 import { sanitizePhases, seedPhases } from "./engine/phases.js";
 import { DashboardTab } from "./DashboardTab.jsx";
 import { PhasesTab } from "./PhasesTab.jsx";
 import { ReviewTab } from "./ReviewTab.jsx";
+import { SeedCard } from "./SeedCard.jsx";
+import { SEED_FLAG } from "./engine/seed.js";
 
 const TABS = [
   { id: "dashboard", l: "Dashboard", i: BarChart3 },
@@ -31,13 +33,25 @@ export function PnpModule() {
   // The same review store Trading OS writes, so a review written here
   // is the one the XP engine and the Firm doctrine already read.
   const [rawReviews, setReviews] = useStorageState("ict_reviews", []);
+  const [rawAccounts, setAccounts] = useStorageState("ti_accounts", []);
+  const [seeded, setSeeded] = useStorageState(SEED_FLAG, false);
+  const [, setTrades] = useStorageState("ti_trades", []);
 
   const trades = useMemo(() => sanitizeTrades(rawTrades), [rawTrades]);
   const phases = useMemo(
     () => sanitizePhases(rawPhases == null ? seedPhases() : rawPhases),
     [rawPhases],
   );
+  const accounts = useMemo(() => sanitizeAccounts(rawAccounts), [rawAccounts]);
   const accountId = settings?.activeAccountId || "";
+
+  // Appends only. An account already named the same, or a trade already
+  // carrying the seeded id, is skipped by buildSeed before we get here.
+  const applySeed = (plan) => {
+    if (plan.accounts.length) setAccounts((prev) => [...(Array.isArray(prev) ? prev : []), ...plan.accounts]);
+    if (plan.trades.length) setTrades((prev) => [...plan.trades, ...(Array.isArray(prev) ? prev : [])]);
+    setSeeded(true);
+  };
 
   if (!tradesLoaded || !phasesLoaded) return <Hydrating />;
 
@@ -52,7 +66,15 @@ export function PnpModule() {
       />
       <div style={{ flex: 1, overflowY: "auto", padding: "18px 24px 40px" }}>
         {tab === "dashboard" && (
-          <DashboardTab trades={trades} phases={phases} accountId={accountId} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {!seeded && (
+              <SeedCard
+                accounts={accounts} trades={trades}
+                onSeed={applySeed} onDismiss={() => setSeeded(true)}
+              />
+            )}
+            <DashboardTab trades={trades} phases={phases} accountId={accountId} />
+          </div>
         )}
         {tab === "phases" && (
           <PhasesTab phases={phases} setPhases={setPhases} trades={trades} />

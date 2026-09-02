@@ -16,7 +16,7 @@ import { AK, Lbl, Seg, NumInp, AutoCalc } from "./fields.jsx";
 import {
   uid, sanitizeTrades, sanitizeAccounts, sanitizeInstruments, sanitizeSessions,
   sanitizeConditions, sanitizeConfluences, sanitizeStrategies, sanitizeMistakes,
-  sanitizeEmotions, sanitizeReflectionQs, sanitizeReviewFields, sanitizePsychFields, sanitizeLessons, sanitizeReminders, sanitizePresets, newPreset, accountMetrics, fmtMoney, tiToLegacyTrades, netPnl,
+  sanitizeEmotions, sanitizeReflectionQs, sanitizeReviewFields, sanitizePsychFields, sanitizeLessons, sanitizeReminders, sanitizePresets, newPreset, accountMetrics, fmtMoney, tiToLegacyTrades, netPnl, tradeResult,
 } from "./tradingIntel.js";
 import { ReviewsTab } from "../ReviewsTab.jsx";
 import { pendingReviews, sanitizeReviews } from "../reviews.js";
@@ -134,8 +134,13 @@ export function TradingIntelModule() {
   const todayDs = localDateStr();
   const sleepMap = useMemo(() => sanitizeSleep(rawSleep), [rawSleep]);
   const sleepHours = sleepMap[todayDs];
-  const gate = useMemo(() => evalGates({ trades, cfg: rawGates, sleepHours, checklistDone, netPnlOf: netPnl, now: nowTick, ds: todayDs }),
-    [trades, rawGates, sleepHours, checklistDone, nowTick, todayDs]);
+  // isLoss is the R-aware verdict, not net < 0: a trade inside ±0.05R is a
+  // breakeven everywhere else in the app, and three scratches in a row are
+  // not the tilt signal the stand-down rule exists to catch.
+  const gate = useMemo(() => evalGates({
+    trades, cfg: rawGates, sleepHours, checklistDone, netPnlOf: netPnl,
+    isLoss: (t) => tradeResult(t) === "Loss", now: nowTick, ds: todayDs,
+  }), [trades, rawGates, sleepHours, checklistDone, nowTick, todayDs]);
   // Tick only while a cooldown is counting down (keeps the minute display live
   // without a permanent 1s render loop).
   useEffect(() => {

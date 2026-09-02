@@ -158,8 +158,11 @@ export const sanitizePsychFields = (raw) => { const a = arrStr(raw, 40); return 
 // Constrain a value to a known option list. Anything else becomes "",
 // so a renamed option cannot quietly create a chart bucket of one.
 const pick = (v, options) => (options.includes(v) ? v : "");
+// Blank when absent, NOT 0. A 0 reads as "rated zero" to anything that
+// asks whether the field is populated, which would light up a chart from
+// a trade nobody has rated.
 const clampInt = (v, lo, hi) =>
-  (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, Math.round(+v))) : 0);
+  (v == null || v === "" || !Number.isFinite(+v) ? "" : Math.max(lo, Math.min(hi, Math.round(+v))));
 
 export function sanitizeTrades(raw) {
   if (!Array.isArray(raw)) return [];

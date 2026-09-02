@@ -86,7 +86,13 @@ const AGGS = {
  * because every loser contributed null and was never counted.
  */
 export function aggregate(rows, field, agg = "sum") {
-  const xs = rows.map((r) => r[field]).filter((v) => v != null && Number.isFinite(+v)).map(Number);
+  // `v !== ""` matters: `+"" === 0` and `Number.isFinite(0)` is true, so a
+  // blank field would otherwise be averaged in as a real zero and drag
+  // every mean towards it.
+  const xs = rows
+    .map((r) => r[field])
+    .filter((v) => v != null && v !== "" && Number.isFinite(+v))
+    .map(Number);
   return (AGGS[agg] || AGGS.sum)(xs);
 }
 

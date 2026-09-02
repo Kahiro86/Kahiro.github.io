@@ -79,12 +79,13 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
   const gcfg = sanitizeGates(rawGatesCfg);
   const [gCap, setGCap] = useState(String(gcfg.dailyCap));
   const [gCool, setGCool] = useState(String(gcfg.cooldownMin));
+  const [gRun, setGRun] = useState(String(gcfg.maxConsecutiveLosses));
   const [gSleep, setGSleep] = useState(String(gcfg.sleepThreshold));
   const [gHalf, setGHalf] = useState(String(gcfg.halfSizeThreshold));
   const [gChecklist, setGChecklist] = useState(gcfg.checklist.join("\n"));
   const [gateMsg, setGateMsg] = useState(null);
   const saveGateThresholds = () => {
-    const next = proposeGateChange(gcfg, { dailyCap: +gCap, cooldownMin: +gCool, sleepThreshold: +gSleep, halfSizeThreshold: +gHalf });
+    const next = proposeGateChange(gcfg, { dailyCap: +gCap, cooldownMin: +gCool, maxConsecutiveLosses: +gRun, sleepThreshold: +gSleep, halfSizeThreshold: +gHalf });
     setGatesCfg(next); setGateMsg({ text: `Thresholds staged — they take effect ${next.from} (never mid-session).`, tone: GR });
   };
   const saveChecklist = () => {
@@ -439,11 +440,12 @@ export function SettingsPanel({ onClose, onStartTour, onOpenHelp, helpMode, setH
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
           <label style={{ fontSize: 10, color: T3 }}>Daily cap<br /><input value={gCap} onChange={(e) => setGCap(e.target.value)} type="number" inputMode="numeric" style={{ ...idInput, width: 78, marginTop: 4 }} /></label>
           <label style={{ fontSize: 10, color: T3 }}>Cooldown (min)<br /><input value={gCool} onChange={(e) => setGCool(e.target.value)} type="number" inputMode="numeric" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
+          <label style={{ fontSize: 10, color: T3 }} title="Losses in a row before logging is blocked. 0 turns the rule off.">Loss run<br /><input value={gRun} onChange={(e) => setGRun(e.target.value)} type="number" inputMode="numeric" style={{ ...idInput, width: 78, marginTop: 4 }} /></label>
           <label style={{ fontSize: 10, color: T3 }}>Sleep floor (h)<br /><input value={gSleep} onChange={(e) => setGSleep(e.target.value)} type="number" inputMode="decimal" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
           <label style={{ fontSize: 10, color: T3 }}>Half-size (h)<br /><input value={gHalf} onChange={(e) => setGHalf(e.target.value)} type="number" inputMode="decimal" style={{ ...idInput, width: 90, marginTop: 4 }} /></label>
         </div>
         <button onClick={saveGateThresholds} style={btn({ flex: "none", marginBottom: 12 })}>Save thresholds (apply tomorrow)</button>
-        {gcfg.pending && <div style={{ fontSize: 11, color: AM, marginBottom: 10 }}>Staged: cap {gcfg.pending.dailyCap} · cooldown {gcfg.pending.cooldownMin}m · sleep {gcfg.pending.sleepThreshold}/{gcfg.pending.halfSizeThreshold}h from {gcfg.pending.from}.</div>}
+        {gcfg.pending && <div style={{ fontSize: 11, color: AM, marginBottom: 10 }}>Staged: cap {gcfg.pending.dailyCap} · cooldown {gcfg.pending.cooldownMin}m · loss run {gcfg.pending.maxConsecutiveLosses} · sleep {gcfg.pending.sleepThreshold}/{gcfg.pending.halfSizeThreshold}h from {gcfg.pending.from}.</div>}
         <label style={{ fontSize: 10, color: T3, letterSpacing: 1, textTransform: "uppercase", display: "block", marginBottom: 5 }}>Pre-trade checklist (one rule per line)</label>
         <textarea value={gChecklist} onChange={(e) => setGChecklist(e.target.value)} rows={6} style={{ ...idInput, width: "100%", resize: "vertical", lineHeight: 1.6, fontSize: 12.5, marginBottom: 8 }} />
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
