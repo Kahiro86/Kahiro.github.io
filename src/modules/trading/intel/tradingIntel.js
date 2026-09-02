@@ -161,8 +161,15 @@ const pick = (v, options) => (options.includes(v) ? v : "");
 // Blank when absent, NOT 0. A 0 reads as "rated zero" to anything that
 // asks whether the field is populated, which would light up a chart from
 // a trade nobody has rated.
-const clampInt = (v, lo, hi) =>
-  (v == null || v === "" || !Number.isFinite(+v) ? "" : Math.max(lo, Math.min(hi, Math.round(+v))));
+const clampInt = (v, lo, hi) => {
+  if (v == null || v === "" || !Number.isFinite(+v)) return "";
+  const n = Math.max(lo, Math.min(hi, Math.round(+v)));
+  // 0 is not a rating on a 1-10 scale, it is the slider at rest. The
+  // Rating control already renders it as "—"; storing it as blank keeps
+  // "has this been rated?" answerable, which is what decides whether the
+  // execution-quality chart has anything to show.
+  return n === 0 ? "" : n;
+};
 
 export function sanitizeTrades(raw) {
   if (!Array.isArray(raw)) return [];
