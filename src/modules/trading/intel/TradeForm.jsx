@@ -9,10 +9,6 @@ import { MoneyInp } from "../../../shared/ui.jsx";
 import { DatePicker } from "../../../shared/DatePicker.jsx";
 import { localDateStr } from "../../../shared/dates.js";
 import { AK, Lbl, Section, Seg, ChipMulti, Rating, TextArea, NumInp, AutoCalc } from "./fields.jsx";
-// The analytics vocabulary, imported rather than restated so a value
-// logged here and a value a chart groups by cannot drift apart.
-import * as PNP from "../../pnp/engine/constants.js";
-const PNP_AK = "#F0B429";
 import { PSYCH_BEFORE, REVIEW_FIELDS, DEFAULT_TIMEFRAMES, MEDIA_CATEGORIES } from "./defaults.js";
 import {
   uid, sanitizeTrades, tradeInfo, detectSessions, recommendLessons, applicableReminders,
@@ -262,56 +258,6 @@ export function TradeForm({ initial, libs, accounts, activeId, reflectionQs, rev
             <AutoCalc label="Actual RR" value={f.exit !== "" && actualRR(preview) ? `${actualRR(preview)}R` : "—"} />
             <AutoCalc label="Result" value={result || "Open"} color={result ? RESULT_COLORS[result] : T3} />
           </div>
-        </Section>
-
-        {/* ── PRESS 'N' PLAY ───────────────────────────────────────────
-            The fields the analytics dashboard reads. Closed by default:
-            they are review fields, filled in after the trade is done, not
-            things to be typing while a position is open. Every one of
-            them is optional — the charts that read them stay dark and say
-            so rather than inventing a value. */}
-        <Section title="Press 'n' Play" sub="Grading, discipline and forensics — fills the analytics dashboard" defaultOpen={false} accent={PNP_AK}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10 }}>
-            <div><Lbl hint="A+ should outperform B. If it does not, the grading is wrong.">Setup grade</Lbl>
-              <Seg options={PNP.SETUP_GRADES} value={f.setupGrade} onChange={(v) => set("setupGrade", v)} /></div>
-            <div><Lbl>Management style</Lbl>
-              <Seg options={PNP.MANAGEMENT_STYLES} value={f.managementStyle} onChange={(v) => set("managementStyle", v)} /></div>
-          </div>
-          <div><Lbl hint="How well you executed the plan, not how the trade went">Execution rating</Lbl>
-            <Rating value={f.executionRating} onChange={(v) => set("executionRating", v)} /></div>
-          <div><Lbl hint="Ticked ÷ 13 is your rule adherence — chart 7 reads this">Rule checklist</Lbl>
-            <ChipMulti options={PNP.RULE_CHECKLIST} selected={f.ruleChecklist || []} onChange={(v) => set("ruleChecklist", v)} allowAdd={false} /></div>
-          <div><Lbl hint="The state you entered in. Revenge and FOMO are the two to watch.">Pre-trade flags</Lbl>
-            <ChipMulti options={PNP.PRE_TRADE_FLAGS} selected={f.preTradeFlags || []} onChange={(v) => set("preTradeFlags", v)} allowAdd={false} /></div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10 }}>
-            <div><Lbl hint="Best price reached — becomes MFE in R">MFE price</Lbl>
-              <NumInp value={f.mfePrice} onChange={(v) => set("mfePrice", v)} placeholder="—" /></div>
-            <div><Lbl hint="Worst price reached — becomes heat taken, in R">MAE price</Lbl>
-              <NumInp value={f.maePrice} onChange={(v) => set("maePrice", v)} placeholder="—" /></div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10 }}>
-            <div><Lbl>High-impact news?</Lbl>
-              <Seg options={PNP.YES_NO} value={f.highImpactNews} onChange={(v) => set("highImpactNews", v)} /></div>
-            <div><Lbl hint="Psychology and Execution are the ones that end accounts">Loss caused by</Lbl>
-              <Seg options={PNP.LOSS_CAUSES} value={f.lossCausedBy} onChange={(v) => set("lossCausedBy", v)} /></div>
-          </div>
-          <div><Lbl>Wicked out?</Lbl>
-            <Seg options={PNP.YES_NO} value={f.wickedOut} onChange={(v) => set("wickedOut", v)} /></div>
-          {/* The forensics only make sense once you say it was wicked out. */}
-          {f.wickedOut === "Yes" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div><Lbl hint="SL Too Tight and Poor SL Placement are fixable. Correct Invalidation is the system working.">Why</Lbl>
-                <Seg options={PNP.WICK_OUT_CLASSES} value={f.wickOutClass} onChange={(v) => set("wickOutClass", v)} /></div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10 }}>
-                <div><Lbl>Reached TP1 after SL?</Lbl>
-                  <Seg options={PNP.YES_NO_NA} value={f.reachedTp1AfterSl} onChange={(v) => set("reachedTp1AfterSl", v)} /></div>
-                <div><Lbl>Reached original TP after SL?</Lbl>
-                  <Seg options={PNP.YES_NO_NA} value={f.reachedOriginalTpAfterSl} onChange={(v) => set("reachedOriginalTpAfterSl", v)} /></div>
-              </div>
-            </div>
-          )}
-          <div><Lbl>If R was left behind, why</Lbl>
-            <Seg options={PNP.MISSED_R_REASONS} value={f.missedRReason} onChange={(v) => set("missedRReason", v)} /></div>
         </Section>
 
         <Section title="Psychology" sub="Before, during and after — the edge that isn't on the chart" defaultOpen={false}>

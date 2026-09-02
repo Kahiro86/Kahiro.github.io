@@ -31,7 +31,6 @@ export const DEFAULT_CHECKLIST = [
 export const DEFAULT_GATES = {
   dailyCap: 3,
   cooldownMin: 30,          // post-loss lockout window
-  maxConsecutiveLosses: 3,  // N losses in a row → hard stand-down
   sleepThreshold: 6.5,      // below → NO-TRADE (hard block)
   halfSizeThreshold: 7.5,   // between threshold and this → HALF SIZE (flag)
   checklist: [...DEFAULT_CHECKLIST],
@@ -49,7 +48,6 @@ export function sanitizeGates(raw) {
   const pend = p.pending && typeof p.pending === "object" && DATE_RE.test(p.pending.from) ? {
     dailyCap: num(p.pending.dailyCap, DEFAULT_GATES.dailyCap, 1, 50),
     cooldownMin: num(p.pending.cooldownMin, DEFAULT_GATES.cooldownMin, 0, 1440),
-    maxConsecutiveLosses: num(p.pending.maxConsecutiveLosses, DEFAULT_GATES.maxConsecutiveLosses, 0, 20),
     sleepThreshold: num(p.pending.sleepThreshold, DEFAULT_GATES.sleepThreshold, 0, 12),
     halfSizeThreshold: num(p.pending.halfSizeThreshold, DEFAULT_GATES.halfSizeThreshold, 0, 12),
     from: p.pending.from,
@@ -57,8 +55,6 @@ export function sanitizeGates(raw) {
   return {
     dailyCap: num(p.dailyCap, DEFAULT_GATES.dailyCap, 1, 50),
     cooldownMin: num(p.cooldownMin, DEFAULT_GATES.cooldownMin, 0, 1440),
-    // 0 disables the rule. Capped at 20 so it cannot be set out of reach.
-    maxConsecutiveLosses: num(p.maxConsecutiveLosses, DEFAULT_GATES.maxConsecutiveLosses, 0, 20),
     sleepThreshold: num(p.sleepThreshold, DEFAULT_GATES.sleepThreshold, 0, 12),
     halfSizeThreshold: num(p.halfSizeThreshold, DEFAULT_GATES.halfSizeThreshold, 0, 12),
     checklist: list.length ? list : [...DEFAULT_CHECKLIST],
@@ -78,8 +74,8 @@ export function sanitizeSleep(raw) {
 // The thresholds in force on `ds` — a staged edit only applies from its date.
 export function effectiveGates(cfg, ds = localDateStr()) {
   if (cfg.pending && ds >= cfg.pending.from) {
-    const { dailyCap, cooldownMin, maxConsecutiveLosses, sleepThreshold, halfSizeThreshold } = cfg.pending;
-    return { ...cfg, dailyCap, cooldownMin, maxConsecutiveLosses, sleepThreshold, halfSizeThreshold, pending: null };
+    const { dailyCap, cooldownMin, sleepThreshold, halfSizeThreshold } = cfg.pending;
+    return { ...cfg, dailyCap, cooldownMin, sleepThreshold, halfSizeThreshold, pending: null };
   }
   return cfg;
 }
@@ -106,33 +102,6 @@ export function cooldownRemainingMs(trades, cfg, netPnlOf, now = Date.now()) {
   return Math.max(0, cfg.cooldownMin * 60000 - (now - latest));
 }
 
-/**
- * Losses in a row, counting back from the most recent closed trade.
- *
- * `isLoss` is injected rather than assumed. This file's own definition of
- * a loss — net P&L below zero — is right for the cooldown, but the charts
- * treat anything inside ±0.05R as breakeven, and three scratch trades in
- * a row are not a tilt signal. Passing the R-aware predicate keeps the
- * gate and the dashboard telling the same story about the same trade.
- */
-export function consecutiveLosses(trades, netPnlOf, isLoss = null) {
-  const lost = isLoss || ((t) => netPnlOf(t) < 0);
-  const closed = (Array.isArray(trades) ? trades : [])
-    .filter((t) => t && t.status === "CLOSED")
-    .slice()
-    .sort((a, b) => String(a.createdAt || a.date).localeCompare(String(b.createdAt || b.date)));
-  let run = 0;
-  for (let i = closed.length - 1; i >= 0; i--) {
-    const t = closed[i];
-    if (lost(t)) { run++; continue; }
-    // A breakeven neither extends nor breaks the run, matching how the
-    // streak charts read the same sequence.
-    if (isLoss && !lost(t) && Math.abs(netPnlOf(t)) < 1e-9) continue;
-    break;
-  }
-  return run;
-}
-
 export function sleepFlag(hours, cfg) {
   if (!Number.isFinite(+hours)) return null;       // no input yet → no flag
   if (+hours < cfg.sleepThreshold) return "NO-TRADE";
@@ -142,36 +111,24 @@ export function sleepFlag(hours, cfg) {
 
 // The single verdict the UI reads. `checklistDone` is this session's flag.
 // Returns real blocks (each disables logging) and non-blocking flags.
-export function evalGates({ trades, cfg, sleepHours, checklistDone, netPnlOf, isLoss = null, now = Date.now(), ds = localDateStr() }) {
+export function evalGates({ trades, cfg, sleepHours, checklistDone, netPnlOf, now = Date.now(), ds = localDateStr() }) {
   const g = effectiveGates(sanitizeGates(cfg), ds);
   const count = todayTradeCount(trades, ds);
   const cooldownMs = cooldownRemainingMs(trades, g, netPnlOf, now);
   const sflag = sleepFlag(sleepHours, g);
-  const lossRun = g.maxConsecutiveLosses ? consecutiveLosses(trades, netPnlOf, isLoss) : 0;
 
   const blocks = [];
   if (sflag === "NO-TRADE") blocks.push({ id: "sleep", reason: `NO-TRADE — ${(+sleepHours).toFixed(1)}h sleep is below the ${g.sleepThreshold}h floor.`, lifts: "Tomorrow, with enough rest." });
   if (count >= g.dailyCap) blocks.push({ id: "cap", reason: `Daily cap reached — ${count}/${g.dailyCap} trades logged today.`, lifts: "Midnight (local)." });
   if (cooldownMs > 0) blocks.push({ id: "cooldown", reason: `Post-loss cooldown — ${Math.ceil(cooldownMs / 60000)} min left.`, lifts: `In ${Math.ceil(cooldownMs / 60000)} min.` });
   if (!checklistDone) blocks.push({ id: "checklist", reason: "Complete the pre-trade checklist to unlock logging.", lifts: "When the checklist is done." });
-  // A losing run is the tilt signal the trading plan calls a hard
-  // stand-down — not something to manage better. It blocks rather than
-  // warns, and only a winning or breakeven trade clears it, which means
-  // the next session, not the next click.
-  if (g.maxConsecutiveLosses && lossRun >= g.maxConsecutiveLosses) {
-    blocks.push({
-      id: "lossrun",
-      reason: `Stand down — ${lossRun} losses in a row (limit ${g.maxConsecutiveLosses}).`,
-      lifts: "After a break. Review before the next trade, not during it.",
-    });
-  }
 
   const flags = [];
   if (sflag === "HALF SIZE") flags.push({ id: "halfsize", reason: `HALF SIZE — ${(+sleepHours).toFixed(1)}h sleep is under the ${g.halfSizeThreshold}h mark.` });
 
   return {
     cfg: g, canLog: blocks.length === 0, blocks, flags,
-    count, cap: g.dailyCap, cooldownMs, sleep: sflag, lossRun,
+    count, cap: g.dailyCap, cooldownMs, sleep: sflag,
   };
 }
 
@@ -186,7 +143,6 @@ export function proposeGateChange(cfg, next, today = localDateStr()) {
     pending: {
       dailyCap: num(next.dailyCap, c.dailyCap),
       cooldownMin: num(next.cooldownMin, c.cooldownMin),
-      maxConsecutiveLosses: num(next.maxConsecutiveLosses, c.maxConsecutiveLosses),
       sleepThreshold: num(next.sleepThreshold, c.sleepThreshold),
       halfSizeThreshold: num(next.halfSizeThreshold, c.halfSizeThreshold),
       from,

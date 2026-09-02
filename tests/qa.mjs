@@ -32,8 +32,7 @@ const EXE = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // module's inner groups get exercised.
 const MODULES = [
   ["dashboard", "Command Center"], ["firm", "The Firm"], ["life", "Life OS"],
-  ["faith", "Faith & Mind"], ["pnp", "Press 'n' Play"], ["calendar", "Calendar"],
-  ["journey", "Journey"], ["analytics", "Analytics"],
+  ["faith", "Faith & Mind"], ["calendar", "Calendar"], ["journey", "Journey"], ["analytics", "Analytics"],
 ];
 
 // "habits" is deliberately absent. This harness seeds corrupt localStorage
@@ -62,7 +61,6 @@ const SUBTABS_MAP = {
     { group: "Faith", subtabs: ["Scripture & Notes", "The Walk"] },
     { group: "Mind", subtabs: ["Library", "Notes", "Decision Journal"] },
   ],
-  pnp: ["Session Phases", "Reviews", "Dashboard"],
   analytics: ["Trends", "Progression", "Reports"],
   journey: ["Hall of Fame", "Want List", "Goals"],
 };
