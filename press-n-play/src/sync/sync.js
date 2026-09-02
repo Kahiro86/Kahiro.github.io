@@ -106,7 +106,13 @@ export async function flush() {
   if (!session || !dirty.size) return;
   setStatus("syncing");
 
-  const keys = syncOrder(dirty);
+  // Always fetch tombstones alongside whatever is dirty, even when this
+  // device has not touched them. Merging `trades` against the cloud while
+  // consulting only local tombstones would re-add a trade another device
+  // deleted — the next pull undoes it, but the round trip is avoidable
+  // for the cost of one extra key in the query.
+  const keys = syncOrder(new Set([...dirty, "tombstones"]));
+
   // Read the cloud's current version of exactly these keys first. Pushing
   // blind would let a device that has been offline overwrite edits made
   // elsewhere while it was away; merging against what is actually up there
@@ -126,7 +132,7 @@ export async function flush() {
     if (r.store) applyExternal(key, r.value, r.ts);
     if (r.value === undefined || r.value === null) { handled.add(key); continue; }
     if (r.push) rows.push({ user_id: session.user.id, key, value: r.value, updated_at: r.ts });
-    handled.add(key);
+    if (dirty.has(key)) handled.add(key); // tombstones may be here without being queued
   }
 
   try {
