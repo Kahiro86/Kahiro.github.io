@@ -31,6 +31,9 @@ const FaithOS = lazy(() => import("./modules/faith/FaithOS.jsx").then((m) => ({ 
 // logic core, three screens). Lazy like every other module, which also
 // keeps its WASM off the first-paint path for anyone who never opens it.
 const HabitTracker = lazy(() => import("./modules/habits/HabitTracker.tsx").then((m) => ({ default: m.HabitTracker })));
+// The analytics layer over the trade journal. Reads ti_trades — the same
+// store Trading OS writes — so it never holds a second copy of a trade.
+const PnpModule = lazy(() => import("./modules/pnp/PnpModule.jsx").then((m) => ({ default: m.PnpModule })));
 const AnalyticsOS = lazy(() => import("./modules/analytics/AnalyticsOS.jsx").then((m) => ({ default: m.AnalyticsOS })));
 const JourneyModule = lazy(() => import("./modules/journey/JourneyModule.jsx").then((m) => ({ default: m.JourneyModule })));
 const FirmOS = lazy(() => import("./modules/firm/FirmOS.jsx").then((m) => ({ default: m.FirmOS })));
@@ -263,6 +266,7 @@ export default function App() {
       // Takes no props: it owns its own storage and never reads Kahiro's
       // habit state. The two run side by side until the migration lands.
       case "habits": return <HabitTracker />;
+      case "pnp": return <PnpModule />;
       case "calendar": return <CalendarModule habits={habitsV2} onNavigate={navTo} />;
       case "journey": return <JourneyModule xpInfo={xpInfo} />;
       case "analytics": return <AnalyticsOS habits={habitsV2} onNavigate={navTo} />;

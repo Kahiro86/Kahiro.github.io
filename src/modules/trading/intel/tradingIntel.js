@@ -11,6 +11,9 @@ import {
   DEFAULT_CONDITIONS, DEFAULT_CONFLUENCES, DEFAULT_STRATEGIES, DEFAULT_MISTAKES,
   DEFAULT_EMOTIONS, DEFAULT_REFLECTION_QUESTIONS, REVIEW_FIELDS, PSYCH_BEFORE, REMINDER_SCOPES,
 } from "./defaults.js";
+// The PRESS 'N' PLAY option lists. Imported rather than duplicated so a
+// value logged on a trade and a value a chart groups by cannot drift.
+import * as PNP from "../../pnp/engine/constants.js";
 
 export const uid = (p = "x") => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -152,6 +155,12 @@ const sanitizeRatings = (raw) => {
 export const sanitizeReviewFields = (raw) => { const a = arrStr(raw, 40); return a.length ? a : [...REVIEW_FIELDS]; };
 export const sanitizePsychFields = (raw) => { const a = arrStr(raw, 40); return a.length ? a : [...PSYCH_BEFORE]; };
 
+// Constrain a value to a known option list. Anything else becomes "",
+// so a renamed option cannot quietly create a chart bucket of one.
+const pick = (v, options) => (options.includes(v) ? v : "");
+const clampInt = (v, lo, hi) =>
+  (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, Math.round(+v))) : 0);
+
 export function sanitizeTrades(raw) {
   if (!Array.isArray(raw)) return [];
   const out = [];
@@ -192,6 +201,32 @@ export function sanitizeTrades(raw) {
       whatRepeat: str(t.whatRepeat, 500), whatStop: str(t.whatStop, 500), focusNext: str(t.focusNext, 500),
       reflectionAnswers: (t.reflectionAnswers && typeof t.reflectionAnswers === "object" && !Array.isArray(t.reflectionAnswers)) ? Object.fromEntries(Object.entries(t.reflectionAnswers).filter(([, v]) => typeof v === "string").map(([k, v]) => [k.slice(0, 200), v.slice(0, 1000)])) : {},
       mistakes: arrStr(t.mistakes),
+
+      // ── PRESS 'N' PLAY fields ─────────────────────────────────────
+      // Additive only. Every reader of ti_trades asks for the keys it
+      // knows about, so these are invisible to Trading OS, the Dashboard,
+      // Calendar, Finance, Analytics, Correlations and the Firm doctrine.
+      // They must be listed HERE, though: this function rebuilds each
+      // trade from a whitelist, so a key it does not name is silently
+      // dropped on every load.
+      setupGrade: pick(t.setupGrade, PNP.SETUP_GRADES),
+      executionRating: clampInt(t.executionRating, 0, 10),
+      managementStyle: pick(t.managementStyle, PNP.MANAGEMENT_STYLES),
+      ruleChecklist: Array.isArray(t.ruleChecklist) ? arrStr(t.ruleChecklist, 20) : null,
+      preTradeFlags: arrStr(t.preTradeFlags, 20),
+      phaseId: str(t.phaseId, 40),
+      // MFE/MAE are logged as prices; converting to R needs the trade's
+      // own stop distance, which only the metrics layer should know.
+      mfePrice: t.mfePrice === "" || t.mfePrice == null ? "" : num(t.mfePrice),
+      maePrice: t.maePrice === "" || t.maePrice == null ? "" : num(t.maePrice),
+      missedRReason: pick(t.missedRReason, PNP.MISSED_R_REASONS),
+      wickedOut: pick(t.wickedOut, PNP.YES_NO),
+      wickOutClass: pick(t.wickOutClass, PNP.WICK_OUT_CLASSES),
+      reachedTp1AfterSl: pick(t.reachedTp1AfterSl, PNP.YES_NO_NA),
+      reachedOriginalTpAfterSl: pick(t.reachedOriginalTpAfterSl, PNP.YES_NO_NA),
+      highImpactNews: pick(t.highImpactNews, PNP.YES_NO),
+      lossCausedBy: pick(t.lossCausedBy, PNP.LOSS_CAUSES),
+
       createdAt: typeof t.createdAt === "string" ? t.createdAt : new Date().toISOString(),
       editedAt: typeof t.editedAt === "string" ? t.editedAt : null,
     });

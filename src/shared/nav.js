@@ -1,4 +1,4 @@
-import { Layers, Target, Church, BarChart3, Trophy, Building2, CalendarDays, CheckSquare } from "lucide-react";
+import { Layers, Target, Church, BarChart3, Trophy, Building2, CalendarDays, CheckSquare, LineChart } from "lucide-react";
 
 // The app is organised around the firm's doctrine: one command bridge, the
 // Machine (Stark — the external build), the Man (Batman — the internal build),
@@ -14,6 +14,7 @@ export const NAV_SECTIONS = ["Command", "The Machine", "The Man", "Insight"];
 export const NAV = [
   { id: "dashboard", label: "Command Center", icon: Layers,      section: "Command" },
   { id: "firm",      label: "The Firm",       icon: Building2,   section: "The Machine" },
+  { id: "pnp",       label: "Press 'n' Play", icon: LineChart,   section: "The Machine" },
   { id: "life",      label: "Life OS",        icon: Target,      section: "The Man" },
   { id: "faith",     label: "Faith & Mind",   icon: Church,      section: "The Man" },
   { id: "habits",    label: "Habits",         icon: CheckSquare, section: "The Man" },
