@@ -1,0 +1,17 @@
+/* The page itself. Everything else is styled inline, beside the markup
+   that uses it — the app has no shared stylesheet to keep in sync. */
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: #000000;
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* A visible focus ring for keyboard users, in the app's own accent so it
+   introduces no new colour. */
+:focus-visible {
+  outline: 2px solid #F0B429;
+  outline-offset: 2px;
+}
