@@ -34,6 +34,7 @@ export default defineConfig({
       input: {
         app: resolve(__dirname, "index.dev.html"),
         habits: resolve(__dirname, "habits.html"),
+        pnp: resolve(__dirname, "pnp.html"),
       },
       output: {
         manualChunks(id) {
