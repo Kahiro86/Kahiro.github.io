@@ -8,13 +8,14 @@
 // numbers that compute themselves.
 import { useMemo, useState } from "react";
 import { BarChart3, Clock, ClipboardCheck } from "lucide-react";
-import { BD, T2, T3, GL } from "../../shared/designTokens.js";
 import { useStorageState } from "../../shared/useStorageState.js";
 import { ModuleTabs } from "../../shared/ModuleTabs.jsx";
 import { Hydrating } from "../../shared/ui.jsx";
 import { sanitizeTrades } from "../trading/intel/tradingIntel.js";
 import { sanitizePhases, seedPhases } from "./engine/phases.js";
 import { DashboardTab } from "./DashboardTab.jsx";
+import { PhasesTab } from "./PhasesTab.jsx";
+import { ReviewTab } from "./ReviewTab.jsx";
 
 const TABS = [
   { id: "dashboard", l: "Dashboard", i: BarChart3 },
@@ -27,6 +28,9 @@ export function PnpModule() {
   const [rawTrades, , tradesLoaded] = useStorageState("ti_trades", []);
   const [rawPhases, setPhases, phasesLoaded] = useStorageState("pnp_phases", null);
   const [settings] = useStorageState("ti_settings", {});
+  // The same review store Trading OS writes, so a review written here
+  // is the one the XP engine and the Firm doctrine already read.
+  const [rawReviews, setReviews] = useStorageState("ict_reviews", []);
 
   const trades = useMemo(() => sanitizeTrades(rawTrades), [rawTrades]);
   const phases = useMemo(
@@ -51,14 +55,10 @@ export function PnpModule() {
           <DashboardTab trades={trades} phases={phases} accountId={accountId} />
         )}
         {tab === "phases" && (
-          <div style={{ color: T2, fontSize: 12, background: GL, border: `1px solid ${BD}`, borderRadius: 12, padding: 16 }}>
-            Session phase editor — next step.
-          </div>
+          <PhasesTab phases={phases} setPhases={setPhases} trades={trades} />
         )}
         {tab === "reviews" && (
-          <div style={{ color: T2, fontSize: 12, background: GL, border: `1px solid ${BD}`, borderRadius: 12, padding: 16 }}>
-            Period reviews — next step.
-          </div>
+          <ReviewTab trades={trades} reviews={rawReviews} setReviews={setReviews} accountId={accountId} />
         )}
       </div>
     </div>

@@ -116,7 +116,11 @@ export function seedPhases() {
 
 export function sanitizePhases(raw) {
   if (!Array.isArray(raw)) return seedPhases();
-  const int = (v) => (Number.isFinite(+v) ? Math.round(+v) : null);
+  // Guard null/undefined/"" explicitly: `+null` is 0 and `Number.isFinite(0)`
+  // is true, so a naive coercion turns the Custom phase's "no window" into
+  // a real 00:00–00:00 window that every trade before 1am would match.
+  const int = (v) =>
+    (v == null || v === "" || !Number.isFinite(+v) ? null : Math.round(+v));
   const out = raw
     .filter((p) => p && typeof p === "object" && p.id && typeof p.phase === "string")
     .map((p) => ({

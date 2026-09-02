@@ -7,6 +7,8 @@
 import { metricsOf, netR, closedTrades } from "../../src/modules/pnp/engine/metrics.js";
 import { maxDrawdownR, longestStreak, currentStreak, equityCurve } from "../../src/modules/pnp/engine/sequence.js";
 import { groupBy, aggregate, sampleLevel, sampleSizeCheck, periodKey, tradesInPeriod } from "../../src/modules/pnp/engine/periods.js";
+import { seedPhases, sanitizePhases, phaseWindowLabel, phaseForTime, isEuDst, isUsDst } from "../../src/modules/pnp/engine/phases.js";
+import { reviewStats } from "../../src/modules/pnp/engine/review.js";
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -147,6 +149,61 @@ console.log("\n── periods & aggregation ──");
     tradesInPeriod(feb, "weekly", "2026-02-01").map((t) => t.id), ["p1"]);
   eq("monthly period picks up the whole month",
     tradesInPeriod(feb, "monthly", "2026-02").map((t) => t.id), ["p1", "p2"]);
+}
+
+console.log("\n── session phases ──");
+{
+  const ph = sanitizePhases(seedPhases());
+  eq("15 phases seeded", ph.length, 15);
+
+  // Summer: the Notion table's own clock values.
+  eq("A1 in September", phaseWindowLabel(ph.find((p) => p.phase === "A1"), "2026-09-02"), "03:00 – 04:00");
+  eq("L1 in September", phaseWindowLabel(ph.find((p) => p.phase === "L1"), "2026-09-02"), "10:00 – 11:00");
+  eq("NY2 in September", phaseWindowLabel(ph.find((p) => p.phase === "NY2"), "2026-09-02"), "16:30 – 17:30");
+
+  // Winter: both shift an hour later in EAT, which is the twice-a-year
+  // manual edit the Notion table asks for.
+  eq("L1 in January shifts an hour", phaseWindowLabel(ph.find((p) => p.phase === "L1"), "2026-01-15"), "11:00 – 12:00");
+  eq("NY2 in January shifts an hour", phaseWindowLabel(ph.find((p) => p.phase === "NY2"), "2026-01-15"), "17:30 – 18:30");
+  // Japan observes no daylight saving, so Asia must NOT move.
+  eq("A1 does not move in January", phaseWindowLabel(ph.find((p) => p.phase === "A1"), "2026-01-15"), "03:00 – 04:00");
+
+  eq("EU summer time in July", isEuDst("2026-07-01"), true);
+  eq("EU winter in December", isEuDst("2026-12-01"), false);
+  eq("US daylight time in July", isUsDst("2026-07-01"), true);
+
+  // The same clock time is a different phase either side of the change.
+  const at = (t, ds) => ph.find((p) => p.id === phaseForTime(ph, t, ds)).phase;
+  eq("11:30 is L2 in July", at("11:30", "2026-07-15"), "L2");
+  eq("11:30 is L1 in January", at("11:30", "2026-01-15"), "L1");
+
+  // `+null` is 0, so a naive coercion gives Custom a real 00:00 window.
+  const custom = ph.find((p) => p.phase === "Custom");
+  eq("Custom has no window", [custom.startOffset, custom.endOffset], [null, null]);
+  eq("Custom renders as a dash", phaseWindowLabel(custom, "2026-09-02"), "—");
+  eq("a time outside every window falls to Custom", at("00:30", "2026-09-02"), "Custom");
+}
+
+console.log("\n── review stats ──");
+{
+  const rs = [mk("r1", "2026-02-03", 2), mk("r2", "2026-02-04", -1), mk("r3", "2026-02-10", 1)];
+  // Feb 3 and 4 are both in the week starting Sunday Feb 1; Feb 10 is not.
+  const w = reviewStats(rs, "weekly", "2026-02-01");
+  eq("weekly picks up its own days with no linking", w.tradesTaken, 2);
+  eq("weekly total R", w.totalR, 1);
+  eq("weekly profit factor 2 ÷ 1", w.profitFactor, 2);
+  eq("weekly expectancy", w.expectancyR, 0.5);
+
+  const mo = reviewStats(rs, "monthly", "2026-02");
+  eq("monthly picks up the whole month without linking", mo.tradesTaken, 3);
+  eq("monthly computes its own drawdown", mo.maxDrawdownR, 1);
+
+  // A period with no trades must not report zeros as though it broke even.
+  const none = reviewStats(rs, "daily", "2026-02-05");
+  eq("an untraded day has no expectancy", none.expectancyR, null);
+  eq("an untraded day has no profit factor", none.profitFactor, null);
+  eq("an all-wins period has no profit factor either",
+    reviewStats([mk("w1", "2026-05-01", 2)], "daily", "2026-05-01").profitFactor, null);
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
